@@ -3,8 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#121410">
 <title>Run + Lift — 11 iulie 2026, Stadionul Dinamo</title>
 <meta name="description" content="Eveniment de alergare și forță în aer liber. 5 runde de Bear Complex combinate cu alergare. Sâmbătă, 11 iulie 2026, Stadionul Dinamo, Chișinău.">
+
+<!-- Open Graph (Facebook / WhatsApp / LinkedIn) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Run + Lift">
+<meta property="og:title" content="Run + Lift — Aleargă. Ridică. Rezistă.">
+<meta property="og:description" content="Eveniment de alergare și forță în aer liber. 5 runde de Bear Complex + alergare. 11 iulie 2026, Stadionul Dinamo, Chișinău.">
+<meta property="og:url" content="https://run-lift-landing.vercel.app">
+<meta property="og:locale" content="ro_RO">
+<meta property="og:image" content="https://run-lift-landing.vercel.app/og.svg">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Run + Lift — Aleargă. Ridică. Rezistă.">
+<meta name="twitter:description" content="Eveniment de alergare și forță în aer liber. 11 iulie 2026, Stadionul Dinamo, Chișinău.">
+<meta name="twitter:image" content="https://run-lift-landing.vercel.app/og.svg">
+
+<!-- Favicon (SVG inline: marca RL verde-volt pe fundal negru) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23C9F24B'/%3E%3Ctext x='16' y='23' font-family='Impact,Arial Black,sans-serif' font-size='18' font-weight='900' text-anchor='middle' fill='%23121410'%3ERL%3C/text%3E%3C/svg%3E">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -671,9 +691,9 @@
   // măsură ce vin înscrieri în Google Form (verifică tab-ul Responses).
   // În sesiunea curentă, contorul crește cu 1 la fiecare submit reușit.
   // =========================================================================
-  var OCCUPIED_SLOTS = 9;
-  var TOTAL_SLOTS = 16;
-  var EVENT_DATE = new Date(2026, 6, 11, 6, 30, 0); // 11 iulie 2026, 06:30
+  const OCCUPIED_SLOTS = 9;
+  const TOTAL_SLOTS = 16;
+  const EVENT_DATE = new Date(2026, 6, 11, 6, 30, 0); // 11 iulie 2026, 06:30
 
   // =========================================================================
   // GOOGLE FORMS INTEGRATION
@@ -693,7 +713,7 @@
   //     Exemplu: entry.1234567890=TEST → "nume": "1234567890"
   //  4. Înlocuiește valorile de mai jos și salvează.
   // =========================================================================
-  var GOOGLE_FORM = {
+  const GOOGLE_FORM = {
     formId: 'REPLACE_WITH_FORM_ID',   // ex: '1FAIpQLSf...' (partea dintre /e/ și /viewform)
     entries: {
       nume:    'REPLACE_ENTRY_ID',    // ex: '1234567890'
@@ -705,25 +725,24 @@
     acordValue: 'Da'                  // textul EXACT al opțiunii bifate în Google Form
   };
 
-  function isFormConfigured() {
-    if (!GOOGLE_FORM.formId || GOOGLE_FORM.formId.indexOf('REPLACE') === 0) return false;
-    var e = GOOGLE_FORM.entries;
-    return e.nume && e.nume.indexOf('REPLACE') !== 0
-        && e.telefon && e.telefon.indexOf('REPLACE') !== 0
-        && e.email && e.email.indexOf('REPLACE') !== 0
-        && e.acord && e.acord.indexOf('REPLACE') !== 0;
-  }
+  const isConfigured = (v) => v && !v.startsWith('REPLACE');
+  const isFormConfigured = () => {
+    const { formId, entries: e } = GOOGLE_FORM;
+    return isConfigured(formId)
+      && isConfigured(e.nume) && isConfigured(e.telefon)
+      && isConfigured(e.email) && isConfigured(e.acord);
+  };
 
-  function submitToGoogleForm(data) {
-    var url = 'https://docs.google.com/forms/d/e/' + GOOGLE_FORM.formId + '/formResponse';
-    var body = new URLSearchParams();
-    body.append('entry.' + GOOGLE_FORM.entries.nume, data.nume);
-    body.append('entry.' + GOOGLE_FORM.entries.telefon, data.telefon);
-    body.append('entry.' + GOOGLE_FORM.entries.email, data.email);
+  const submitToGoogleForm = (data) => {
+    const url = `https://docs.google.com/forms/d/e/${GOOGLE_FORM.formId}/formResponse`;
+    const body = new URLSearchParams();
+    body.append(`entry.${GOOGLE_FORM.entries.nume}`, data.nume);
+    body.append(`entry.${GOOGLE_FORM.entries.telefon}`, data.telefon);
+    body.append(`entry.${GOOGLE_FORM.entries.email}`, data.email);
     if (GOOGLE_FORM.entries.echipa && data.echipa) {
-      body.append('entry.' + GOOGLE_FORM.entries.echipa, data.echipa);
+      body.append(`entry.${GOOGLE_FORM.entries.echipa}`, data.echipa);
     }
-    body.append('entry.' + GOOGLE_FORM.entries.acord, GOOGLE_FORM.acordValue);
+    body.append(`entry.${GOOGLE_FORM.entries.acord}`, GOOGLE_FORM.acordValue);
 
     // no-cors: Google acceptă cererea, dar noi nu putem citi răspunsul.
     // E OK — dacă cererea a fost trimisă cu succes, promisiunea se rezolvă.
@@ -731,105 +750,110 @@
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString()
+      body: body.toString(),
     });
-  }
+  };
 
-  (function () {
-    var form = document.getElementById('reg-form');
-    var loadingEl = document.getElementById('form-loading');
-    var errorEl = document.getElementById('form-error');
-    var confirmation = document.getElementById('confirmation');
-    var nameEl = document.getElementById('confirm-name');
-    var resetBtn = document.getElementById('reset-btn');
-    var retryBtn = document.getElementById('retry-btn');
-    var acordLabel = document.getElementById('acord-label');
-    var acordError = document.getElementById('acord-error');
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    const form = $('reg-form');
+    const loadingEl = $('form-loading');
+    const errorEl = $('form-error');
+    const confirmation = $('confirmation');
+    const nameEl = $('confirm-name');
+    const resetBtn = $('reset-btn');
+    const retryBtn = $('retry-btn');
+    const acordLabel = $('acord-label');
+    const acordError = $('acord-error');
 
-    var toast = document.getElementById('toast');
-    var toastIcon = document.getElementById('toast-icon');
-    var toastMsg = document.getElementById('toast-msg');
-    var toastTimer = null;
+    const toast = $('toast');
+    const toastIcon = $('toast-icon');
+    const toastMsg = $('toast-msg');
+    let toastTimer = null;
 
-    var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    var PHONE_RE = /^\+?[0-9][0-9 ()\-]{6,14}$/;
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    const PHONE_RE = /^\+?[0-9][0-9 ()\-]{6,14}$/;
 
-    var sessionSignups = 0;
-    var pendingFirstName = null;
+    let sessionSignups = 0;
 
     // ---- Countdown timer ----
-    var cdZile = document.getElementById('cd-zile');
-    var cdOre = document.getElementById('cd-ore');
-    var cdMinute = document.getElementById('cd-minute');
-    var cdSecunde = document.getElementById('cd-secunde');
-    var pad = function (n) { return String(n).padStart(2, '0'); };
+    const cd = { zile: $('cd-zile'), ore: $('cd-ore'), minute: $('cd-minute'), secunde: $('cd-secunde') };
+    const pad = (n) => String(n).padStart(2, '0');
 
-    function updateCountdown() {
-      var diff = Math.max(0, EVENT_DATE.getTime() - Date.now());
-      cdZile.textContent = pad(Math.floor(diff / 86400000));
-      cdOre.textContent = pad(Math.floor(diff / 3600000) % 24);
-      cdMinute.textContent = pad(Math.floor(diff / 60000) % 60);
-      cdSecunde.textContent = pad(Math.floor(diff / 1000) % 60);
-    }
+    const updateCountdown = () => {
+      const diff = Math.max(0, EVENT_DATE.getTime() - Date.now());
+      cd.zile.textContent    = pad(Math.floor(diff / 86400000));
+      cd.ore.textContent     = pad(Math.floor(diff / 3600000) % 24);
+      cd.minute.textContent  = pad(Math.floor(diff / 60000) % 60);
+      cd.secunde.textContent = pad(Math.floor(diff / 1000) % 60);
+    };
     updateCountdown();
     setInterval(updateCountdown, 1000);
 
     // ---- Slots bar ----
-    var slotsGrid = document.getElementById('slots-grid');
-    var slotsCount = document.getElementById('slots-count');
+    const slotsGrid = $('slots-grid');
+    const slotsCount = $('slots-count');
 
-    function renderSlots() {
-      var occupied = Math.min(TOTAL_SLOTS, OCCUPIED_SLOTS + sessionSignups);
-      var remaining = TOTAL_SLOTS - occupied;
-      slotsGrid.innerHTML = '';
-      for (var i = 0; i < TOTAL_SLOTS; i++) {
-        var s = document.createElement('div');
-        s.className = 'slot' + (i < occupied ? ' filled' : '');
-        slotsGrid.appendChild(s);
-      }
-      slotsCount.textContent = remaining + ' / ' + TOTAL_SLOTS;
+    const renderSlots = () => {
+      const occupied = Math.min(TOTAL_SLOTS, OCCUPIED_SLOTS + sessionSignups);
+      const remaining = TOTAL_SLOTS - occupied;
+      slotsGrid.replaceChildren(
+        ...Array.from({ length: TOTAL_SLOTS }, (_, i) => {
+          const s = document.createElement('div');
+          s.className = `slot${i < occupied ? ' filled' : ''}`;
+          return s;
+        })
+      );
+      slotsCount.textContent = `${remaining} / ${TOTAL_SLOTS}`;
       slotsCount.classList.toggle('low', remaining <= 3);
-    }
+    };
     renderSlots();
 
     // ---- Scroll reveal ----
     if ('IntersectionObserver' in window) {
-      var revealObserver = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (!entry.isIntersecting) return;
-          var el = entry.target;
+      const revealObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const el = entry.target;
           revealObserver.unobserve(el);
-          var delay = Number(el.getAttribute('data-reveal-delay') || 0);
+          const delay = Number(el.dataset.revealDelay || 0);
           el.animate(
             [{ opacity: 0, transform: 'translateY(20px)' }, { opacity: 1, transform: 'translateY(0)' }],
-            { duration: 550, delay: delay, easing: 'ease-out', fill: 'backwards' }
+            { duration: 550, delay, easing: 'ease-out', fill: 'backwards' }
           );
           el.style.opacity = '';
-        });
+        }
       }, { threshold: 0.15 });
 
-      setTimeout(function () {
-        var idx = 0;
-        document.querySelectorAll('[data-reveal]').forEach(function (el) {
+      setTimeout(() => {
+        let idx = 0;
+        for (const el of document.querySelectorAll('[data-reveal]')) {
           if (el.getBoundingClientRect().top > window.innerHeight * 0.9) {
             el.style.opacity = '0';
-            el.setAttribute('data-reveal-delay', String((idx % 3) * 120));
+            el.dataset.revealDelay = String((idx % 3) * 120);
             revealObserver.observe(el);
             idx++;
           }
-        });
+        }
       }, 100);
     }
 
     // ---- Form state machine ----
-    function showState(state) {
+    const STATES = ['form', 'loading', 'error', 'success'];
+    const showState = (state) => {
       form.hidden = state !== 'form';
       loadingEl.hidden = state !== 'loading';
       errorEl.hidden = state !== 'error';
       confirmation.hidden = state !== 'success';
-    }
+    };
 
-    function showToast(kind, msg) {
+    // ---- Toast ----
+    const hideToast = () => {
+      if (!toast.classList.contains('show')) return;
+      toast.classList.add('hide');
+      setTimeout(() => toast.classList.remove('show', 'hide'), 200);
+    };
+    const showToast = (kind, msg) => {
       clearTimeout(toastTimer);
       toast.classList.remove('hide');
       toast.classList.toggle('success', kind === 'success');
@@ -837,125 +861,122 @@
       toastMsg.textContent = msg;
       toast.classList.add('show');
       toastTimer = setTimeout(hideToast, 3500);
-    }
-    function hideToast() {
-      if (!toast.classList.contains('show')) return;
-      toast.classList.add('hide');
-      setTimeout(function () {
-        toast.classList.remove('show');
-        toast.classList.remove('hide');
-      }, 200);
-    }
+    };
 
-    function fieldWrap(name) {
-      return form.querySelector('[data-field="' + name + '"]');
-    }
-    function setInvalid(name, isInvalid) {
-      var wrap = fieldWrap(name);
-      if (wrap) wrap.classList.toggle('invalid', !!isInvalid);
-    }
-    function setAcordInvalid(isInvalid) {
+    // ---- Field errors ----
+    const fieldWrap = (name) => form.querySelector(`[data-field="${name}"]`);
+    const setInvalid = (name, isInvalid) => {
+      fieldWrap(name)?.classList.toggle('invalid', !!isInvalid);
+    };
+    const setAcordInvalid = (isInvalid) => {
       acordLabel.classList.toggle('invalid', !!isInvalid);
       acordError.classList.toggle('show', !!isInvalid);
-    }
-    function clearAllErrors() {
-      ['nume', 'telefon', 'email'].forEach(function (n) { setInvalid(n, false); });
+    };
+    const clearAllErrors = () => {
+      ['nume', 'telefon', 'email'].forEach((n) => setInvalid(n, false));
       setAcordInvalid(false);
-    }
+    };
 
     // Live-clear errors as user edits.
-    form.addEventListener('input', function (e) {
-      var wrap = e.target.closest('[data-field]');
-      if (wrap) wrap.classList.remove('invalid');
-    });
-    form.addEventListener('change', function (e) {
-      if (e.target.name === 'acord') setAcordInvalid(!e.target.checked ? false : false);
+    form.addEventListener('input', (e) => {
+      e.target.closest('[data-field]')?.classList.remove('invalid');
     });
 
-    function transitionToSuccess(firstName) {
+    // ---- Validation ----
+    const validate = (data) => {
+      const errors = {};
+      if (data.nume.length < 3) errors.nume = true;
+      if (!PHONE_RE.test(data.telefon)) errors.telefon = true;
+      if (!EMAIL_RE.test(data.email)) errors.email = true;
+      if (!data.acord) errors.acord = true;
+      return errors;
+    };
+
+    // ---- Transitions ----
+    const transitionToSuccess = (firstName) => {
       nameEl.textContent = firstName;
       sessionSignups++;
       renderSlots();
       showState('success');
       showToast('success', 'Înscrierea a fost trimisă!');
-      window.scrollTo({ top: confirmation.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
-    }
+      window.scrollTo({
+        top: confirmation.getBoundingClientRect().top + window.scrollY - 80,
+        behavior: 'smooth',
+      });
+    };
 
-    function transitionToError() {
+    const transitionToError = () => {
       showState('error');
       showToast('error', 'Înscrierea nu a putut fi trimisă.');
-    }
+    };
 
-    form.addEventListener('submit', function (e) {
+    // ---- Submit handler ----
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       clearAllErrors();
 
-      var fd = new FormData(form);
-      var data = {
+      const fd = new FormData(form);
+      const data = {
         nume:    String(fd.get('nume') || '').trim(),
         telefon: String(fd.get('telefon') || '').trim(),
         email:   String(fd.get('email') || '').trim(),
         echipa:  String(fd.get('echipa') || '').trim(),
-        acord:   !!fd.get('acord')
+        acord:   !!fd.get('acord'),
       };
 
-      var errors = {};
-      if (data.nume.length < 3) errors.nume = true;
-      if (!PHONE_RE.test(data.telefon)) errors.telefon = true;
-      if (!EMAIL_RE.test(data.email)) errors.email = true;
-      if (!data.acord) errors.acord = true;
+      const errors = validate(data);
+      const errCount = Object.keys(errors).length;
 
-      var count = Object.keys(errors).length;
-
-      if (count > 0) {
+      if (errCount > 0) {
         if (errors.nume) setInvalid('nume', true);
         if (errors.telefon) setInvalid('telefon', true);
         if (errors.email) setInvalid('email', true);
         if (errors.acord) setAcordInvalid(true);
 
-        var msg = (errors.acord && count === 1)
+        const msg = (errors.acord && errCount === 1)
           ? 'Trebuie să accepți regulamentul ca să te poți înscrie.'
           : 'Verifică câmpurile marcate cu roșu.';
         showToast('error', msg);
 
-        var firstBad = ['nume', 'telefon', 'email'].find(function (n) { return errors[n]; });
-        if (firstBad) {
-          var input = form.querySelector('[name="' + firstBad + '"]');
-          if (input) input.focus({ preventScroll: false });
-        }
+        const firstBad = ['nume', 'telefon', 'email'].find((n) => errors[n]);
+        if (firstBad) form.querySelector(`[name="${firstBad}"]`)?.focus();
         return;
       }
 
-      var firstName = data.nume.split(/\s+/)[0] || 'atlet';
-      pendingFirstName = firstName;
+      const firstName = data.nume.split(/\s+/)[0] || 'atlet';
       showState('loading');
 
       if (!isFormConfigured()) {
         console.warn('[Run+Lift] Google Form nu e configurat (vezi GOOGLE_FORM în <script>). Simulez trimiterea.');
-        setTimeout(function () { transitionToSuccess(firstName); }, 1800);
+        setTimeout(() => transitionToSuccess(firstName), 1800);
         return;
       }
 
-      submitToGoogleForm(data)
-        .then(function () { transitionToSuccess(firstName); })
-        .catch(function (err) {
-          console.error('[Run+Lift] Eroare la trimitere:', err);
-          transitionToError();
-        });
+      try {
+        await submitToGoogleForm(data);
+        transitionToSuccess(firstName);
+      } catch (err) {
+        console.error('[Run+Lift] Eroare la trimitere:', err);
+        transitionToError();
+      }
     });
 
-    resetBtn.addEventListener('click', function () {
+    resetBtn.addEventListener('click', () => {
       form.reset();
       clearAllErrors();
       showState('form');
     });
 
-    retryBtn.addEventListener('click', function () {
+    retryBtn.addEventListener('click', () => {
       clearAllErrors();
       showState('form');
     });
   })();
 </script>
+
+<!-- Vercel Analytics + Speed Insights (rulează doar când e deploy pe Vercel) -->
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
 
 </body>
 </html>
