@@ -171,6 +171,43 @@ Toate validările rulează în `index.html` **înainte** de trimitere:
 
 Erori: contur roșu pe câmp + mesaj sub el + toast la sus centrat (3.5s).
 
+### Stări formular
+
+Formularul are 4 stări gestionate prin `showState()`:
+
+- `form` — starea inițială, formularul e vizibil
+- `loading` — spinner + text "Se trimite înscrierea…" (~1.8s)
+- `success` — cerc verde cu SVG check animat + "Te-ai înregistrat, {nume}!"
+- `error` — cerc roșu cu X + "Ceva n-a mers" + buton "Încearcă din nou"
+
+### Bară "Locuri rămase"
+
+Deasupra formularului există o bară cu 16 sloturi (verzi = ocupate, gri = libere) și un contor "X / 16" care devine roșu când mai sunt ≤ 3 locuri.
+
+**Cum actualizezi numărul de ocupate**: în `index.html`, la începutul `<script>` (spre finalul fișierului), găsești:
+
+```js
+var OCCUPIED_SLOTS = 9;
+```
+
+Modifică valoarea manual pe măsură ce vin înscrieri în tab-ul **Responses** al Google Form-ului. Contorul crește automat cu 1 în sesiunea curentă la fiecare submit reușit (dar se pierde la refresh — actualizează în cod pentru persistență).
+
+### Countdown timer
+
+În topbar există un contor live către `EVENT_DATE` (11 iulie 2026, 06:30). Se actualizează la fiecare secundă via `setInterval`. Când data trece, arată `00 00 00 00`.
+
+Pentru alt eveniment, modifică:
+
+```js
+var EVENT_DATE = new Date(2026, 6, 11, 6, 30, 0); // luna e 0-indexed: iulie = 6
+```
+
+### Animații
+
+- **Hero**: cele 3 rânduri ale titlului + subtitle + CTA apar cu `fade-up` staggered la load. CTA hero pulsează după 1.5s (`glow-pulse`).
+- **Scroll reveal**: heading-urile secțiunilor (01/02/03) și cardurile de echipament apar cu fade-up la intrare în viewport (IntersectionObserver).
+- **Success screen**: SVG check desenat + `pop-in` pe cerc + 3 puls-ring-uri.
+
 ### Design tokens
 
 - Fundal: `#121410`, suprafață: `#1A1D17`, contur: `#2A2E25`

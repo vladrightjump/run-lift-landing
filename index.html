@@ -22,6 +22,29 @@
     from { opacity: 1; transform: translate(-50%, 0); }
     to   { opacity: 0; transform: translate(-50%, -16px); }
   }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pop-in {
+    0%   { transform: scale(0); }
+    70%  { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+  @keyframes draw-check { to { stroke-dashoffset: 0; } }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes ring-pulse {
+    0%   { transform: scale(0.9); opacity: 0.7; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201,242,75,0.35); }
+    50%      { box-shadow: 0 0 24px 4px rgba(201,242,75,0.22); }
+  }
+  @keyframes dot-blink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.35; transform: scale(0.75); }
+  }
 
   /* ---- Top bar ---- */
   .topbar {
@@ -42,6 +65,45 @@
   .brand-name { font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 1px; text-transform: uppercase; }
   .topbar-meta { display: flex; align-items: center; gap: 24px; }
   .topbar-info { font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #9BA08F; }
+
+  /* ---- Countdown ---- */
+  .countdown { display: flex; align-items: center; gap: 10px; }
+  .countdown-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #C9F24B;
+    animation: dot-blink 1.4s ease-in-out infinite;
+  }
+  .countdown-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: #9BA08F;
+  }
+  .countdown-values { display: flex; align-items: baseline; gap: 6px; }
+  .countdown-num {
+    font-family: Anton, sans-serif; font-size: 24px; line-height: 1;
+    color: #F2F3EC; font-variant-numeric: tabular-nums;
+  }
+  .countdown-num.accent { color: #C9F24B; }
+  .countdown-unit {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: #9BA08F;
+  }
+  @media (max-width: 720px) {
+    .countdown { order: 3; width: 100%; justify-content: flex-start; }
+  }
+
+  /* ---- Hero animations ---- */
+  .fade-line { display: inline-block; animation: fade-up 0.6s ease-out both; }
+  .fade-line.d1 { animation-delay: 0.1s; }
+  .fade-line.d2 { animation-delay: 0.25s; }
+  .fade-line.d3 { animation-delay: 0.4s; }
+  .fade-line.d4 { animation-delay: 0.55s; }
+  .hero-desc { animation: fade-up 0.6s ease-out 0.55s both; }
+  .btn-primary-lg.hero-cta {
+    animation: fade-up 0.6s ease-out 0.7s both, glow-pulse 3s ease-in-out 1.5s infinite;
+  }
+  .kicker { animation: fade-up 0.6s ease-out both; }
+
+  /* Scroll reveal — set by JS via IntersectionObserver */
+  [data-reveal] { will-change: opacity, transform; }
 
   /* ---- Buttons ---- */
   .btn-primary, .btn-primary-lg {
@@ -234,22 +296,105 @@
   .acord-error { font-size: 13px; color: #F26D6D; display: none; margin-top: -12px; }
   .acord-error.show { display: block; }
 
+  /* ---- Slots bar ---- */
+  .slots-bar {
+    border: 1px solid #2A2E25; border-bottom: none;
+    background: #1A1D17; padding: 18px 22px; display: grid; gap: 12px;
+  }
+  .slots-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .slots-label {
+    font-size: 13px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: #9BA08F;
+  }
+  .slots-count {
+    font-family: Anton, sans-serif; font-size: 22px; letter-spacing: 1px;
+    color: #C9F24B; transition: color 0.3s ease;
+  }
+  .slots-count.low { color: #F26D6D; }
+  .slots-grid {
+    display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px;
+  }
+  .slot { height: 8px; background: #2A2E25; transition: background 0.3s ease; }
+  .slot.filled { background: #C9F24B; }
+
+  /* ---- Form loading state ---- */
+  .form-loading {
+    border: 1px solid #2A2E25; background: #1A1D17;
+    padding: clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px);
+    text-align: center; display: grid; gap: 22px; justify-items: center;
+  }
+  .form-loading .spinner {
+    width: 52px; height: 52px;
+    border: 4px solid #2A2E25; border-top-color: #C9F24B;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  .form-loading .label {
+    font-family: Anton, sans-serif; font-size: 22px;
+    text-transform: uppercase; letter-spacing: 1.5px; color: #C9CCBE;
+  }
+
+  /* ---- Form error state ---- */
+  .form-error {
+    border: 1px solid #F26D6D; background: #1A1D17;
+    padding: clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px);
+    text-align: center; display: grid; gap: 16px; justify-items: center;
+  }
+  .form-error .x-circle {
+    width: 84px; height: 84px; background: #3A1A1A; border-radius: 50%;
+    display: grid; place-items: center;
+    animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .form-error .x-circle span { font-size: 38px; font-weight: 700; color: #F26D6D; }
+  .form-error .headline {
+    font-family: Anton, sans-serif; font-size: clamp(28px, 6vw, 40px);
+    text-transform: uppercase; letter-spacing: 1px; color: #F26D6D;
+    animation: fade-up 0.5s ease-out 0.3s both;
+  }
+  .form-error p { margin: 0; font-size: 16px; line-height: 1.55; color: #9BA08F; max-width: 380px; animation: fade-up 0.5s ease-out 0.5s both; }
+  .btn-retry {
+    background: #C9F24B; color: #121410; border: none; cursor: pointer;
+    font-family: Anton, sans-serif; font-size: 17px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 14px 32px; margin-top: 8px;
+    animation: fade-up 0.5s ease-out 0.7s both;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .btn-retry:hover { background: #DDFF66; transform: translateY(-2px); }
+  .btn-retry:active { transform: translateY(0) scale(0.97); }
+
   /* ---- Confirmation ---- */
   .confirmation {
     border: 1px solid #C9F24B; background: #1A1D17;
     padding: clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px);
     text-align: center; display: grid; gap: 16px; justify-items: center;
   }
-  .confirmation .check {
-    width: 56px; height: 56px; background: #C9F24B; color: #121410;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; font-weight: 700;
+  .confirmation .check-wrap {
+    position: relative; width: 84px; height: 84px;
+    display: grid; place-items: center;
+  }
+  .confirmation .check-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid #C9F24B;
+    animation: ring-pulse 1.6s ease-out 0.4s 3;
+  }
+  .confirmation .check-circle {
+    width: 84px; height: 84px; background: #C9F24B; border-radius: 50%;
+    display: grid; place-items: center;
+    animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .confirmation .check-circle svg path {
+    stroke-dasharray: 40; stroke-dashoffset: 40;
+    animation: draw-check 0.5s ease-out 0.35s forwards;
   }
   .confirmation .headline {
     font-family: Anton, sans-serif; font-size: clamp(28px, 6vw, 40px);
     text-transform: uppercase; letter-spacing: 1px;
+    animation: fade-up 0.5s ease-out 0.5s both;
   }
-  .confirmation p { margin: 0; font-size: 16px; line-height: 1.55; color: #9BA08F; max-width: 380px; }
+  .confirmation p { margin: 0; font-size: 16px; line-height: 1.55; color: #9BA08F; max-width: 380px; animation: fade-up 0.5s ease-out 0.8s both; }
+  .confirmation .btn-ghost { animation: fade-up 0.5s ease-out 1.1s both; }
 
   /* ---- Toast (top-center) ---- */
   .toast {
@@ -271,7 +416,10 @@
     display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px;
   }
   .foot-brand { font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; color: #9BA08F; }
-  .foot-email { font-size: 13px; color: #5E6355; }
+  .foot-organizers { font-size: 13px; color: #9BA08F; line-height: 1.7; }
+  .foot-organizers .name { color: #C9CCBE; font-weight: 600; }
+  .foot-organizers a { color: #C9F24B; font-weight: 600; }
+  .foot-organizers a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -288,6 +436,16 @@
     <div class="brand-mark">RL</div>
     <span class="brand-name">Run + Lift</span>
   </div>
+  <div class="countdown" aria-label="Timp până la start">
+    <span class="countdown-dot" aria-hidden="true"></span>
+    <span class="countdown-label">Start în</span>
+    <div class="countdown-values">
+      <span class="countdown-num accent" id="cd-zile">00</span><span class="countdown-unit">z</span>
+      <span class="countdown-num" id="cd-ore">00</span><span class="countdown-unit">h</span>
+      <span class="countdown-num" id="cd-minute">00</span><span class="countdown-unit">m</span>
+      <span class="countdown-num" id="cd-secunde">00</span><span class="countdown-unit">s</span>
+    </div>
+  </div>
   <div class="topbar-meta">
     <span class="topbar-info">11 iulie 2026 · Stadionul Dinamo, Chișinău</span>
     <a href="#inscriere" class="btn-primary">Înscrie-te</a>
@@ -299,13 +457,13 @@
   <div class="container">
     <p class="kicker">Sâmbătă, 11 iulie 2026 · Stadionul Dinamo, Chișinău</p>
     <h1>
-      Aleargă.<br>
-      <span class="accent">Ridică.</span><br>
-      Rezistă.
+      <span class="fade-line d1">Aleargă.</span><br>
+      <span class="fade-line d2 accent">Ridică.</span><br>
+      <span class="fade-line d3">Rezistă.</span>
     </h1>
     <div class="hero-row">
       <p class="hero-desc">Eveniment de alergare și forță în aer liber — 5 runde de Bear Complex combinate cu alergare. Pentru oricine vrea să se pună la încercare, indiferent de nivel.</p>
-      <a href="#inscriere" class="btn-primary-lg">Rezervă-ți locul</a>
+      <a href="#inscriere" class="btn-primary-lg hero-cta">Rezervă-ți locul</a>
     </div>
   </div>
 </section>
@@ -313,13 +471,13 @@
 <!-- ===== FORMAT ===== -->
 <section class="section">
   <div class="container">
-    <div class="section-head">
+    <div class="section-head" data-reveal>
       <span class="section-num">01</span>
       <h2>Formatul</h2>
     </div>
     <p class="section-intro">Bear Complex + alergare — 5 runde contra cronometru. Antrenorul îți alege echipamentul și greutatea în funcție de pregătirea fizică — halteră, kettlebell sau gantere — și faci în fiecare rundă complexul respectiv, câte 12 repetări la fiecare mișcare.</p>
     <div class="eq-grid">
-      <div class="eq-card">
+      <div class="eq-card" data-reveal>
         <div class="eq-label">HALTERĂ (BARĂ)</div>
         <ul class="eq-list">
           <li><span class="rep">12</span>clean</li>
@@ -329,7 +487,7 @@
         </ul>
         <p class="eq-foot">Bare de 100 / 80 / 60 / 40 kg</p>
       </div>
-      <div class="eq-card">
+      <div class="eq-card" data-reveal>
         <div class="eq-label">KETTLEBELL</div>
         <ul class="eq-list">
           <li><span class="rep">12</span>deadlift</li>
@@ -339,7 +497,7 @@
         </ul>
         <p class="eq-foot">Kettlebell-uri de 32 / 24 / 16 kg</p>
       </div>
-      <div class="eq-card">
+      <div class="eq-card" data-reveal>
         <div class="eq-label">GANTERE</div>
         <ul class="eq-list">
           <li><span class="rep">12</span>deadlift</li>
@@ -361,7 +519,7 @@
 <section class="section">
   <div class="container venue-grid">
     <div>
-      <div class="section-head" style="margin-bottom: 32px">
+      <div class="section-head" style="margin-bottom: 32px" data-reveal>
         <span class="section-num">02</span>
         <h2>Locația</h2>
       </div>
@@ -403,11 +561,11 @@
 <section id="inscriere" class="reg-section">
   <div class="container reg-grid">
     <div>
-      <div class="section-head" style="margin-bottom: 32px">
+      <div class="section-head" style="margin-bottom: 32px" data-reveal>
         <span class="section-num">03</span>
         <h2>Înscriere</h2>
       </div>
-      <p class="reg-intro">Completează formularul și primești confirmarea pe email.</p>
+      <p class="reg-intro">Completează formularul și primești confirmarea pe email. Înscrierile sunt deschise <strong style="color: #C9F24B">până pe 10 iulie</strong> — <strong style="color: #C9F24B">doar 16 locuri</strong>.</p>
       <div class="summary-box">
         <div class="summary-title">Pe scurt</div>
         <ul class="summary-list">
@@ -415,11 +573,21 @@
           <li><span class="arrow">→</span>5 runde: alergare 400 m + Bear Complex</li>
           <li><span class="arrow">→</span>Antrenorul îți alege echipamentul: halteră, kettlebell sau gantere</li>
           <li><span class="arrow">→</span>Deschis oricui, indiferent de nivel</li>
+          <li><span class="arrow">→</span>Înscrieri până pe 10 iulie · limită de 16 participanți</li>
+          <li><span class="arrow">→</span>Adu cu tine: apă pentru hidratare și bună dispoziție</li>
         </ul>
       </div>
     </div>
 
     <div>
+      <div class="slots-bar">
+        <div class="slots-head">
+          <span class="slots-label">Locuri rămase</span>
+          <span class="slots-count" id="slots-count">7 / 16</span>
+        </div>
+        <div class="slots-grid" id="slots-grid" aria-hidden="true"></div>
+      </div>
+
       <form id="reg-form" class="reg-form" novalidate>
         <div class="row-2">
           <label class="field" data-field="nume">
@@ -451,9 +619,28 @@
         <button type="submit" class="btn-submit">Trimite înscrierea</button>
       </form>
 
+      <div id="form-loading" class="form-loading" hidden>
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="label">Se trimite înscrierea…</div>
+      </div>
+
+      <div id="form-error" class="form-error" hidden>
+        <div class="x-circle" aria-hidden="true"><span>✕</span></div>
+        <div class="headline">Ceva n-a mers</div>
+        <p>Înscrierea nu a putut fi trimisă. Verifică conexiunea la internet și încearcă din nou.</p>
+        <button type="button" id="retry-btn" class="btn-retry">Încearcă din nou</button>
+      </div>
+
       <div id="confirmation" class="confirmation" hidden>
-        <div class="check">✓</div>
-        <div class="headline">Ești pe listă, <span id="confirm-name">atlet</span>!</div>
+        <div class="check-wrap">
+          <div class="check-ring" aria-hidden="true"></div>
+          <div class="check-circle">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+              <path d="M10 23 L19 32 L34 13" stroke="#121410" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="headline">Te-ai înregistrat, <span id="confirm-name">atlet</span>!</div>
         <p>Ți-am trimis un email de confirmare cu toate detaliile. Ne vedem pe 11 iulie la start.</p>
         <button type="button" id="reset-btn" class="btn-ghost">Înscrie altă persoană</button>
       </div>
@@ -464,10 +651,30 @@
 <!-- ===== FOOTER ===== -->
 <footer>
   <span class="foot-brand">Run + Lift · 2026</span>
-  <span class="foot-email">contact@runlift.md</span>
+  <span class="foot-organizers">
+    Organizatori:
+    <span class="name">Vladislav Filip</span>
+    <a href="tel:+37369509949">+373 69 509 949</a>
+    <a href="https://www.instagram.com/vladfillip" target="_blank" rel="noopener">@vladfillip</a>
+    ·
+    <span class="name">Roma Morari</span>
+    <a href="tel:+37369819404">+373 69 819 404</a>
+    <a href="https://www.instagram.com/morarroma" target="_blank" rel="noopener">@morarroma</a>
+  </span>
 </footer>
 
 <script>
+  // =========================================================================
+  // CONFIGURARE EVENIMENT
+  // -------------------------------------------------------------------------
+  // Câți dintre cele 16 locuri sunt deja ocupate. Actualizează manual pe
+  // măsură ce vin înscrieri în Google Form (verifică tab-ul Responses).
+  // În sesiunea curentă, contorul crește cu 1 la fiecare submit reușit.
+  // =========================================================================
+  var OCCUPIED_SLOTS = 9;
+  var TOTAL_SLOTS = 16;
+  var EVENT_DATE = new Date(2026, 6, 11, 6, 30, 0); // 11 iulie 2026, 06:30
+
   // =========================================================================
   // GOOGLE FORMS INTEGRATION
   // -------------------------------------------------------------------------
@@ -530,9 +737,12 @@
 
   (function () {
     var form = document.getElementById('reg-form');
+    var loadingEl = document.getElementById('form-loading');
+    var errorEl = document.getElementById('form-error');
     var confirmation = document.getElementById('confirmation');
     var nameEl = document.getElementById('confirm-name');
     var resetBtn = document.getElementById('reset-btn');
+    var retryBtn = document.getElementById('retry-btn');
     var acordLabel = document.getElementById('acord-label');
     var acordError = document.getElementById('acord-error');
 
@@ -543,6 +753,81 @@
 
     var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     var PHONE_RE = /^\+?[0-9][0-9 ()\-]{6,14}$/;
+
+    var sessionSignups = 0;
+    var pendingFirstName = null;
+
+    // ---- Countdown timer ----
+    var cdZile = document.getElementById('cd-zile');
+    var cdOre = document.getElementById('cd-ore');
+    var cdMinute = document.getElementById('cd-minute');
+    var cdSecunde = document.getElementById('cd-secunde');
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+
+    function updateCountdown() {
+      var diff = Math.max(0, EVENT_DATE.getTime() - Date.now());
+      cdZile.textContent = pad(Math.floor(diff / 86400000));
+      cdOre.textContent = pad(Math.floor(diff / 3600000) % 24);
+      cdMinute.textContent = pad(Math.floor(diff / 60000) % 60);
+      cdSecunde.textContent = pad(Math.floor(diff / 1000) % 60);
+    }
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+
+    // ---- Slots bar ----
+    var slotsGrid = document.getElementById('slots-grid');
+    var slotsCount = document.getElementById('slots-count');
+
+    function renderSlots() {
+      var occupied = Math.min(TOTAL_SLOTS, OCCUPIED_SLOTS + sessionSignups);
+      var remaining = TOTAL_SLOTS - occupied;
+      slotsGrid.innerHTML = '';
+      for (var i = 0; i < TOTAL_SLOTS; i++) {
+        var s = document.createElement('div');
+        s.className = 'slot' + (i < occupied ? ' filled' : '');
+        slotsGrid.appendChild(s);
+      }
+      slotsCount.textContent = remaining + ' / ' + TOTAL_SLOTS;
+      slotsCount.classList.toggle('low', remaining <= 3);
+    }
+    renderSlots();
+
+    // ---- Scroll reveal ----
+    if ('IntersectionObserver' in window) {
+      var revealObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var el = entry.target;
+          revealObserver.unobserve(el);
+          var delay = Number(el.getAttribute('data-reveal-delay') || 0);
+          el.animate(
+            [{ opacity: 0, transform: 'translateY(20px)' }, { opacity: 1, transform: 'translateY(0)' }],
+            { duration: 550, delay: delay, easing: 'ease-out', fill: 'backwards' }
+          );
+          el.style.opacity = '';
+        });
+      }, { threshold: 0.15 });
+
+      setTimeout(function () {
+        var idx = 0;
+        document.querySelectorAll('[data-reveal]').forEach(function (el) {
+          if (el.getBoundingClientRect().top > window.innerHeight * 0.9) {
+            el.style.opacity = '0';
+            el.setAttribute('data-reveal-delay', String((idx % 3) * 120));
+            revealObserver.observe(el);
+            idx++;
+          }
+        });
+      }, 100);
+    }
+
+    // ---- Form state machine ----
+    function showState(state) {
+      form.hidden = state !== 'form';
+      loadingEl.hidden = state !== 'loading';
+      errorEl.hidden = state !== 'error';
+      confirmation.hidden = state !== 'success';
+    }
 
     function showToast(kind, msg) {
       clearTimeout(toastTimer);
@@ -587,21 +872,18 @@
       if (e.target.name === 'acord') setAcordInvalid(!e.target.checked ? false : false);
     });
 
-    var submitBtn = form.querySelector('button[type="submit"]');
-
-    function setSubmitting(isSubmitting) {
-      submitBtn.disabled = isSubmitting;
-      submitBtn.textContent = isSubmitting ? 'Se trimite...' : 'Trimite înscrierea';
-      submitBtn.style.opacity = isSubmitting ? '0.7' : '1';
-      submitBtn.style.cursor = isSubmitting ? 'wait' : 'pointer';
-    }
-
-    function showConfirmation(firstName) {
+    function transitionToSuccess(firstName) {
       nameEl.textContent = firstName;
-      form.hidden = true;
-      confirmation.hidden = false;
+      sessionSignups++;
+      renderSlots();
+      showState('success');
       showToast('success', 'Înscrierea a fost trimisă!');
       window.scrollTo({ top: confirmation.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+    }
+
+    function transitionToError() {
+      showState('error');
+      showToast('error', 'Înscrierea nu a putut fi trimisă.');
     }
 
     form.addEventListener('submit', function (e) {
@@ -645,31 +927,32 @@
       }
 
       var firstName = data.nume.split(/\s+/)[0] || 'atlet';
+      pendingFirstName = firstName;
+      showState('loading');
 
       if (!isFormConfigured()) {
         console.warn('[Run+Lift] Google Form nu e configurat (vezi GOOGLE_FORM în <script>). Simulez trimiterea.');
-        showConfirmation(firstName);
+        setTimeout(function () { transitionToSuccess(firstName); }, 1800);
         return;
       }
 
-      setSubmitting(true);
       submitToGoogleForm(data)
-        .then(function () {
-          setSubmitting(false);
-          showConfirmation(firstName);
-        })
+        .then(function () { transitionToSuccess(firstName); })
         .catch(function (err) {
           console.error('[Run+Lift] Eroare la trimitere:', err);
-          setSubmitting(false);
-          showToast('error', 'Nu am putut trimite înscrierea. Încearcă din nou sau scrie-ne pe contact@runlift.md.');
+          transitionToError();
         });
     });
 
     resetBtn.addEventListener('click', function () {
       form.reset();
       clearAllErrors();
-      confirmation.hidden = true;
-      form.hidden = false;
+      showState('form');
+    });
+
+    retryBtn.addEventListener('click', function () {
+      clearAllErrors();
+      showState('form');
     });
   })();
 </script>
