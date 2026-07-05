@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run + Lift — 11 iulie 2026, Stadionul Dinamo</title>
+<meta name="description" content="Eveniment de alergare și forță în aer liber. 5 runde de Bear Complex combinate cu alergare. Sâmbătă, 11 iulie 2026, Stadionul Dinamo, Chișinău.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #121410; }
+  body { color: #F1EFE6; font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  ::selection { background: #C9F24B; color: #121410; }
+  a { text-decoration: none; }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate(-50%, -16px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+  @keyframes toast-out {
+    from { opacity: 1; transform: translate(-50%, 0); }
+    to   { opacity: 0; transform: translate(-50%, -16px); }
+  }
+
+  /* ---- Top bar ---- */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px 24px;
+    padding: 14px clamp(16px, 4vw, 40px);
+    background: rgba(18,20,16,0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #2A2E25;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 30px; height: 30px; background: #C9F24B;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Anton, sans-serif; font-size: 15px; color: #121410; letter-spacing: 0.5px;
+  }
+  .brand-name { font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 1px; text-transform: uppercase; }
+  .topbar-meta { display: flex; align-items: center; gap: 24px; }
+  .topbar-info { font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #9BA08F; }
+
+  /* ---- Buttons ---- */
+  .btn-primary, .btn-primary-lg {
+    display: inline-block; background: #C9F24B; color: #121410;
+    font-weight: 700; text-transform: uppercase;
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+    border: none; cursor: pointer;
+  }
+  .btn-primary { font-size: 13px; letter-spacing: 1.5px; padding: 11px 22px; }
+  .btn-primary-lg { font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1.5px; padding: 18px 36px; font-weight: 400; }
+  .btn-submit {
+    background: #C9F24B; color: #121410; border: none; cursor: pointer;
+    font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 18px; margin-top: 4px;
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .btn-primary:hover, .btn-primary-lg:hover, .btn-submit:hover {
+    background: #DDFF66; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,242,75,0.25);
+  }
+  .btn-primary-lg:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(201,242,75,0.28); }
+  .btn-primary:active, .btn-primary-lg:active, .btn-submit:active {
+    transform: translateY(0) scale(0.97); box-shadow: none;
+  }
+  .btn-ghost {
+    background: transparent; border: 1px solid #2A2E25; color: #9BA08F; cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase; padding: 12px 24px; margin-top: 8px;
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  }
+  .btn-ghost:hover { border-color: #C9F24B; color: #C9F24B; transform: translateY(-2px); }
+  .btn-ghost:active { transform: translateY(0) scale(0.97); }
+
+  /* ---- Hero ---- */
+  .hero {
+    padding: clamp(48px, 9vw, 88px) clamp(20px, 5vw, 40px) clamp(48px, 7vw, 72px);
+    border-bottom: 1px solid #2A2E25; position: relative; overflow: hidden;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .kicker { margin: 0 0 24px; font-size: 15px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: #9BA08F; }
+  .hero h1 {
+    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+    font-size: clamp(60px, 13vw, 136px); line-height: 0.95; letter-spacing: 0.5px;
+    text-transform: uppercase; text-wrap: balance;
+  }
+  .hero h1 .accent { color: #C9F24B; }
+  .hero-row {
+    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+    gap: 32px; margin-top: 40px;
+  }
+  .hero-desc { margin: 0; max-width: 480px; font-size: 18px; line-height: 1.55; color: #C9CCBE; text-wrap: pretty; }
+
+  /* ---- Section headers ---- */
+  .section { padding: clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px); border-bottom: 1px solid #2A2E25; }
+  .section-head { display: flex; align-items: baseline; gap: 20px; margin-bottom: 44px; }
+  .section-num { font-family: Anton, sans-serif; font-size: 15px; color: #C9F24B; letter-spacing: 3px; text-transform: uppercase; }
+  .section h2 {
+    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+    font-size: clamp(34px, 6vw, 52px); letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .section-intro { margin: 0 0 40px; max-width: 620px; font-size: 17px; line-height: 1.55; color: #C9CCBE; text-wrap: pretty; }
+
+  /* ---- Equipment cards ---- */
+  .eq-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .eq-card {
+    background: #1A1D17; border: 1px solid #2A2E25; padding: 28px 24px;
+    transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .eq-card:hover {
+    background: #262C1B; border-color: #C9F24B;
+    transform: translateY(-4px); box-shadow: 0 14px 32px rgba(0,0,0,0.35);
+  }
+  .eq-label { font-family: Anton, sans-serif; font-size: 13px; color: #9BA08F; letter-spacing: 2px; margin-bottom: 14px; }
+  .eq-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .eq-list li { display: flex; gap: 10px; font-size: 15px; color: #C9CCBE; }
+  .eq-list .rep { font-family: Anton, sans-serif; color: #C9F24B; }
+  .eq-foot { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid #2A2E25; font-size: 13px; color: #9BA08F; }
+  .rounds-banner {
+    margin-top: 16px; background: #1A1D17; border: 1px solid #2A2E25; padding: 20px 24px;
+    display: flex; flex-wrap: wrap; gap: 14px; align-items: baseline;
+  }
+  .rounds-banner .label { font-family: Anton, sans-serif; font-size: 16px; color: #C9F24B; text-transform: uppercase; letter-spacing: 1px; }
+  .rounds-banner .desc { font-size: 14px; color: #9BA08F; }
+
+  /* ---- Venue ---- */
+  .venue-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+    gap: clamp(32px, 5vw, 56px); align-items: center;
+  }
+  .venue-table { display: grid; gap: 0; border: 1px solid #2A2E25; }
+  .venue-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 18px 22px; border-bottom: 1px solid #2A2E25;
+  }
+  .venue-row:last-child { border-bottom: none; }
+  .venue-key { font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #9BA08F; }
+  .venue-val { font-size: 16px; font-weight: 600; }
+  .venue-note { margin: 24px 0 0; font-size: 14px; line-height: 1.55; color: #9BA08F; text-wrap: pretty; }
+  .venue-map {
+    border: 1px solid #2A2E25; aspect-ratio: 4 / 3;
+    position: relative; overflow: hidden; background: #1A1D17;
+  }
+  .venue-map iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+    filter: contrast(1.02) brightness(0.95);
+  }
+  .venue-map-caption {
+    position: absolute; left: 12px; bottom: 12px; z-index: 2;
+    display: flex; gap: 10px; align-items: center;
+    background: rgba(18,20,16,0.92); border: 1px solid #2A2E25;
+    padding: 8px 12px; backdrop-filter: blur(4px);
+  }
+  .venue-map-caption .dot {
+    width: 10px; height: 10px; background: #C9F24B; border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(201,242,75,0.18);
+  }
+  .venue-map-caption .txt {
+    font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #F1EFE6;
+  }
+  .venue-map-link {
+    position: absolute; right: 12px; bottom: 12px; z-index: 2;
+    background: #C9F24B; color: #121410;
+    font-family: Anton, sans-serif; font-size: 12px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 8px 14px;
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .venue-map-link:hover {
+    background: #DDFF66; transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(201,242,75,0.28);
+  }
+
+  /* ---- Registration ---- */
+  .reg-section { padding: clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px) clamp(64px, 9vw, 96px); }
+  .reg-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+    gap: clamp(32px, 5vw, 56px); align-items: start;
+  }
+  .reg-intro { margin: 0 0 28px; font-size: 17px; line-height: 1.55; color: #C9CCBE; text-wrap: pretty; }
+
+  .summary-box {
+    border: 1px solid #2A2E25; background: #1A1D17; padding: 26px;
+  }
+  .summary-title {
+    font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 2px;
+    text-transform: uppercase; color: #C9F24B; margin-bottom: 18px;
+  }
+  .summary-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  .summary-list li { display: flex; gap: 12px; font-size: 15px; line-height: 1.5; color: #C9CCBE; }
+  .summary-list .arrow { color: #C9F24B; font-weight: 700; }
+
+  form.reg-form {
+    border: 1px solid #2A2E25; background: #1A1D17;
+    padding: clamp(20px, 4vw, 36px); display: grid; gap: 22px;
+  }
+  .row-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 18px; }
+  .field { display: grid; gap: 8px; }
+  .field > .label { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #9BA08F; }
+  .field .muted { color: #5E6355; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .field input[type="text"], .field input[type="tel"], .field input[type="email"] {
+    background: #121410; border: 1px solid #2A2E25; color: #F1EFE6;
+    font-family: Archivo, sans-serif; font-size: 15px; padding: 13px 14px;
+    outline: none; width: 100%; box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  }
+  .field input:focus {
+    border-color: #C9F24B; box-shadow: 0 0 0 3px rgba(201,242,75,0.18); transform: translateY(-1px);
+  }
+  .helper {
+    margin: 0; font-size: 14px; line-height: 1.5; color: #9BA08F; text-wrap: pretty;
+  }
+
+  /* Field errors */
+  .field-error { font-size: 13px; color: #F26D6D; display: none; }
+  .field.invalid > .label { color: #F26D6D; }
+  .field.invalid input { border-color: #F26D6D; }
+  .field.invalid input:focus { border-color: #F26D6D; box-shadow: 0 0 0 3px rgba(242,109,109,0.18); }
+  .field.invalid .field-error { display: block; }
+
+  .checkbox { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+  .checkbox input[type="checkbox"] {
+    width: 18px; height: 18px; margin: 2px 0 0;
+    accent-color: #C9F24B; cursor: pointer;
+    outline: 2px solid transparent; outline-offset: 2px;
+    transition: transform 0.15s ease, outline-color 0.2s ease;
+  }
+  .checkbox:hover input[type="checkbox"] { transform: scale(1.15); }
+  .checkbox span { font-size: 14px; line-height: 1.5; color: #9BA08F; transition: color 0.2s ease; }
+  .checkbox.invalid input[type="checkbox"] { outline-color: #F26D6D; }
+  .checkbox.invalid span { color: #F26D6D; }
+  .acord-error { font-size: 13px; color: #F26D6D; display: none; margin-top: -12px; }
+  .acord-error.show { display: block; }
+
+  /* ---- Confirmation ---- */
+  .confirmation {
+    border: 1px solid #C9F24B; background: #1A1D17;
+    padding: clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px);
+    text-align: center; display: grid; gap: 16px; justify-items: center;
+  }
+  .confirmation .check {
+    width: 56px; height: 56px; background: #C9F24B; color: #121410;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 700;
+  }
+  .confirmation .headline {
+    font-family: Anton, sans-serif; font-size: clamp(28px, 6vw, 40px);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .confirmation p { margin: 0; font-size: 16px; line-height: 1.55; color: #9BA08F; max-width: 380px; }
+
+  /* ---- Toast (top-center) ---- */
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 200; display: none; align-items: center; gap: 12px;
+    background: #3A1A1A; color: #F26D6D;
+    font-family: Archivo, sans-serif; font-size: 15px; font-weight: 600;
+    padding: 14px 22px; box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    max-width: min(90vw, 480px); border: 1px solid transparent;
+  }
+  .toast.show { display: flex; animation: toast-in 0.25s ease forwards; }
+  .toast.hide { animation: toast-out 0.2s ease forwards; }
+  .toast .icon { font-size: 17px; font-weight: 700; }
+  .toast.success { background: #C9F24B; color: #121410; }
+
+  /* ---- Footer ---- */
+  footer {
+    border-top: 1px solid #2A2E25; padding: 28px clamp(20px, 5vw, 40px);
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px;
+  }
+  .foot-brand { font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; color: #9BA08F; }
+  .foot-email { font-size: 13px; color: #5E6355; }
+</style>
+</head>
+<body>
+
+<!-- ===== TOAST ===== -->
+<div id="toast" class="toast" role="status" aria-live="polite">
+  <span class="icon" id="toast-icon">!</span>
+  <span id="toast-msg">Verifică câmpurile marcate cu roșu.</span>
+</div>
+
+<!-- ===== TOP BAR ===== -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">RL</div>
+    <span class="brand-name">Run + Lift</span>
+  </div>
+  <div class="topbar-meta">
+    <span class="topbar-info">11 iulie 2026 · Stadionul Dinamo, Chișinău</span>
+    <a href="#inscriere" class="btn-primary">Înscrie-te</a>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="container">
+    <p class="kicker">Sâmbătă, 11 iulie 2026 · Stadionul Dinamo, Chișinău</p>
+    <h1>
+      Aleargă.<br>
+      <span class="accent">Ridică.</span><br>
+      Rezistă.
+    </h1>
+    <div class="hero-row">
+      <p class="hero-desc">Eveniment de alergare și forță în aer liber — 5 runde de Bear Complex combinate cu alergare. Pentru oricine vrea să se pună la încercare, indiferent de nivel.</p>
+      <a href="#inscriere" class="btn-primary-lg">Rezervă-ți locul</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FORMAT ===== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2>Formatul</h2>
+    </div>
+    <p class="section-intro">Bear Complex + alergare — 5 runde contra cronometru. Antrenorul îți alege echipamentul și greutatea în funcție de pregătirea fizică — halteră, kettlebell sau gantere — și faci în fiecare rundă complexul respectiv, câte 12 repetări la fiecare mișcare.</p>
+    <div class="eq-grid">
+      <div class="eq-card">
+        <div class="eq-label">HALTERĂ (BARĂ)</div>
+        <ul class="eq-list">
+          <li><span class="rep">12</span>clean</li>
+          <li><span class="rep">12</span>front squat</li>
+          <li><span class="rep">12</span>jerk / push press</li>
+          <li><span class="rep">12</span>back squat</li>
+        </ul>
+        <p class="eq-foot">Bare de 100 / 80 / 60 / 40 kg</p>
+      </div>
+      <div class="eq-card">
+        <div class="eq-label">KETTLEBELL</div>
+        <ul class="eq-list">
+          <li><span class="rep">12</span>deadlift</li>
+          <li><span class="rep">12</span>swing</li>
+          <li><span class="rep">12</span>high pull</li>
+          <li><span class="rep">12</span>goblet squat</li>
+        </ul>
+        <p class="eq-foot">Kettlebell-uri de 32 / 24 / 16 kg</p>
+      </div>
+      <div class="eq-card">
+        <div class="eq-label">GANTERE</div>
+        <ul class="eq-list">
+          <li><span class="rep">12</span>deadlift</li>
+          <li><span class="rep">12</span>hang clean</li>
+          <li><span class="rep">12</span>push press</li>
+          <li><span class="rep">12</span>squat</li>
+        </ul>
+        <p class="eq-foot">Perechi de gantere de 15 / 12 / 10 kg</p>
+      </div>
+    </div>
+    <div class="rounds-banner">
+      <span class="label">5 runde</span>
+      <span class="desc">Fiecare rundă: alergare un cerc de 400 m + o rundă de Bear Complex</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== VENUE ===== -->
+<section class="section">
+  <div class="container venue-grid">
+    <div>
+      <div class="section-head" style="margin-bottom: 32px">
+        <span class="section-num">02</span>
+        <h2>Locația</h2>
+      </div>
+      <div class="venue-table">
+        <div class="venue-row">
+          <span class="venue-key">Unde</span>
+          <span class="venue-val">Stadionul Dinamo, Chișinău</span>
+        </div>
+        <div class="venue-row">
+          <span class="venue-key">Când</span>
+          <span class="venue-val">Sâmbătă, 11 iulie 2026</span>
+        </div>
+        <div class="venue-row">
+          <span class="venue-key">Ora</span>
+          <span class="venue-val">6:30</span>
+        </div>
+      </div>
+      <p class="venue-note">Zona de start și stațiile de forță sunt amplasate pe stadion. Hidratare la fața locului.</p>
+    </div>
+    <div class="venue-map">
+      <iframe
+        title="Stadionul Dinamo, Chișinău — hartă"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        allowfullscreen
+        src="https://maps.google.com/maps?q=Stadionul+Dinamo,+Strada+Alexei+%C8%98ciusev+106A,+Chi%C8%99in%C4%83u&t=h&z=17&hl=ro&output=embed"></iframe>
+      <div class="venue-map-caption">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="txt">Stadionul Dinamo · Str. Șciusev 106A</span>
+      </div>
+      <a class="venue-map-link"
+         href="https://www.google.com/maps/dir/?api=1&destination=47.0265979,28.8192078&destination_place_id=Stadionul+Dinamo,+Chi%C8%99in%C4%83u"
+         target="_blank" rel="noopener">Deschide în Google Maps</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== REGISTRATION ===== -->
+<section id="inscriere" class="reg-section">
+  <div class="container reg-grid">
+    <div>
+      <div class="section-head" style="margin-bottom: 32px">
+        <span class="section-num">03</span>
+        <h2>Înscriere</h2>
+      </div>
+      <p class="reg-intro">Completează formularul și primești confirmarea pe email.</p>
+      <div class="summary-box">
+        <div class="summary-title">Pe scurt</div>
+        <ul class="summary-list">
+          <li><span class="arrow">→</span>Sâmbătă, 11 iulie 2026, ora 6:30 — Stadionul Dinamo, Chișinău</li>
+          <li><span class="arrow">→</span>5 runde: alergare 400 m + Bear Complex</li>
+          <li><span class="arrow">→</span>Antrenorul îți alege echipamentul: halteră, kettlebell sau gantere</li>
+          <li><span class="arrow">→</span>Deschis oricui, indiferent de nivel</li>
+        </ul>
+      </div>
+    </div>
+
+    <div>
+      <form id="reg-form" class="reg-form" novalidate>
+        <div class="row-2">
+          <label class="field" data-field="nume">
+            <span class="label">Nume complet *</span>
+            <input name="nume" type="text" placeholder="Ana Popescu" autocomplete="name">
+            <span class="field-error">Completează numele complet.</span>
+          </label>
+          <label class="field" data-field="telefon">
+            <span class="label">Telefon *</span>
+            <input name="telefon" type="tel" placeholder="07xx xxx xxx" autocomplete="tel">
+            <span class="field-error">Numărul de telefon nu e valid.</span>
+          </label>
+        </div>
+        <label class="field" data-field="email">
+          <span class="label">Email *</span>
+          <input name="email" type="email" placeholder="ana@email.ro" autocomplete="email">
+          <span class="field-error">Adresa de email nu e validă.</span>
+        </label>
+        <p class="helper">Echipamentul și greutatea sunt alese de antrenor la fața locului, în funcție de pregătirea ta fizică.</p>
+        <label class="field" data-field="echipa">
+          <span class="label">Nume echipă / partener <span class="muted">(doar pentru Echipă de 2)</span></span>
+          <input name="echipa" type="text" placeholder="Opțional">
+        </label>
+        <label class="checkbox" data-field="acord" id="acord-label">
+          <input name="acord" type="checkbox">
+          <span>Confirm că sunt apt din punct de vedere medical pentru efort fizic intens și accept regulamentul evenimentului. *</span>
+        </label>
+        <span class="acord-error" id="acord-error">Trebuie să accepți regulamentul ca să te poți înscrie.</span>
+        <button type="submit" class="btn-submit">Trimite înscrierea</button>
+      </form>
+
+      <div id="confirmation" class="confirmation" hidden>
+        <div class="check">✓</div>
+        <div class="headline">Ești pe listă, <span id="confirm-name">atlet</span>!</div>
+        <p>Ți-am trimis un email de confirmare cu toate detaliile. Ne vedem pe 11 iulie la start.</p>
+        <button type="button" id="reset-btn" class="btn-ghost">Înscrie altă persoană</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <span class="foot-brand">Run + Lift · 2026</span>
+  <span class="foot-email">contact@runlift.md</span>
+</footer>
+
+<script>
+  // =========================================================================
+  // GOOGLE FORMS INTEGRATION
+  // -------------------------------------------------------------------------
+  // Cum obții aceste valori:
+  //  1. Creează un Google Form (forms.google.com) cu câmpuri:
+  //     - Nume complet (short answer, required)
+  //     - Telefon (short answer, required)
+  //     - Email (short answer, required)
+  //     - Nume echipă / partener (short answer, optional)
+  //     - Acord medical (checkbox, required)
+  //  2. Click "Send" → tab "Link" → copiază URL-ul.
+  //     Extrage FORM_ID din: https://docs.google.com/forms/d/e/{FORM_ID}/viewform
+  //  3. Click ⋮ (three dots, sus dreapta) → "Get pre-filled link" →
+  //     completează CU VALORI FIXE (ex "TEST", "123", etc), click "Get link" → "Copy link".
+  //     Din URL extrage fiecare entry.NNNN=... — acelea sunt ENTRY_ID-urile.
+  //     Exemplu: entry.1234567890=TEST → "nume": "1234567890"
+  //  4. Înlocuiește valorile de mai jos și salvează.
+  // =========================================================================
+  var GOOGLE_FORM = {
+    formId: 'REPLACE_WITH_FORM_ID',   // ex: '1FAIpQLSf...' (partea dintre /e/ și /viewform)
+    entries: {
+      nume:    'REPLACE_ENTRY_ID',    // ex: '1234567890'
+      telefon: 'REPLACE_ENTRY_ID',
+      email:   'REPLACE_ENTRY_ID',
+      echipa:  'REPLACE_ENTRY_ID',
+      acord:   'REPLACE_ENTRY_ID'     // pentru checkbox, valoarea trimisă e textul opțiunii, ex "Da"
+    },
+    acordValue: 'Da'                  // textul EXACT al opțiunii bifate în Google Form
+  };
+
+  function isFormConfigured() {
+    if (!GOOGLE_FORM.formId || GOOGLE_FORM.formId.indexOf('REPLACE') === 0) return false;
+    var e = GOOGLE_FORM.entries;
+    return e.nume && e.nume.indexOf('REPLACE') !== 0
+        && e.telefon && e.telefon.indexOf('REPLACE') !== 0
+        && e.email && e.email.indexOf('REPLACE') !== 0
+        && e.acord && e.acord.indexOf('REPLACE') !== 0;
+  }
+
+  function submitToGoogleForm(data) {
+    var url = 'https://docs.google.com/forms/d/e/' + GOOGLE_FORM.formId + '/formResponse';
+    var body = new URLSearchParams();
+    body.append('entry.' + GOOGLE_FORM.entries.nume, data.nume);
+    body.append('entry.' + GOOGLE_FORM.entries.telefon, data.telefon);
+    body.append('entry.' + GOOGLE_FORM.entries.email, data.email);
+    if (GOOGLE_FORM.entries.echipa && data.echipa) {
+      body.append('entry.' + GOOGLE_FORM.entries.echipa, data.echipa);
+    }
+    body.append('entry.' + GOOGLE_FORM.entries.acord, GOOGLE_FORM.acordValue);
+
+    // no-cors: Google acceptă cererea, dar noi nu putem citi răspunsul.
+    // E OK — dacă cererea a fost trimisă cu succes, promisiunea se rezolvă.
+    return fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    });
+  }
+
+  (function () {
+    var form = document.getElementById('reg-form');
+    var confirmation = document.getElementById('confirmation');
+    var nameEl = document.getElementById('confirm-name');
+    var resetBtn = document.getElementById('reset-btn');
+    var acordLabel = document.getElementById('acord-label');
+    var acordError = document.getElementById('acord-error');
+
+    var toast = document.getElementById('toast');
+    var toastIcon = document.getElementById('toast-icon');
+    var toastMsg = document.getElementById('toast-msg');
+    var toastTimer = null;
+
+    var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    var PHONE_RE = /^\+?[0-9][0-9 ()\-]{6,14}$/;
+
+    function showToast(kind, msg) {
+      clearTimeout(toastTimer);
+      toast.classList.remove('hide');
+      toast.classList.toggle('success', kind === 'success');
+      toastIcon.textContent = kind === 'success' ? '✓' : '!';
+      toastMsg.textContent = msg;
+      toast.classList.add('show');
+      toastTimer = setTimeout(hideToast, 3500);
+    }
+    function hideToast() {
+      if (!toast.classList.contains('show')) return;
+      toast.classList.add('hide');
+      setTimeout(function () {
+        toast.classList.remove('show');
+        toast.classList.remove('hide');
+      }, 200);
+    }
+
+    function fieldWrap(name) {
+      return form.querySelector('[data-field="' + name + '"]');
+    }
+    function setInvalid(name, isInvalid) {
+      var wrap = fieldWrap(name);
+      if (wrap) wrap.classList.toggle('invalid', !!isInvalid);
+    }
+    function setAcordInvalid(isInvalid) {
+      acordLabel.classList.toggle('invalid', !!isInvalid);
+      acordError.classList.toggle('show', !!isInvalid);
+    }
+    function clearAllErrors() {
+      ['nume', 'telefon', 'email'].forEach(function (n) { setInvalid(n, false); });
+      setAcordInvalid(false);
+    }
+
+    // Live-clear errors as user edits.
+    form.addEventListener('input', function (e) {
+      var wrap = e.target.closest('[data-field]');
+      if (wrap) wrap.classList.remove('invalid');
+    });
+    form.addEventListener('change', function (e) {
+      if (e.target.name === 'acord') setAcordInvalid(!e.target.checked ? false : false);
+    });
+
+    var submitBtn = form.querySelector('button[type="submit"]');
+
+    function setSubmitting(isSubmitting) {
+      submitBtn.disabled = isSubmitting;
+      submitBtn.textContent = isSubmitting ? 'Se trimite...' : 'Trimite înscrierea';
+      submitBtn.style.opacity = isSubmitting ? '0.7' : '1';
+      submitBtn.style.cursor = isSubmitting ? 'wait' : 'pointer';
+    }
+
+    function showConfirmation(firstName) {
+      nameEl.textContent = firstName;
+      form.hidden = true;
+      confirmation.hidden = false;
+      showToast('success', 'Înscrierea a fost trimisă!');
+      window.scrollTo({ top: confirmation.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      clearAllErrors();
+
+      var fd = new FormData(form);
+      var data = {
+        nume:    String(fd.get('nume') || '').trim(),
+        telefon: String(fd.get('telefon') || '').trim(),
+        email:   String(fd.get('email') || '').trim(),
+        echipa:  String(fd.get('echipa') || '').trim(),
+        acord:   !!fd.get('acord')
+      };
+
+      var errors = {};
+      if (data.nume.length < 3) errors.nume = true;
+      if (!PHONE_RE.test(data.telefon)) errors.telefon = true;
+      if (!EMAIL_RE.test(data.email)) errors.email = true;
+      if (!data.acord) errors.acord = true;
+
+      var count = Object.keys(errors).length;
+
+      if (count > 0) {
+        if (errors.nume) setInvalid('nume', true);
+        if (errors.telefon) setInvalid('telefon', true);
+        if (errors.email) setInvalid('email', true);
+        if (errors.acord) setAcordInvalid(true);
+
+        var msg = (errors.acord && count === 1)
+          ? 'Trebuie să accepți regulamentul ca să te poți înscrie.'
+          : 'Verifică câmpurile marcate cu roșu.';
+        showToast('error', msg);
+
+        var firstBad = ['nume', 'telefon', 'email'].find(function (n) { return errors[n]; });
+        if (firstBad) {
+          var input = form.querySelector('[name="' + firstBad + '"]');
+          if (input) input.focus({ preventScroll: false });
+        }
+        return;
+      }
+
+      var firstName = data.nume.split(/\s+/)[0] || 'atlet';
+
+      if (!isFormConfigured()) {
+        console.warn('[Run+Lift] Google Form nu e configurat (vezi GOOGLE_FORM în <script>). Simulez trimiterea.');
+        showConfirmation(firstName);
+        return;
+      }
+
+      setSubmitting(true);
+      submitToGoogleForm(data)
+        .then(function () {
+          setSubmitting(false);
+          showConfirmation(firstName);
+        })
+        .catch(function (err) {
+          console.error('[Run+Lift] Eroare la trimitere:', err);
+          setSubmitting(false);
+          showToast('error', 'Nu am putut trimite înscrierea. Încearcă din nou sau scrie-ne pe contact@runlift.md.');
+        });
+    });
+
+    resetBtn.addEventListener('click', function () {
+      form.reset();
+      clearAllErrors();
+      confirmation.hidden = true;
+      form.hidden = false;
+    });
+  })();
+</script>
+
+</body>
+</html>
