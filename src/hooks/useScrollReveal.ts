@@ -8,6 +8,8 @@ import { useEffect } from 'react';
 export const useScrollReveal = () => {
   useEffect(() => {
     if (!('IntersectionObserver' in window)) return;
+    // Fără animații de reveal pentru utilizatorii care preferă mișcare redusă.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const observer = new IntersectionObserver(
       (entries) => {

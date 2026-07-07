@@ -2,47 +2,28 @@
  * Configurări eveniment — actualizează valorile de mai jos manual.
  */
 
+// Fallback static — folosit doar dacă API-ul de statistici nu răspunde.
+// Numărul live vine din Supabase (vezi useStats).
 export const OCCUPIED_SLOTS = 9;
-export const TOTAL_SLOTS = 16;
-export const EVENT_DATE = new Date(2026, 6, 11, 6, 30, 0); // 11 iulie 2026, 06:30
+export const TOTAL_SLOTS = 30;
+
+// Orele sunt fixate pe fusul orar al Chișinăului (UTC+3 vara) — vizitatorii
+// din alte fusuri văd același moment absolut, nu ora lor locală.
+export const EVENT_DATE = new Date('2026-07-11T06:30:00+03:00'); // 11 iulie 2026, 06:30
+export const EVENT_END_DATE = new Date(EVENT_DATE.getTime() + 6 * 60 * 60 * 1000); // start + 6h
+export const REGISTRATION_DEADLINE = new Date('2026-07-11T00:00:00+03:00'); // până pe 10 iulie inclusiv
 
 /**
- * Google Forms integration.
+ * Supabase — backend-ul de înscrieri.
  *
- * Cum obții aceste valori:
- *  1. Creează un Google Form (forms.google.com) cu câmpurile:
- *     - Nume complet (short answer, required)
- *     - Telefon (short answer, required)
- *     - Email (short answer, required)
- *     - Nume echipă / partener (short answer, optional)
- *     - Acord medical (checkbox, o singură opțiune "Da", required)
- *  2. Click "Send" → tab "Link" → copiază URL-ul → extrage FORM_ID
- *     din: https://docs.google.com/forms/d/e/{FORM_ID}/viewform
- *  3. Click ⋮ → "Get pre-filled link" → completează cu valori de test →
- *     "Get link" → "Copy link". Din URL extrage entry.NNNN — acelea
- *     sunt ENTRY_ID-urile.
- *  4. Înlocuiește valorile de mai jos.
+ * `publishableKey` e cheia publică (safe în client): permite doar INSERT
+ * în `registrations` (RLS) și citirea RPC-ului `public_stats`, care expune
+ * exclusiv date ne-personale (număr înscriși + prenume + echipă).
  */
-export const GOOGLE_FORM = {
-  formId: 'REPLACE_WITH_FORM_ID',
-  entries: {
-    nume: 'REPLACE_ENTRY_ID',
-    telefon: 'REPLACE_ENTRY_ID',
-    email: 'REPLACE_ENTRY_ID',
-    echipa: 'REPLACE_ENTRY_ID',
-    acord: 'REPLACE_ENTRY_ID',
-  },
-  acordValue: 'Da',
+export const SUPABASE = {
+  url: 'https://iattqvakxcgepjiecgpf.supabase.co',
+  publishableKey: 'sb_publishable_aNPzVWhAckqnG3qubS00vA_KoBQmh5s',
 } as const;
 
-export const isFormConfigured = (): boolean => {
-  const isReal = (v: string) => v.length > 0 && !v.startsWith('REPLACE');
-  const { formId, entries } = GOOGLE_FORM;
-  return (
-    isReal(formId) &&
-    isReal(entries.nume) &&
-    isReal(entries.telefon) &&
-    isReal(entries.email) &&
-    isReal(entries.acord)
-  );
-};
+export const isBackendConfigured = (): boolean =>
+  SUPABASE.url.startsWith('https://') && SUPABASE.publishableKey.length > 0;

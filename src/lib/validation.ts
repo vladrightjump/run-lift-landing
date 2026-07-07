@@ -10,12 +10,15 @@ export type FieldName = 'nume' | 'telefon' | 'email' | 'acord';
 export type FieldErrors = Partial<Record<FieldName, boolean>>;
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-export const PHONE_RE = /^\+?[0-9][0-9 ()\-]{6,14}$/;
+// Se aplică pe numărul normalizat (fără spații, paranteze, liniuțe, puncte).
+export const PHONE_RE = /^\+?\d{8,15}$/;
+
+export const normalizePhone = (value: string): string => value.replace(/[\s().-]/g, '');
 
 export const validate = (data: FormData): FieldErrors => {
   const errors: FieldErrors = {};
   if (data.nume.length < 3) errors.nume = true;
-  if (!PHONE_RE.test(data.telefon)) errors.telefon = true;
+  if (!PHONE_RE.test(normalizePhone(data.telefon))) errors.telefon = true;
   if (!EMAIL_RE.test(data.email)) errors.email = true;
   if (!data.acord) errors.acord = true;
   return errors;

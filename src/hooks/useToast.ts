@@ -4,39 +4,46 @@ export type ToastKind = 'error' | 'success';
 export type ToastState = { kind: ToastKind; msg: string } | null;
 
 const AUTO_HIDE_MS = 3500;
+const HIDE_ANIM_MS = 200;
 
 export const useToast = () => {
   const [toast, setToast] = useState<ToastState>(null);
   const [hiding, setHiding] = useState(false);
-  const timerRef = useRef<number | null>(null);
+  const autoHideTimerRef = useRef<number | null>(null);
+  const hideAnimTimerRef = useRef<number | null>(null);
 
-  const clearTimer = useCallback(() => {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
+  const clearTimers = useCallback(() => {
+    if (autoHideTimerRef.current !== null) {
+      window.clearTimeout(autoHideTimerRef.current);
+      autoHideTimerRef.current = null;
+    }
+    if (hideAnimTimerRef.current !== null) {
+      window.clearTimeout(hideAnimTimerRef.current);
+      hideAnimTimerRef.current = null;
     }
   }, []);
 
   const hideToast = useCallback(() => {
-    if (!toast) return;
     setHiding(true);
-    window.setTimeout(() => {
+    if (hideAnimTimerRef.current !== null) window.clearTimeout(hideAnimTimerRef.current);
+    hideAnimTimerRef.current = window.setTimeout(() => {
+      hideAnimTimerRef.current = null;
       setToast(null);
       setHiding(false);
-    }, 200);
-  }, [toast]);
+    }, HIDE_ANIM_MS);
+  }, []);
 
   const showToast = useCallback(
     (kind: ToastKind, msg: string) => {
-      clearTimer();
+      clearTimers();
       setHiding(false);
       setToast({ kind, msg });
-      timerRef.current = window.setTimeout(() => hideToast(), AUTO_HIDE_MS);
+      autoHideTimerRef.current = window.setTimeout(() => hideToast(), AUTO_HIDE_MS);
     },
-    [clearTimer, hideToast]
+    [clearTimers, hideToast]
   );
 
-  useEffect(() => () => clearTimer(), [clearTimer]);
+  useEffect(() => () => clearTimers(), [clearTimers]);
 
   return { toast, hiding, showToast, hideToast };
 };

@@ -1,7 +1,6 @@
 const MAP_SRC =
   'https://maps.google.com/maps?q=Stadionul+Dinamo,+Strada+Alexei+%C8%98ciusev+106A,+Chi%C8%99in%C4%83u&t=h&z=17&hl=ro&output=embed';
-const DIRECTIONS_URL =
-  'https://www.google.com/maps/dir/?api=1&destination=47.0265979,28.8192078&destination_place_id=Stadionul+Dinamo,+Chi%C8%99in%C4%83u';
+const DIRECTIONS_URL = 'https://www.google.com/maps/dir/?api=1&destination=47.0265979,28.8192078';
 
 export const VenueSection = () => (
   <section className="section">

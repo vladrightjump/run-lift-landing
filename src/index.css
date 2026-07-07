@@ -1,4 +1,7 @@
   html, body { margin: 0; padding: 0; background: #121410; }
+  html { scroll-behavior: smooth; }
+  /* Ancorele (#inscriere) nu intră sub topbar-ul sticky */
+  section[id] { scroll-margin-top: 90px; }
   body { color: #F1EFE6; font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
   ::selection { background: #C9F24B; color: #121410; }
   a { text-decoration: none; }
@@ -85,7 +88,6 @@
   .fade-line.d1 { animation-delay: 0.1s; }
   .fade-line.d2 { animation-delay: 0.25s; }
   .fade-line.d3 { animation-delay: 0.4s; }
-  .fade-line.d4 { animation-delay: 0.55s; }
   .hero-desc { animation: fade-up 0.6s ease-out 0.55s both; }
   .btn-primary-lg.hero-cta {
     animation: fade-up 0.6s ease-out 0.7s both, glow-pulse 3s ease-in-out 1.5s infinite;
@@ -305,10 +307,43 @@
   }
   .slots-count.low { color: #F26D6D; }
   .slots-grid {
-    display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px;
+    /* 30 de sloturi — 2 rânduri a câte 15 */
+    display: grid; grid-template-columns: repeat(15, 1fr); gap: 4px;
   }
   .slot { height: 8px; background: #2A2E25; transition: background 0.3s ease; }
   .slot.filled { background: #C9F24B; }
+
+  /* ---- Participants (04 · Cine vine) ---- */
+  .participants-section { border-top: 1px solid #2A2E25; border-bottom: none; }
+  .participants-section .section-head { margin-bottom: 32px; }
+  .plist-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; border: 1px solid #2A2E25; border-bottom: none;
+    background: #1A1D17; padding: 16px 22px;
+  }
+  .plist-label {
+    font-size: 13px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: #9BA08F;
+  }
+  .plist-count { font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1px; color: #C9F24B; }
+  .plist { border: 1px solid #2A2E25; background: #1A1D17; }
+  .plist-row {
+    display: flex; align-items: center; gap: 18px;
+    padding: 15px 22px; border-bottom: 1px solid #232620;
+  }
+  .plist-row:last-child { border-bottom: none; }
+  .plist-nr {
+    font-family: Anton, sans-serif; font-size: 15px; color: #5E6355;
+    min-width: 28px; font-variant-numeric: tabular-nums;
+  }
+  .plist-name { font-size: 15px; font-weight: 600; color: #F1EFE6; flex: 1; }
+  .plist-team { color: #9BA08F; font-weight: 400; }
+  .badge-new {
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: #121410; background: #C9F24B; padding: 3px 8px;
+  }
+  .plist-empty { padding: 36px 22px; text-align: center; font-size: 15px; color: #9BA08F; }
+  .plist-empty a { color: #C9F24B; font-weight: 600; }
 
   /* ---- Form loading state ---- */
   .form-loading {
@@ -332,6 +367,8 @@
     padding: clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px);
     text-align: center; display: grid; gap: 16px; justify-items: center;
   }
+  /* Panourile primesc focus programatic (tabindex=-1) — fără inel de focus */
+  .form-error:focus, .confirmation:focus { outline: none; }
   .form-error .x-circle {
     width: 84px; height: 84px; background: #3A1A1A; border-radius: 50%;
     display: grid; place-items: center;
@@ -353,6 +390,46 @@
   }
   .btn-retry:hover { background: #DDFF66; transform: translateY(-2px); }
   .btn-retry:active { transform: translateY(0) scale(0.97); }
+
+  /* Neutral variant for sold-out / event-ended */
+  #sold-out, #event-ended {
+    border-color: #2A2E25;
+  }
+  #sold-out .headline, #event-ended .headline {
+    color: #F1EFE6;
+    animation-delay: 0.1s;
+  }
+  .x-circle-neutral {
+    background: #262C1B !important;
+  }
+  .x-circle-neutral span { color: #C9F24B !important; }
+
+  /* ---- Offline banner ---- */
+  .offline-banner {
+    border: 1px solid #F26D6D; background: #3A1A1A;
+    color: #F26D6D;
+    padding: 12px 16px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 14px; font-weight: 600;
+    animation: fade-up 0.3s ease-out both;
+  }
+  .offline-banner span:first-child {
+    font-size: 18px; font-weight: 700;
+  }
+
+  /* Disabled submit button */
+  .btn-submit:disabled {
+    background: #2A2E25 !important;
+    color: #5E6355 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  .btn-submit:disabled:hover {
+    background: #2A2E25 !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
 
   /* ---- Confirmation ---- */
   .confirmation {
@@ -410,3 +487,13 @@
   .foot-organizers .name { color: #C9CCBE; font-weight: 600; }
   .foot-organizers a { color: #C9F24B; font-weight: 600; }
   .foot-organizers a:hover { text-decoration: underline; }
+
+  /* ---- Reduced motion ---- */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
