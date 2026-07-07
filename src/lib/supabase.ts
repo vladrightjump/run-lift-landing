@@ -53,10 +53,10 @@ export const submitRegistration = async (
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({
+        // echipa nu se mai colectează — coloana rămâne în DB cu default ''.
         nume: data.nume.trim(),
         telefon: normalizePhone(data.telefon),
         email: data.email.trim(),
-        echipa: data.echipa.trim(),
         acord: data.acord,
       }),
       signal,

@@ -30,10 +30,7 @@ export const ParticipantsSection = ({ stats }: Props) => {
           {participants.map((p, i) => (
             <div key={`${p.nume}-${i}`} className="plist-row">
               <span className="plist-nr">{String(i + 1).padStart(2, '0')}</span>
-              <span className="plist-name">
-                {p.nume}
-                {p.echipa && <span className="plist-team"> · {p.echipa}</span>}
-              </span>
+              <span className="plist-name">{p.nume}</span>
               {mine.has(p.nume) && <span className="badge-new">Nou</span>}
             </div>
           ))}

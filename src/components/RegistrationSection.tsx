@@ -156,7 +156,6 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
       nume: String(fd.get('nume') ?? '').trim(),
       telefon: String(fd.get('telefon') ?? '').trim(),
       email: String(fd.get('email') ?? '').trim(),
-      echipa: String(fd.get('echipa') ?? '').trim(),
       acord: !!fd.get('acord'),
     };
 
@@ -433,12 +432,6 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
               Echipamentul și greutatea sunt alese de antrenor la fața locului, în funcție de pregătirea ta
               fizică.
             </p>
-            <label className="field" data-field="echipa">
-              <span className="label">
-                Nume echipă / partener <span className="muted">(doar pentru Echipă de 2)</span>
-              </span>
-              <input name="echipa" type="text" placeholder="Opțional" />
-            </label>
             <label
               className={`checkbox${errors.acord ? ' invalid' : ''}`}
               data-field="acord"

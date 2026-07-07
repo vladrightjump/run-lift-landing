@@ -2,7 +2,6 @@ export type FormData = {
   nume: string;
   telefon: string;
   email: string;
-  echipa: string;
   acord: boolean;
 };
 

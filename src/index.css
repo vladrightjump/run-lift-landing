@@ -337,7 +337,6 @@
     min-width: 28px; font-variant-numeric: tabular-nums;
   }
   .plist-name { font-size: 15px; font-weight: 600; color: #F1EFE6; flex: 1; }
-  .plist-team { color: #9BA08F; font-weight: 400; }
   .badge-new {
     font-size: 11px; font-weight: 700; letter-spacing: 1px;
     text-transform: uppercase; color: #121410; background: #C9F24B; padding: 3px 8px;
