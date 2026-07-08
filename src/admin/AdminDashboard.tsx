@@ -6,6 +6,7 @@ import {
   InvalidTokenError,
 } from '../lib/adminApi';
 import type { AdminRegistration } from '../lib/adminApi';
+import { AdminEmailTab } from './AdminEmailTab';
 import { isDuplicateError } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
@@ -36,6 +37,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
+  const [tab, setTab] = useState<'participanti' | 'email'>('participanti');
   const toastTimerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const cd = useCountdown(EVENT_DATE);
@@ -213,6 +215,27 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       </header>
 
       <main className="admin-main">
+        <nav className="admin-tabs">
+          <button
+            type="button"
+            className={tab === 'participanti' ? 'active' : ''}
+            onClick={() => setTab('participanti')}
+          >
+            Participanți
+          </button>
+          <button
+            type="button"
+            className={tab === 'email' ? 'active' : ''}
+            onClick={() => setTab('email')}
+          >
+            Emailuri
+          </button>
+        </nav>
+
+        {tab === 'email' && <AdminEmailTab rows={all} formatDate={formatDate} showToast={showToast} />}
+
+        {tab === 'participanti' && (
+        <>
         <section className="admin-stats">
           <div className="admin-stat">
             <span className="admin-stat-label">Înscriși</span>
@@ -357,6 +380,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             </div>
           </div>
         </section>
+        </>
+        )}
       </main>
 
       {confirmRow && (
