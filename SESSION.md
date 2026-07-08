@@ -64,3 +64,11 @@ Last update: 2026-07-07 (Supabase migration + participants section + domain)
   rewrite `/admin` în `vercel.json`, stiluri `admin-*` în `index.css`.
 - Dashboard: stats + bară 30 sloturi, căutare, adăugare inline, ștergere cu undo
   (re-insert), export CSV, polling 15s, logout; token invalid → înapoi la login.
+
+## Arhivă înscrieri (8 iul 2026)
+
+- Tabel `registrations_backup` (migrarea `registrations_backup`): copie automată a
+  tuturor înscrierilor, întreținută prin trigger pe `registrations` (insert/update/delete).
+- Ștergerile din tabelul principal NU dispar din arhivă — rândul rămâne cu `deleted_at` setat.
+- RLS fără politici: vizibil doar din dashboard-ul Supabase / service role.
+- Backfill făcut pentru cei 25 existenți; testat insert + delete cap-coadă.
