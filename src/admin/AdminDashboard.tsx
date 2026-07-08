@@ -35,6 +35,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [draft, setDraft] = useState({ nume: '', telefon: '', email: '' });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
+  const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const cd = useCountdown(EVENT_DATE);
@@ -100,6 +101,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const remaining = Math.max(0, TOTAL_SLOTS - all.length);
   const percent = Math.round((all.length / TOTAL_SLOTS) * 100);
 
+  // Ștergerea efectivă — rulează doar după confirmarea din dialog.
   const handleDelete = (row: AdminRegistration) => {
     const before = rowsRef.current ?? [];
     setRows(before.filter((r) => r.id !== row.id));
@@ -338,7 +340,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                       type="button"
                       className="admin-btn-delete"
                       title="Șterge înscrierea"
-                      onClick={() => handleDelete(r)}
+                      onClick={() => setConfirmRow(r)}
                     >
                       Șterge
                     </button>
@@ -356,6 +358,38 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </div>
         </section>
       </main>
+
+      {confirmRow && (
+        <div
+          className="admin-confirm-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setConfirmRow(null);
+          }}
+        >
+          <div className="admin-confirm" role="alertdialog" aria-modal="true">
+            <h3>Ștergi înscrierea?</h3>
+            <p>
+              <strong>{confirmRow.nume}</strong> ({confirmRow.email}) va fi șters din listă.
+              Poți anula imediat după, din notificarea de jos.
+            </p>
+            <div className="admin-confirm-actions">
+              <button
+                type="button"
+                className="admin-confirm-delete"
+                onClick={() => {
+                  handleDelete(confirmRow);
+                  setConfirmRow(null);
+                }}
+              >
+                Da, șterge
+              </button>
+              <button type="button" className="admin-confirm-cancel" onClick={() => setConfirmRow(null)}>
+                Anulează
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className={`admin-toast${toast.kind === 'error' ? ' error' : ''}`} role="status">

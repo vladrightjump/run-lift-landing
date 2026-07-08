@@ -725,6 +725,41 @@
   .admin-btn-delete:hover { background: #F26D6D; color: #121410; border-color: #F26D6D; }
   .admin-empty { padding: 36px 24px; text-align: center; font-size: 15px; color: #9BA08F; }
 
+  /* ---- Confirmare ștergere ---- */
+  .admin-confirm-overlay {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(18,20,16,0.7); backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .admin-confirm {
+    background: #1A1D17; border: 1px solid #5A3030;
+    padding: 28px; max-width: 420px; width: 100%;
+    display: grid; gap: 14px; animation: fade-up 0.25s ease-out;
+    box-shadow: 0 20px 48px rgba(0,0,0,0.55);
+  }
+  .admin-confirm h3 {
+    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+    font-size: 22px; letter-spacing: 1px; text-transform: uppercase; color: #F26D6D;
+  }
+  .admin-confirm p { margin: 0; font-size: 14px; line-height: 1.55; color: #9BA08F; overflow-wrap: anywhere; }
+  .admin-confirm p strong { color: #F1EFE6; }
+  .admin-confirm-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .admin-confirm-delete {
+    background: #F26D6D; color: #121410; border: none; cursor: pointer;
+    font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 1px;
+    text-transform: uppercase; padding: 12px 22px;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .admin-confirm-delete:hover { background: #FF8A8A; transform: translateY(-2px); }
+  .admin-confirm-delete:active { transform: translateY(0) scale(0.96); }
+  .admin-confirm-cancel {
+    background: transparent; border: 1px solid #2A2E25; color: #9BA08F; cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase; padding: 12px 22px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .admin-confirm-cancel:hover { border-color: #C9F24B; color: #C9F24B; }
+
   /* ---- Toast (bottom-center, cu undo) ---- */
   .admin-toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
