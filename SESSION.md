@@ -52,3 +52,15 @@ Last update: 2026-07-07 (Supabase migration + participants section + domain)
 - Vercel Analytics returna 404 — de activat din dashboard dacă se vrea
 - Free tier Supabase: proiectul face pauză după ~1 săpt. fără trafic (irelevant până pe 11 iulie)
 - Formularul Google + proiectul Apps Script "Untitled project" pot fi șterse din contul Google
+
+## Backoffice /admin (8 iul 2026)
+
+- Login (user unic `vlad`, hash bcrypt în `admin_users`) + dashboard după designurile
+  "Run Lift - Login/Admin backoffice.html" (Claude design, decodate din format bundler).
+- Tabele noi: `admin_users`, `admin_sessions` (RLS fără politici) + 6 RPC-uri
+  SECURITY DEFINER cu token de sesiune (migrarea `admin_backoffice`); seed-ul userului
+  s-a făcut prin execute_sql ca parola să nu apară în istoricul migrărilor.
+- Frontend: `src/admin/*`, `src/lib/adminApi.ts`, switch pe pathname în `main.tsx`,
+  rewrite `/admin` în `vercel.json`, stiluri `admin-*` în `index.css`.
+- Dashboard: stats + bară 30 sloturi, căutare, adăugare inline, ștergere cu undo
+  (re-insert), export CSV, polling 15s, logout; token invalid → înapoi la login.

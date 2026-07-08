@@ -216,3 +216,19 @@ Dacă vrei ceva și mai simplu (fără cont/CLI/repo):
 ## Contact
 
 Pentru întrebări legate de eveniment: `contact@runlift.md` (placeholder — de înlocuit).
+
+## Backoffice (/admin)
+
+Dashboard de organizator la `https://parktraining.fit/admin`: statistici live, lista completă
+de înscrieri (nume, telefon, email, dată), căutare, adăugare manuală, ștergere cu undo,
+export CSV.
+
+**Auth**: un singur cont, în tabelul separat `admin_users` (parolă bcrypt, pgcrypto).
+Login-ul creează un token în `admin_sessions` (expiră după 7 zile), păstrat în
+`localStorage`. Toate operațiile trec prin RPC-uri `SECURITY DEFINER` care validează
+token-ul (`admin_login`, `admin_check_token`, `admin_list_registrations`,
+`admin_add_registration`, `admin_delete_registration`, `admin_logout`) — cheia publică
+singură nu poate citi datele personale, RLS-ul rămâne neschimbat.
+
+Cod: `src/admin/` (AdminApp, AdminLogin, AdminDashboard) + `src/lib/adminApi.ts`;
+ruta e aleasă în `src/main.tsx` (fără router), iar `vercel.json` rescrie `/admin` → `index.html`.
