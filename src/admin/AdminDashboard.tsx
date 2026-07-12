@@ -7,6 +7,7 @@ import {
 } from '../lib/adminApi';
 import type { AdminRegistration } from '../lib/adminApi';
 import { AdminEmailTab } from './AdminEmailTab';
+import { AdminLaunchTab } from './AdminLaunchTab';
 import { isDuplicateError } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
@@ -37,7 +38,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
-  const [tab, setTab] = useState<'participanti' | 'email'>('participanti');
+  const [tab, setTab] = useState<'participanti' | 'email' | 'lansare'>('participanti');
   const toastTimerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const cd = useCountdown(EVENT_DATE);
@@ -230,9 +231,22 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           >
             Emailuri
           </button>
+          <button
+            type="button"
+            className={tab === 'lansare' ? 'active' : ''}
+            onClick={() => setTab('lansare')}
+          >
+            Anunță-mă la lansare
+          </button>
         </nav>
 
         {tab === 'email' && <AdminEmailTab rows={all} formatDate={formatDate} showToast={showToast} />}
+
+        {tab === 'lansare' && (
+          <div className="admin-launch">
+            <AdminLaunchTab token={token} formatDate={formatDate} onAuthError={handleAuthError} />
+          </div>
+        )}
 
         {tab === 'participanti' && (
         <>

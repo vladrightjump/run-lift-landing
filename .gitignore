@@ -4,3 +4,12 @@ node_modules/
 dist/
 *.log
 *.tsbuildinfo
+
+# Local data exports — contain personal data (PII), never commit
+participante.md
+participants-emails.txt
+
+# Playwright
+test-results/
+playwright-report/
+/playwright/.cache/

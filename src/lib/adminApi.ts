@@ -77,6 +77,22 @@ export const checkToken = (token: string, signal?: AbortSignal): Promise<boolean
 export const listRegistrations = (token: string, signal?: AbortSignal): Promise<AdminRegistration[]> =>
   rpc<AdminRegistration[]>('admin_list_registrations', { p_token: token }, signal);
 
+export type AdminLaunchSignup = {
+  id: string;
+  created_at: string;
+  nume: string;
+  prenume: string;
+  email: string;
+  telefon: string;
+};
+
+/** Înscrierile la „Anunță-mă la lansare" (tabelul launch_notifications). */
+export const listLaunchNotifications = (
+  token: string,
+  signal?: AbortSignal
+): Promise<AdminLaunchSignup[]> =>
+  rpc<AdminLaunchSignup[]>('admin_list_launch_notifications', { p_token: token }, signal);
+
 /** Adaugă o înscriere (acord = true implicit). Email duplicat => HTTP 409. */
 export const addRegistration = (
   token: string,

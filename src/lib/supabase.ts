@@ -69,6 +69,46 @@ export const submitRegistration = async (
   }
 };
 
+export type LaunchNotificationData = {
+  nume: string;
+  prenume: string;
+  email: string;
+  telefon: string;
+};
+
+/**
+ * INSERT în `launch_notifications` (formularul „Anunță-mă la lansare").
+ * RLS permite doar insert pentru `anon`; emailul e unic (case-insensitive) — duplicat => HTTP 409.
+ */
+export const submitLaunchNotification = async (
+  data: LaunchNotificationData,
+  externalSignal?: AbortSignal
+): Promise<void> => {
+  const { signal, done } = timeoutSignal(externalSignal);
+  try {
+    const res = await fetch(`${SUPABASE.url}/rest/v1/launch_notifications`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE.publishableKey,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        nume: data.nume.trim(),
+        prenume: data.prenume.trim(),
+        email: data.email.trim(),
+        telefon: normalizePhone(data.telefon),
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
+    }
+  } finally {
+    done();
+  }
+};
+
 export type PublicParticipant = { nume: string; echipa: string };
 export type PublicStats = { count: number; participants: PublicParticipant[] };
 

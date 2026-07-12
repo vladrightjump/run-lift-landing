@@ -14,6 +14,14 @@ export const EVENT_END_DATE = new Date(EVENT_DATE.getTime() + 6 * 60 * 60 * 1000
 export const REGISTRATION_DEADLINE = new Date('2026-07-11T00:00:00+03:00'); // până pe 10 iulie inclusiv
 
 /**
+ * Coming Soon — Ediția a doua.
+ * `SHOW_COMING_SOON = true` face ca homepage-ul (/) să afișeze ecranul Coming Soon
+ * în locul landing-ului. Pune pe `false` ca să revii la landing-ul complet.
+ */
+export const SHOW_COMING_SOON = true;
+export const LAUNCH_DATE = new Date('2026-07-17T06:30:00+03:00'); // 17 iulie 2026, 06:30
+
+/**
  * Supabase — backend-ul de înscrieri.
  *
  * `publishableKey` e cheia publică (safe în client): permite doar INSERT
