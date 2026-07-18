@@ -3,15 +3,29 @@ import {
   addRegistration,
   deleteRegistration,
   listRegistrations,
+  listWaitlist,
+  deleteWaitlist,
+  promoteWaitlist,
   InvalidTokenError,
 } from '../lib/adminApi';
-import type { AdminRegistration } from '../lib/adminApi';
+import type { AdminRegistration, AdminWaitlistEntry } from '../lib/adminApi';
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
-import { isDuplicateError } from '../lib/supabase';
+import { AdminTemplatesTab } from './AdminTemplatesTab';
+import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
-import { EVENT_DATE, TOTAL_SLOTS } from '../lib/config';
+import { LAUNCH_DATE, TOTAL_SLOTS, WAITLIST_SLOTS } from '../lib/config';
+
+const launchFmt = new Intl.DateTimeFormat('ro-RO', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Chisinau',
+});
+const LAUNCH_LABEL = launchFmt.format(LAUNCH_DATE);
 
 type Props = {
   token: string;
@@ -31,6 +45,7 @@ const formatDate = (iso: string): string => dateFmt.format(new Date(iso)).replac
 
 export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [rows, setRows] = useState<AdminRegistration[] | null>(null);
+  const [waitlist, setWaitlist] = useState<AdminWaitlistEntry[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
@@ -38,10 +53,12 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
-  const [tab, setTab] = useState<'participanti' | 'email' | 'lansare'>('participanti');
+  const [tab, setTab] = useState<'participanti' | 'email' | 'lansare' | 'sabloane'>(
+    'participanti'
+  );
   const toastTimerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const cd = useCountdown(EVENT_DATE);
+  const cd = useCountdown(LAUNCH_DATE);
 
   // Sesiune expirată — orice RPC o semnalează; ieșim la login.
   const handleAuthError = useCallback(
@@ -64,6 +81,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // refresh() e stabil; ref-ul evită să-l recreăm la fiecare schimbare de listă.
   const rowsRef = useRef<AdminRegistration[] | null>(null);
   rowsRef.current = rows;
+  const waitlistRef = useRef<AdminWaitlistEntry[] | null>(null);
+  waitlistRef.current = waitlist;
 
   const refresh = useCallback(() => {
     abortRef.current?.abort();
@@ -78,6 +97,12 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         if (controller.signal.aborted || handleAuthError(err)) return;
         // Păstrăm ultima listă cunoscută; eroarea contează doar la primul load.
         setLoadError((prev) => prev || rowsRef.current === null);
+      });
+    listWaitlist(token, controller.signal)
+      .then(setWaitlist)
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        handleAuthError(err);
       });
   }, [token, handleAuthError]);
 
@@ -103,6 +128,36 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   );
   const remaining = Math.max(0, TOTAL_SLOTS - all.length);
   const percent = Math.round((all.length / TOTAL_SLOTS) * 100);
+  const waitAll = waitlist ?? [];
+
+  // Promovează o persoană din așteptare în participanți + email de confirmare.
+  const handlePromote = (row: AdminWaitlistEntry) => {
+    const before = waitlistRef.current ?? [];
+    setWaitlist(before.filter((w) => w.id !== row.id));
+    promoteWaitlist(token, row.id)
+      .then((newId) => {
+        if (newId) void sendConfirmationEmail(newId);
+        refresh();
+        showToast({ kind: 'success', msg: `${row.nume} a fost promovat la participanți.` });
+      })
+      .catch((err) => {
+        if (handleAuthError(err)) return;
+        setWaitlist(before);
+        showToast({ kind: 'error', msg: 'Promovarea nu a mers. Încearcă din nou.' });
+      });
+  };
+
+  const handleDeleteWaitlist = (row: AdminWaitlistEntry) => {
+    const before = waitlistRef.current ?? [];
+    setWaitlist(before.filter((w) => w.id !== row.id));
+    deleteWaitlist(token, row.id)
+      .then(() => showToast({ kind: 'error', msg: `${row.nume} a fost șters din așteptare.` }))
+      .catch((err) => {
+        if (handleAuthError(err)) return;
+        setWaitlist(before);
+        showToast({ kind: 'error', msg: 'Ștergerea nu a mers. Încearcă din nou.' });
+      });
+  };
 
   // Ștergerea efectivă — rulează doar după confirmarea din dialog.
   const handleDelete = (row: AdminRegistration) => {
@@ -204,10 +259,12 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           <span className="admin-badge">Backoffice</span>
         </div>
         <div className="admin-topbar-meta">
-          <span className="topbar-info">11 iulie 2026 · Stadionul Dinamo</span>
+          <span className="topbar-info">Ediția a treia · anunț {LAUNCH_LABEL}</span>
           <span className="admin-cd">
             <span className="countdown-dot" />
-            Start în {cd.zile}z {cd.ore}h {cd.minute}m {cd.secunde}s
+            {cd.done
+              ? 'Anunțul e live'
+              : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`}
           </span>
           <button type="button" className="admin-logout" onClick={onLogout}>
             Ieși din cont
@@ -238,9 +295,22 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           >
             Anunță-mă la lansare
           </button>
+          <button
+            type="button"
+            className={tab === 'sabloane' ? 'active' : ''}
+            onClick={() => setTab('sabloane')}
+          >
+            Șabloane
+          </button>
         </nav>
 
-        {tab === 'email' && <AdminEmailTab rows={all} formatDate={formatDate} showToast={showToast} />}
+        {tab === 'sabloane' && (
+          <AdminTemplatesTab token={token} onAuthError={handleAuthError} />
+        )}
+
+        {tab === 'email' && (
+          <AdminEmailTab token={token} rows={all} formatDate={formatDate} showToast={showToast} />
+        )}
 
         {tab === 'lansare' && (
           <div className="admin-launch">
@@ -268,6 +338,13 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             <span className="admin-stat-label">Grad de ocupare</span>
             <span className="admin-stat-value accent" key={percent}>
               {percent}%
+            </span>
+          </div>
+          <div className="admin-stat">
+            <span className="admin-stat-label">În așteptare</span>
+            <span className="admin-stat-value" key={waitAll.length}>
+              {waitAll.length}
+              <span className="admin-stat-total"> / {WAITLIST_SLOTS}</span>
             </span>
           </div>
         </section>
@@ -390,6 +467,67 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
               )}
               {rows !== null && filtered.length === 0 && (
                 <div className="admin-empty">Niciun participant găsit.</div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="admin-table-section">
+          <div className="admin-table-head admin-wait-head">
+            <h2>
+              Lista de așteptare <span className="admin-wait-count">{waitAll.length}</span>
+            </h2>
+            <span className="admin-wait-note">
+              Se completează automat când locurile sunt pline — promovează când se eliberează un loc.
+            </span>
+          </div>
+          <div className="admin-table-wrap">
+            <div className="admin-table admin-wait">
+              <div className="admin-row admin-row-head">
+                <span>#</span>
+                <span>Nume</span>
+                <span>Telefon</span>
+                <span>Email</span>
+                <span>Înscris</span>
+                <span className="right">Acțiuni</span>
+              </div>
+              {waitAll.map((w, i) => (
+                <div key={w.id} className="admin-row">
+                  <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="admin-cell-name">{w.nume}</span>
+                  <a className="admin-cell-link" href={`tel:${w.telefon}`}>
+                    {w.telefon}
+                  </a>
+                  <a className="admin-cell-link ellipsis" href={`mailto:${w.email}`}>
+                    {w.email}
+                  </a>
+                  <span className="admin-cell-date">{formatDate(w.created_at)}</span>
+                  <div className="admin-cell-actions">
+                    <button
+                      type="button"
+                      className="admin-btn-promote"
+                      title="Mută la participanți"
+                      onClick={() => handlePromote(w)}
+                    >
+                      Promovează
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-btn-delete"
+                      title="Șterge din lista de așteptare"
+                      onClick={() => handleDeleteWaitlist(w)}
+                    >
+                      Șterge
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {waitlist === null && <div className="admin-empty">Se încarcă…</div>}
+              {waitlist !== null && waitAll.length === 0 && (
+                <div className="admin-empty">
+                  Nicio persoană în așteptare. Lista se completează automat când toate cele{' '}
+                  {TOTAL_SLOTS} locuri sunt ocupate.
+                </div>
               )}
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { SUPABASE } from './config';
+import { SUPABASE, CURRENT_EDITION } from './config';
 import { normalizePhone } from './validation';
 import type { FormData } from './validation';
 
@@ -42,8 +42,14 @@ const timeoutSignal = (externalSignal?: AbortSignal): { signal: AbortSignal; don
 export const submitRegistration = async (
   data: FormData,
   externalSignal?: AbortSignal
-): Promise<void> => {
+): Promise<string> => {
   const { signal, done } = timeoutSignal(externalSignal);
+  // Generăm id-ul în client (RLS blochează citirea rândului înapoi) ca să-l
+  // putem folosi la trimiterea emailului de confirmare.
+  const id =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : undefined;
   try {
     const res = await fetch(`${SUPABASE.url}/rest/v1/registrations`, {
       method: 'POST',
@@ -53,19 +59,39 @@ export const submitRegistration = async (
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({
-        // echipa nu se mai colectează — coloana rămâne în DB cu default ''.
+        ...(id ? { id } : {}),
         nume: data.nume.trim(),
         telefon: normalizePhone(data.telefon),
         email: data.email.trim(),
+        data_nasterii: data.dataNasterii || null,
         acord: data.acord,
+        editie: CURRENT_EDITION,
       }),
       signal,
     });
     if (!res.ok) {
       throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
     }
+    return id ?? '';
   } finally {
     done();
+  }
+};
+
+/**
+ * Trimite emailul de confirmare pentru o înscriere tocmai făcută (best-effort).
+ * Nu blochează fluxul de succes — dacă emailul eșuează, înscrierea rămâne validă.
+ */
+export const sendConfirmationEmail = async (id: string): Promise<void> => {
+  if (!id) return;
+  try {
+    await fetch(`${SUPABASE.url}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'confirm', id }),
+    });
+  } catch {
+    // ignorăm — confirmarea e opțională
   }
 };
 
@@ -77,12 +103,19 @@ export type LaunchNotificationData = {
 };
 
 /**
+ * De unde a venit înscrierea. Serverul acceptă doar aceste două valori
+ * (constraint + politică RLS pe `launch_notifications.sursa`).
+ */
+export type SursaInscriere = 'lansare' | 'despre-noi';
+
+/**
  * INSERT în `launch_notifications` (formularul „Anunță-mă la lansare").
  * RLS permite doar insert pentru `anon`; emailul e unic (case-insensitive) — duplicat => HTTP 409.
  */
 export const submitLaunchNotification = async (
   data: LaunchNotificationData,
-  externalSignal?: AbortSignal
+  externalSignal?: AbortSignal,
+  sursa: SursaInscriere = 'lansare'
 ): Promise<void> => {
   const { signal, done } = timeoutSignal(externalSignal);
   try {
@@ -98,6 +131,9 @@ export const submitLaunchNotification = async (
         prenume: data.prenume.trim(),
         email: data.email.trim(),
         telefon: normalizePhone(data.telefon),
+        sursa,
+        // `editie` NU se trimite: o pune serverul din DEFAULT, iar politica
+        // RLS respinge orice valoare venită din client.
       }),
       signal,
     });
@@ -109,8 +145,66 @@ export const submitLaunchNotification = async (
   }
 };
 
+/**
+ * Emailul de bun venit pentru cei care cer informații (best-effort).
+ * Șablonul e configurabil din /admin; dacă trimiterea eșuează, înscrierea
+ * rămâne validă — nu blocăm fluxul de succes.
+ */
+export const sendInfoEmail = async (email: string): Promise<void> => {
+  if (!email) return;
+  try {
+    await fetch(`${SUPABASE.url}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'info', email }),
+    });
+  } catch {
+    // ignorăm — emailul e opțional
+  }
+};
+
 export type PublicParticipant = { nume: string; echipa: string };
-export type PublicStats = { count: number; participants: PublicParticipant[] };
+export type PublicStats = { count: number; participants: PublicParticipant[]; waitlist: number };
+
+/**
+ * INSERT în `event_waitlist` (lista de așteptare, când locurile sunt pline).
+ * RLS permite doar insert cu `acord = true`; un trigger limitează la 10/ediție
+ * (eroare `waitlist_full`); emailul e unic pe ediție (duplicat => HTTP 409).
+ */
+export const submitWaitlist = async (
+  data: FormData,
+  externalSignal?: AbortSignal
+): Promise<void> => {
+  const { signal, done } = timeoutSignal(externalSignal);
+  try {
+    const res = await fetch(`${SUPABASE.url}/rest/v1/event_waitlist`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE.publishableKey,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        nume: data.nume.trim(),
+        telefon: normalizePhone(data.telefon),
+        email: data.email.trim(),
+        data_nasterii: data.dataNasterii || null,
+        acord: data.acord,
+        editie: CURRENT_EDITION,
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
+    }
+  } finally {
+    done();
+  }
+};
+
+/** Lista de așteptare e plină (trigger `waitlist_full`). */
+export const isWaitlistFullError = (err: unknown): boolean =>
+  err instanceof SubmitHttpError && err.message.includes('waitlist_full');
 
 /** Date publice, ne-personale: număr înscriși + prenume mascat + echipă. */
 export const fetchStats = async (signal?: AbortSignal): Promise<PublicStats> => {
@@ -122,6 +216,29 @@ export const fetchStats = async (signal?: AbortSignal): Promise<PublicStats> => 
     throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
   }
   return (await res.json()) as PublicStats;
+};
+
+export type ConfirmResult = 'confirmat' | 'deja_confirmat' | 'invalid';
+
+/**
+ * Confirmă înscrierea pe baza token-ului din linkul primit pe email.
+ * Token-ul e secretul; RPC-ul întoarce doar starea, nu date personale.
+ */
+export const confirmSignup = async (
+  token: string,
+  signal?: AbortSignal
+): Promise<ConfirmResult> => {
+  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/confirm_signup`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_token: token }),
+    signal,
+  });
+  if (!res.ok) {
+    throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
+  }
+  const result = (await res.json()) as string;
+  return (['confirmat', 'deja_confirmat'].includes(result) ? result : 'invalid') as ConfirmResult;
 };
 
 export const isDuplicateError = (err: unknown): boolean =>

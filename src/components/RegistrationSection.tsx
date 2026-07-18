@@ -5,17 +5,21 @@ import {
   OCCUPIED_SLOTS,
   REGISTRATION_DEADLINE,
   TOTAL_SLOTS,
+  WAITLIST_SLOTS,
   isBackendConfigured,
 } from '../lib/config';
 import {
   submitRegistration,
+  submitWaitlist,
+  sendConfirmationEmail,
   isTimeoutError,
   isAbortError,
   isDuplicateError,
+  isWaitlistFullError,
 } from '../lib/supabase';
 import type { PublicStats } from '../lib/supabase';
 import { rememberMySignup } from '../lib/mySignups';
-import { validate, errorMessage, firstErrorField } from '../lib/validation';
+import { validate, errorMessage, firstErrorField, dataNasteriiError } from '../lib/validation';
 import type { FieldName, FieldErrors, FormData } from '../lib/validation';
 import type { ToastKind } from '../hooks/useToast';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -34,11 +38,11 @@ type Props = {
 };
 
 const SUMMARY_ITEMS = [
-  'Sâmbătă, 11 iulie 2026, ora 6:30 — Stadionul Dinamo, Chișinău',
-  '5 runde: alergare 400 m + Bear Complex',
-  'Antrenorul îți alege echipamentul: halteră, kettlebell sau gantere',
+  'Sâmbătă, 18 iulie 2026, ora 07:00 — Parcul Râșcani, Str. Braniștii',
+  'Cursă în stil HYROX: alergare + stații funcționale, contra cronometru',
+  'Stațiile și greutățile se adaptează nivelului tău',
   'Deschis oricui, indiferent de nivel',
-  `Înscrieri până pe 10 iulie · limită de ${TOTAL_SLOTS} participanți`,
+  `Înscrieri până pe 17 iulie · limită de ${TOTAL_SLOTS} participanți`,
   'Adu cu tine: apă pentru hidratare și bună dispoziție',
 ];
 
@@ -73,6 +77,10 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
   const [errors, setErrors] = useState<FieldErrors>({});
   const [confirmName, setConfirmName] = useState('atlet');
   const [sessionSignups, setSessionSignups] = useState(0);
+  const [dateErrMsg, setDateErrMsg] = useState('Introdu data nașterii.');
+  // Când locurile sunt epuizate, același formular scrie în lista de așteptare.
+  const [submittedAsWaitlist, setSubmittedAsWaitlist] = useState(false);
+  const [wlFull, setWlFull] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
   const confirmationRef = useRef<HTMLDivElement>(null);
@@ -125,8 +133,16 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
 
   const isSoldOut = slots.remaining <= 0;
 
-  // "form" screen shown when nu suntem blocați de sold-out/deadline/event-ended
-  const showForm = formState === 'form' && !isSoldOut && !isEventEnded && !isRegClosed;
+  // Lista de așteptare — apare când e sold-out, până se umplu cele WAITLIST_SLOTS locuri.
+  const waitlistCount = stats?.waitlist ?? 0;
+  const isWaitlistFull = wlFull || waitlistCount >= WAITLIST_SLOTS;
+  // În modul „așteptare": locuri epuizate, dar lista mai are loc — formularul rămâne activ.
+  const waitlistMode = isSoldOut && !isWaitlistFull;
+  const waitlistLeft = Math.max(0, WAITLIST_SLOTS - waitlistCount);
+
+  // Formularul e vizibil pentru înscriere normală SAU pentru lista de așteptare.
+  const showForm =
+    formState === 'form' && !isEventEnded && !isRegClosed && !(isSoldOut && isWaitlistFull);
 
   const clearErrorFor = useCallback((name: FieldName) => {
     setErrors((prev) => {
@@ -151,17 +167,24 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
     // Double-submit guard
     if (submittingRef.current) return;
 
+    // Dacă locurile sunt epuizate (dar lista mai are loc), scriem în lista de așteptare.
+    const asWaitlist = isSoldOut && !isWaitlistFull;
+
     const fd = new window.FormData(e.currentTarget);
     const data: FormData = {
       nume: String(fd.get('nume') ?? '').trim(),
       telefon: String(fd.get('telefon') ?? '').trim(),
       email: String(fd.get('email') ?? '').trim(),
+      dataNasterii: String(fd.get('dataNasterii') ?? '').trim(),
       acord: !!fd.get('acord'),
     };
 
     const errs = validate(data);
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
+      if (errs.dataNasterii) {
+        setDateErrMsg(dataNasteriiError(data.dataNasterii) ?? 'Data nașterii nu e validă.');
+      }
       showToast('error', errorMessage(errs));
       const bad = firstErrorField(errs);
       if (bad) formRef.current?.querySelector<HTMLInputElement>(`[name="${bad}"]`)?.focus();
@@ -183,12 +206,15 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
 
     const finishSuccess = () => {
       setConfirmName(firstName);
-      setSessionSignups((n) => n + 1);
-      rememberMySignup(data.nume); // pentru badge-ul „Nou" din lista de participanți
+      setSubmittedAsWaitlist(asWaitlist);
+      if (!asWaitlist) {
+        setSessionSignups((n) => n + 1);
+        rememberMySignup(data.nume); // pentru badge-ul „Nou" din lista de participanți
+      }
       if (isBackendConfigured()) refreshStats();
       setFormState('success');
       submittingRef.current = false;
-      showToast('success', 'Înscrierea a fost trimisă!');
+      showToast('success', asWaitlist ? 'Ești pe lista de așteptare!' : 'Înscrierea a fost trimisă!');
       requestAnimationFrame(() => {
         const el = confirmationRef.current;
         if (!el) return;
@@ -236,7 +262,13 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
     abortRef.current = controller;
 
     try {
-      await submitRegistration(data, controller.signal);
+      if (asWaitlist) {
+        await submitWaitlist(data, controller.signal);
+      } else {
+        const newId = await submitRegistration(data, controller.signal);
+        // Confirmare automată prin email (best-effort, nu blochează succesul).
+        void sendConfirmationEmail(newId);
+      }
       await enforceMin();
       finishSuccess();
     } catch (err) {
@@ -244,6 +276,15 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
       if (isAbortError(err)) return;
       console.error('[Run+Lift] Eroare la trimitere:', err);
       await enforceMin();
+      // Lista de așteptare tocmai s-a umplut — comutăm pe ecranul „plin".
+      if (asWaitlist && isWaitlistFullError(err)) {
+        setWlFull(true);
+        if (isBackendConfigured()) refreshStats();
+        setFormState('form');
+        submittingRef.current = false;
+        showToast('error', 'Lista de așteptare tocmai s-a umplut.');
+        return;
+      }
       const reason: ErrorReason = isTimeoutError(err)
         ? 'timeout'
         : isDuplicateError(err)
@@ -278,9 +319,23 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
             <h2>Înscriere</h2>
           </div>
           <p className="reg-intro">
-            Completează formularul și locul tău e rezervat pe loc. Înscrierile sunt deschise{' '}
-            <strong style={{ color: '#C9F24B' }}>până pe 10 iulie</strong> —{' '}
-            <strong style={{ color: '#C9F24B' }}>doar {TOTAL_SLOTS} locuri</strong>.
+            {waitlistMode ? (
+              <>
+                Locurile s-au epuizat, dar te poți pune pe{' '}
+                <strong style={{ color: '#C9F24B' }}>lista de așteptare</strong>. Dacă se eliberează un
+                loc, te contactăm — au mai rămas{' '}
+                <strong style={{ color: '#C9F24B' }}>
+                  {waitlistLeft} {waitlistLeft === 1 ? 'loc' : 'locuri'}
+                </strong>{' '}
+                pe listă.
+              </>
+            ) : (
+              <>
+                Completează formularul și locul tău e rezervat pe loc. Înscrierile sunt deschise{' '}
+                <strong style={{ color: '#C9F24B' }}>până pe 17 iulie</strong> —{' '}
+                <strong style={{ color: '#C9F24B' }}>doar {TOTAL_SLOTS} locuri</strong>.
+              </>
+            )}
           </p>
           <div className="summary-box">
             <div className="summary-title">Pe scurt</div>
@@ -333,7 +388,7 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
             </div>
             <div className="headline">Înscrierile s-au închis</div>
             <p>
-              Perioada de înscriere s-a încheiat pe 10 iulie. Scrie-ne pe Instagram — dacă se
+              Perioada de înscriere s-a încheiat pe 17 iulie. Scrie-ne pe Instagram — dacă se
               eliberează un loc, te anunțăm.
             </p>
             <a
@@ -347,17 +402,20 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
             </a>
           </div>
 
-          {/* Sold out overrides form */}
+          {/* Sold out ȘI lista de așteptare plină — totul e ocupat */}
           <div
             id="sold-out"
             className="form-error"
-            hidden={!isSoldOut || isEventEnded || isRegClosed || formState !== 'form'}
+            hidden={!(isSoldOut && isWaitlistFull) || isEventEnded || isRegClosed || formState !== 'form'}
           >
             <div className="x-circle x-circle-neutral" aria-hidden="true">
               <span>✕</span>
             </div>
-            <div className="headline">Locurile sunt epuizate</div>
-            <p>Toate cele {TOTAL_SLOTS} locuri sunt ocupate. Scrie-ne pe Instagram să fii pe lista de rezervă.</p>
+            <div className="headline">Locurile și lista de așteptare sunt pline</div>
+            <p>
+              Toate cele {TOTAL_SLOTS} locuri și cele {WAITLIST_SLOTS} de pe lista de așteptare sunt
+              ocupate. Scrie-ne pe Instagram — dacă apare o disponibilitate, te anunțăm.
+            </p>
             <a
               href="https://www.instagram.com/vladfillip"
               target="_blank"
@@ -390,6 +448,15 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
               if (name && name !== 'acord') clearErrorFor(name);
             }}
           >
+            {waitlistMode && (
+              <div className="waitlist-banner" role="status">
+                <span aria-hidden="true">⏳</span>
+                <span>
+                  Locuri epuizate — te pui pe lista de așteptare. Au mai rămas {waitlistLeft}{' '}
+                  {waitlistLeft === 1 ? 'loc' : 'locuri'}.
+                </span>
+              </div>
+            )}
             <div className="row-2">
               <label className={`field${errors.nume ? ' invalid' : ''}`} data-field="nume">
                 <span className="label">Nume complet *</span>
@@ -416,21 +483,39 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
                 <span id="err-telefon" className="field-error">Numărul de telefon nu e valid.</span>
               </label>
             </div>
-            <label className={`field${errors.email ? ' invalid' : ''}`} data-field="email">
-              <span className="label">Email *</span>
-              <input
-                name="email"
-                type="email"
-                placeholder="ana@email.ro"
-                autoComplete="email"
-                aria-invalid={errors.email || undefined}
-                aria-describedby={errors.email ? 'err-email' : undefined}
-              />
-              <span id="err-email" className="field-error">Adresa de email nu e validă.</span>
-            </label>
+            <div className="row-2">
+              <label className={`field${errors.email ? ' invalid' : ''}`} data-field="email">
+                <span className="label">Email *</span>
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="ana@email.ro"
+                  autoComplete="email"
+                  aria-invalid={errors.email || undefined}
+                  aria-describedby={errors.email ? 'err-email' : undefined}
+                />
+                <span id="err-email" className="field-error">Adresa de email nu e validă.</span>
+              </label>
+              <label
+                className={`field${errors.dataNasterii ? ' invalid' : ''}`}
+                data-field="dataNasterii"
+              >
+                <span className="label">Data nașterii *</span>
+                <input
+                  name="dataNasterii"
+                  type="date"
+                  min="1940-01-01"
+                  max="2012-07-18"
+                  autoComplete="bday"
+                  aria-invalid={errors.dataNasterii || undefined}
+                  aria-describedby={errors.dataNasterii ? 'err-datanasterii' : undefined}
+                />
+                <span id="err-datanasterii" className="field-error">{dateErrMsg}</span>
+              </label>
+            </div>
             <p className="helper">
-              Echipamentul și greutatea sunt alese de antrenor la fața locului, în funcție de pregătirea ta
-              fizică.
+              Participanții trebuie să aibă minim 14 ani în ziua evenimentului. Stațiile și greutățile sunt
+              adaptate de antrenori la fața locului, în funcție de pregătirea ta fizică.
             </p>
             <label
               className={`checkbox${errors.acord ? ' invalid' : ''}`}
@@ -452,7 +537,11 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
               Trebuie să accepți regulamentul ca să te poți înscrie.
             </span>
             <button type="submit" className="btn-submit" disabled={!isOnline}>
-              {isOnline ? 'Trimite înscrierea' : 'Offline — nu se poate trimite'}
+              {!isOnline
+                ? 'Offline — nu se poate trimite'
+                : waitlistMode
+                ? 'Intră pe lista de așteptare'
+                : 'Trimite înscrierea'}
             </button>
           </form>
 
@@ -499,10 +588,17 @@ export const RegistrationSection = ({ showToast, stats, refreshStats }: Props) =
                 </svg>
               </div>
             </div>
-            <div className="headline">Te-ai înregistrat, <span id="confirm-name">{confirmName}</span>!</div>
-            <p>Locul tău e rezervat. Ne vedem sâmbătă, 11 iulie, ora 6:30, la Stadionul Dinamo.</p>
+            <div className="headline">
+              {submittedAsWaitlist ? 'Ești pe lista de așteptare' : 'Te-ai înregistrat'},{' '}
+              <span id="confirm-name">{confirmName}</span>!
+            </div>
+            <p>
+              {submittedAsWaitlist
+                ? 'Te-am adăugat pe lista de așteptare. Dacă se eliberează un loc, te contactăm la datele lăsate.'
+                : 'Locul tău e rezervat. Ne vedem sâmbătă, 18 iulie, ora 07:00, la Parcul Râșcani.'}
+            </p>
             <button type="button" id="reset-btn" className="btn-ghost" onClick={resetForm}>
-              Înscrie altă persoană
+              {submittedAsWaitlist ? 'Adaugă altă persoană' : 'Înscrie altă persoană'}
             </button>
           </div>
         </div>

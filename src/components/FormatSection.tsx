@@ -1,24 +1,20 @@
-type EquipmentCard = {
+type FormatCard = {
   label: string;
-  moves: string[];
-  weight: string;
+  desc: string;
 };
 
-const EQUIPMENT: EquipmentCard[] = [
+const CARDS: FormatCard[] = [
   {
-    label: 'HALTERĂ (BARĂ)',
-    moves: ['clean', 'front squat', 'jerk / push press', 'back squat'],
-    weight: 'Bare de 100 / 80 / 60 / 40 kg',
+    label: 'RUN',
+    desc: 'Segmente de alergare prin parc între stații — același traseu pentru toți.',
   },
   {
-    label: 'KETTLEBELL',
-    moves: ['deadlift', 'swing', 'high pull', 'goblet squat'],
-    weight: 'Kettlebell-uri de 32 / 24 / 16 kg',
+    label: 'LIFT',
+    desc: 'Stații de exerciții funcționale — forță, împins, tras, cărat.',
   },
   {
-    label: 'GANTERE',
-    moves: ['deadlift', 'hang clean', 'push press', 'squat'],
-    weight: 'Perechi de gantere de 15 / 12 / 10 kg',
+    label: 'REPEAT',
+    desc: 'Alternezi alergarea cu stațiile până la finish — contra cronometru.',
   },
 ];
 
@@ -30,29 +26,22 @@ export const FormatSection = () => (
         <h2>Formatul</h2>
       </div>
       <p className="section-intro">
-        Bear Complex + alergare — 5 runde contra cronometru. Antrenorul îți alege echipamentul și greutatea în
-        funcție de pregătirea fizică — halteră, kettlebell sau gantere — și faci în fiecare rundă complexul
-        respectiv, câte 12 repetări la fiecare mișcare.
+        Alergi. Ridici. Repeți. Segmente de alergare alternate cu stații de exerciții funcționale, în
+        stil HYROX. Fără trucuri — doar tu, cronometrul și traseul. Stațiile și greutățile se adaptează
+        nivelului tău de către antrenori la fața locului.
       </p>
       <div className="eq-grid">
-        {EQUIPMENT.map((eq) => (
-          <div key={eq.label} className="eq-card" data-reveal>
-            <div className="eq-label">{eq.label}</div>
-            <ul className="eq-list">
-              {eq.moves.map((move) => (
-                <li key={move}>
-                  <span className="rep">12</span>
-                  {move}
-                </li>
-              ))}
-            </ul>
-            <p className="eq-foot">{eq.weight}</p>
+        {CARDS.map((c) => (
+          <div key={c.label} className="eq-card" data-reveal>
+            <div
+              className="eq-label"
+              style={{ fontSize: 30, letterSpacing: 1, color: '#C9F24B', marginBottom: 14 }}
+            >
+              {c.label}
+            </div>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: '#C9CCBE' }}>{c.desc}</p>
           </div>
         ))}
-      </div>
-      <div className="rounds-banner">
-        <span className="label">5 runde</span>
-        <span className="desc">Fiecare rundă: alergare un cerc de 400 m + o rundă de Bear Complex</span>
       </div>
     </div>
   </section>

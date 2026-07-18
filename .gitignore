@@ -13,3 +13,11 @@ participants-emails.txt
 test-results/
 playwright-report/
 /playwright/.cache/
+
+# Unelte locale / artefacte de sesiune
+.claude/
+.playwright-mcp/
+maps_embed_check.png
+form-*.png
+cs-*.png
+prod-*.png

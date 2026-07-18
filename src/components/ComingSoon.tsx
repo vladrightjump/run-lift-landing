@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LAUNCH_DATE } from '../lib/config';
+import { LAUNCH_DATE, INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
 import { useCountdown } from '../hooks/useCountdown';
 import {
   submitLaunchNotification,
+  sendInfoEmail,
   isDuplicateError,
   isTimeoutError,
   isAbortError,
@@ -18,7 +19,16 @@ type Draft = { nume: string; prenume: string; email: string; telefon: string };
 type FieldErrors = Partial<Record<keyof Draft, boolean>>;
 type FormState = 'form' | 'loading' | 'success';
 
-const MARQUEE_ITEMS = ['Aleargă · Ridică · Rezistă', 'Eveniment nou', 'Run + Lift'];
+const MARQUEE_ITEMS = ['Aleargă · Ridică · Rezistă', 'Antrenament nou', 'Run + Lift'];
+
+const LAUNCH_LABEL = new Intl.DateTimeFormat('ro-RO', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Chisinau',
+}).format(LAUNCH_DATE);
 
 const validateDraft = (d: Draft): FieldErrors => {
   const errors: FieldErrors = {};
@@ -95,9 +105,11 @@ export const ComingSoon = ({ showToast }: Props) => {
 
     try {
       await submitLaunchNotification(draft, controller.signal);
+      // Emailul de confirmare pleacă best-effort — nu blocăm succesul.
+      void sendInfoEmail(draft.email.trim());
       setDuplicate(false);
       setState('success');
-      showToast('success', 'Gata! Te anunțăm la lansare.');
+      showToast('success', 'Gata! Verifică emailul pentru confirmare.');
     } catch (err) {
       if (isAbortError(err)) return;
       if (isDuplicateError(err)) {
@@ -127,13 +139,13 @@ export const ComingSoon = ({ showToast }: Props) => {
         <span className="cs-logo">
           R<span className="cs-accent">+</span>L
         </span>
-        <span className="cs-brand-meta">Run + Lift · Ediția a doua</span>
+        <span className="cs-brand-meta">Run + Lift · Ediția a treia</span>
       </header>
 
       <main className="cs-main">
         <span className="cs-badge">
           <span className="cs-badge-dot" />
-          Eveniment nou · Ediția a doua
+          Antrenament nou · Ediția a treia
         </span>
 
         <h1 className="cs-title">
@@ -142,28 +154,51 @@ export const ComingSoon = ({ showToast }: Props) => {
         </h1>
 
         <p className="cs-sub">
-          Pregătim următoarea ediție Run <span className="cs-accent">+</span> Lift. Lasă-ți datele
-          și te anunțăm primii când se deschid înscrierile.
+          {cd.done ? (
+            <>
+              Anunțul pentru noul antrenament Run <span className="cs-accent">+</span> Lift este
+              gata. Lasă-ți datele și îți scriem imediat.
+            </>
+          ) : (
+            <>
+              Pe {LAUNCH_LABEL} anunțăm noul antrenament Run <span className="cs-accent">+</span>{' '}
+              Lift. Lasă-ți datele și te anunțăm primii.
+            </>
+          )}
         </p>
 
-        <div className="cs-countdown" role="timer" aria-label="Timp rămas până la lansare">
-          {[
-            { v: cd.zile, l: 'Zile' },
-            { v: cd.ore, l: 'Ore' },
-            { v: cd.minute, l: 'Minute' },
-            { v: cd.secunde, l: 'Secunde' },
-          ].map((u) => (
-            <div key={u.l} className="cs-cd-unit">
-              <span className="cs-cd-value">{u.v}</span>
-              <span className="cs-cd-label">{u.l}</span>
-            </div>
-          ))}
-        </div>
+        {!cd.done && (
+          <div className="cs-countdown" role="timer" aria-label="Timp rămas până la anunț">
+            {[
+              { v: cd.zile, l: 'Zile' },
+              { v: cd.ore, l: 'Ore' },
+              { v: cd.minute, l: 'Minute' },
+              { v: cd.secunde, l: 'Secunde' },
+            ].map((u) => (
+              <div key={u.l} className="cs-cd-unit">
+                <span className="cs-cd-value">{u.v}</span>
+                <span className="cs-cd-label">{u.l}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
-        <button type="button" className="cs-cta" onClick={openForm}>
-          Anunță-mă la lansare
-        </button>
+        <div className="cs-actions">
+          <button type="button" className="cs-cta" onClick={openForm}>
+            Anunță-mă la lansare
+          </button>
+          <a className="cs-cta-secondary" href="/despre-noi">
+            Află mai multe
+          </a>
+        </div>
       </main>
+
+      <footer className="cs-footer">
+        <span>Run + Lift · Chișinău</span>
+        <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
+          Instagram {INSTAGRAM_HANDLE}
+        </a>
+      </footer>
 
       <div className="cs-marquee" aria-hidden="true">
         <div className="cs-marquee-track">
@@ -202,8 +237,8 @@ export const ComingSoon = ({ showToast }: Props) => {
                 </h2>
                 <p className="cs-modal-sub">
                   {duplicate
-                    ? 'Adresa ta era deja înscrisă. Te anunțăm la lansarea ediției a doua.'
-                    : 'Îți scriem primii când se deschid înscrierile la ediția a doua.'}
+                    ? 'Adresa ta era deja înscrisă. Te anunțăm când lansăm noul antrenament.'
+                    : 'Ți-am trimis un email — apasă pe linkul din el ca să confirmi înscrierea.'}
                 </p>
                 <button type="button" className="cs-submit" onClick={closeForm}>
                   Închide
@@ -212,7 +247,9 @@ export const ComingSoon = ({ showToast }: Props) => {
             ) : (
               <>
                 <h2 className="cs-modal-title">Anunță-mă la lansare</h2>
-                <p className="cs-modal-sub">Îți scriem imediat ce se deschid înscrierile.</p>
+                <p className="cs-modal-sub">
+                  Îți scriem imediat ce anunțăm noul antrenament.
+                </p>
 
                 <form
                   className="cs-form"

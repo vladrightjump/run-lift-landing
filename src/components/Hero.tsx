@@ -1,18 +1,18 @@
 export const Hero = () => (
   <section className="hero">
     <div className="container">
-      <p className="kicker">Sâmbătă, 11 iulie 2026 · Stadionul Dinamo, Chișinău</p>
+      <p className="kicker">Sâmbătă, 18 iulie 2026 · Parcul Râșcani, Chișinău · Ediția a doua</p>
       <h1>
-        <span className="fade-line d1">Aleargă.</span>
+        <span className="fade-line d1">Hyrox</span>
         <br />
-        <span className="fade-line d2 accent">Ridică.</span>
+        <span className="fade-line d2 accent">Style</span>
         <br />
-        <span className="fade-line d3">Rezistă.</span>
+        <span className="fade-line d3">Race.</span>
       </h1>
       <div className="hero-row">
         <p className="hero-desc">
-          Eveniment de alergare și forță în aer liber — 5 runde de Bear Complex combinate cu alergare. Pentru
-          oricine vrea să se pună la încercare, indiferent de nivel.
+          Cursă în stil HYROX în aer liber: segmente de alergare alternate cu stații de exerciții
+          funcționale. Alergi, treci stația, repeți — contra cronometru, în ritmul tău.
         </p>
         <a href="#inscriere" className="btn-primary-lg hero-cta">
           Rezervă-ți locul

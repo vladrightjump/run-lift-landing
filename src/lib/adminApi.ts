@@ -84,7 +84,40 @@ export type AdminLaunchSignup = {
   prenume: string;
   email: string;
   telefon: string;
+  /** Ediția pentru care persoana s-a înscris (pusă de server la insert). */
+  editie: number;
+  /** De unde a venit: butonul de pe Coming Soon sau formularul din /despre-noi. */
+  sursa: 'lansare' | 'despre-noi';
+  /** Momentul confirmării din email; null = încă neconfirmat. */
+  confirmat_la: string | null;
 };
+
+export type AdminEmailTemplate = {
+  cheie: string;
+  subiect: string;
+  text_email: string;
+  actualizat_la: string;
+};
+
+/** Șabloanele de email editabile din backoffice. */
+export const listEmailTemplates = (
+  token: string,
+  signal?: AbortSignal
+): Promise<AdminEmailTemplate[]> =>
+  rpc<AdminEmailTemplate[]>('admin_list_email_templates', { p_token: token }, signal);
+
+export const saveEmailTemplate = (
+  token: string,
+  cheie: string,
+  subiect: string,
+  text: string
+): Promise<void> =>
+  rpc<void>('admin_save_email_template', {
+    p_token: token,
+    p_cheie: cheie,
+    p_subiect: subiect,
+    p_text: text,
+  });
 
 /** Înscrierile la „Anunță-mă la lansare" (tabelul launch_notifications). */
 export const listLaunchNotifications = (
@@ -108,5 +141,53 @@ export const addRegistration = (
 export const deleteRegistration = (token: string, id: string): Promise<void> =>
   rpc<void>('admin_delete_registration', { p_token: token, p_id: id });
 
+/* ---- Lista de așteptare (event_waitlist) ---- */
+
+export type AdminWaitlistEntry = {
+  id: string;
+  created_at: string;
+  nume: string;
+  telefon: string;
+  email: string;
+};
+
+export const listWaitlist = (token: string, signal?: AbortSignal): Promise<AdminWaitlistEntry[]> =>
+  rpc<AdminWaitlistEntry[]>('admin_list_waitlist', { p_token: token }, signal);
+
+export const deleteWaitlist = (token: string, id: string): Promise<void> =>
+  rpc<void>('admin_delete_waitlist', { p_token: token, p_id: id });
+
+/** Mută o persoană din așteptare în participanți. Întoarce id-ul nou (sau null
+ * dacă emailul era deja înscris). */
+export const promoteWaitlist = (token: string, id: string): Promise<string | null> =>
+  rpc<string | null>('admin_promote_waitlist', { p_token: token, p_id: id });
+
 export const adminLogout = (token: string): Promise<void> =>
   rpc<void>('admin_logout', { p_token: token });
+
+/* ---- Email (funcția Edge `send-email` → Resend) ---- */
+
+export type EmailMessage = { to: string; subject: string; text: string };
+export type SendEmailResult = { sent: number; failed: number; errors?: { to: string; status: number }[] };
+
+const FUNCTIONS_URL = `${SUPABASE.url}/functions/v1`;
+
+/** Trimitere în masă din backoffice — protejată de token pe server. */
+export const sendBulkEmail = async (
+  token: string,
+  messages: EmailMessage[],
+  signal?: AbortSignal
+): Promise<SendEmailResult> => {
+  const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'admin', token, messages }),
+    signal,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401) throw new InvalidTokenError();
+    throw new SubmitHttpError(res.status, JSON.stringify(body));
+  }
+  return body as SendEmailResult;
+};

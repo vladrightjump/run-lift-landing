@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { adminLogin } from '../lib/adminApi';
 import { useCountdown } from '../hooks/useCountdown';
-import { EVENT_DATE } from '../lib/config';
+import { LAUNCH_DATE } from '../lib/config';
 
 type Props = {
   onLogin: (token: string) => void;
@@ -13,7 +13,7 @@ export const AdminLogin = ({ onLogin }: Props) => {
   const [shake, setShake] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [checking, setChecking] = useState(false);
-  const cd = useCountdown(EVENT_DATE);
+  const cd = useCountdown(LAUNCH_DATE);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -101,7 +101,9 @@ export const AdminLogin = ({ onLogin }: Props) => {
 
         <p className="admin-auth-countdown">
           <span className="countdown-dot" />
-          Start în {cd.zile}z {cd.ore}h {cd.minute}m {cd.secunde}s
+          {cd.done
+            ? 'Anunțul e live'
+            : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`}
         </p>
       </div>
     </main>

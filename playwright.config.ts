@@ -6,6 +6,9 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  // Doar fișierele .spec.ts sunt e2e; tests/unit/*.test.ts aparțin vitest
+  // și nu pot fi încărcate de Playwright (import din 'vitest' => crash).
+  testMatch: /.*\.spec\.ts/,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

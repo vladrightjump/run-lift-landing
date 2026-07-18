@@ -1,6 +1,14 @@
+import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
+
 export const Footer = () => (
   <footer>
     <span className="foot-brand">Run + Lift · 2026</span>
+    <span className="foot-community">
+      Comunitatea:{' '}
+      <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
+        {INSTAGRAM_HANDLE}
+      </a>
+    </span>
     <span className="foot-organizers">
       Organizatori: <span className="name">Vladislav Filip</span>{' '}
       <a href="tel:+37369509949">+373 69 509 949</a>{' '}

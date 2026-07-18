@@ -36,7 +36,7 @@ export const TopBar = () => {
       </div>
 
       <div className="topbar-meta">
-        <span className="topbar-info">11 iulie 2026 · Stadionul Dinamo, Chișinău</span>
+        <span className="topbar-info">18 iulie 2026 · Parcul Râșcani</span>
         <a href="#inscriere" className="btn-primary">Înscrie-te</a>
       </div>
     </header>
