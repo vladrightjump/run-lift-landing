@@ -5,6 +5,8 @@ import {
   submitWaitlist,
   sendConfirmationEmail,
   sendInfoEmail,
+  fetchStats,
+  confirmSignup,
   isDuplicateError,
   isTimeoutError,
   isAbortError,
@@ -188,6 +190,58 @@ describe('sendInfoEmail', () => {
   it('înghite erorile — emailul nu trebuie să rupă înscrierea', async () => {
     fetchMock.mockRejectedValueOnce(new Error('network down'));
     await expect(sendInfoEmail('andrei@email.ro')).resolves.toBeUndefined();
+  });
+});
+
+describe('fetchStats (statistici publice)', () => {
+  it('citește RPC-ul public_stats și întoarce JSON-ul', async () => {
+    const payload = { count: 2, participants: [{ nume: 'Vlad F.', echipa: '' }], waitlist: 0 };
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    );
+    const stats = await fetchStats();
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/rpc\/public_stats$/);
+    expect(stats).toEqual(payload);
+  });
+
+  it('folosește cheia publicabilă, nu una secretă', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ count: 0, participants: [], waitlist: 0 }), { status: 200 })
+    );
+    await fetchStats();
+    const headers = fetchMock.mock.calls[0][1].headers as Record<string, string>;
+    expect(headers.apikey).toMatch(/^sb_publishable_/);
+  });
+
+  it('aruncă SubmitHttpError când serverul răspunde cu eroare', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('boom', { status: 500 }));
+    await expect(fetchStats()).rejects.toBeInstanceOf(SubmitHttpError);
+  });
+});
+
+describe('confirmSignup (confirmarea din linkul de email)', () => {
+  it('trimite token-ul către RPC-ul confirm_signup', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify('confirmat'), { status: 200 }));
+    await confirmSignup('tok-123');
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/rpc\/confirm_signup$/);
+    expect(ultimulBody()).toEqual({ p_token: 'tok-123' });
+  });
+
+  it('întoarce „confirmat" și „deja_confirmat" ca atare', async () => {
+    for (const val of ['confirmat', 'deja_confirmat'] as const) {
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(val), { status: 200 }));
+      await expect(confirmSignup('tok')).resolves.toBe(val);
+    }
+  });
+
+  it('orice altă valoare devine „invalid" (token necunoscut/expirat)', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify('altceva'), { status: 200 }));
+    await expect(confirmSignup('tok')).resolves.toBe('invalid');
+  });
+
+  it('aruncă SubmitHttpError la eroare de server', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('boom', { status: 500 }));
+    await expect(confirmSignup('tok')).rejects.toBeInstanceOf(SubmitHttpError);
   });
 });
 
