@@ -38,6 +38,12 @@ const delay = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
 const EVENT_META = '25 iulie 2026 · Parcul Râșcani';
 const HERO_KICKER = 'Sâmbătă, 25 iulie 2026 · Parcul Râșcani, Chișinău · Ediția a treia';
 
+// Aceeași locație ca edițiile anterioare — pinul „Новая спортплощадка" din
+// Parcul Râșcani. Butonul de direcții folosește link-ul scurt al organizatorului.
+const MAP_SRC =
+  'https://maps.google.com/maps?q=%D0%9D%D0%BE%D0%B2%D0%B0%D1%8F%20%D1%81%D0%BF%D0%BE%D1%80%D1%82%D0%BF%D0%BB%D0%BE%D1%89%D0%B0%D0%B4%D0%BA%D0%B0%20Chi%C8%99in%C4%83u&z=16&hl=ro&output=embed';
+const DIRECTIONS_URL = 'https://share.google/EO25izjX5nIyQgwsa';
+
 const SUMMARY_ITEMS = [
   'Sâmbătă, 25 iulie 2026, ora 07:00 — Parcul Râșcani, Str. Braniștii',
   'Cursă în stil HYROX: urcare, coborâre, alergare + stații funcționale',
@@ -570,32 +576,35 @@ export const Edition3Landing = () => {
               Vino cu 30 de minute înainte pentru check-in și încălzire. Hidratare la fața locului.
             </p>
           </div>
-          <div
-            style={{
-              border: '1px solid #2A2E25',
-              aspectRatio: '4 / 3',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'repeating-linear-gradient(45deg, #1A1D17 0px, #1A1D17 14px, #161913 14px, #161913 28px)',
-            }}
-          >
+          <div>
+            <div style={{ border: '1px solid #2A2E25', overflow: 'hidden', background: '#1A1D17' }}>
+              <iframe
+                title="Parcul Râșcani, Chișinău — hartă"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+                src={MAP_SRC}
+                style={{ display: 'block', width: '100%', aspectRatio: '4 / 3', border: 0 }}
+              />
+            </div>
             <a
               className="e3-link"
-              href="https://maps.app.goo.gl/"
+              href={DIRECTIONS_URL}
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                fontFamily: 'monospace',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 14,
                 fontSize: 13,
-                color: '#9BA08F',
+                fontWeight: 600,
                 letterSpacing: 1,
-                background: '#121410',
-                padding: '8px 14px',
-                border: '1px solid #2A2E25',
+                textTransform: 'uppercase',
+                color: '#C9F24B',
               }}
             >
-              deschide harta parcului
+              <span aria-hidden="true">↗</span> Deschide în Google Maps
             </a>
           </div>
         </div>
