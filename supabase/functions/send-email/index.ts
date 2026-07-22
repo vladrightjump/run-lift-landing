@@ -114,8 +114,7 @@ const CONFIRM_TEXT =
   `Salut, {prenume}!\n\n` +
   `Înscrierea ta la Run + Lift — HYROX Style Race este confirmată.\n\n` +
   `• Când: sâmbătă, 25 iulie 2026, ora 07:00\n` +
-  `• Unde: Parcul Râșcani, Str. Braniștii, Chișinău\n` +
-  `• Vino cu 30 de minute înainte pentru check-in și încălzire.\n\n` +
+  `• Unde: Parcul Râșcani, Str. Braniștii, Chișinău\n\n` +
   `Adu apă pentru hidratare și bună dispoziție. Ne vedem la start!\n\n` +
   `Echipa Run + Lift`;
 
