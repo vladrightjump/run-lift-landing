@@ -26,8 +26,10 @@ describe('date și ore', () => {
     expect(LAUNCH_DATE.toISOString()).toBe('2026-07-22T15:00:00.000Z');
   });
 
-  it('lansarea e după eveniment', () => {
-    expect(LAUNCH_DATE.getTime()).toBeGreaterThan(EVENT_DATE.getTime());
+  it('lansarea (anunțul ediției 3) e înainte de eveniment', () => {
+    // Anunțăm ediția a treia pe 22 iulie; evenimentul ei are loc pe 25 iulie.
+    // La expirarea LAUNCH_DATE, Coming Soon lasă loc landing-ului ediției 3.
+    expect(LAUNCH_DATE.getTime()).toBeLessThan(EVENT_DATE.getTime());
   });
 });
 

@@ -5,7 +5,10 @@
 // Ediția curentă a evenimentului. Înscrierile noi se salvează cu această
 // valoare (coloana `editie` din `registrations`); `public_stats` și lista
 // din backoffice arată doar ediția curentă. La un eveniment nou: incrementezi.
-export const CURRENT_EDITION = 2;
+// Sincron cu `app_config.current_event_edition` din Supabase (vezi
+// funcția `current_event_edition()`, care alimentează defaults-urile și
+// `public_stats`). La ediție nouă: incrementezi aici ȘI acolo.
+export const CURRENT_EDITION = 3;
 
 // Fallback static — folosit doar dacă API-ul de statistici nu răspunde.
 // Numărul live vine din Supabase (vezi useStats).
@@ -16,9 +19,9 @@ export const WAITLIST_SLOTS = 10;
 
 // Orele sunt fixate pe fusul orar al Chișinăului (UTC+3 vara) — vizitatorii
 // din alte fusuri văd același moment absolut, nu ora lor locală.
-export const EVENT_DATE = new Date('2026-07-18T07:00:00+03:00'); // 18 iulie 2026, 07:00
+export const EVENT_DATE = new Date('2026-07-25T07:00:00+03:00'); // 25 iulie 2026, 07:00
 export const EVENT_END_DATE = new Date(EVENT_DATE.getTime() + 6 * 60 * 60 * 1000); // start + 6h
-export const REGISTRATION_DEADLINE = new Date('2026-07-18T00:00:00+03:00'); // până pe 17 iulie inclusiv
+export const REGISTRATION_DEADLINE = new Date('2026-07-25T00:00:00+03:00'); // până pe 24 iulie inclusiv
 
 /**
  * Coming Soon.

@@ -1,0 +1,59 @@
+/*
+ * Ediția a treia — „Up + Down".
+ * Designul e portat 1:1 din artifact (stiluri inline pe componente); aici stau
+ * doar lucrurile care NU se pot exprima inline: fonturi, keyframes și stările
+ * :hover / :focus / :active. Fiecare element interactiv are și o clasă `e3-*`.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&display=swap');
+
+.e3-root { min-height: 100vh; background: #121410; color: #F1EFE6; font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; }
+.e3-root ::selection { background: #C9F24B; color: #121410; }
+.e3-root a { color: #C9F24B; }
+
+/* Butonul/CTA lime standard */
+.e3-cta { transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
+.e3-cta:hover { background: #DDFF66; transform: translateY(-2px); box-shadow: 0 6px 18px rgba(201,242,75,0.25); }
+.e3-cta:active { transform: translateY(0) scale(0.97); box-shadow: none; }
+
+/* CTA mare din hero (cu glow) */
+.e3-cta-lg { transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; animation: e3-fade-up 0.6s ease-out 0.7s both, e3-glow 3s ease-in-out 1.5s infinite; }
+.e3-cta-lg:hover { background: #DDFF66; transform: translateY(-3px); box-shadow: 0 10px 28px rgba(201,242,75,0.28); }
+.e3-cta-lg:active { transform: translateY(0) scale(0.97); box-shadow: none; }
+
+/* Butonul de submit */
+.e3-submit { transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
+.e3-submit:hover:not(:disabled) { background: #DDFF66; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,242,75,0.25); }
+.e3-submit:active:not(:disabled) { transform: translateY(0) scale(0.98); box-shadow: none; }
+.e3-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Butonul de retry (eroare) */
+.e3-retry { transition: background 0.2s ease, transform 0.15s ease; }
+.e3-retry:hover { background: #DDFF66; transform: translateY(-2px); }
+.e3-retry:active { transform: translateY(0) scale(0.97); }
+
+/* Butonul ghost (înscrie altă persoană) */
+.e3-ghost { transition: border-color 0.2s ease, color 0.2s ease; }
+.e3-ghost:hover { border-color: #C9F24B; color: #C9F24B; }
+
+/* Input-uri */
+.e3-input { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.e3-input:focus { border-color: #C9F24B; box-shadow: 0 0 0 3px rgba(201,242,75,0.18); }
+.e3-input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+
+/* Linkuri text (footer) */
+.e3-link { text-decoration: none; }
+.e3-link:hover { text-decoration: underline; color: #DDFF66; }
+
+@keyframes e3-toast-in { from { opacity: 0; transform: translate(-50%, -16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes e3-spin { to { transform: rotate(360deg); } }
+@keyframes e3-pop-in { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes e3-draw-check { to { stroke-dashoffset: 0; } }
+@keyframes e3-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes e3-ring-pulse { 0% { transform: scale(0.9); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes e3-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,242,75,0.35); } 50% { box-shadow: 0 0 24px 4px rgba(201,242,75,0.22); } }
+@keyframes e3-dot-blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.75); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .e3-root *, .e3-cta-lg { animation: none !important; }
+}
