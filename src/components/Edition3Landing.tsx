@@ -26,7 +26,6 @@ import { rememberMySignup, getMySignups } from '../lib/mySignups';
 import { useCountdown } from '../hooks/useCountdown';
 import { useStats } from '../hooks/useStats';
 import { useNow } from '../hooks/useNow';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 type Phase = 'form' | 'loading' | 'success' | 'error';
 type ToastKind = 'success' | 'error';
@@ -58,6 +57,15 @@ const FORMAT_CARDS = [
   { t: 'REPEAT', d: 'Alternezi alergarea cu stațiile până la finish — contra cronometru.' },
 ];
 
+const MONTHS = [
+  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
+];
+// Ani permiși: de la 14 ani (2012) în urmă până la 100 (1926). Validarea fină
+// (min. 14 ani la data evenimentului) rămâne în `validate`/`dataNasteriiError`.
+const BIRTH_YEARS = Array.from({ length: 2012 - 1926 + 1 }, (_, i) => 2012 - i);
+const pad2 = (n: number | string) => String(n).padStart(2, '0');
+
 const label: CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
@@ -76,6 +84,25 @@ const inputStyle: CSSProperties = {
   width: '100%',
   boxSizing: 'border-box',
 };
+const selectStyle: CSSProperties = {
+  background: '#121410',
+  border: '1px solid #2A2E25',
+  color: '#F1EFE6',
+  fontFamily: 'Archivo, sans-serif',
+  fontSize: 15,
+  padding: '13px 28px 13px 12px',
+  outline: 'none',
+  width: '100%',
+  boxSizing: 'border-box',
+  appearance: 'none',
+  cursor: 'pointer',
+  colorScheme: 'dark',
+  backgroundImage:
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239BA08F' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 10px center',
+};
+
 const sectionNum: CSSProperties = {
   fontFamily: 'Anton, sans-serif',
   fontSize: 15,
@@ -96,7 +123,6 @@ const fieldErr: CSSProperties = { fontSize: 13, color: '#F26D6D' };
 export const Edition3Landing = () => {
   const cd = useCountdown(EVENT_DATE);
   const { stats, refresh } = useStats();
-  const isOnline = useOnlineStatus();
   const now = useNow(30_000);
 
   const [phase, setPhase] = useState<Phase>('form');
@@ -107,6 +133,8 @@ export const Edition3Landing = () => {
   const [wlFull, setWlFull] = useState(false);
   const [sessionSignups, setSessionSignups] = useState(0);
   const [toast, setToast] = useState<{ kind: ToastKind; msg: string } | null>(null);
+  const [birth, setBirth] = useState({ d: '', m: '', y: '' });
+  const birthISO = birth.d && birth.m && birth.y ? `${birth.y}-${pad2(birth.m)}-${pad2(birth.d)}` : '';
 
   const formRef = useRef<HTMLFormElement>(null);
   const submittingRef = useRef(false);
@@ -200,11 +228,6 @@ export const Edition3Landing = () => {
       return;
     }
 
-    if (!isOnline) {
-      showToast('error', 'Nu ai conexiune la internet. Reîncearcă când revii online.');
-      return;
-    }
-
     setErrors({});
     setPhase('loading');
     submittingRef.current = true;
@@ -283,6 +306,7 @@ export const Edition3Landing = () => {
 
   const resetForm = () => {
     formRef.current?.reset();
+    setBirth({ d: '', m: '', y: '' });
     setErrors({});
     setPhase('form');
   };
@@ -769,19 +793,64 @@ export const Edition3Landing = () => {
                     />
                     {errors.email && <span style={fieldErr}>Adresa de email nu e validă.</span>}
                   </label>
-                  <label style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ display: 'grid', gap: 8 }}>
                     <span style={label}>Data nașterii *</span>
-                    <input
-                      className="e3-input"
-                      name="dataNasterii"
-                      type="date"
-                      min="1940-01-01"
-                      max="2012-07-25"
-                      autoComplete="bday"
-                      style={{ ...inputStyle, padding: '12px 14px', colorScheme: 'dark', borderColor: errors.dataNasterii ? '#F26D6D' : '#2A2E25' }}
-                    />
+                    <input type="hidden" name="dataNasterii" value={birthISO} readOnly />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: 8 }}>
+                      <select
+                        aria-label="Ziua nașterii"
+                        className="e3-input"
+                        value={birth.d}
+                        onChange={(e) => {
+                          setBirth((b) => ({ ...b, d: e.target.value }));
+                          clearErrorFor('dataNasterii');
+                        }}
+                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? '#F26D6D' : '#2A2E25' }}
+                      >
+                        <option value="">Zi</option>
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                          <option key={d} value={String(d)}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="Luna nașterii"
+                        className="e3-input"
+                        value={birth.m}
+                        onChange={(e) => {
+                          setBirth((b) => ({ ...b, m: e.target.value }));
+                          clearErrorFor('dataNasterii');
+                        }}
+                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? '#F26D6D' : '#2A2E25' }}
+                      >
+                        <option value="">Luna</option>
+                        {MONTHS.map((name, i) => (
+                          <option key={name} value={String(i + 1)}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="Anul nașterii"
+                        className="e3-input"
+                        value={birth.y}
+                        onChange={(e) => {
+                          setBirth((b) => ({ ...b, y: e.target.value }));
+                          clearErrorFor('dataNasterii');
+                        }}
+                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? '#F26D6D' : '#2A2E25' }}
+                      >
+                        <option value="">An</option>
+                        {BIRTH_YEARS.map((y) => (
+                          <option key={y} value={String(y)}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     {errors.dataNasterii && <span style={fieldErr}>{dateErrMsg}</span>}
-                  </label>
+                  </div>
                 </div>
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: '#9BA08F', textWrap: 'pretty' }}>
                   Participanții trebuie să aibă minim 14 ani în ziua evenimentului. Stațiile și greutățile sunt
@@ -813,7 +882,6 @@ export const Edition3Landing = () => {
                 <button
                   type="submit"
                   className="e3-submit"
-                  disabled={!isOnline}
                   style={{
                     background: '#C9F24B',
                     color: '#121410',
@@ -827,11 +895,7 @@ export const Edition3Landing = () => {
                     marginTop: 4,
                   }}
                 >
-                  {!isOnline
-                    ? 'Offline — nu se poate trimite'
-                    : waitlistMode
-                    ? 'Intră pe lista de așteptare'
-                    : 'Trimite înscrierea'}
+                  {waitlistMode ? 'Intră pe lista de așteptare' : 'Trimite înscrierea'}
                 </button>
               </form>
             )}
