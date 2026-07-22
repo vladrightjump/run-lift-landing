@@ -188,4 +188,19 @@ test.describe('Înscriere — formular ediția 3', () => {
     await expect(page.getByText(/lista de așteptare/i).first()).toBeVisible();
     expect(waitlistHit).toBe(true);
   });
+
+  test('secțiunea Locație: harta e afișată, iar linkul duce la Google Maps', async ({ page }) => {
+    await fixClock(page);
+    await mockStats(page, 0);
+    await page.goto('/?preview=landing');
+
+    // Harta embed a locației (Parcul Râșcani) e prezentă.
+    await expect(page.locator('iframe[title*="hartă"]')).toHaveAttribute('src', /maps\.google\.com/);
+
+    // Linkul „Deschide în Google Maps" duce chiar la Google Maps, într-un tab nou.
+    const link = page.getByRole('link', { name: /deschide în google maps/i });
+    await expect(link).toHaveAttribute('href', /^https:\/\/www\.google\.com\/maps\//);
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', /noopener/);
+  });
 });

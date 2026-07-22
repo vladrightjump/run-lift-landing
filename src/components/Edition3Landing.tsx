@@ -783,7 +783,7 @@ export const Edition3Landing = () => {
                     {errors.telefon && <span style={fieldErr}>Numărul de telefon nu e valid.</span>}
                   </label>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 18 }}>
+                <div style={{ display: 'grid', gap: 18 }}>
                   <label style={{ display: 'grid', gap: 8 }}>
                     <span style={label}>Email *</span>
                     <input
@@ -799,7 +799,7 @@ export const Edition3Landing = () => {
                   <div style={{ display: 'grid', gap: 8 }}>
                     <span style={label}>Data nașterii *</span>
                     <input type="hidden" name="dataNasterii" value={birthISO} readOnly />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.6fr 1.1fr', gap: 10 }}>
                       <select
                         aria-label="Ziua nașterii"
                         className="e3-input"
