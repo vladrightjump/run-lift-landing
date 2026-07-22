@@ -8,8 +8,19 @@ import type { Locator, Page } from '@playwright/test';
 
 const INSERT_ROUTE = '**/rest/v1/launch_notifications';
 
+// Ceas fixat înainte de lansare (22 iulie 18:00) dar care AVANSEAZĂ în timp real
+// — altfel, dacă rulăm testele după ora lansării, countdown-ul e „done" și
+// cifrele dispar. Testele cu clock propriu (countdown expirat) îl suprascriu.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const base = new Date('2026-07-22T10:00:00+03:00').getTime();
+    const start = performance.now();
+    Date.now = () => base + (performance.now() - start);
+  });
+});
+
 const openModal = async (page: Page): Promise<Locator> => {
-  await page.goto('/');
+  await page.goto('/?preview=soon');
   await page.getByRole('button', { name: /anunță-mă la lansare/i }).click();
   const modal = page.getByRole('dialog');
   await expect(modal).toBeVisible();
@@ -25,7 +36,7 @@ const fillValid = async (modal: Locator) => {
 
 test.describe('Coming Soon — ecran', () => {
   test('afișează titlul, badge-ul, countdown-ul și CTA-ul', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?preview=soon');
 
     const title = page.locator('h1.cs-title');
     await expect(title).toContainText('Coming');
@@ -45,7 +56,7 @@ test.describe('Coming Soon — ecran', () => {
   });
 
   test('countdown-ul are role=timer și cifre zero-padded', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?preview=soon');
     await expect(page.getByRole('timer')).toBeVisible();
     const values = await page.locator('.cs-cd-value').allTextContents();
     expect(values).toHaveLength(4);
@@ -53,7 +64,7 @@ test.describe('Coming Soon — ecran', () => {
   });
 
   test('countdown-ul avansează (secundele se schimbă)', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?preview=soon');
     const seconds = page.locator('.cs-cd-unit', { hasText: 'Secunde' }).locator('.cs-cd-value');
     const first = await seconds.textContent();
     await expect(seconds).not.toHaveText(first ?? '', { timeout: 3000 });
@@ -67,14 +78,14 @@ test.describe('Coming Soon — ecran', () => {
       Date.now = () => fixed;
     });
 
-    await page.goto('/');
+    await page.goto('/?preview=soon');
     await expect(page.locator('.cs-cd-unit')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /anunță-mă la lansare/i })).toBeVisible();
   });
 
   test('se randează corect pe mobil (375px) fără scroll orizontal', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
-    await page.goto('/');
+    await page.goto('/?preview=soon');
 
     await expect(page.locator('h1.cs-title')).toBeVisible();
     await expect(page.locator('.cs-cd-unit')).toHaveCount(4);
@@ -86,16 +97,19 @@ test.describe('Coming Soon — ecran', () => {
     expect(overflow).toBeLessThanOrEqual(1);
   });
 
-  test('titlul paginii și meta description reflectă anunțul din 22 iulie', async ({ page }) => {
-    await page.goto('/');
-    await expect(page).toHaveTitle(/coming soon/i);
+  test('titlul paginii și meta description reflectă evenimentul (25 iulie)', async ({ page }) => {
+    // Meta e statică în index.html și reprezintă evenimentul ediției a treia,
+    // fiindcă asta se distribuie ca preview de share după lansare.
+    await page.goto('/?preview=soon');
+    await expect(page).toHaveTitle(/hyrox style race/i);
+    await expect(page).toHaveTitle(/edi[țt]ia a treia/i);
     const desc = await page.locator('meta[name="description"]').getAttribute('content');
-    expect(desc).toMatch(/22 iulie 2026/);
-    expect(desc).toMatch(/edi[țt]ia a treia/i);
+    expect(desc).toMatch(/25 iulie 2026/);
+    expect(desc).toMatch(/hyrox/i);
   });
 
   test('landing-ul vechi (înscrieri, participanți) nu e randat', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?preview=soon');
     await expect(page.locator('.cs-root')).toBeVisible();
     await expect(page.locator('#inscriere')).toHaveCount(0);
   });

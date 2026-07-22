@@ -160,7 +160,7 @@ test.describe('Despre noi — formular', () => {
 
 test.describe('Navigare între pagini', () => {
   test('butonul „Află mai multe" de pe Coming Soon duce la /despre-noi', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?preview=soon');
     const buton = page.getByRole('link', { name: /află mai multe/i });
     await expect(buton).toBeVisible();
     await buton.click();
@@ -169,6 +169,11 @@ test.describe('Navigare între pagini', () => {
   });
 
   test('logoul din /despre-noi duce înapoi acasă', async ({ page }) => {
+    // Logoul duce la „/" fără query, deci fixăm ceasul înainte de lansare
+    // (22 iulie 18:00) ca acasă să fie Coming Soon, nu landing-ul.
+    await page.addInitScript(() => {
+      Date.now = () => new Date('2026-07-22T10:00:00+03:00').getTime();
+    });
     await page.goto('/despre-noi');
     await page.locator('.dn-logo').click();
     await expect(page).toHaveURL(/\/$/);
@@ -176,7 +181,7 @@ test.describe('Navigare între pagini', () => {
   });
 
   test('Instagram apare și pe Coming Soon', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?preview=soon');
     await expect(page.locator('.cs-footer a', { hasText: /instagram/i })).toHaveAttribute(
       'href',
       'https://instagram.com/we_run_and_lift'

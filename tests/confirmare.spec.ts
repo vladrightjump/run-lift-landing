@@ -82,7 +82,7 @@ test.describe('Formularele anunță confirmarea', () => {
       route.fulfill({ status: 200, body: '{"sent":1}' })
     );
 
-    await page.goto('/');
+    await page.goto('/?preview=soon');
     await page.getByRole('button', { name: /anunță-mă la lansare/i }).click();
     const modal = page.getByRole('dialog');
     await modal.getByPlaceholder('Popescu').fill('Test');
@@ -104,7 +104,7 @@ test.describe('Formularele anunță confirmarea', () => {
       return route.fulfill({ status: 200, body: '{"sent":1}' });
     });
 
-    await page.goto('/');
+    await page.goto('/?preview=soon');
     await page.getByRole('button', { name: /anunță-mă la lansare/i }).click();
     const modal = page.getByRole('dialog');
     await modal.getByPlaceholder('Popescu').fill('Test');

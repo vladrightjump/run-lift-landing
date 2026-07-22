@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   submitLaunchNotification,
+  submitRegistration,
+  submitWaitlist,
+  sendConfirmationEmail,
   sendInfoEmail,
   isDuplicateError,
   isTimeoutError,
   isAbortError,
   SubmitHttpError,
 } from '../../src/lib/supabase';
+import { CURRENT_EDITION } from '../../src/lib/config';
 
 const draft = {
   nume: '  Popescu  ',
@@ -87,6 +91,85 @@ describe('submitLaunchNotification', () => {
       expect(isDuplicateError(err)).toBe(true);
     });
     expect.assertions(1);
+  });
+});
+
+const regData = {
+  nume: '  Vladislav Filip  ',
+  telefon: '069 509 949',
+  email: '  Vlad@Email.RO ',
+  dataNasterii: '1994-10-18',
+  acord: true,
+};
+
+describe('submitRegistration (înscriere la eveniment)', () => {
+  it('trimite către tabela registrations', async () => {
+    await submitRegistration(regData);
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/registrations$/);
+  });
+
+  it('salvează ediția curentă a evenimentului (acum 3)', async () => {
+    // Regresie: dacă editie iese din sincron cu current_event_edition din DB,
+    // înscrierile ediției 3 s-ar amesteca cu ediția 2 (deja plină).
+    await submitRegistration(regData);
+    expect(ultimulBody().editie).toBe(CURRENT_EDITION);
+    expect(CURRENT_EDITION).toBe(3);
+  });
+
+  it('curăță spațiile, normalizează telefonul și păstrează data nașterii', async () => {
+    await submitRegistration(regData);
+    expect(ultimulBody()).toMatchObject({
+      nume: 'Vladislav Filip',
+      telefon: '069509949',
+      email: 'Vlad@Email.RO',
+      data_nasterii: '1994-10-18',
+      acord: true,
+    });
+  });
+
+  it('generează un id în client (pentru emailul de confirmare) și îl întoarce', async () => {
+    const id = await submitRegistration(regData);
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(ultimulBody().id).toBe(id);
+  });
+
+  it('data_nasterii lipsă devine null, nu string gol', async () => {
+    await submitRegistration({ ...regData, dataNasterii: '' });
+    expect(ultimulBody().data_nasterii).toBeNull();
+  });
+
+  it('duplicatul (409) e recunoscut', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 409 }));
+    await submitRegistration(regData).catch((err) => {
+      expect(isDuplicateError(err)).toBe(true);
+    });
+    expect.assertions(1);
+  });
+});
+
+describe('submitWaitlist (lista de așteptare)', () => {
+  it('trimite către event_waitlist cu ediția curentă', async () => {
+    await submitWaitlist(regData);
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/event_waitlist$/);
+    expect(ultimulBody().editie).toBe(CURRENT_EDITION);
+  });
+});
+
+describe('sendConfirmationEmail', () => {
+  it('apelează edge function-ul cu modul "confirm" și id-ul înscrierii', async () => {
+    await sendConfirmationEmail('abc-123');
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/functions\/v1\/send-email$/);
+    expect(ultimulBody()).toEqual({ mode: 'confirm', id: 'abc-123' });
+  });
+
+  it('nu face niciun request pentru id gol', async () => {
+    await sendConfirmationEmail('');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('înghite erorile — emailul nu trebuie să rupă înscrierea', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    await expect(sendConfirmationEmail('abc-123')).resolves.toBeUndefined();
   });
 });
 
