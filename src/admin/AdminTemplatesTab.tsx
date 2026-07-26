@@ -19,6 +19,21 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
     descriere:
       'Nefolosit în prezent — a fost înlocuit de șablonul de confirmare. Păstrat pentru referință.',
   },
+  bulk_participant_confirmare: {
+    titlu: 'Trimitere în masă · Confirmare (participanți)',
+    descriere:
+      'Punct de plecare pentru tab-ul „Email" → Participanți. Variabile: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii} (o singură acoladă).',
+  },
+  bulk_participant_reminder: {
+    titlu: 'Trimitere în masă · Reminder eveniment (participanți)',
+    descriere:
+      'Reminderul de dinaintea evenimentului, din tab-ul „Email" → Participanți. Variabile: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}.',
+  },
+  bulk_waitlist_anunt: {
+    titlu: 'Trimitere în masă · Anunț eveniment (listă de așteptare)',
+    descriere:
+      'Anunțul cu link de înscriere, din tab-ul „Email" → Listă de așteptare. Variabile: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}.',
+  },
 };
 
 export const AdminTemplatesTab = ({ token, onAuthError }: Props) => {

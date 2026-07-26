@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { sendBulkEmail, listLaunchNotifications, InvalidTokenError } from '../lib/adminApi';
-import type { AdminRegistration, AdminLaunchSignup } from '../lib/adminApi';
+import {
+  sendBulkEmail,
+  listLaunchNotifications,
+  listEmailTemplates,
+  InvalidTokenError,
+} from '../lib/adminApi';
+import type { AdminRegistration, AdminLaunchSignup, AdminEmailTemplate } from '../lib/adminApi';
 
 type Props = {
   token: string;
@@ -23,33 +28,21 @@ type Recipient = {
   created_at: string;
 };
 
-const REG_LINK = 'https://parktraining.fit';
+// Template-urile de trimitere în masă stau acum în DB (tabelul `email_templates`)
+// și se editează din tab-ul „Șabloane de email". Aici le doar încărcăm și le
+// oferim ca punct de plecare. Mapările de mai jos leagă cheia din DB de numele
+// prietenos și de audiența în care apare.
+const TEMPLATE_LABELS: Record<string, string> = {
+  bulk_participant_confirmare: 'Confirmare (automat)',
+  bulk_participant_reminder: 'Reminder eveniment',
+  bulk_waitlist_anunt: 'Anunț eveniment nou',
+};
 
-// Template-uri pentru PARTICIPANȚII înscriși (ediția 2).
-const PARTICIPANT_TEMPLATES: Template[] = [
-  {
-    nume: 'Confirmare (automat)',
-    subiect: 'Confirmare înscriere — HYROX, 18 iulie',
-    corp: 'Salut, {prenume}!\n\nÎnscrierea ta la Run + Lift — HYROX Style Race este confirmată.\n\n• Când: sâmbătă, 18 iulie 2026, ora 07:00\n• Unde: Parcul Râșcani, Str. Braniștii, Chișinău\n• Vino cu 30 de minute înainte pentru check-in și încălzire.\n\nAdu apă pentru hidratare și bună dispoziție. Ne vedem la start!\n\nEchipa Run + Lift',
-  },
-  {
-    nume: 'Reminder eveniment',
-    subiect: 'Mâine e ziua — HYROX, 18 iulie, 07:00',
-    corp: 'Salut, {prenume}!\n\nÎți reamintim că Run + Lift — HYROX Style Race are loc mâine, sâmbătă 18 iulie, ora 07:00, la Parcul Râșcani (Str. Braniștii).\n\n• Check-in de la 06:30, start fix la 07:00\n• Adu: echipament sport, apă pentru hidratare și bună dispoziție\n\nDacă nu mai poți participa, răspunde la acest email ca să eliberăm locul.\n\nNe vedem la start!\nEchipa Run + Lift',
-  },
-  { nume: 'Mesaj liber', subiect: '', corp: '' },
-];
+const PARTICIPANT_KEYS = ['bulk_participant_confirmare', 'bulk_participant_reminder'] as const;
+const WAITLIST_KEYS = ['bulk_waitlist_anunt'] as const;
 
-// Template-uri pentru LISTA DE AȘTEPTARE (cei care au lăsat emailul la „Anunță-mă
-// la lansare") — anunțul noului eveniment, cu link de înscriere.
-const WAITLIST_TEMPLATES: Template[] = [
-  {
-    nume: 'Anunț eveniment nou',
-    subiect: 'S-au deschis înscrierile — HYROX, 18 iulie',
-    corp: `Salut, {prenume}!\n\nEvenimentul pe care îl așteptai e aici: Run + Lift — HYROX Style Race, sâmbătă 18 iulie 2026, ora 07:00, la Parcul Râșcani (Str. Braniștii), Chișinău.\n\nCursă în stil HYROX în aer liber — alergi, treci stația, repeți, contra cronometru. Locuri limitate.\n\nÎnscrie-te aici:\n${REG_LINK}\n\nNe vedem la start!\nEchipa Run + Lift`,
-  },
-  { nume: 'Mesaj liber', subiect: '', corp: '' },
-];
+// „Mesaj liber" nu se salvează nicăieri — e mereu ultimul, gol.
+const FREE_TEMPLATE: Template = { nume: 'Mesaj liber', subiect: '', corp: '' };
 
 const VARIABLES = ['{nume}', '{prenume}', '{telefon}', '{email}', '{data_inscrierii}'] as const;
 
@@ -74,6 +67,7 @@ const normalizeLaunch = (r: AdminLaunchSignup): Recipient => ({
 export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => {
   const [audience, setAudience] = useState<Audience>('participanti');
   const [launchRows, setLaunchRows] = useState<AdminLaunchSignup[]>([]);
+  const [dbTemplates, setDbTemplates] = useState<AdminEmailTemplate[]>([]);
   // null = toți selectați (inclusiv cei apăruți între timp).
   const [selected, setSelected] = useState<Record<string, boolean> | null>(null);
   const [activeTemplate, setActiveTemplate] = useState(0);
@@ -94,7 +88,31 @@ export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => 
     return () => controller.abort();
   }, [token]);
 
-  const templates = audience === 'participanti' ? PARTICIPANT_TEMPLATES : WAITLIST_TEMPLATES;
+  // Șabloanele de trimitere în masă — încărcate din DB, editabile din tab-ul
+  // „Șabloane de email". Dacă nu se încarcă, rămâne doar „Mesaj liber".
+  useEffect(() => {
+    const controller = new AbortController();
+    listEmailTemplates(token, controller.signal)
+      .then(setDbTemplates)
+      .catch(() => {
+        /* liniște — rămâne opțiunea de mesaj liber */
+      });
+    return () => controller.abort();
+  }, [token]);
+
+  const buildTemplates = (keys: readonly string[]): Template[] => {
+    const named = keys
+      .map((k) => {
+        const row = dbTemplates.find((t) => t.cheie === k);
+        if (!row) return null;
+        return { nume: TEMPLATE_LABELS[k] ?? k, subiect: row.subiect, corp: row.text_email };
+      })
+      .filter((t): t is Template => t !== null);
+    return [...named, FREE_TEMPLATE];
+  };
+
+  const templates =
+    audience === 'participanti' ? buildTemplates(PARTICIPANT_KEYS) : buildTemplates(WAITLIST_KEYS);
   const baseRows: Recipient[] =
     audience === 'participanti' ? rows.map(normalizeParticipant) : launchRows.map(normalizeLaunch);
 

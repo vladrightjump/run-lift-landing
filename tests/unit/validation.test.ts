@@ -6,7 +6,41 @@ import {
   MIN_AGE,
   ageAtEvent,
   dataNasteriiError,
+  validate,
+  firstErrorField,
+  errorMessage,
 } from '../../src/lib/validation';
+import type { FormData } from '../../src/lib/validation';
+import { EVENT_DATE } from '../../src/lib/config';
+
+/** Formular complet valid — punctul de plecare pentru testele pe câmp. */
+const valid: FormData = {
+  nume: 'Ana Popescu',
+  telefon: '069123456',
+  email: 'ana@email.ro',
+  dataNasterii: '1994-05-20',
+  acord: true,
+};
+
+/** Data evenimentului în fusul Chișinăului, ca [an, lună, zi]. */
+const eventYMD = (): [number, number, number] => {
+  const iso = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Chisinau',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(EVENT_DATE);
+  const [y, m, d] = iso.split('-').map(Number);
+  return [y, m, d];
+};
+
+const pad = (n: number) => String(n).padStart(2, '0');
+/** Ziua de naștere a cuiva care împlinește exact `ani` în ziua evenimentului. */
+const naStereLa = (ani: number, offsetZile = 0): string => {
+  const [y, m, d] = eventYMD();
+  const dt = new Date(Date.UTC(y - ani, m - 1, d + offsetZile));
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+};
 
 describe('normalizePhone', () => {
   it('scoate spații, paranteze, puncte și liniuțe', () => {
@@ -116,5 +150,135 @@ describe('vârsta la data evenimentului', () => {
 
   it('acceptă o dată de naștere validă', () => {
     expect(dataNasteriiError('1994-05-20')).toBeNull();
+  });
+});
+
+describe('pragul de vârstă la data evenimentului', () => {
+  it('exact MIN_AGE în ziua evenimentului → acceptat', () => {
+    // Cazul de la limită: cineva care împlinește 14 ani chiar în ziua cursei
+    // are voie să participe. Un „<=" scris greșit l-ar respinge.
+    const zi = naStereLa(MIN_AGE);
+    expect(ageAtEvent(zi)).toBe(MIN_AGE);
+    expect(dataNasteriiError(zi)).toBeNull();
+  });
+
+  it('cu o zi prea tânăr → respins', () => {
+    const zi = naStereLa(MIN_AGE, 1);
+    expect(ageAtEvent(zi)).toBe(MIN_AGE - 1);
+    expect(dataNasteriiError(zi)).toMatch(new RegExp(`minim ${MIN_AGE} ani`));
+  });
+
+  it('cu o zi mai în vârstă decât pragul → acceptat', () => {
+    expect(dataNasteriiError(naStereLa(MIN_AGE, -1))).toBeNull();
+  });
+
+  it('exact 100 de ani e acceptat, 101 nu', () => {
+    expect(dataNasteriiError(naStereLa(100))).toBeNull();
+    expect(dataNasteriiError(naStereLa(101))).toBe('Data nașterii nu e validă.');
+  });
+
+  it('pragul e identic în orice fus orar al vizitatorului', () => {
+    // Regula se calculează pe data evenimentului în ora Chișinăului. Dacă
+    // cineva revine la EVENT_DATE.getDate() (fusul browserului), un
+    // participant din Honolulu ar primi alt verdict decât unul din Chișinău.
+    const [y, m, d] = eventYMD();
+    expect(ageAtEvent(`${y - MIN_AGE}-${pad(m)}-${pad(d)}`)).toBe(MIN_AGE);
+  });
+});
+
+describe('date care nu există în calendar', () => {
+  it('respinge 30 februarie și 31 aprilie', () => {
+    // Formularul are ziua 1–31 independent de lună, deci combinația e chiar
+    // selectabilă. `new Date("2012-02-30")` NU dă eroare — o rostogolește în
+    // martie — așa că fără verificare explicită ar trece ca dată validă.
+    for (const zi of ['2012-02-30', '2012-04-31', '2012-06-31', '2012-09-31']) {
+      expect(ageAtEvent(zi)).toBeNull();
+      expect(dataNasteriiError(zi)).toBe('Data nașterii nu e validă.');
+    }
+  });
+
+  it('29 februarie e valid doar în an bisect', () => {
+    expect(ageAtEvent('2012-02-29')).not.toBeNull(); // 2012 e bisect
+    expect(ageAtEvent('2011-02-29')).toBeNull();
+  });
+
+  it('respinge luna sau ziua în afara intervalului', () => {
+    for (const zi of ['2012-13-01', '2012-00-10', '2012-01-32', '2012-01-00']) {
+      expect(ageAtEvent(zi)).toBeNull();
+    }
+  });
+
+  it('cere formatul yyyy-mm-dd, cu zerouri în față', () => {
+    // Selectoarele produc mereu forma cu pad; orice altceva e semn de bug.
+    expect(ageAtEvent('2012-2-5')).toBeNull();
+    expect(ageAtEvent('05-20-1994')).toBeNull();
+    expect(ageAtEvent('1994-05-20T00:00:00Z')).toBeNull();
+  });
+});
+
+describe('validate (formularul de înscriere)', () => {
+  it('un formular complet valid nu produce erori', () => {
+    expect(validate(valid)).toEqual({});
+  });
+
+  it('semnalează fiecare câmp independent', () => {
+    expect(validate({ ...valid, nume: 'An' })).toEqual({ nume: true });
+    expect(validate({ ...valid, telefon: 'abc' })).toEqual({ telefon: true });
+    expect(validate({ ...valid, email: 'nu-e-email' })).toEqual({ email: true });
+    expect(validate({ ...valid, dataNasterii: '' })).toEqual({ dataNasterii: true });
+    expect(validate({ ...valid, acord: false })).toEqual({ acord: true });
+  });
+
+  it('numele cere minim 3 caractere', () => {
+    expect(validate({ ...valid, nume: 'An' }).nume).toBe(true);
+    expect(validate({ ...valid, nume: 'Ana' }).nume).toBeUndefined();
+  });
+
+  it('adună toate erorile deodată, nu doar prima', () => {
+    const errs = validate({ nume: '', telefon: '', email: '', dataNasterii: '', acord: false });
+    expect(Object.keys(errs).sort()).toEqual(
+      ['acord', 'dataNasterii', 'email', 'nume', 'telefon'].sort()
+    );
+  });
+
+  it('primește input deja curățat de spații (contractul cu formularul)', () => {
+    // Componenta face .trim() înainte de validate. Documentăm dependența:
+    // dacă cineva scoate trim-ul din formular, un nume din spații ar trece.
+    expect(validate({ ...valid, nume: '   ' }).nume).toBeUndefined();
+    expect(validate({ ...valid, nume: '   '.trim() }).nume).toBe(true);
+  });
+
+  it('acceptă telefon scris cu spații și prefix internațional', () => {
+    expect(validate({ ...valid, telefon: '+373 69 123 456' })).toEqual({});
+    expect(validate({ ...valid, telefon: '(069) 123-456' })).toEqual({});
+  });
+});
+
+describe('firstErrorField (unde sare focusul)', () => {
+  it('respectă ordinea vizuală a câmpurilor', () => {
+    const toate = validate({ nume: '', telefon: '', email: '', dataNasterii: '', acord: false });
+    expect(firstErrorField(toate)).toBe('nume');
+    expect(firstErrorField({ telefon: true, email: true })).toBe('telefon');
+    expect(firstErrorField({ email: true, dataNasterii: true })).toBe('email');
+    expect(firstErrorField({ dataNasterii: true })).toBe('dataNasterii');
+  });
+
+  it('nu întoarce „acord" — checkboxul nu primește focus', () => {
+    expect(firstErrorField({ acord: true })).toBeUndefined();
+  });
+
+  it('fără erori → undefined', () => {
+    expect(firstErrorField({})).toBeUndefined();
+  });
+});
+
+describe('errorMessage (textul din toast)', () => {
+  it('mesaj dedicat când singura problemă e acordul', () => {
+    expect(errorMessage({ acord: true })).toMatch(/accepți regulamentul/i);
+  });
+
+  it('mesaj generic când sunt mai multe probleme', () => {
+    expect(errorMessage({ acord: true, email: true })).toMatch(/câmpurile marcate/i);
+    expect(errorMessage({ email: true })).toMatch(/câmpurile marcate/i);
   });
 });

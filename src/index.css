@@ -1003,6 +1003,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
     padding: 24px 32px;
     z-index: 1;
   }
@@ -1022,7 +1024,8 @@
   .cs-nav {
     display: flex;
     align-items: center;
-    gap: 22px;
+    flex-wrap: wrap;
+    gap: 8px 22px;
   }
   .cs-tab {
     font-size: 11px;

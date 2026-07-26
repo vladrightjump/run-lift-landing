@@ -10,7 +10,9 @@ import {
   isDuplicateError,
   isTimeoutError,
   isAbortError,
+  isWaitlistFullError,
   SubmitHttpError,
+  SUBMIT_TIMEOUT_MS,
 } from '../../src/lib/supabase';
 import { CURRENT_EDITION } from '../../src/lib/config';
 
@@ -154,6 +156,152 @@ describe('submitWaitlist (lista de așteptare)', () => {
     await submitWaitlist(regData);
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/event_waitlist$/);
     expect(ultimulBody().editie).toBe(CURRENT_EDITION);
+  });
+
+  it('curăță datele la fel ca înscrierea normală', async () => {
+    // Aceleași reguli ca la registrations — altfel același om apare cu date
+    // scrise diferit în cele două tabele.
+    await submitWaitlist(regData);
+    expect(ultimulBody()).toMatchObject({
+      nume: 'Vladislav Filip',
+      telefon: '069509949',
+      email: 'Vlad@Email.RO',
+      data_nasterii: '1994-10-18',
+      acord: true,
+    });
+  });
+
+  it('data_nasterii lipsă devine null', async () => {
+    await submitWaitlist({ ...regData, dataNasterii: '' });
+    expect(ultimulBody().data_nasterii).toBeNull();
+  });
+
+  it('lista plină (trigger waitlist_full) e recunoscută distinct de alte erori', async () => {
+    // Fluxul din UI depinde de asta: la „waitlist_full" arată un mesaj special
+    // și reîmprospătează locurile, în loc să afișeze eroarea generică.
+    fetchMock.mockResolvedValueOnce(
+      new Response('{"message":"waitlist_full"}', { status: 400 })
+    );
+    const err = await submitWaitlist(regData).catch((e) => e);
+    expect(isWaitlistFullError(err)).toBe(true);
+    expect(isDuplicateError(err)).toBe(false);
+  });
+
+  it('o eroare oarecare NU e confundată cu lista plină', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('boom', { status: 500 }));
+    const err = await submitWaitlist(regData).catch((e) => e);
+    expect(isWaitlistFullError(err)).toBe(false);
+  });
+
+  it('duplicatul (409) e recunoscut', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 409 }));
+    const err = await submitWaitlist(regData).catch((e) => e);
+    expect(isDuplicateError(err)).toBe(true);
+  });
+});
+
+describe('isWaitlistFullError', () => {
+  it('cere ambele condiții: SubmitHttpError ȘI mesajul triggerului', () => {
+    expect(isWaitlistFullError(new SubmitHttpError(400, 'waitlist_full'))).toBe(true);
+    expect(isWaitlistFullError(new SubmitHttpError(400, 'altceva'))).toBe(false);
+    expect(isWaitlistFullError(new Error('waitlist_full'))).toBe(false);
+    expect(isWaitlistFullError(null)).toBe(false);
+    expect(isWaitlistFullError(undefined)).toBe(false);
+  });
+});
+
+describe('timeout și anulare', () => {
+  /**
+   * fetch care nu răspunde niciodată singur — se termină doar prin abort.
+   * Verifică întâi `signal.aborted`, exact ca `fetch`-ul real: dacă semnalul
+   * e deja anulat când intră cererea, evenimentul „abort" a trecut deja și
+   * un mock care doar ascultă ar rămâne suspendat pentru totdeauna.
+   */
+  const fetchCareAtarna = () =>
+    fetchMock.mockImplementationOnce(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          if (init.signal.aborted) {
+            reject(init.signal.reason);
+            return;
+          }
+          init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+        })
+    );
+
+  it('după SUBMIT_TIMEOUT_MS cererea e abandonată cu TimeoutError', async () => {
+    // Fără asta, un server care nu răspunde ar lăsa formularul blocat pe
+    // „Se trimite…" la nesfârșit.
+    vi.useFakeTimers();
+    fetchCareAtarna();
+    const rezultat = submitRegistration(regData).catch((e) => e);
+    await vi.advanceTimersByTimeAsync(SUBMIT_TIMEOUT_MS);
+    const err = await rezultat;
+    expect(isTimeoutError(err)).toBe(true);
+    expect(isAbortError(err)).toBe(false);
+  });
+
+  it('nu expiră înainte de termen', async () => {
+    vi.useFakeTimers();
+    fetchCareAtarna();
+    let gata = false;
+    const rezultat = submitRegistration(regData).catch((e) => e).then((v) => {
+      gata = true;
+      return v;
+    });
+    await vi.advanceTimersByTimeAsync(SUBMIT_TIMEOUT_MS - 1000);
+    expect(gata).toBe(false);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(isTimeoutError(await rezultat)).toBe(true);
+  });
+
+  it('semnalul extern (unmount) anulează cererea cu AbortError', async () => {
+    fetchCareAtarna();
+    const controller = new AbortController();
+    const rezultat = submitRegistration(regData, controller.signal).catch((e) => e);
+    controller.abort(new DOMException('unmount', 'AbortError'));
+    const err = await rezultat;
+    expect(isAbortError(err)).toBe(true);
+    expect(isTimeoutError(err)).toBe(false);
+  });
+
+  it('un semnal deja anulat oprește cererea imediat', async () => {
+    fetchCareAtarna();
+    const controller = new AbortController();
+    controller.abort(new DOMException('deja', 'AbortError'));
+    const err = await submitLaunchNotification(draft, controller.signal).catch((e) => e);
+    expect(isAbortError(err)).toBe(true);
+  });
+
+  it('cronometrul se oprește după un răspuns reușit (fără timere scăpate)', async () => {
+    vi.useFakeTimers();
+    await submitRegistration(regData);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('cronometrul se oprește și când serverul dă eroare', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValueOnce(new Response('boom', { status: 500 }));
+    await submitRegistration(regData).catch(() => {});
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('antetele cererilor de scriere', () => {
+  it('cer „return=minimal" — RLS nu permite citirea rândului înapoi', async () => {
+    // Fără Prefer: return=minimal, PostgREST încearcă să întoarcă rândul
+    // inserat, iar politica de select îl respinge → insert-ul pare eșuat.
+    for (const call of [
+      () => submitRegistration(regData),
+      () => submitWaitlist(regData),
+      () => submitLaunchNotification(draft),
+    ]) {
+      fetchMock.mockClear();
+      await call();
+      const headers = fetchMock.mock.calls[0][1].headers as Record<string, string>;
+      expect(headers.Prefer).toBe('return=minimal');
+      expect(headers['Content-Type']).toBe('application/json');
+    }
   });
 });
 

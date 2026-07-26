@@ -52,6 +52,9 @@ describe('legăturile interne duc spre rute reale', () => {
     'src/components/ComingSoon.tsx',
     'src/components/DespreNoi.tsx',
     'src/components/Confirmare.tsx',
+    // Landing-ul are și el linkuri interne (tabul „Despre noi") — fără el în
+    // listă, un href greșit aici ar ajunge în producție ca 404.
+    'src/components/Edition3Landing.tsx',
   ];
 
   it('fiecare href intern e o rută cunoscută sau o ancoră', () => {
