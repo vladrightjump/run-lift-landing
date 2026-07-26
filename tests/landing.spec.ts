@@ -39,7 +39,12 @@ test.describe('App — comutarea Coming Soon ↔ landing', () => {
   });
 
   test('după ora lansării, „/" arată singur landing-ul (fără param)', async ({ page }) => {
-    // Ceasul din beforeEach (23 iulie) e deja după LAUNCH_DATE (22 iulie 18:00).
+    // Ceasul din beforeEach (23 iulie) e înainte de LAUNCH_DATE (4 aug 18:00),
+    // deci pentru acest test îl mutăm după lansare ca „/" să comute pe landing.
+    await page.addInitScript(() => {
+      const fixed = new Date('2026-08-04T18:00:01+03:00').getTime();
+      Date.now = () => fixed;
+    });
     await page.goto('/');
     await expect(page.locator('#inscriere')).toBeVisible();
     await expect(page.locator('.cs-root')).toHaveCount(0);

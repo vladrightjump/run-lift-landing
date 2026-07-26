@@ -13,7 +13,7 @@ const INSERT_ROUTE = '**/rest/v1/launch_notifications';
 // cifrele dispar. Testele cu clock propriu (countdown expirat) îl suprascriu.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    const base = new Date('2026-07-22T10:00:00+03:00').getTime();
+    const base = new Date('2026-08-04T10:00:00+03:00').getTime();
     const start = performance.now();
     Date.now = () => base + (performance.now() - start);
   });
@@ -43,8 +43,8 @@ test.describe('Coming Soon — ecran', () => {
     await expect(title).toContainText('Soon');
 
     // Regex case-insensitive: CSS-ul aplică text-transform: uppercase pe badge.
-    await expect(page.locator('.cs-badge')).toHaveText(/antrenament nou · ediția a treia/i);
-    await expect(page.locator('.cs-brand-meta')).toHaveText(/run \+ lift · ediția a treia/i);
+    await expect(page.locator('.cs-badge')).toHaveText(/antrenament nou · ediția a patra/i);
+    await expect(page.locator('.cs-brand-meta')).toHaveText(/run \+ lift · ediția a patra/i);
 
     const units = page.locator('.cs-cd-unit');
     await expect(units).toHaveCount(4);
@@ -74,7 +74,7 @@ test.describe('Coming Soon — ecran', () => {
     // useCountdown citește ora doar prin Date.now() — e suficient să-l stubăm,
     // înainte ca bundle-ul aplicației să ruleze.
     await page.addInitScript(() => {
-      const fixed = new Date('2026-07-22T18:00:01+03:00').getTime();
+      const fixed = new Date('2026-08-04T18:00:01+03:00').getTime();
       Date.now = () => fixed;
     });
 
@@ -202,7 +202,7 @@ test.describe('Coming Soon — formular „Anunță-mă la lansare"', () => {
 
   test('formularul funcționează și după expirarea countdown-ului', async ({ page }) => {
     await page.addInitScript(() => {
-      const fixed = new Date('2026-07-22T18:00:01+03:00').getTime();
+      const fixed = new Date('2026-08-04T18:00:01+03:00').getTime();
       Date.now = () => fixed;
     });
     await page.route(INSERT_ROUTE, (route) => route.fulfill({ status: 201, body: '' }));

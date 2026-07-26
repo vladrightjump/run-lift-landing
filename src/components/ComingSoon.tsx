@@ -139,13 +139,16 @@ export const ComingSoon = ({ showToast }: Props) => {
         <span className="cs-logo">
           R<span className="cs-accent">+</span>L
         </span>
-        <span className="cs-brand-meta">Run + Lift · Ediția a treia</span>
+        <nav className="cs-nav">
+          <span className="cs-brand-meta">Run + Lift · Ediția a patra</span>
+          <a className="cs-tab" href="/despre-noi">Despre noi</a>
+        </nav>
       </header>
 
       <main className="cs-main">
         <span className="cs-badge">
           <span className="cs-badge-dot" />
-          Antrenament nou · Ediția a treia
+          Antrenament nou · Ediția a patra
         </span>
 
         <h1 className="cs-title">

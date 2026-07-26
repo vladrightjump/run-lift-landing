@@ -21,15 +21,15 @@ describe('date și ore', () => {
   });
 
   it('LAUNCH_DATE e fixată pe fusul Chișinăului, nu pe cel local', () => {
-    // 22 iulie 2026, 18:00 la UTC+3 => 15:00 UTC. Testul pică dacă cineva
+    // 4 august 2026, 18:00 la UTC+3 => 15:00 UTC. Testul pică dacă cineva
     // scrie data fără offset și se bazează pe fusul mașinii de build.
-    expect(LAUNCH_DATE.toISOString()).toBe('2026-07-22T15:00:00.000Z');
+    expect(LAUNCH_DATE.toISOString()).toBe('2026-08-04T15:00:00.000Z');
   });
 
-  it('lansarea (anunțul ediției 3) e înainte de eveniment', () => {
-    // Anunțăm ediția a treia pe 22 iulie; evenimentul ei are loc pe 25 iulie.
-    // La expirarea LAUNCH_DATE, Coming Soon lasă loc landing-ului ediției 3.
-    expect(LAUNCH_DATE.getTime()).toBeLessThan(EVENT_DATE.getTime());
+  it('anunțul ediției 4 e după evenimentul ediției 3 (stare tranzitorie)', () => {
+    // Ediția 3 (EVENT_DATE, 25 iulie) a trecut deja; anunțăm ediția 4 pe 4 aug.
+    // În Faza B, EVENT_DATE se mută pe data ediției 4 și redevine după LAUNCH_DATE.
+    expect(LAUNCH_DATE.getTime()).toBeGreaterThan(EVENT_DATE.getTime());
   });
 });
 

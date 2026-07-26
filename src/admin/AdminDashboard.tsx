@@ -259,7 +259,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           <span className="admin-badge">Backoffice</span>
         </div>
         <div className="admin-topbar-meta">
-          <span className="topbar-info">Ediția a treia · anunț {LAUNCH_LABEL}</span>
+          <span className="topbar-info">Ediția a patra · anunț {LAUNCH_LABEL}</span>
           <span className="admin-cd">
             <span className="countdown-dot" />
             {cd.done

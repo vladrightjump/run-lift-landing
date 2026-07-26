@@ -29,7 +29,7 @@ export const REGISTRATION_DEADLINE = new Date('2026-07-25T00:00:00+03:00'); // p
  * în locul landing-ului. Pune pe `false` ca să revii la landing-ul complet.
  */
 export const SHOW_COMING_SOON = true;
-export const LAUNCH_DATE = new Date('2026-07-22T18:00:00+03:00'); // 22 iulie 2026, 18:00
+export const LAUNCH_DATE = new Date('2026-08-04T18:00:00+03:00'); // 4 august 2026, 18:00
 
 /**
  * Ediția pentru care se strâng acum înscrieri la „Anunță-mă la lansare".
@@ -40,7 +40,7 @@ export const LAUNCH_DATE = new Date('2026-07-22T18:00:00+03:00'); // 22 iulie 20
  * Valoarea de aici e folosită doar de backoffice, ca să filtreze lista.
  * La ediție nouă: incrementezi aici ȘI schimbi default-ul coloanei în Supabase.
  */
-export const CURRENT_LAUNCH_EDITION = 3;
+export const CURRENT_LAUNCH_EDITION = 4;
 
 /** Instagramul comunității — afișat în footer pe ambele pagini. */
 export const INSTAGRAM_HANDLE = '@we_run_and_lift';

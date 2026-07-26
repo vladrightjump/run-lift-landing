@@ -57,7 +57,7 @@ export const Confirmare = () => {
         <a className="cs-logo" href="/">
           R<span className="cs-accent">+</span>L
         </a>
-        <span className="cs-brand-meta">Run + Lift · Ediția a treia</span>
+        <span className="cs-brand-meta">Run + Lift · Ediția a patra</span>
       </header>
 
       <main className="cs-main">

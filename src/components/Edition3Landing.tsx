@@ -429,6 +429,20 @@ export const Edition3Landing = () => {
             {EVENT_META}
           </span>
           <a
+            href="/despre-noi"
+            className="e3-link"
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+              color: '#9BA08F',
+              textDecoration: 'none',
+            }}
+          >
+            Despre noi
+          </a>
+          <a
             href="#inscriere"
             className="e3-cta"
             style={{
