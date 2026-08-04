@@ -56,6 +56,7 @@ export const submitRegistration = async (
       headers: {
         apikey: SUPABASE.publishableKey,
         'Content-Type': 'application/json',
+        'Content-Profile': SUPABASE.schema,
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({
@@ -124,6 +125,7 @@ export const submitLaunchNotification = async (
       headers: {
         apikey: SUPABASE.publishableKey,
         'Content-Type': 'application/json',
+        'Content-Profile': SUPABASE.schema,
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({
@@ -182,6 +184,7 @@ export const submitWaitlist = async (
       headers: {
         apikey: SUPABASE.publishableKey,
         'Content-Type': 'application/json',
+        'Content-Profile': SUPABASE.schema,
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({
@@ -209,7 +212,7 @@ export const isWaitlistFullError = (err: unknown): boolean =>
 /** Date publice, ne-personale: număr înscriși + prenume mascat + echipă. */
 export const fetchStats = async (signal?: AbortSignal): Promise<PublicStats> => {
   const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/public_stats`, {
-    headers: { apikey: SUPABASE.publishableKey },
+    headers: { apikey: SUPABASE.publishableKey, 'Accept-Profile': SUPABASE.schema },
     signal,
   });
   if (!res.ok) {
@@ -230,7 +233,11 @@ export const confirmSignup = async (
 ): Promise<ConfirmResult> => {
   const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/confirm_signup`, {
     method: 'POST',
-    headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+    headers: {
+      apikey: SUPABASE.publishableKey,
+      'Content-Type': 'application/json',
+      'Content-Profile': SUPABASE.schema,
+    },
     body: JSON.stringify({ p_token: token }),
     signal,
   });

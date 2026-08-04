@@ -8,7 +8,7 @@
 // Sincron cu `app_config.current_event_edition` din Supabase (vezi
 // funcția `current_event_edition()`, care alimentează defaults-urile și
 // `public_stats`). La ediție nouă: incrementezi aici ȘI acolo.
-export const CURRENT_EDITION = 3;
+export const CURRENT_EDITION = 4;
 
 // Fallback static — folosit doar dacă API-ul de statistici nu răspunde.
 // Numărul live vine din Supabase (vezi useStats).
@@ -19,16 +19,16 @@ export const WAITLIST_SLOTS = 10;
 
 // Orele sunt fixate pe fusul orar al Chișinăului (UTC+3 vara) — vizitatorii
 // din alte fusuri văd același moment absolut, nu ora lor locală.
-export const EVENT_DATE = new Date('2026-07-25T07:00:00+03:00'); // 25 iulie 2026, 07:00
+export const EVENT_DATE = new Date('2026-08-08T06:30:00+03:00'); // 8 august 2026, 06:30
 export const EVENT_END_DATE = new Date(EVENT_DATE.getTime() + 6 * 60 * 60 * 1000); // start + 6h
-export const REGISTRATION_DEADLINE = new Date('2026-07-25T00:00:00+03:00'); // până pe 24 iulie inclusiv
+export const REGISTRATION_DEADLINE = new Date('2026-08-08T06:30:00+03:00'); // înscrieri până la start
 
 /**
  * Coming Soon.
  * `SHOW_COMING_SOON = true` face ca homepage-ul (/) să afișeze ecranul Coming Soon
  * în locul landing-ului. Pune pe `false` ca să revii la landing-ul complet.
  */
-export const SHOW_COMING_SOON = true;
+export const SHOW_COMING_SOON = false;
 export const LAUNCH_DATE = new Date('2026-08-04T18:00:00+03:00'); // 4 august 2026, 18:00
 
 /**
@@ -54,8 +54,13 @@ export const INSTAGRAM_URL = 'https://instagram.com/we_run_and_lift';
  * exclusiv date ne-personale (număr înscriși + prenume + echipă).
  */
 export const SUPABASE = {
-  url: 'https://iattqvakxcgepjiecgpf.supabase.co',
-  publishableKey: 'sb_publishable_aNPzVWhAckqnG3qubS00vA_KoBQmh5s',
+  url: 'https://whyndrjcezmtajbykeil.supabase.co',
+  publishableKey: 'sb_publishable_SR4wCG4ZsSZYAqobBjUF_g_Xx4pRbHh',
+  // Tabelele Run + Lift trăiesc în schema `runlift` a proiectului ironworks-gym
+  // (consolidat cu gym-ul + botul de Telegram). PostgREST rutează spre schema
+  // asta prin headerele Accept-Profile (GET) / Content-Profile (scriere).
+  // Schema trebuie expusă în Supabase → API → Exposed schemas.
+  schema: 'runlift',
 } as const;
 
 export const isBackendConfigured = (): boolean =>

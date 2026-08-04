@@ -55,6 +55,7 @@ const rpc = async <T>(fn: string, args: Record<string, unknown>, signal?: AbortS
     headers: {
       apikey: SUPABASE.publishableKey,
       'Content-Type': 'application/json',
+      'Content-Profile': SUPABASE.schema,
     },
     body: JSON.stringify(args),
     signal,

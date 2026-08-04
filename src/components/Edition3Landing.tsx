@@ -34,8 +34,8 @@ const MIN_LOADING_MS = 700;
 const SIM_LOADING_MS = 1800;
 const delay = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
-const EVENT_META = '25 iulie 2026 · Parcul Râșcani';
-const HERO_KICKER = 'Sâmbătă, 25 iulie 2026 · Parcul Râșcani, Chișinău · Ediția a treia';
+const EVENT_META = '8 august 2026 · Parcul Râșcani';
+const HERO_KICKER = 'Sâmbătă, 8 august 2026 · Parcul Râșcani, Chișinău · Outdoor Adaptive';
 
 // Aceeași locație ca edițiile anterioare — pinul „Новая спортплощадка" din
 // Parcul Râșcani. Butonul de direcții folosește link-ul scurt al organizatorului.
@@ -47,8 +47,8 @@ const MAP_SRC = `https://maps.google.com/maps?q=${MAP_QUERY}&z=16&hl=ro&output=e
 const DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${MAP_QUERY}`;
 
 const SUMMARY_ITEMS = [
-  'Sâmbătă, 25 iulie 2026, ora 07:00 — Parcul Râșcani, Str. Braniștii',
-  'Cursă în stil HYROX: urcare, coborâre, alergare + stații funcționale',
+  'Sâmbătă, 8 august 2026, ora 06:30 — Parcul Râșcani, Chișinău',
+  'Cursă în stil HYROX: alergare + stații funcționale',
   'Stațiile și greutățile se adaptează nivelului tău',
   'Deschis oricui, indiferent de nivel',
   'Adu cu tine: apă pentru hidratare și bună dispoziție',
@@ -497,10 +497,9 @@ export const Edition3Landing = () => {
               textWrap: 'balance',
             }}
           >
-            <span style={{ display: 'inline-block', animation: 'e3-fade-up 0.6s ease-out 0.1s both' }}>Up</span>
-            <span style={{ display: 'inline-block', color: '#C9F24B', animation: 'e3-fade-up 0.6s ease-out 0.25s both' }}>+</span>
+            <span style={{ display: 'inline-block', animation: 'e3-fade-up 0.6s ease-out 0.1s both' }}>Hyrox</span>
             <br />
-            <span style={{ display: 'inline-block', animation: 'e3-fade-up 0.6s ease-out 0.4s both' }}>Down.</span>
+            <span style={{ display: 'inline-block', color: '#C9F24B', animation: 'e3-fade-up 0.6s ease-out 0.4s both' }}>Trial.</span>
           </h1>
           <div
             style={{
@@ -523,8 +522,8 @@ export const Edition3Landing = () => {
                 animation: 'e3-fade-up 0.6s ease-out 0.55s both',
               }}
             >
-              Cursă în stil HYROX în aer liber: urci, cobori, alergi și treci stațiile funcționale — contra
-              cronometru, în ritmul tău. Ediția a treia Run + Lift.
+              Cursă în stil HYROX în aer liber: alergare combinată cu stații funcționale — contra
+              cronometru, în ritmul tău. Stațiile și greutățile se adaptează nivelului tău.
             </p>
             <a
               href="#inscriere"
@@ -555,7 +554,7 @@ export const Edition3Landing = () => {
             <h2 style={sectionTitle}>Formatul</h2>
           </div>
           <p style={{ margin: '0 0 40px', maxWidth: 620, fontSize: 17, lineHeight: 1.55, color: '#C9CCBE', textWrap: 'pretty' }}>
-            Urci. Cobori. Repeți. Segmente de alergare alternate cu stații de exerciții funcționale sus–jos, în
+            Aleargă. Ridică. Repetă. Segmente de alergare alternate cu stații de exerciții funcționale, în
             stil HYROX. Fără trucuri — doar tu, cronometrul și traseul. Stațiile și greutățile se adaptează
             nivelului tău de către antrenori la fața locului.
           </p>
@@ -592,9 +591,9 @@ export const Edition3Landing = () => {
             </div>
             <div style={{ display: 'grid', gap: 0, border: '1px solid #2A2E25' }}>
               {[
-                { k: 'Unde', v: 'Parcul Râșcani, Strada Braniștii, Chișinău', lime: false },
-                { k: 'Când', v: 'Sâmbătă, 25 iulie 2026', lime: false },
-                { k: 'Start', v: '07:00', lime: true },
+                { k: 'Unde', v: 'Parcul Râșcani, Chișinău', lime: false },
+                { k: 'Când', v: 'Sâmbătă, 8 august 2026', lime: false },
+                { k: 'Start', v: '06:30', lime: true },
               ].map((row, i, arr) => (
                 <div
                   key={row.k}
@@ -1070,7 +1069,7 @@ export const Edition3Landing = () => {
                 <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: '#9BA08F', maxWidth: 380 }}>
                   {submittedAsWaitlist
                     ? 'Toate locurile sunt ocupate momentan. Te contactăm pe email sau telefon imediat ce se eliberează un loc — în ordinea înscrierii.'
-                    : 'Ți-am trimis un email de confirmare cu toate detaliile. Ne vedem pe 25 iulie la start, ora 07:00.'}
+                    : 'Ți-am trimis un email de confirmare cu toate detaliile. Ne vedem pe 8 august la start, ora 06:30.'}
                 </p>
                 <button
                   type="button"

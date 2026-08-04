@@ -26,10 +26,10 @@ describe('date și ore', () => {
     expect(LAUNCH_DATE.toISOString()).toBe('2026-08-04T15:00:00.000Z');
   });
 
-  it('anunțul ediției 4 e după evenimentul ediției 3 (stare tranzitorie)', () => {
-    // Ediția 3 (EVENT_DATE, 25 iulie) a trecut deja; anunțăm ediția 4 pe 4 aug.
-    // În Faza B, EVENT_DATE se mută pe data ediției 4 și redevine după LAUNCH_DATE.
-    expect(LAUNCH_DATE.getTime()).toBeGreaterThan(EVENT_DATE.getTime());
+  it('evenimentul ediției 4 e după anunțul de lansare (Faza B)', () => {
+    // Faza B: înscrieri deschise. EVENT_DATE = data ediției 4 (8 aug),
+    // după LAUNCH_DATE (anunțul de pe 4 aug).
+    expect(EVENT_DATE.getTime()).toBeGreaterThan(LAUNCH_DATE.getTime());
   });
 });
 

@@ -112,12 +112,12 @@ describe('submitRegistration (înscriere la eveniment)', () => {
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/registrations$/);
   });
 
-  it('salvează ediția curentă a evenimentului (acum 3)', async () => {
+  it('salvează ediția curentă a evenimentului (acum 4)', async () => {
     // Regresie: dacă editie iese din sincron cu current_event_edition din DB,
-    // înscrierile ediției 3 s-ar amesteca cu ediția 2 (deja plină).
+    // înscrierile ediției 4 s-ar amesteca cu edițiile trecute.
     await submitRegistration(regData);
     expect(ultimulBody().editie).toBe(CURRENT_EDITION);
-    expect(CURRENT_EDITION).toBe(3);
+    expect(CURRENT_EDITION).toBe(4);
   });
 
   it('curăță spațiile, normalizează telefonul și păstrează data nașterii', async () => {

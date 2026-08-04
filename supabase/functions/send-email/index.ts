@@ -11,6 +11,8 @@ const SERVICE_KEY =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const MAIL_FROM = Deno.env.get("MAIL_FROM") ?? "Run + Lift <noreply@parktraining.fit>";
+// Tabelele/funcțiile Run + Lift stau în schema `runlift` a proiectului ironworks-gym.
+const DB_SCHEMA = Deno.env.get("DB_SCHEMA") ?? "runlift";
 
 const CORS = {
   // Doar site-ul propriu poate apela din browser. Apelurile server-side
@@ -31,7 +33,12 @@ type Message = { to: string; subject: string; text: string };
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T | null> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: "POST",
-    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type": "application/json" },
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      "Content-Type": "application/json",
+      "Content-Profile": DB_SCHEMA,
+    },
     body: JSON.stringify(args),
   });
   if (!res.ok) return null;
@@ -73,7 +80,7 @@ function renderHtml(subject: string, textBody: string): string {
           </tr></table>
         </td></tr>
         <tr><td style="padding:12px 28px 4px;">
-          <span style="display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#121410;background:#C9F24B;padding:5px 10px;">HYROX Style Race · 25 iulie</span>
+          <span style="display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#121410;background:#C9F24B;padding:5px 10px;">Hyrox Trial · 8 august</span>
         </td></tr>
         <tr><td style="padding:16px 28px 8px;">
           <h1 style="margin:0 0 14px;font-family:Arial Black,Arial,sans-serif;font-size:22px;line-height:1.2;color:#F1EFE6;text-transform:uppercase;">${esc(
@@ -109,28 +116,28 @@ async function sendOne(m: Message): Promise<{ ok: boolean; status: number; body:
   return { ok: res.ok, status: res.status, body: await res.text().catch(() => "") };
 }
 
-const CONFIRM_SUBJECT = "Confirmare înscriere — HYROX, 25 iulie";
+const CONFIRM_SUBJECT = "Confirmare înscriere — Hyrox Trial, 8 august";
 const CONFIRM_TEXT =
   `Salut, {prenume}!\n\n` +
-  `Înscrierea ta la Run + Lift — HYROX Style Race este confirmată.\n\n` +
-  `• Când: sâmbătă, 25 iulie 2026, ora 07:00\n` +
-  `• Unde: Parcul Râșcani, Str. Braniștii, Chișinău\n\n` +
+  `Înscrierea ta la Run + Lift — Hyrox Trial este confirmată.\n\n` +
+  `• Când: sâmbătă, 8 august 2026, ora 06:30\n` +
+  `• Unde: Parcul Râșcani, Chișinău\n\n` +
   `Adu apă pentru hidratare și bună dispoziție. Ne vedem la start!\n\n` +
   `Echipa Run + Lift`;
 
-const REMINDER_SUBJECT = "Mâine e ziua — HYROX, 25 iulie, 07:00";
+const REMINDER_SUBJECT = "Mâine e ziua — Hyrox Trial, 8 august, 06:30";
 const REMINDER_TEXT =
   `Salut, {prenume}!\n\n` +
-  `Îți reamintim că Run + Lift — HYROX Style Race are loc mâine, sâmbătă 25 iulie, ora 07:00, la Parcul Râșcani (Str. Braniștii).\n\n` +
-  `• Check-in de la 06:30, start fix la 07:00\n` +
+  `Îți reamintim că Run + Lift — Hyrox Trial are loc mâine, sâmbătă 8 august, ora 06:30, la Parcul Râșcani.\n\n` +
+  `• Check-in de la 06:00, start fix la 06:30\n` +
   `• Adu: echipament sport, apă pentru hidratare și bună dispoziție\n\n` +
   `Dacă nu mai poți participa, răspunde la acest email ca să eliberăm locul.\n\n` +
   `Ne vedem la start!\nEchipa Run + Lift`;
 
-const ANNOUNCE_SUBJECT = "S-au deschis înscrierile — HYROX, 25 iulie";
+const ANNOUNCE_SUBJECT = "S-au deschis înscrierile — Hyrox Trial, 8 august";
 const ANNOUNCE_TEXT =
   `Salut, {prenume}!\n\n` +
-  `Evenimentul pe care îl așteptai e aici: Run + Lift — HYROX Style Race, sâmbătă 25 iulie 2026, ora 07:00, la Parcul Râșcani (Str. Braniștii), Chișinău.\n\n` +
+  `Evenimentul pe care îl așteptai e aici: Run + Lift — Hyrox Trial, sâmbătă 8 august 2026, ora 06:30, la Parcul Râșcani, Chișinău.\n\n` +
   `Cursă în stil HYROX în aer liber — alergi, treci stația, repeți, contra cronometru. Locuri limitate.\n\n` +
   `Înscrie-te aici:\nhttps://parktraining.fit\n\n` +
   `Ne vedem la start!\nEchipa Run + Lift`;
