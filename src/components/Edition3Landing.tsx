@@ -80,12 +80,12 @@ const label: CSSProperties = {
   fontWeight: 700,
   letterSpacing: 2,
   textTransform: 'uppercase',
-  color: '#9BA08F',
+  color: 'var(--e3-muted)',
 };
 const inputStyle: CSSProperties = {
-  background: '#121410',
-  border: '1px solid #2A2E25',
-  color: '#F1EFE6',
+  background: 'var(--e3-bg)',
+  border: '1px solid var(--e3-border)',
+  color: 'var(--e3-text)',
   fontFamily: 'Archivo, sans-serif',
   fontSize: 15,
   padding: '13px 14px',
@@ -94,9 +94,9 @@ const inputStyle: CSSProperties = {
   boxSizing: 'border-box',
 };
 const selectStyle: CSSProperties = {
-  background: '#121410',
-  border: '1px solid #2A2E25',
-  color: '#F1EFE6',
+  background: 'var(--e3-bg)',
+  border: '1px solid var(--e3-border)',
+  color: 'var(--e3-text)',
   fontFamily: 'Archivo, sans-serif',
   fontSize: 15,
   padding: '13px 28px 13px 12px',
@@ -115,7 +115,7 @@ const selectStyle: CSSProperties = {
 const sectionNum: CSSProperties = {
   fontFamily: 'Anton, sans-serif',
   fontSize: 15,
-  color: '#C9F24B',
+  color: 'var(--e3-accent)',
   letterSpacing: 3,
   textTransform: 'uppercase',
 };
@@ -127,7 +127,7 @@ const sectionTitle: CSSProperties = {
   letterSpacing: 0.5,
   textTransform: 'uppercase',
 };
-const fieldErr: CSSProperties = { fontSize: 13, color: '#F26D6D' };
+const fieldErr: CSSProperties = { fontSize: 13, color: 'var(--e3-danger)' };
 
 export const Edition3Landing = () => {
   const cd = useCountdown(EVENT_DATE);
@@ -342,8 +342,8 @@ export const Edition3Landing = () => {
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            background: toast.kind === 'error' ? '#3A1A1A' : '#C9F24B',
-            color: toast.kind === 'error' ? '#F26D6D' : '#121410',
+            background: toast.kind === 'error' ? '#3A1A1A' : 'var(--e3-accent)',
+            color: toast.kind === 'error' ? 'var(--e3-danger)' : 'var(--e3-bg)',
             fontFamily: 'Archivo, sans-serif',
             fontSize: 15,
             fontWeight: 600,
@@ -372,7 +372,7 @@ export const Edition3Landing = () => {
           padding: '14px clamp(16px, 4vw, 40px)',
           background: 'rgba(18,20,16,0.92)',
           backdropFilter: 'blur(8px)',
-          borderBottom: '1px solid #2A2E25',
+          borderBottom: '1px solid var(--e3-border)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -380,13 +380,13 @@ export const Edition3Landing = () => {
             style={{
               width: 30,
               height: 30,
-              background: '#C9F24B',
+              background: 'var(--e3-accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontFamily: 'Anton, sans-serif',
               fontSize: 15,
-              color: '#121410',
+              color: 'var(--e3-bg)',
               letterSpacing: 0.5,
             }}
           >
@@ -402,11 +402,11 @@ export const Edition3Landing = () => {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: '#C9F24B',
+              background: 'var(--e3-accent)',
               animation: 'e3-dot-blink 1.4s ease-in-out infinite',
             }}
           />
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: '#9BA08F' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
             Start în
           </span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }} role="timer" aria-label="Timp rămas până la start">
@@ -422,13 +422,13 @@ export const Edition3Landing = () => {
                     fontFamily: 'Anton, sans-serif',
                     fontSize: 24,
                     lineHeight: 1,
-                    color: u.lime ? '#C9F24B' : '#F2F3EC',
+                    color: u.lime ? 'var(--e3-accent)' : '#F2F3EC',
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >
                   {u.v}
                 </span>
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#9BA08F' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
                   {u.l}
                 </span>
               </span>
@@ -436,7 +436,7 @@ export const Edition3Landing = () => {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#9BA08F' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
             {EVENT_META}
           </span>
           <a
@@ -447,7 +447,7 @@ export const Edition3Landing = () => {
               fontWeight: 600,
               letterSpacing: 2,
               textTransform: 'uppercase',
-              color: '#9BA08F',
+              color: 'var(--e3-muted)',
               textDecoration: 'none',
             }}
           >
@@ -458,8 +458,8 @@ export const Edition3Landing = () => {
             className="e3-cta"
             style={{
               display: 'inline-block',
-              background: '#C9F24B',
-              color: '#121410',
+              background: 'var(--e3-accent)',
+              color: 'var(--e3-bg)',
               fontWeight: 700,
               fontSize: 13,
               letterSpacing: 1.5,
@@ -477,7 +477,7 @@ export const Edition3Landing = () => {
       <section
         style={{
           padding: 'clamp(48px, 9vw, 88px) clamp(20px, 5vw, 40px) clamp(48px, 7vw, 72px)',
-          borderBottom: '1px solid #2A2E25',
+          borderBottom: '1px solid var(--e3-border)',
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -490,7 +490,7 @@ export const Edition3Landing = () => {
               fontWeight: 600,
               letterSpacing: 2.5,
               textTransform: 'uppercase',
-              color: '#9BA08F',
+              color: 'var(--e3-muted)',
               animation: 'e3-fade-up 0.6s ease-out both',
             }}
           >
@@ -510,7 +510,7 @@ export const Edition3Landing = () => {
           >
             <span style={{ display: 'inline-block', animation: 'e3-fade-up 0.6s ease-out 0.1s both' }}>Hyrox</span>
             <br />
-            <span style={{ display: 'inline-block', color: '#C9F24B', animation: 'e3-fade-up 0.6s ease-out 0.4s both' }}>Trial.</span>
+            <span style={{ display: 'inline-block', color: 'var(--e3-accent)', animation: 'e3-fade-up 0.6s ease-out 0.4s both' }}>Trial.</span>
           </h1>
           <div
             style={{
@@ -528,7 +528,7 @@ export const Edition3Landing = () => {
                 maxWidth: 480,
                 fontSize: 18,
                 lineHeight: 1.55,
-                color: '#C9CCBE',
+                color: 'var(--e3-muted-strong)',
                 textWrap: 'pretty',
                 animation: 'e3-fade-up 0.6s ease-out 0.55s both',
               }}
@@ -541,8 +541,8 @@ export const Edition3Landing = () => {
               className="e3-cta-lg"
               style={{
                 display: 'inline-block',
-                background: '#C9F24B',
-                color: '#121410',
+                background: 'var(--e3-accent)',
+                color: 'var(--e3-bg)',
                 fontFamily: 'Anton, sans-serif',
                 fontSize: 20,
                 letterSpacing: 1.5,
@@ -558,13 +558,13 @@ export const Edition3Landing = () => {
       </section>
 
       {/* ===== FORMAT ===== */}
-      <section style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderBottom: '1px solid #2A2E25' }}>
+      <section style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderBottom: '1px solid var(--e3-border)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 44 }}>
             <span style={sectionNum}>01</span>
             <h2 style={sectionTitle}>Formatul</h2>
           </div>
-          <p style={{ margin: '0 0 40px', maxWidth: 620, fontSize: 17, lineHeight: 1.55, color: '#C9CCBE', textWrap: 'pretty' }}>
+          <p style={{ margin: '0 0 40px', maxWidth: 620, fontSize: 17, lineHeight: 1.55, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
             Aleargă. Ridică. Repetă. Segmente de alergare alternate cu stații de exerciții funcționale, în
             stil HYROX. Fără trucuri — doar tu, cronometrul și traseul. Stațiile și greutățile se adaptează
             nivelului tău de către antrenori la fața locului.
@@ -573,10 +573,10 @@ export const Edition3Landing = () => {
             {FORMAT_CARDS.map((c) => (
               <div
                 key={c.t}
-                style={{ background: '#1A1D17', border: '1px solid #2A2E25', padding: '28px 24px', display: 'grid', gap: 10 }}
+                style={{ background: 'var(--e3-surface)', border: '1px solid var(--e3-border)', padding: '28px 24px', display: 'grid', gap: 10 }}
               >
-                <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 40, color: '#C9F24B' }}>{c.t}</span>
-                <span style={{ fontSize: 15, lineHeight: 1.5, color: '#C9CCBE' }}>{c.d}</span>
+                <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 40, color: 'var(--e3-accent)' }}>{c.t}</span>
+                <span style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--e3-muted-strong)' }}>{c.d}</span>
               </div>
             ))}
           </div>
@@ -584,7 +584,7 @@ export const Edition3Landing = () => {
       </section>
 
       {/* ===== VENUE ===== */}
-      <section style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderBottom: '1px solid #2A2E25' }}>
+      <section style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderBottom: '1px solid var(--e3-border)' }}>
         <div
           style={{
             maxWidth: 1200,
@@ -600,7 +600,7 @@ export const Edition3Landing = () => {
               <span style={sectionNum}>02</span>
               <h2 style={sectionTitle}>Locația</h2>
             </div>
-            <div style={{ display: 'grid', gap: 0, border: '1px solid #2A2E25' }}>
+            <div style={{ display: 'grid', gap: 0, border: '1px solid var(--e3-border)' }}>
               {[
                 { k: 'Unde', v: EVENT_WHERE, lime: false },
                 { k: 'Când', v: EVENT_WHEN, lime: false },
@@ -613,22 +613,22 @@ export const Edition3Landing = () => {
                     justifyContent: 'space-between',
                     alignItems: 'baseline',
                     padding: '18px 22px',
-                    borderBottom: i < arr.length - 1 ? '1px solid #2A2E25' : 'none',
+                    borderBottom: i < arr.length - 1 ? '1px solid var(--e3-border)' : 'none',
                   }}
                 >
-                  <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#9BA08F' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
                     {row.k}
                   </span>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: row.lime ? '#C9F24B' : undefined }}>{row.v}</span>
+                  <span style={{ fontSize: 16, fontWeight: 600, color: row.lime ? 'var(--e3-accent)' : undefined }}>{row.v}</span>
                 </div>
               ))}
             </div>
-            <p style={{ margin: '24px 0 0', fontSize: 14, lineHeight: 1.55, color: '#9BA08F', textWrap: 'pretty' }}>
+            <p style={{ margin: '24px 0 0', fontSize: 14, lineHeight: 1.55, color: 'var(--e3-muted)', textWrap: 'pretty' }}>
               Vino cu 30 de minute înainte pentru check-in și încălzire. Hidratare la fața locului.
             </p>
           </div>
           <div>
-            <div style={{ border: '1px solid #2A2E25', overflow: 'hidden', background: '#1A1D17' }}>
+            <div style={{ border: '1px solid var(--e3-border)', overflow: 'hidden', background: 'var(--e3-surface)' }}>
               <iframe
                 title={`${EVENT_WHERE} — hartă`}
                 loading="lazy"
@@ -652,7 +652,7 @@ export const Edition3Landing = () => {
                 fontWeight: 600,
                 letterSpacing: 1,
                 textTransform: 'uppercase',
-                color: '#C9F24B',
+                color: 'var(--e3-accent)',
               }}
             >
               <span aria-hidden="true">↗</span> Deschide în Google Maps
@@ -681,12 +681,12 @@ export const Edition3Landing = () => {
               <span style={sectionNum}>03</span>
               <h2 style={sectionTitle}>Înscriere</h2>
             </div>
-            <p style={{ margin: '0 0 28px', fontSize: 17, lineHeight: 1.55, color: '#C9CCBE', textWrap: 'pretty' }}>
+            <p style={{ margin: '0 0 28px', fontSize: 17, lineHeight: 1.55, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
               {waitlistMode ? (
                 <>
-                  Locurile s-au epuizat, dar te poți pune pe <strong style={{ color: '#C9F24B' }}>lista de așteptare</strong>.
+                  Locurile s-au epuizat, dar te poți pune pe <strong style={{ color: 'var(--e3-accent)' }}>lista de așteptare</strong>.
                   Au mai rămas{' '}
-                  <strong style={{ color: '#C9F24B' }}>
+                  <strong style={{ color: 'var(--e3-accent)' }}>
                     {waitlistLeft} {waitlistLeft === 1 ? 'loc' : 'locuri'}
                   </strong>{' '}
                   pe listă.
@@ -694,18 +694,18 @@ export const Edition3Landing = () => {
               ) : (
                 <>
                   Completează formularul și primești confirmarea pe email.{' '}
-                  <strong style={{ color: '#C9F24B' }}>Locuri limitate</strong> — primul venit, primul servit.
+                  <strong style={{ color: 'var(--e3-accent)' }}>Locuri limitate</strong> — primul venit, primul servit.
                 </>
               )}
             </p>
-            <div style={{ border: '1px solid #2A2E25', background: '#1A1D17', padding: 26 }}>
+            <div style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)', padding: 26 }}>
               <div
                 style={{
                   fontFamily: 'Anton, sans-serif',
                   fontSize: 15,
                   letterSpacing: 2,
                   textTransform: 'uppercase',
-                  color: '#C9F24B',
+                  color: 'var(--e3-accent)',
                   marginBottom: 18,
                 }}
               >
@@ -713,8 +713,8 @@ export const Edition3Landing = () => {
               </div>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 14 }}>
                 {SUMMARY_ITEMS.map((item) => (
-                  <li key={item} style={{ display: 'flex', gap: 12, fontSize: 15, lineHeight: 1.5, color: '#C9CCBE' }}>
-                    <span style={{ color: '#C9F24B', fontWeight: 700 }}>→</span>
+                  <li key={item} style={{ display: 'flex', gap: 12, fontSize: 15, lineHeight: 1.5, color: 'var(--e3-muted-strong)' }}>
+                    <span style={{ color: 'var(--e3-accent)', fontWeight: 700 }}>→</span>
                     {item}
                   </li>
                 ))}
@@ -726,16 +726,16 @@ export const Edition3Landing = () => {
             {/* Slots */}
             <div
               style={{
-                border: '1px solid #2A2E25',
+                border: '1px solid var(--e3-border)',
                 borderBottom: 'none',
-                background: '#1A1D17',
+                background: 'var(--e3-surface)',
                 padding: '18px 22px',
                 display: 'grid',
                 gap: 12,
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#9BA08F' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
                   Locuri rămase
                 </span>
                 <span
@@ -743,7 +743,7 @@ export const Edition3Landing = () => {
                     fontFamily: 'Anton, sans-serif',
                     fontSize: 22,
                     letterSpacing: 1,
-                    color: slots.remaining <= 3 ? '#F26D6D' : '#C9F24B',
+                    color: slots.remaining <= 3 ? 'var(--e3-danger)' : 'var(--e3-accent)',
                   }}
                 >
                   {stats ? slots.remaining : '–'} / {TOTAL_SLOTS}
@@ -751,11 +751,11 @@ export const Edition3Landing = () => {
               </div>
               <div style={{ display: 'flex', gap: 4 }} aria-hidden="true">
                 {Array.from({ length: TOTAL_SLOTS }, (_, i) => (
-                  <div key={i} style={{ height: 8, flex: 1, background: i < slots.occupied ? '#C9F24B' : '#2A2E25' }} />
+                  <div key={i} style={{ height: 8, flex: 1, background: i < slots.occupied ? 'var(--e3-accent)' : 'var(--e3-border)' }} />
                 ))}
               </div>
               {isSoldOut && !isWaitlistFull && (
-                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: '#C9F24B', fontWeight: 600, textWrap: 'pretty' }}>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-accent)', fontWeight: 600, textWrap: 'pretty' }}>
                   Locurile s-au epuizat — completează formularul și intri pe lista de așteptare. Te contactăm
                   imediat ce se eliberează un loc.
                 </p>
@@ -774,8 +774,8 @@ export const Edition3Landing = () => {
                   if (name && name !== 'acord') clearErrorFor(name);
                 }}
                 style={{
-                  border: '1px solid #2A2E25',
-                  background: '#1A1D17',
+                  border: '1px solid var(--e3-border)',
+                  background: 'var(--e3-surface)',
                   padding: 'clamp(20px, 4vw, 36px)',
                   display: 'grid',
                   gap: 22,
@@ -790,7 +790,7 @@ export const Edition3Landing = () => {
                       type="text"
                       placeholder="Ana Popescu"
                       autoComplete="name"
-                      style={{ ...inputStyle, borderColor: errors.nume ? '#F26D6D' : '#2A2E25' }}
+                      style={{ ...inputStyle, borderColor: errors.nume ? 'var(--e3-danger)' : 'var(--e3-border)' }}
                     />
                     {errors.nume && <span style={fieldErr}>Completează numele complet.</span>}
                   </label>
@@ -802,7 +802,7 @@ export const Edition3Landing = () => {
                       type="tel"
                       placeholder="07xx xxx xxx"
                       autoComplete="tel"
-                      style={{ ...inputStyle, borderColor: errors.telefon ? '#F26D6D' : '#2A2E25' }}
+                      style={{ ...inputStyle, borderColor: errors.telefon ? 'var(--e3-danger)' : 'var(--e3-border)' }}
                     />
                     {errors.telefon && <span style={fieldErr}>Numărul de telefon nu e valid.</span>}
                   </label>
@@ -816,7 +816,7 @@ export const Edition3Landing = () => {
                       type="email"
                       placeholder="ana@email.ro"
                       autoComplete="email"
-                      style={{ ...inputStyle, borderColor: errors.email ? '#F26D6D' : '#2A2E25' }}
+                      style={{ ...inputStyle, borderColor: errors.email ? 'var(--e3-danger)' : 'var(--e3-border)' }}
                     />
                     {errors.email && <span style={fieldErr}>Adresa de email nu e validă.</span>}
                   </label>
@@ -832,7 +832,7 @@ export const Edition3Landing = () => {
                           setBirth((b) => ({ ...b, d: e.target.value }));
                           clearErrorFor('dataNasterii');
                         }}
-                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? '#F26D6D' : '#2A2E25' }}
+                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? 'var(--e3-danger)' : 'var(--e3-border)' }}
                       >
                         <option value="">Zi</option>
                         {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
@@ -849,7 +849,7 @@ export const Edition3Landing = () => {
                           setBirth((b) => ({ ...b, m: e.target.value }));
                           clearErrorFor('dataNasterii');
                         }}
-                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? '#F26D6D' : '#2A2E25' }}
+                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? 'var(--e3-danger)' : 'var(--e3-border)' }}
                       >
                         <option value="">Luna</option>
                         {MONTHS.map((name, i) => (
@@ -866,7 +866,7 @@ export const Edition3Landing = () => {
                           setBirth((b) => ({ ...b, y: e.target.value }));
                           clearErrorFor('dataNasterii');
                         }}
-                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? '#F26D6D' : '#2A2E25' }}
+                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? 'var(--e3-danger)' : 'var(--e3-border)' }}
                       >
                         <option value="">An</option>
                         {BIRTH_YEARS.map((y) => (
@@ -879,7 +879,7 @@ export const Edition3Landing = () => {
                     {errors.dataNasterii && <span style={fieldErr}>{dateErrMsg}</span>}
                   </div>
                 </div>
-                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: '#9BA08F', textWrap: 'pretty' }}>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-muted)', textWrap: 'pretty' }}>
                   Participanții trebuie să aibă minim 14 ani în ziua evenimentului. Stațiile și greutățile sunt
                   adaptate de antrenori la fața locului.
                 </p>
@@ -894,13 +894,13 @@ export const Edition3Landing = () => {
                       width: 18,
                       height: 18,
                       margin: '2px 0 0',
-                      accentColor: '#C9F24B',
+                      accentColor: 'var(--e3-accent)',
                       cursor: 'pointer',
-                      outline: `2px solid ${errors.acord ? '#F26D6D' : 'transparent'}`,
+                      outline: `2px solid ${errors.acord ? 'var(--e3-danger)' : 'transparent'}`,
                       outlineOffset: 2,
                     }}
                   />
-                  <span style={{ fontSize: 14, lineHeight: 1.5, color: errors.acord ? '#F26D6D' : '#9BA08F' }}>
+                  <span style={{ fontSize: 14, lineHeight: 1.5, color: errors.acord ? 'var(--e3-danger)' : 'var(--e3-muted)' }}>
                     Confirm că sunt apt din punct de vedere medical pentru efort fizic intens și accept
                     regulamentul evenimentului. *
                   </span>
@@ -910,8 +910,8 @@ export const Edition3Landing = () => {
                   type="submit"
                   className="e3-submit"
                   style={{
-                    background: '#C9F24B',
-                    color: '#121410',
+                    background: 'var(--e3-accent)',
+                    color: 'var(--e3-bg)',
                     border: 'none',
                     cursor: 'pointer',
                     fontFamily: 'Anton, sans-serif',
@@ -931,8 +931,8 @@ export const Edition3Landing = () => {
             {closedReason && (
               <div
                 style={{
-                  border: '1px solid #2A2E25',
-                  background: '#1A1D17',
+                  border: '1px solid var(--e3-border)',
+                  background: 'var(--e3-surface)',
                   padding: 'clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px)',
                   textAlign: 'center',
                   display: 'grid',
@@ -954,7 +954,7 @@ export const Edition3Landing = () => {
                     ? 'Înscrierile s-au închis'
                     : 'Locurile sunt pline'}
                 </div>
-                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: '#9BA08F', maxWidth: 380 }}>
+                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: 'var(--e3-muted)', maxWidth: 380 }}>
                   {closedReason === 'ended'
                     ? 'Ne vedem la ediția următoare. Urmărește-ne pentru anunțuri.'
                     : closedReason === 'reg'
@@ -968,8 +968,8 @@ export const Edition3Landing = () => {
                   className="e3-cta"
                   style={{
                     display: 'inline-block',
-                    background: '#C9F24B',
-                    color: '#121410',
+                    background: 'var(--e3-accent)',
+                    color: 'var(--e3-bg)',
                     fontFamily: 'Anton, sans-serif',
                     fontSize: 17,
                     letterSpacing: 1.5,
@@ -987,8 +987,8 @@ export const Edition3Landing = () => {
             {phase === 'loading' && (
               <div
                 style={{
-                  border: '1px solid #2A2E25',
-                  background: '#1A1D17',
+                  border: '1px solid var(--e3-border)',
+                  background: 'var(--e3-surface)',
                   padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)',
                   textAlign: 'center',
                   display: 'grid',
@@ -1000,8 +1000,8 @@ export const Edition3Landing = () => {
                   style={{
                     width: 52,
                     height: 52,
-                    border: '4px solid #2A2E25',
-                    borderTopColor: '#C9F24B',
+                    border: '4px solid var(--e3-border)',
+                    borderTopColor: 'var(--e3-accent)',
                     borderRadius: '50%',
                     animation: 'e3-spin 0.8s linear infinite',
                   }}
@@ -1012,7 +1012,7 @@ export const Edition3Landing = () => {
                     fontSize: 22,
                     textTransform: 'uppercase',
                     letterSpacing: 1.5,
-                    color: '#C9CCBE',
+                    color: 'var(--e3-muted-strong)',
                   }}
                 >
                   Se trimite înscrierea…
@@ -1024,8 +1024,8 @@ export const Edition3Landing = () => {
             {phase === 'success' && (
               <div
                 style={{
-                  border: '1px solid #C9F24B',
-                  background: '#1A1D17',
+                  border: '1px solid var(--e3-accent)',
+                  background: 'var(--e3-surface)',
                   padding: 'clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px)',
                   textAlign: 'center',
                   display: 'grid',
@@ -1039,7 +1039,7 @@ export const Edition3Landing = () => {
                       position: 'absolute',
                       inset: 0,
                       borderRadius: '50%',
-                      border: '2px solid #C9F24B',
+                      border: '2px solid var(--e3-accent)',
                       animation: 'e3-ring-pulse 1.6s ease-out 0.4s 3',
                     }}
                   />
@@ -1047,7 +1047,7 @@ export const Edition3Landing = () => {
                     style={{
                       width: 84,
                       height: 84,
-                      background: '#C9F24B',
+                      background: 'var(--e3-accent)',
                       borderRadius: '50%',
                       display: 'grid',
                       placeItems: 'center',
@@ -1057,7 +1057,7 @@ export const Edition3Landing = () => {
                     <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
                       <path
                         d="M10 23 L19 32 L34 13"
-                        stroke="#121410"
+                        stroke="var(--e3-bg)"
                         strokeWidth="5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -1077,7 +1077,7 @@ export const Edition3Landing = () => {
                   {submittedAsWaitlist ? 'Ești pe lista de așteptare, ' : 'Te-ai înregistrat, '}
                   {confirmName}!
                 </div>
-                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: '#9BA08F', maxWidth: 380 }}>
+                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: 'var(--e3-muted)', maxWidth: 380 }}>
                   {submittedAsWaitlist
                     ? 'Toate locurile sunt ocupate momentan. Te contactăm pe email sau telefon imediat ce se eliberează un loc — în ordinea înscrierii.'
                     : `Ți-am trimis un email de confirmare cu toate detaliile. ${SUCCESS_SEE_YOU}`}
@@ -1088,8 +1088,8 @@ export const Edition3Landing = () => {
                   onClick={resetForm}
                   style={{
                     background: 'transparent',
-                    border: '1px solid #2A2E25',
-                    color: '#9BA08F',
+                    border: '1px solid var(--e3-border)',
+                    color: 'var(--e3-muted)',
                     cursor: 'pointer',
                     fontFamily: 'Archivo, sans-serif',
                     fontSize: 13,
@@ -1109,8 +1109,8 @@ export const Edition3Landing = () => {
             {phase === 'error' && (
               <div
                 style={{
-                  border: '1px solid #F26D6D',
-                  background: '#1A1D17',
+                  border: '1px solid var(--e3-danger)',
+                  background: 'var(--e3-surface)',
                   padding: 'clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px)',
                   textAlign: 'center',
                   display: 'grid',
@@ -1129,7 +1129,7 @@ export const Edition3Landing = () => {
                     animation: 'e3-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
                   }}
                 >
-                  <span style={{ fontSize: 38, fontWeight: 700, color: '#F26D6D' }}>✕</span>
+                  <span style={{ fontSize: 38, fontWeight: 700, color: 'var(--e3-danger)' }}>✕</span>
                 </div>
                 <div
                   style={{
@@ -1137,12 +1137,12 @@ export const Edition3Landing = () => {
                     fontSize: 'clamp(28px, 6vw, 40px)',
                     textTransform: 'uppercase',
                     letterSpacing: 1,
-                    color: '#F26D6D',
+                    color: 'var(--e3-danger)',
                   }}
                 >
                   Ceva n-a mers
                 </div>
-                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: '#9BA08F', maxWidth: 380 }}>
+                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: 'var(--e3-muted)', maxWidth: 380 }}>
                   Înscrierea nu a putut fi trimisă. Verifică conexiunea la internet și încearcă din nou.
                 </p>
                 <button
@@ -1153,8 +1153,8 @@ export const Edition3Landing = () => {
                     setPhase('form');
                   }}
                   style={{
-                    background: '#C9F24B',
-                    color: '#121410',
+                    background: 'var(--e3-accent)',
+                    color: 'var(--e3-bg)',
                     border: 'none',
                     cursor: 'pointer',
                     fontFamily: 'Anton, sans-serif',
@@ -1174,7 +1174,7 @@ export const Edition3Landing = () => {
       </section>
 
       {/* ===== PARTICIPANTS ===== */}
-      <section id="participanti" style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderTop: '1px solid #2A2E25' }}>
+      <section id="participanti" style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderTop: '1px solid var(--e3-border)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
             <span style={sectionNum}>04</span>
@@ -1187,20 +1187,20 @@ export const Edition3Landing = () => {
               justifyContent: 'space-between',
               gap: 16,
               flexWrap: 'wrap',
-              border: '1px solid #2A2E25',
+              border: '1px solid var(--e3-border)',
               borderBottom: 'none',
-              background: '#1A1D17',
+              background: 'var(--e3-surface)',
               padding: '16px 22px',
             }}
           >
-            <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#9BA08F' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
               Participanți înscriși
             </span>
-            <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 20, letterSpacing: 1, color: '#C9F24B' }}>
+            <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 20, letterSpacing: 1, color: 'var(--e3-accent)' }}>
               {stats ? stats.count : '–'} / {TOTAL_SLOTS}
             </span>
           </div>
-          <div style={{ border: '1px solid #2A2E25', background: '#1A1D17' }}>
+          <div style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)' }}>
             {participants.map((p, i) => (
               <div
                 key={`${p.nume}-${i}`}
@@ -1210,14 +1210,14 @@ export const Edition3Landing = () => {
                   style={{
                     fontFamily: 'Anton, sans-serif',
                     fontSize: 15,
-                    color: '#5E6355',
+                    color: 'var(--e3-muted-dim)',
                     minWidth: 28,
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <span style={{ fontSize: 15, fontWeight: 600, color: '#F1EFE6', flex: 1 }}>{p.nume}</span>
+                <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--e3-text)', flex: 1 }}>{p.nume}</span>
                 {mine.has(p.nume) && (
                   <span
                     style={{
@@ -1225,8 +1225,8 @@ export const Edition3Landing = () => {
                       fontWeight: 700,
                       letterSpacing: 1,
                       textTransform: 'uppercase',
-                      color: '#121410',
-                      background: '#C9F24B',
+                      color: 'var(--e3-bg)',
+                      background: 'var(--e3-accent)',
                       padding: '3px 8px',
                     }}
                   >
@@ -1236,15 +1236,15 @@ export const Edition3Landing = () => {
               </div>
             ))}
             {stats && participants.length === 0 && (
-              <div style={{ padding: '36px 22px', textAlign: 'center', fontSize: 15, color: '#9BA08F' }}>
+              <div style={{ padding: '36px 22px', textAlign: 'center', fontSize: 15, color: 'var(--e3-muted)' }}>
                 Încă nimeni înscris — fii primul!{' '}
-                <a href="#inscriere" style={{ color: '#C9F24B', fontWeight: 600 }}>
+                <a href="#inscriere" style={{ color: 'var(--e3-accent)', fontWeight: 600 }}>
                   Înscrie-te
                 </a>
               </div>
             )}
             {!stats && (
-              <div style={{ padding: '36px 22px', textAlign: 'center', fontSize: 15, color: '#9BA08F' }}>Se încarcă lista…</div>
+              <div style={{ padding: '36px 22px', textAlign: 'center', fontSize: 15, color: 'var(--e3-muted)' }}>Se încarcă lista…</div>
             )}
           </div>
           {waitlistCount > 0 && (
@@ -1255,16 +1255,16 @@ export const Edition3Landing = () => {
                 justifyContent: 'space-between',
                 gap: 16,
                 flexWrap: 'wrap',
-                border: '1px solid #2A2E25',
-                background: '#1A1D17',
+                border: '1px solid var(--e3-border)',
+                background: 'var(--e3-surface)',
                 padding: '16px 22px',
                 marginTop: 28,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#9BA08F' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
                 Pe lista de așteptare
               </span>
-              <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 20, letterSpacing: 1, color: '#C9F24B' }}>
+              <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 20, letterSpacing: 1, color: 'var(--e3-accent)' }}>
                 {waitlistCount}
               </span>
             </div>
@@ -1275,7 +1275,7 @@ export const Edition3Landing = () => {
       {/* ===== FOOTER ===== */}
       <footer
         style={{
-          borderTop: '1px solid #2A2E25',
+          borderTop: '1px solid var(--e3-border)',
           padding: '28px clamp(20px, 5vw, 40px)',
           display: 'flex',
           flexWrap: 'wrap',
@@ -1284,26 +1284,26 @@ export const Edition3Landing = () => {
           gap: '12px 24px',
         }}
       >
-        <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 15, letterSpacing: 1, textTransform: 'uppercase', color: '#9BA08F' }}>
+        <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 15, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
           Run + Lift · 2026
         </span>
-        <span style={{ fontSize: 13, color: '#9BA08F' }}>
-          Organizatori: <span style={{ color: '#C9CCBE', fontWeight: 600 }}>Vladislav Filip</span>{' '}
-          <a href="tel:+37369509949" className="e3-link" style={{ color: '#C9F24B', fontWeight: 600 }}>
+        <span style={{ fontSize: 13, color: 'var(--e3-muted)' }}>
+          Organizatori: <span style={{ color: 'var(--e3-muted-strong)', fontWeight: 600 }}>Vladislav Filip</span>{' '}
+          <a href="tel:+37369509949" className="e3-link" style={{ color: 'var(--e3-accent)', fontWeight: 600 }}>
             +373 69 509 949
           </a>{' '}
-          <a href="https://www.instagram.com/vladfillip" target="_blank" rel="noopener noreferrer" className="e3-link" style={{ color: '#C9F24B', fontWeight: 600 }}>
+          <a href="https://www.instagram.com/vladfillip" target="_blank" rel="noopener noreferrer" className="e3-link" style={{ color: 'var(--e3-accent)', fontWeight: 600 }}>
             @vladfillip
           </a>{' '}
-          · <span style={{ color: '#C9CCBE', fontWeight: 600 }}>Roma Morari</span>{' '}
-          <a href="tel:+37369819404" className="e3-link" style={{ color: '#C9F24B', fontWeight: 600 }}>
+          · <span style={{ color: 'var(--e3-muted-strong)', fontWeight: 600 }}>Roma Morari</span>{' '}
+          <a href="tel:+37369819404" className="e3-link" style={{ color: 'var(--e3-accent)', fontWeight: 600 }}>
             +373 69 819 404
           </a>{' '}
-          <a href="https://www.instagram.com/morarroma" target="_blank" rel="noopener noreferrer" className="e3-link" style={{ color: '#C9F24B', fontWeight: 600 }}>
+          <a href="https://www.instagram.com/morarroma" target="_blank" rel="noopener noreferrer" className="e3-link" style={{ color: 'var(--e3-accent)', fontWeight: 600 }}>
             @morarroma
           </a>{' '}
           ·{' '}
-          <a href="https://www.instagram.com/we_run_and_lift/" target="_blank" rel="noopener noreferrer" className="e3-link" style={{ color: '#C9F24B', fontWeight: 600 }}>
+          <a href="https://www.instagram.com/we_run_and_lift/" target="_blank" rel="noopener noreferrer" className="e3-link" style={{ color: 'var(--e3-accent)', fontWeight: 600 }}>
             @we_run_and_lift
           </a>
         </span>
