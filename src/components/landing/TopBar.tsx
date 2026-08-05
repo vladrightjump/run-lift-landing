@@ -69,7 +69,7 @@ export const TopBar = ({ cd }: Props) => {
                     fontFamily: 'Anton, sans-serif',
                     fontSize: 24,
                     lineHeight: 1,
-                    color: u.lime ? 'var(--e3-accent)' : '#F2F3EC',
+                    color: u.lime ? 'var(--e3-accent)' : 'var(--e3-text-bright)',
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >

@@ -41,7 +41,7 @@ export const ParticipantsSection = ({ stats }: Props) => {
             {participants.map((p, i) => (
               <div
                 key={`${p.nume}-${i}`}
-                style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '15px 22px', borderBottom: '1px solid #232620' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '15px 22px', borderBottom: '1px solid var(--e3-hairline)' }}
               >
                 <span
                   style={{

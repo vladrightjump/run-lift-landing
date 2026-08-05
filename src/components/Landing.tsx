@@ -50,7 +50,7 @@ export const Landing = () => {
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            background: toast.kind === 'error' ? '#3A1A1A' : 'var(--e3-accent)',
+            background: toast.kind === 'error' ? 'var(--e3-danger-bg)' : 'var(--e3-accent)',
             color: toast.kind === 'error' ? 'var(--e3-danger)' : 'var(--e3-bg)',
             fontFamily: 'Archivo, sans-serif',
             fontSize: 15,

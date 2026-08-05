@@ -529,7 +529,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                   style={{
                     width: 84,
                     height: 84,
-                    background: '#3A1A1A',
+                    background: 'var(--e3-danger-bg)',
                     borderRadius: '50%',
                     display: 'grid',
                     placeItems: 'center',

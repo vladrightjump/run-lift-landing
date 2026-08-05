@@ -15,6 +15,12 @@
   --e3-muted-dim: #5E6355;
   --e3-danger: #F26D6D;
   --e3-danger-strong: #E5484D;
+  --e3-danger-bg: #3A1A1A;
+  --e3-hairline: #232620;
+  --e3-text-bright: #F2F3EC;
+  --e3-surface-hover: #1E2119;
+  --e3-bg-deep: #0C0E0A;
+  --e3-surface-tint: #262C1B;
 }
 
   html, body { margin: 0; padding: 0; background: var(--e3-bg); }
@@ -95,7 +101,7 @@
   .countdown-values { display: flex; align-items: baseline; gap: 6px; }
   .countdown-num {
     font-family: Anton, sans-serif; font-size: 24px; line-height: 1;
-    color: #F2F3EC; font-variant-numeric: tabular-nums;
+    color: var(--e3-text-bright); font-variant-numeric: tabular-nums;
   }
   .countdown-num.accent { color: var(--e3-accent); }
   .countdown-unit {
@@ -195,7 +201,7 @@
     transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
   }
   .eq-card:hover {
-    background: #262C1B; border-color: var(--e3-accent);
+    background: var(--e3-surface-tint); border-color: var(--e3-accent);
     transform: translateY(-4px); box-shadow: 0 14px 32px rgba(0,0,0,0.35);
   }
   .eq-label { font-family: Anton, sans-serif; font-size: 13px; color: var(--e3-muted); letter-spacing: 2px; margin-bottom: 14px; }
@@ -368,7 +374,7 @@
   .plist { border: 1px solid var(--e3-border); background: var(--e3-surface); }
   .plist-row {
     display: flex; align-items: center; gap: 18px;
-    padding: 15px 22px; border-bottom: 1px solid #232620;
+    padding: 15px 22px; border-bottom: 1px solid var(--e3-hairline);
   }
   .plist-row:last-child { border-bottom: none; }
   .plist-nr {
@@ -408,7 +414,7 @@
   /* Panourile primesc focus programatic (tabindex=-1) — fără inel de focus */
   .form-error:focus, .confirmation:focus { outline: none; }
   .form-error .x-circle {
-    width: 84px; height: 84px; background: #3A1A1A; border-radius: 50%;
+    width: 84px; height: 84px; background: var(--e3-danger-bg); border-radius: 50%;
     display: grid; place-items: center;
     animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
@@ -438,13 +444,13 @@
     animation-delay: 0.1s;
   }
   .x-circle-neutral {
-    background: #262C1B !important;
+    background: var(--e3-surface-tint) !important;
   }
   .x-circle-neutral span { color: var(--e3-accent) !important; }
 
   /* ---- Offline banner ---- */
   .offline-banner {
-    border: 1px solid var(--e3-danger); background: #3A1A1A;
+    border: 1px solid var(--e3-danger); background: var(--e3-danger-bg);
     color: var(--e3-danger);
     padding: 12px 16px; margin-bottom: 12px;
     display: flex; align-items: center; gap: 12px;
@@ -514,7 +520,7 @@
   .toast {
     position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
     z-index: 200; display: none; align-items: center; gap: 12px;
-    background: #3A1A1A; color: var(--e3-danger);
+    background: var(--e3-danger-bg); color: var(--e3-danger);
     font-family: Archivo, sans-serif; font-size: 15px; font-weight: 600;
     padding: 14px 22px; box-shadow: 0 12px 32px rgba(0,0,0,0.45);
     max-width: min(90vw, 480px); border: 1px solid transparent;
@@ -749,10 +755,10 @@
   .admin-row {
     display: grid; grid-template-columns: 48px 1.5fr 1fr 1.5fr 0.9fr 100px;
     gap: 12px; align-items: center; padding: 14px 24px;
-    border-bottom: 1px solid #232620;
+    border-bottom: 1px solid var(--e3-hairline);
     transition: background 0.15s ease; animation: row-in 0.35s ease-out;
   }
-  .admin-row:hover { background: #1E2119; }
+  .admin-row:hover { background: var(--e3-surface-hover); }
   .admin-row-head {
     padding: 12px 24px; border-bottom: 1px solid var(--e3-border);
     font-size: 11px; font-weight: 700; letter-spacing: 2px;
@@ -831,10 +837,10 @@
   }
   .admin-email-recipient {
     display: flex; align-items: center; gap: 12px;
-    padding: 10px 20px; border-bottom: 1px solid #232620; cursor: pointer;
+    padding: 10px 20px; border-bottom: 1px solid var(--e3-hairline); cursor: pointer;
     transition: background 0.15s ease;
   }
-  .admin-email-recipient:hover { background: #1E2119; }
+  .admin-email-recipient:hover { background: var(--e3-surface-hover); }
   .admin-email-recipient.all { padding: 12px 20px; }
   .admin-email-recipient input[type="checkbox"] {
     accent-color: var(--e3-accent); width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;
@@ -918,7 +924,7 @@
   .admin-email-preview-meta .subject { font-size: 15px; font-weight: 700; color: var(--e3-text); }
   .admin-email-preview-text {
     font-size: 14px; line-height: 1.6; color: var(--e3-muted-strong); white-space: pre-wrap;
-    border-top: 1px solid #232620; padding-top: 12px;
+    border-top: 1px solid var(--e3-hairline); padding-top: 12px;
   }
   .admin-email-preview-empty { padding: 24px; font-size: 14px; color: var(--e3-muted); }
   .admin-email-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -1004,7 +1010,7 @@
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    background: #0C0E0A;
+    background: var(--e3-bg-deep);
     overflow: hidden;
   }
   .cs-bg {
@@ -1200,7 +1206,7 @@
     position: relative;
     width: 100%;
     max-width: 440px;
-    background: #0C0E0A;
+    background: var(--e3-bg-deep);
     border: 1px solid var(--e3-border);
     padding: 32px 28px 28px;
     animation: pop-in 0.28s cubic-bezier(0.34, 1.4, 0.64, 1) both;
