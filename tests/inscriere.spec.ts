@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
+import { EDITION } from '../src/content/edition';
 
 /**
  * Formularul de înscriere la eveniment — landing-ul Ediției a treia.
@@ -13,11 +14,11 @@ const REG_ROUTE = '**/rest/v1/registrations';
 const WAITLIST_ROUTE = '**/rest/v1/event_waitlist';
 const EMAIL_ROUTE = '**/functions/v1/send-email';
 
-// Ora fixată înainte de deadline (25 iulie) ca formularul să fie mereu deschis,
+// Ora fixată înainte de start (8 august) ca formularul să fie mereu deschis,
 // indiferent când rulează testul.
 const fixClock = (page: Page) =>
   page.addInitScript(() => {
-    const fixed = new Date('2026-07-23T10:00:00+03:00').getTime();
+    const fixed = new Date('2026-08-06T10:00:00+03:00').getTime();
     const RealDate = Date;
     // Doar Date.now e citit de useCountdown/useNow — îl fixăm.
     Date.now = () => fixed;
@@ -50,7 +51,7 @@ const fillValid = async (page: Page) => {
 
 const submitBtn = (page: Page) => page.getByRole('button', { name: /trimite înscrierea/i });
 
-test.describe('Înscriere — formular ediția 3', () => {
+test.describe('Înscriere — formular ediția 4', () => {
   test('formularul e vizibil cu buton activ „Trimite înscrierea"', async ({ page }) => {
     await fixClock(page);
     await mockStats(page, 0);
@@ -85,14 +86,18 @@ test.describe('Înscriere — formular ediția 3', () => {
     await expect(page.getByText(/te-ai înregistrat/i)).toBeVisible();
   });
 
-  test('submit valid → trimite ediția 3 și data compusă din selectoare', async ({ page }) => {
+  test('submit valid → trimite ediția 4, schema runlift și data compusă din selectoare', async ({
+    page,
+  }) => {
     await fixClock(page);
     await mockStats(page, 0);
     await mockEmail(page);
 
     let body: Record<string, unknown> = {};
+    let headers: Record<string, string> = {};
     await page.route(REG_ROUTE, (route: Route) => {
       body = route.request().postDataJSON();
+      headers = route.request().headers();
       return route.fulfill({ status: 201, body: '' });
     });
 
@@ -101,9 +106,12 @@ test.describe('Înscriere — formular ediția 3', () => {
     await submitBtn(page).click();
 
     await expect(page.getByText(/te-ai înregistrat/i)).toBeVisible();
-    expect(body.editie).toBe(3);
+    expect(body.editie).toBe(EDITION.number);
     expect(body.data_nasterii).toBe('1994-05-15');
     expect(body.telefon).toBe('069509949');
+    // Regresia din 4 aug: fără Content-Profile: runlift, PostgREST caută în
+    // schema `public` și insert-ul pică. Playwright dă headerele cu litere mici.
+    expect(headers['content-profile']).toBe('runlift');
   });
 
   test('validare: submit gol NU trimite request și afișează eroare', async ({ page }) => {

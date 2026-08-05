@@ -8,7 +8,7 @@ import { SHOW_COMING_SOON, LAUNCH_DATE } from './lib/config';
 export const App = () => {
   const { toast, hiding, showToast } = useToast();
   // La expirarea timerului de lansare (LAUNCH_DATE) ecranul comută singur de la
-  // Coming Soon la landing-ul ediției a treia — fără redeploy manual.
+  // Coming Soon la landing-ul ediției curente — fără redeploy manual.
   const launch = useCountdown(LAUNCH_DATE);
   // Preview manual înainte de ora lansării: /?preview=landing (noul landing)
   // sau /?preview=soon (Coming Soon). Fără param → comportamentul normal (timer).

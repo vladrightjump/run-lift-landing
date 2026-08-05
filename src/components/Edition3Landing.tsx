@@ -12,6 +12,17 @@ import {
   isBackendConfigured,
 } from '../lib/config';
 import {
+  EVENT_META,
+  HERO_KICKER,
+  EVENT_SUMMARY_LINE,
+  EVENT_WHEN,
+  EVENT_WHERE,
+  EVENT_START_TIME,
+  SUCCESS_SEE_YOU,
+  MAP_EMBED_SRC,
+  MAP_DIRECTIONS_URL,
+} from '../content/format';
+import {
   submitRegistration,
   submitWaitlist,
   sendConfirmationEmail,
@@ -34,20 +45,12 @@ const MIN_LOADING_MS = 700;
 const SIM_LOADING_MS = 1800;
 const delay = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
-const EVENT_META = '8 august 2026 · Parcul Râșcani';
-const HERO_KICKER = 'Sâmbătă, 8 august 2026 · Parcul Râșcani, Chișinău · Outdoor Adaptive';
-
-// Aceeași locație ca edițiile anterioare — pinul „Новая спортплощадка" din
-// Parcul Râșcani. Butonul de direcții folosește link-ul scurt al organizatorului.
-const MAP_QUERY =
-  '%D0%9D%D0%BE%D0%B2%D0%B0%D1%8F%20%D1%81%D0%BF%D0%BE%D1%80%D1%82%D0%BF%D0%BB%D0%BE%D1%89%D0%B0%D0%B4%D0%BA%D0%B0%20Chi%C8%99in%C4%83u';
-const MAP_SRC = `https://maps.google.com/maps?q=${MAP_QUERY}&z=16&hl=ro&output=embed`;
-// Aceeași căutare ca embed-ul → deschide exact același pin în Google Maps
-// (aplicație pe telefon sau web), inclusiv butonul de direcții.
-const DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${MAP_QUERY}`;
+// Locația (Google Maps) — embed + direcții derivă din EDITION.venue.mapQuery.
+const MAP_SRC = MAP_EMBED_SRC;
+const DIRECTIONS_URL = MAP_DIRECTIONS_URL;
 
 const SUMMARY_ITEMS = [
-  'Sâmbătă, 8 august 2026, ora 06:30 — Parcul Râșcani, Chișinău',
+  EVENT_SUMMARY_LINE,
   'Cursă în stil HYROX: alergare + stații funcționale',
   'Stațiile și greutățile se adaptează nivelului tău',
   'Deschis oricui, indiferent de nivel',
@@ -591,9 +594,9 @@ export const Edition3Landing = () => {
             </div>
             <div style={{ display: 'grid', gap: 0, border: '1px solid #2A2E25' }}>
               {[
-                { k: 'Unde', v: 'Parcul Râșcani, Chișinău', lime: false },
-                { k: 'Când', v: 'Sâmbătă, 8 august 2026', lime: false },
-                { k: 'Start', v: '06:30', lime: true },
+                { k: 'Unde', v: EVENT_WHERE, lime: false },
+                { k: 'Când', v: EVENT_WHEN, lime: false },
+                { k: 'Start', v: EVENT_START_TIME, lime: true },
               ].map((row, i, arr) => (
                 <div
                   key={row.k}
@@ -619,7 +622,7 @@ export const Edition3Landing = () => {
           <div>
             <div style={{ border: '1px solid #2A2E25', overflow: 'hidden', background: '#1A1D17' }}>
               <iframe
-                title="Parcul Râșcani, Chișinău — hartă"
+                title={`${EVENT_WHERE} — hartă`}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 allowFullScreen
@@ -1069,7 +1072,7 @@ export const Edition3Landing = () => {
                 <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: '#9BA08F', maxWidth: 380 }}>
                   {submittedAsWaitlist
                     ? 'Toate locurile sunt ocupate momentan. Te contactăm pe email sau telefon imediat ce se eliberează un loc — în ordinea înscrierii.'
-                    : 'Ți-am trimis un email de confirmare cu toate detaliile. Ne vedem pe 8 august la start, ora 06:30.'}
+                    : `Ți-am trimis un email de confirmare cu toate detaliile. ${SUCCESS_SEE_YOU}`}
                 </p>
                 <button
                   type="button"

@@ -16,6 +16,7 @@ import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
 import { LAUNCH_DATE, TOTAL_SLOTS, WAITLIST_SLOTS } from '../lib/config';
+import { LAUNCH_EDITION_ORDINAL } from '../content/format';
 
 const launchFmt = new Intl.DateTimeFormat('ro-RO', {
   day: 'numeric',
@@ -259,7 +260,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           <span className="admin-badge">Backoffice</span>
         </div>
         <div className="admin-topbar-meta">
-          <span className="topbar-info">Ediția a patra · anunț {LAUNCH_LABEL}</span>
+          <span className="topbar-info">Ediția {LAUNCH_EDITION_ORDINAL} · anunț {LAUNCH_LABEL}</span>
           <span className="admin-cd">
             <span className="countdown-dot" />
             {cd.done

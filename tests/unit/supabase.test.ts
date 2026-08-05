@@ -15,6 +15,7 @@ import {
   SUBMIT_TIMEOUT_MS,
 } from '../../src/lib/supabase';
 import { CURRENT_EDITION } from '../../src/lib/config';
+import { EDITION } from '../../src/content/edition';
 
 const draft = {
   nume: '  Popescu  ',
@@ -117,7 +118,7 @@ describe('submitRegistration (înscriere la eveniment)', () => {
     // înscrierile ediției 4 s-ar amesteca cu edițiile trecute.
     await submitRegistration(regData);
     expect(ultimulBody().editie).toBe(CURRENT_EDITION);
-    expect(CURRENT_EDITION).toBe(4);
+    expect(CURRENT_EDITION).toBe(EDITION.number);
   });
 
   it('curăță spațiile, normalizează telefonul și păstrează data nașterii', async () => {

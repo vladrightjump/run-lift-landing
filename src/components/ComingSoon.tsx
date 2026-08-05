@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LAUNCH_DATE, INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
+import { LAUNCH_EDITION_ORDINAL } from '../content/format';
 import { useCountdown } from '../hooks/useCountdown';
 import {
   submitLaunchNotification,
@@ -140,7 +141,7 @@ export const ComingSoon = ({ showToast }: Props) => {
           R<span className="cs-accent">+</span>L
         </span>
         <nav className="cs-nav">
-          <span className="cs-brand-meta">Run + Lift · Ediția a patra</span>
+          <span className="cs-brand-meta">Run + Lift · Ediția {LAUNCH_EDITION_ORDINAL}</span>
           <a className="cs-tab" href="/despre-noi">Despre noi</a>
         </nav>
       </header>
@@ -148,7 +149,7 @@ export const ComingSoon = ({ showToast }: Props) => {
       <main className="cs-main">
         <span className="cs-badge">
           <span className="cs-badge-dot" />
-          Antrenament nou · Ediția a patra
+          Antrenament nou · Ediția {LAUNCH_EDITION_ORDINAL}
         </span>
 
         <h1 className="cs-title">

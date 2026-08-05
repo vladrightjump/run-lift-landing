@@ -12,6 +12,7 @@ import {
   SUPABASE,
   isBackendConfigured,
 } from '../../src/lib/config';
+import { EDITION } from '../../src/content/edition';
 
 describe('date și ore', () => {
   it('toate datele sunt valide', () => {
@@ -21,9 +22,12 @@ describe('date și ore', () => {
   });
 
   it('LAUNCH_DATE e fixată pe fusul Chișinăului, nu pe cel local', () => {
-    // 4 august 2026, 18:00 la UTC+3 => 15:00 UTC. Testul pică dacă cineva
-    // scrie data fără offset și se bazează pe fusul mașinii de build.
-    expect(LAUNCH_DATE.toISOString()).toBe('2026-08-04T15:00:00.000Z');
+    // Compusă din EDITION.launchAt + EDITION.tz — testul pică dacă cineva scrie
+    // data fără offset și se bazează pe fusul mașinii de build. Drift-proof: derivă
+    // din EDITION, nu dintr-o dată hardcodată.
+    expect(LAUNCH_DATE.toISOString()).toBe(
+      new Date(`${EDITION.launchAt}${EDITION.tz}`).toISOString()
+    );
   });
 
   it('evenimentul ediției 4 e după anunțul de lansare (Faza B)', () => {

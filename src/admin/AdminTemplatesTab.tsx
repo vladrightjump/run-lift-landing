@@ -34,6 +34,11 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
     descriere:
       'Anunțul cu link de înscriere, din tab-ul „Email" → Listă de așteptare. Variabile: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}.',
   },
+  event_badge: {
+    titlu: 'Badge eveniment (capul fiecărui email)',
+    descriere:
+      'Eticheta lime din capul fiecărui email (ex. „Nume eveniment · data"). Contează doar câmpul „Text"; „Subiect" e ignorat, dar nu-l lăsa gol. Fără variabile.',
+  },
 };
 
 export const AdminTemplatesTab = ({ token, onAuthError }: Props) => {

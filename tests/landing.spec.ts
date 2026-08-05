@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { HERO_KICKER, EVENT_WHEN, EVENT_WHERE, EVENT_START_TIME } from '../src/content/format';
 
 /**
- * Landing-ul Ediției a treia („Up + Down") — conținut + logica de reveal.
+ * Landing-ul ediției curente („Hyrox Trial") — conținut + logica de reveal.
  * public_stats e mock-uit (fără DB reală). Ceasul e fixat înainte de eveniment
  * (dar avansează), ca să fie și după ora lansării (deci „/" arată landing-ul),
  * și înainte de eveniment (deci countdown-ul de start e activ).
@@ -18,7 +19,7 @@ const mockStats = (page: Page, body: unknown) =>
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    const base = new Date('2026-07-23T10:00:00+03:00').getTime();
+    const base = new Date('2026-08-06T10:00:00+03:00').getTime();
     const start = performance.now();
     Date.now = () => base + (performance.now() - start);
   });
@@ -60,14 +61,12 @@ test.describe('Landing — conținut', () => {
     await expect(timer).not.toHaveText(first ?? '', { timeout: 3000 });
   });
 
-  test('hero: „Up + Down" și subtitlul ediției (25 iulie, ediția a treia)', async ({ page }) => {
+  test('hero: „Hyrox Trial" și kicker-ul ediției', async ({ page }) => {
     await page.goto('/?preview=landing');
     const h1 = page.getByRole('heading', { level: 1 });
-    await expect(h1).toContainText('Up');
-    await expect(h1).toContainText('Down');
-    await expect(
-      page.getByText(/25 iulie 2026 · Parcul Râșcani, Chișinău · Ediția a treia/i)
-    ).toBeVisible();
+    await expect(h1).toContainText('Hyrox');
+    await expect(h1).toContainText('Trial');
+    await expect(page.getByText(HERO_KICKER)).toBeVisible();
   });
 
   test('format: cardurile RUN / LIFT / REPEAT', async ({ page }) => {
@@ -79,9 +78,9 @@ test.describe('Landing — conținut', () => {
 
   test('locația: data, adresa și ora de start', async ({ page }) => {
     await page.goto('/?preview=landing');
-    await expect(page.getByText('Parcul Râșcani, Strada Braniștii, Chișinău')).toBeVisible();
-    await expect(page.getByText(/25 iulie 2026/).first()).toBeVisible();
-    await expect(page.getByText('07:00', { exact: true })).toBeVisible();
+    await expect(page.getByText(EVENT_WHERE).first()).toBeVisible();
+    await expect(page.getByText(EVENT_WHEN).first()).toBeVisible();
+    await expect(page.getByText(EVENT_START_TIME, { exact: true }).first()).toBeVisible();
   });
 
   test('footer: organizatorii și Instagramul comunității', async ({ page }) => {

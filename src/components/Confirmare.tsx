@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { confirmSignup } from '../lib/supabase';
 import type { ConfirmResult } from '../lib/supabase';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
+import { LAUNCH_EDITION_ORDINAL } from '../content/format';
 
 type Stare = 'loading' | ConfirmResult | 'eroare';
 
@@ -57,7 +58,7 @@ export const Confirmare = () => {
         <a className="cs-logo" href="/">
           R<span className="cs-accent">+</span>L
         </a>
-        <span className="cs-brand-meta">Run + Lift · Ediția a patra</span>
+        <span className="cs-brand-meta">Run + Lift · Ediția {LAUNCH_EDITION_ORDINAL}</span>
       </header>
 
       <main className="cs-main">

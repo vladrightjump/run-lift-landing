@@ -1,161 +1,86 @@
 # Ghid: cum lansezi o ediție nouă
 
-Tot ce trebuie schimbat de la o ediție la alta, pas cu pas. Ține-l la îndemână.
+De la refactor-ul SSOT (4 aug 2026), o ediție nouă = **editezi un singur fișier**, rulezi un
+script, dai push. Fără vânătoare de string-uri prin componente.
 
-Sunt **două faze** (pot fi făcute separat, la câteva săptămâni distanță, sau împreună):
-
+Sunt **două faze** (pot fi făcute separat sau împreună):
 - **Faza A — Anunț (Coming Soon):** strângi „Anunță-mă la lansare" pentru ediția care urmează.
-- **Faza B — Înscrieri deschise (landing):** evenimentul e anunțat, oamenii se înscriu efectiv.
+- **Faza B — Înscrieri deschise (landing):** oamenii se înscriu efectiv.
 
-> **Regula de aur:** ediția e controlată în **DOUĂ locuri care trebuie ținute în sincron**:
-> 1. `src/lib/config.ts` (frontend)
-> 2. Supabase → tabelul `app_config` (backend)
->
-> Dacă le desincronizezi, statisticile/înscrierile/adminul arată ediții diferite. Restul (public_stats, defaults pe `editie`, adminul) se aliniază automat din `app_config`, prin funcțiile `current_event_edition()` și `current_launch_edition()`.
+> **Sursa de adevăr:** `src/content/edition.ts` (obiectul `EDITION`). Restul — `config.ts`,
+> landing, meta din `index.html`, testele — derivă din el. Backend-ul (`app_config`) se
+> aliniază cu `npm run sync-edition`. Textul emailurilor stă în DB (editabil din `/admin`).
 
 ---
 
-## Concepte (ca să înțelegi de ce)
+## Pași (majoritatea edițiilor: doar asta)
 
-| Noțiune | Ce e | Sursă de adevăr |
-|---|---|---|
-| **ediția de eveniment** | ediția pentru care se strâng înscrieri la cursă | `CURRENT_EDITION` (config) ⇄ `app_config.current_event_edition` |
-| **ediția de lansare** | ediția pentru care se strâng notificări „Anunță-mă" | `CURRENT_LAUNCH_EDITION` (config) ⇄ `app_config.current_launch_edition` |
+### 1. Editezi `src/content/edition.ts`
+Câmpurile uzuale de schimbat:
+- `number` / `launchNumber` — numărul ediției (+ `ordinalOverride` doar dacă vrei altă formulare).
+- `eventName`, `concept` — branding (ex. „Hyrox Trial", „Outdoor Adaptive").
+- `start`, `checkinFrom`, `durationHours`, `registrationDeadline`, `launchAt` — **local, fără
+  offset** (se compun cu `tz`).
+- `showComingSoon` — `true` (Faza A) / `false` (Faza B).
+- `venue` — dacă se schimbă locația (nume, oraș, `mapQuery` din Google Maps).
+- `slots` — dacă se schimbă capacitatea.
+- `ogImageVersion` — **incrementează** (altfel share-preview-ul vine din cache).
 
-Funcțiile SQL citesc `app_config` **la fiecare cerere**, deci în backend e suficient să schimbi valoarea în `app_config` — nu trebuie să rescrii funcțiile. Ele alimentează automat:
-- default-ul coloanei `editie` la `registrations` și `event_waitlist`
-- filtrarea din `public_stats()` (numărul + lista publică)
-- adminul: `admin_list_registrations`, `admin_list_waitlist`, `admin_add_registration`
-- default-ul coloanei `editie` la `launch_notifications`
+Din aceste câmpuri se derivă automat: „Ediția a patra", „8 august 2026", „06:30", kicker-ul,
+mesajul de succes, badge-ul, meta de share (title/description/OG). Nu le mai scrii de mână.
 
-Unicitatea e **per ediție** (`(lower(email), editie)`), deci cine s-a înscris la o ediție trecută se poate înscrie din nou. **Datele edițiilor vechi NU se șterg** — rămân în tabele, doar nu mai apar în vederea curentă.
+### 2. Sincronizezi backend-ul
+```bash
+npm run sync-edition
+```
+Îți printează SQL-ul pentru `app_config`. **Îl revezi** și-l rulezi în Supabase (SQL Editor sau
+MCP). Doar `app_config` (numerele de ediție) — nimic altceva.
+
+### 3. (Opțional) Textul emailurilor
+Emailurile (confirmare/reminder/anunț + badge) sunt în DB, editabile din **`/admin` → „Șabloane
+de email"**. Le ajustezi acolo dacă vrei alt text; NU se ating din cod.
+
+### 4. Cover-ul de share `public/og.png`
+Regenerează imaginea (1200×630) cu noua ediție/dată (design: fundal `#121410`, accent lime
+`#C9F24B`, font Anton). Versiunea (`?v=`) o gestionează `ogImageVersion` din `EDITION` — doar
+înlocuiește fișierul `public/og.png`.
+
+### 5. Verifici + deploy
+```bash
+npm run verify        # typecheck + teste + build + e2e
+git add -A && git commit -m "Ediția <N>" && git push
+```
+Vercel publică automat. Preview înainte: `parktraining.fit/?preview=soon` (Coming Soon) sau
+`?preview=landing` (landing).
 
 ---
 
-## FAZA A — Anunți ediția următoare (Coming Soon)
+## Ce prind testele (nu trebuie editate per ediție)
 
-### 1. Backend (Supabase → SQL Editor sau MCP)
-```sql
-update app_config set value = '<N>' where key = 'current_launch_edition';
--- exemplu pentru ediția 4:
--- update app_config set value = '4' where key = 'current_launch_edition';
-```
-
-### 2. Frontend — `src/lib/config.ts`
-- `CURRENT_LAUNCH_EDITION` → `<N>` (același număr ca în `app_config`)
-- `LAUNCH_DATE` → data+ora anunțului (fus **Chișinău**, ex: `new Date('2026-08-20T18:00:00+03:00')`)
-- `SHOW_COMING_SOON = true`
-
-### 3. Textul „ediția a N-a" (scris cu litere — nu se derivă automat)
-Caută și înlocuiește peste tot numele ediției (ex. „a treia" → „a patra"):
-- `src/components/ComingSoon.tsx` — badge + `cs-brand-meta`
-- `src/components/Confirmare.tsx` — `cs-brand-meta`
-- `src/admin/AdminDashboard.tsx` — `topbar-info`
-
-> Comandă utilă ca să le găsești pe toate:
-> ```
-> grep -rn "a treia\|Ediția\|ediția" src/ index.html
-> ```
-
-### 4. Verifică + deploy
-```
-npm run typecheck && npm run test && npm run build
-git add -A && git commit -m "Anunț ediția <N> (Coming Soon)"
-git push && vercel --prod --yes
-```
-Preview înainte de ora lansării: `parktraining.fit/?preview=soon`.
-
-La expirarea `LAUNCH_DATE`, ecranul comută **singur** de la Coming Soon la landing (nu trebuie redeploy).
+- `edition-derivation.test.ts` — `config.ts` derivă corect din `EDITION`.
+- `meta.test.ts` — meta de share reflectă `EDITION` + `index.html` folosește placeholder-e.
+- `backend-contract.test.ts` — cererile merg spre schema `runlift`, cu `editie` corectă.
+- `deploy-config.test.ts` — CSP-ul (`vercel.json`) permite originul Supabase.
+- e2e (landing/inscriere/coming-soon) — importă din `content/`, deci NU driftează.
+- `npm run test:integration` (opt-in) — `app_config` din DB == `EDITION.number` (anti-drift).
 
 ---
 
-## FAZA B — Deschizi înscrierile la eveniment (landing)
+## Capcane (verifică dacă ceva pică)
 
-### 1. Backend (Supabase → SQL)
-```sql
-update app_config set value = '<N>' where key = 'current_event_edition';
-```
-Gata — `public_stats`, defaults-urile și adminul arată acum ediția `<N>` (goală la început). Ediția veche rămâne în tabel.
-
-### 2. Frontend — `src/lib/config.ts`
-- `CURRENT_EDITION` → `<N>` (același ca `app_config.current_event_edition`)
-- `EVENT_DATE` → data+ora cursei (fus Chișinău, ex: `new Date('2026-09-05T07:00:00+03:00')`)
-  - `EVENT_END_DATE` se calculează singur (start + 6h) — de ajustat doar dacă durează altfel
-- `REGISTRATION_DEADLINE` → până când se poate înscrie (ex. miezul nopții din ziua evenimentului)
-- `TOTAL_SLOTS` / `WAITLIST_SLOTS` → doar dacă schimbi numărul de locuri
-- (validarea vârstei minime folosește automat `EVENT_DATE` — nu atingi nimic)
-
-### 3. Textul + datele din landing — `src/components/Edition3Landing.tsx`
-Actualizează constantele din capul fișierului și câteva texte:
-- `EVENT_META` (ex. `'5 septembrie 2026 · Parcul Râșcani'`)
-- `HERO_KICKER` (ex. `'Sâmbătă, 5 septembrie 2026 · Parcul Râșcani, Chișinău · Ediția a patra'`)
-- `SUMMARY_ITEMS[0]` (linia cu data)
-- `BIRTH_YEARS` → anul de sus = **anul evenimentului − 14** (ex. eveniment 2026 ⇒ `2012`)
-- rândul „Când" din secțiunea Locație (`{ k: 'Când', v: 'Sâmbătă, ... 2026' }`)
-- mesajul de succes („Ne vedem pe … la start, ora 07:00")
-- textul din hero („Ediția a treia Run + Lift") + titlul mare (`Up` / `Down.`) dacă schimbi conceptul
-- dacă se schimbă **locația**: `MAP_QUERY` (căutarea din Google Maps) + textele cu adresa
-
-### 4. Emailuri — `supabase/functions/send-email/index.ts`
-Textele sunt **hardcodate în funcția edge** (nu în șabloanele din /admin). Actualizează data în:
-- `CONFIRM_SUBJECT` + `CONFIRM_TEXT` (emailul care pleacă la fiecare înscriere)
-- `REMINDER_SUBJECT` + `REMINDER_TEXT` (reminder „mâine e ziua")
-- `ANNOUNCE_SUBJECT` + `ANNOUNCE_TEXT` (broadcast la deschiderea înscrierilor)
-- badge-ul HTML „HYROX Style Race · <data>" (în `renderHtml`)
-
-Apoi **redeployează funcția**:
-```
-supabase functions deploy send-email
-```
-(sau prin MCP Supabase → `deploy_edge_function`, cu `verify_jwt: false`)
-
-> Șabloanele editabile din `/admin` (`confirmare` / `info`) sunt pentru fluxul „Anunță-mă la lansare" (double opt-in) și sunt **generice, fără dată** — de regulă NU trebuie atinse.
-
-### 5. Cover-ul de share — `public/og.png` + `index.html`
-- Regenerează `public/og.png` (1200×630) cu noua ediție + dată. (Design: fundal `#121410`, accent lime `#C9F24B`, font Anton.)
-- În `index.html` actualizează: `<title>`, `meta description`, `og:title`, `og:description`, `og:image:alt`, `twitter:title`, `twitter:description`.
-- **Bump cache:** schimbă `og.png?v=3` → `?v=4` (altfel Facebook/WhatsApp servesc coverul vechi din cache).
-
-### 6. Teste (așteptările legate de ediție/dată)
-Actualizează valorile din:
-- `tests/unit/config.test.ts` — verifică `CURRENT_EDITION`, `LAUNCH_DATE` etc.
-- `tests/unit/supabase.test.ts` — aserția `editie === 3` (pune `<N>`)
-- specurile e2e care fixează data (`fixClock` / `addInitScript` cu `Date.now`) — pune o dată dinainte de noul eveniment
-
-Rulează tot: `npm run typecheck && npm run test && npm run test:e2e`
-
-### 7. Deploy
-```
-git add -A && git commit -m "Ediția <N>: înscrieri deschise (25 <lună> 2026)"
-git push && vercel --prod --yes
-```
-Preview: `parktraining.fit/?preview=landing`.
+1. **Schema `runlift` neexpusă** în Supabase → API → Exposed schemas → toate cererile pică.
+2. **CSP** (`vercel.json` `connect-src`) rămas pe alt proiect Supabase → înscrieri blocate.
+3. **`app_config` desincronizat** de `EDITION` → rulează `npm run sync-edition`.
+4. **NU atinge schema `public`** — e a gym-app + botul de Telegram (altă aplicație). Vezi
+   `MIGRATIONS.md`.
+5. **`og.png` necache-bust** → incrementează `ogImageVersion` în `EDITION`.
 
 ---
 
-## Checklist rapid (printabil)
+## Ce NU mai faci (vs. fluxul vechi)
 
-**Anunț (Faza A)**
-- [ ] `app_config.current_launch_edition` = N
-- [ ] `config.ts`: `CURRENT_LAUNCH_EDITION`, `LAUNCH_DATE`, `SHOW_COMING_SOON=true`
-- [ ] text „ediția a N-a" în ComingSoon / Confirmare / AdminDashboard
-- [ ] test + build + deploy
-
-**Înscrieri (Faza B)**
-- [ ] `app_config.current_event_edition` = N
-- [ ] `config.ts`: `CURRENT_EDITION`, `EVENT_DATE`, `REGISTRATION_DEADLINE` (+ SLOTS dacă e cazul)
-- [ ] `Edition3Landing.tsx`: `EVENT_META`, `HERO_KICKER`, `SUMMARY_ITEMS`, `BIRTH_YEARS`, rând „Când", mesaj succes, text hero, (locație dacă se schimbă)
-- [ ] `send-email/index.ts`: CONFIRM / REMINDER / ANNOUNCE + badge → **redeploy funcția**
-- [ ] `public/og.png` regenerat + `index.html` meta + `?v=` bump
-- [ ] teste actualizate (config/supabase/e2e)
-- [ ] build + deploy
-
----
-
-## Ce NU trebuie să faci
-- **Nu șterge** înscrierile ediției vechi — rămân separate prin `editie`, nu deranjează.
-- **Nu rescrie** funcțiile SQL de ediție — citesc singure din `app_config`.
-- **Nu pune** `editie` manual în insert-ul de `launch_notifications` din client — o pune serverul (RLS respinge valoarea din client).
-
-## Fișiere vechi (ediția 2 — nefolosite acum)
-Landing-ul vechi trăiește în `src/components/Hero.tsx`, `RegistrationSection.tsx`, `VenueSection.tsx`, `FormatSection.tsx`, `ParticipantsSection.tsx`. **Nu mai sunt randate** (App folosește `Edition3Landing`). Le poți ignora sau șterge; le-am lăsat ca referință.
+- ~~Editezi `config.ts` manual~~ → derivă din `EDITION`.
+- ~~Cauți „a treia" prin ComingSoon/Confirmare/AdminDashboard~~ → derivat din `ordinal()`.
+- ~~Editezi meta în `index.html`~~ → injectată din `content/meta.ts` la build.
+- ~~Editezi textele din funcția edge `send-email`~~ → sunt în DB, din `/admin`.
+- ~~Actualizezi string-uri în teste~~ → testele importă din `content/`.

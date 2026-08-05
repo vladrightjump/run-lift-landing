@@ -168,16 +168,20 @@ test.describe('Navigare între pagini', () => {
     await expect(page.locator('.dn-root')).toBeVisible();
   });
 
-  test('logoul din /despre-noi duce înapoi acasă', async ({ page }) => {
-    // Logoul duce la „/" fără query, deci fixăm ceasul înainte de lansare
-    // (22 iulie 18:00) ca acasă să fie Coming Soon, nu landing-ul.
-    await page.addInitScript(() => {
-      Date.now = () => new Date('2026-07-22T10:00:00+03:00').getTime();
-    });
+  test('logoul din /despre-noi duce înapoi acasă (landing)', async ({ page }) => {
+    // Logoul duce la „/" fără query. Cu SHOW_COMING_SOON=false (înscrieri deschise),
+    // „/" arată landing-ul ediției curente. Mock la stats ca să nu atingem DB-ul real.
+    await page.route('**/rest/v1/rpc/public_stats', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ count: 0, participants: [], waitlist: 0 }),
+      })
+    );
     await page.goto('/despre-noi');
     await page.locator('.dn-logo').click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator('.cs-root')).toBeVisible();
+    await expect(page.locator('#inscriere')).toBeVisible();
   });
 
   test('Instagram apare și pe Coming Soon', async ({ page }) => {

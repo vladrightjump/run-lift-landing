@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
+import { META } from '../src/content/meta';
 
 /**
  * Pagina Coming Soon — Ediția a treia: countdown + formular „Anunță-mă la lansare".
@@ -97,15 +98,14 @@ test.describe('Coming Soon — ecran', () => {
     expect(overflow).toBeLessThanOrEqual(1);
   });
 
-  test('titlul paginii și meta description reflectă evenimentul (25 iulie)', async ({ page }) => {
-    // Meta e statică în index.html și reprezintă evenimentul ediției a treia,
-    // fiindcă asta se distribuie ca preview de share după lansare.
+  test('titlul paginii și meta description reflectă evenimentul (8 august)', async ({ page }) => {
+    // Meta e statică în index.html și reprezintă evenimentul ediției curente,
+    // fiindcă asta se distribuie ca preview de share.
     await page.goto('/?preview=soon');
-    await expect(page).toHaveTitle(/hyrox style race/i);
-    await expect(page).toHaveTitle(/edi[țt]ia a treia/i);
+    // Meta e injectată la build/dev din content/meta.ts (derivat din EDITION).
+    await expect(page).toHaveTitle(META.title);
     const desc = await page.locator('meta[name="description"]').getAttribute('content');
-    expect(desc).toMatch(/25 iulie 2026/);
-    expect(desc).toMatch(/hyrox/i);
+    expect(desc).toBe(META.description);
   });
 
   test('landing-ul vechi (înscrieri, participanți) nu e randat', async ({ page }) => {
