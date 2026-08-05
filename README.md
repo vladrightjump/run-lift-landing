@@ -93,4 +93,6 @@ cu undo, export CSV, trimitere emailuri în masă, editare șabloane. Auth: cont
 - **`TASK-FOR-CLAUDE.md`** — context/handoff (arhitectură + decizii + capcane + Live URLs).
 - **`GHID-EDITIE-NOUA.md`** — runbook pas cu pas pentru o ediție nouă.
 - **`MIGRATIONS.md`** — migrările DB + granița față de gym-app/bot.
+- **`ERROR-HANDLING.md`** — tratarea erorilor, monitoring și garda CSP↔config la build.
+- **`CI-CD.md`** — pipeline-ul de testare + deploy Vercel verificat pe live.
 - **`BACKLOG.md`** — lucruri deschise (GDPR, FAQ, rezultate, Turnstile, creștere…).

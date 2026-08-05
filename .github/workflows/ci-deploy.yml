@@ -1,0 +1,66 @@
+name: CI + Deploy
+
+# Pe push în main: rulează TOATE verificările; doar dacă trec, declanșează
+# deploy-ul Vercel (deploy hook) și verifică pe LIVE că build-ul nou e chiar sus.
+# Auto-deploy-ul git al Vercel e dezactivat (vercel.json git.deploymentEnabled),
+# deci acest pipeline e singura cale spre producție.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Un singur pipeline per branch; nu anulăm un deploy în curs.
+  group: ci-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Verificări (typecheck + teste + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Typecheck (app + teste)
+        run: |
+          npm run typecheck
+          npm run typecheck:tests
+      - name: Teste unitare + integrare
+        run: npm run test
+      - name: Instalează browserul Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Teste e2e
+        run: npm run test:e2e
+      - name: Build (include garda CSP↔config + ștampila de versiune)
+        run: npm run build
+
+  deploy:
+    name: Deploy Vercel + verificare live
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Declanșează deploy-ul Vercel (deploy hook)
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::Secretul VERCEL_DEPLOY_HOOK_URL lipsește. Vezi CI-CD.md."
+            exit 1
+          fi
+          curl -fsS -X POST "$HOOK" > /dev/null
+          echo "Deploy declanșat pentru ${GITHUB_SHA:0:8}."
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verifică pe live că build-ul nou e sus (+ CSP corect)
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          SITE_URL: https://parktraining.fit
+          TIMEOUT_MS: '240000'
+        run: node scripts/check-live-deploy.mjs

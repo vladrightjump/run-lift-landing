@@ -82,3 +82,12 @@ describe('checkDeployConfig — detectează drift-ul', () => {
     expect(SUPABASE.url).toContain(currentSupabaseRef());
   });
 });
+
+describe('vercel.json — deploy doar via CI', () => {
+  it('auto-deploy-ul git pe main e dezactivat (CI e singurul care face deploy)', () => {
+    const vercel = JSON.parse(realFiles().vercelJson) as {
+      git?: { deploymentEnabled?: Record<string, boolean> };
+    };
+    expect(vercel.git?.deploymentEnabled?.main).toBe(false);
+  });
+});
