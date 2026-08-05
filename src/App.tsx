@@ -1,5 +1,5 @@
 import { ComingSoon } from './components/ComingSoon';
-import { Edition3Landing } from './components/Edition3Landing';
+import { Landing } from './components/Landing';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 import { useCountdown } from './hooks/useCountdown';
@@ -19,7 +19,7 @@ export const App = () => {
   return (
     <>
       <Toast toast={toast} hiding={hiding} />
-      {showComingSoon ? <ComingSoon showToast={showToast} /> : <Edition3Landing />}
+      {showComingSoon ? <ComingSoon showToast={showToast} /> : <Landing />}
     </>
   );
 };

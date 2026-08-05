@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 /**
@@ -48,13 +48,17 @@ describe('rutele au rewrite în vercel.json', () => {
 });
 
 describe('legăturile interne duc spre rute reale', () => {
+  // Landing-ul e spart în secțiuni (`landing/`) care au și ele linkuri interne
+  // (tabul „Despre noi") — le scanăm pe toate, ca un href greșit să nu ajungă 404.
+  const landingFiles = readdirSync(resolve(root, 'src/components/landing'))
+    .filter((f) => f.endsWith('.tsx'))
+    .map((f) => `src/components/landing/${f}`);
   const fisiere = [
     'src/components/ComingSoon.tsx',
     'src/components/DespreNoi.tsx',
     'src/components/Confirmare.tsx',
-    // Landing-ul are și el linkuri interne (tabul „Despre noi") — fără el în
-    // listă, un href greșit aici ar ajunge în producție ca 404.
-    'src/components/Edition3Landing.tsx',
+    'src/components/Landing.tsx',
+    ...landingFiles,
   ];
 
   it('fiecare href intern e o rută cunoscută sau o ancoră', () => {
