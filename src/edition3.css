@@ -54,6 +54,11 @@
 @keyframes e3-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,242,75,0.35); } 50% { box-shadow: 0 0 24px 4px rgba(201,242,75,0.22); } }
 @keyframes e3-dot-blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.75); } }
 
+/* Fundalul video din hero — rămâne fundalul întunecat dacă e ascuns. */
+.e3-hero-video { background: var(--e3-bg); }
+
 @media (prefers-reduced-motion: reduce) {
   .e3-root *, .e3-cta-lg { animation: none !important; }
+  /* Fără mișcare: ascundem clipul, rămâne fundalul întunecat + overlay. */
+  .e3-hero-video { display: none; }
 }

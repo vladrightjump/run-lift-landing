@@ -9,9 +9,42 @@ export const Hero = () => {
           borderBottom: '1px solid var(--e3-border)',
           position: 'relative',
           overflow: 'hidden',
+          background: 'var(--e3-bg)',
         }}
       >
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        {/* Fundal video FPV — mut, în buclă, autoplay (inclusiv iOS via playsInline). */}
+        <video
+          className="e3-hero-video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+        >
+          <source src="/fpv.mp4" type="video/mp4" />
+        </video>
+        {/* Overlay întunecat (mai dens spre stânga, unde e textul) pentru lizibilitate. */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1,
+            background:
+              'linear-gradient(90deg, rgba(18,20,16,0.94) 0%, rgba(18,20,16,0.8) 42%, rgba(18,20,16,0.5) 100%)',
+          }}
+        />
+        <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative', zIndex: 2 }}>
           <p
             style={{
               margin: '0 0 24px',
