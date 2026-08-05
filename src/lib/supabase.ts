@@ -262,9 +262,10 @@ export const isAbortError = (err: unknown): boolean =>
 
 /**
  * `fetch` a eșuat la nivel de rețea — inclusiv când browserul BLOCHEAZĂ cererea
- * prin CSP (`connect-src`). În ambele cazuri fetch aruncă `TypeError: Failed to
- * fetch`, deci nu le putem separa în client; important e să nu le confundăm cu
- * un răspuns HTTP de eroare (`SubmitHttpError`) și să dăm un mesaj potrivit.
+ * prin CSP (`connect-src`). Un `fetch` care nu ajunge la un răspuns aruncă mereu
+ * `TypeError`, dar MESAJUL diferă între browsere (Chrome „Failed to fetch",
+ * Safari/iOS „Load failed", Firefox „NetworkError…"), așa că NU ne bazăm pe text.
+ * Un răspuns HTTP de eroare e `SubmitHttpError`, nu `TypeError`, deci `instanceof
+ * TypeError` separă corect cele două, pe toate browserele.
  */
-export const isNetworkOrCspError = (err: unknown): boolean =>
-  err instanceof TypeError && /fetch/i.test(err.message);
+export const isNetworkOrCspError = (err: unknown): boolean => err instanceof TypeError;

@@ -35,8 +35,16 @@ describe('logClientError', () => {
 });
 
 describe('isNetworkOrCspError', () => {
-  it('true pentru TypeError „Failed to fetch" (rețea sau blocaj CSP)', () => {
+  it('true pentru TypeError „Failed to fetch" (Chrome — rețea sau blocaj CSP)', () => {
     expect(isNetworkOrCspError(new TypeError('Failed to fetch'))).toBe(true);
+  });
+  it('true pentru TypeError „Load failed" (Safari/iOS — nu conține „fetch")', () => {
+    expect(isNetworkOrCspError(new TypeError('Load failed'))).toBe(true);
+  });
+  it('true pentru TypeError „NetworkError…" (Firefox)', () => {
+    expect(
+      isNetworkOrCspError(new TypeError('NetworkError when attempting to fetch resource.'))
+    ).toBe(true);
   });
   it('false pentru un răspuns HTTP de eroare (SubmitHttpError)', () => {
     expect(isNetworkOrCspError(new SubmitHttpError(500, 'x'))).toBe(false);

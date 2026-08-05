@@ -1,25 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LAUNCH_DATE, INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
 import { LAUNCH_EDITION_ORDINAL } from '../content/format';
 import { useCountdown } from '../hooks/useCountdown';
-import {
-  submitLaunchNotification,
-  sendInfoEmail,
-  isDuplicateError,
-  isTimeoutError,
-  isAbortError,
-} from '../lib/supabase';
-import { logClientError } from '../lib/monitoring';
-import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
+import { useLaunchForm } from '../hooks/useLaunchForm';
 import type { ToastKind } from '../hooks/useToast';
 
 type Props = {
   showToast: (kind: ToastKind, msg: string) => void;
 };
-
-type Draft = { nume: string; prenume: string; email: string; telefon: string };
-type FieldErrors = Partial<Record<keyof Draft, boolean>>;
-type FormState = 'form' | 'loading' | 'success';
 
 const MARQUEE_ITEMS = ['Aleargă · Ridică · Rezistă', 'Antrenament nou', 'Run + Lift'];
 
@@ -32,38 +20,23 @@ const LAUNCH_LABEL = new Intl.DateTimeFormat('ro-RO', {
   timeZone: 'Europe/Chisinau',
 }).format(LAUNCH_DATE);
 
-const validateDraft = (d: Draft): FieldErrors => {
-  const errors: FieldErrors = {};
-  if (d.nume.trim().length < 2) errors.nume = true;
-  if (d.prenume.trim().length < 2) errors.prenume = true;
-  if (!EMAIL_RE.test(d.email.trim())) errors.email = true;
-  if (!PHONE_RE.test(normalizePhone(d.telefon))) errors.telefon = true;
-  return errors;
-};
-
 export const ComingSoon = ({ showToast }: Props) => {
   const cd = useCountdown(LAUNCH_DATE);
+  const { draft, setField, errors, state, submit, reset } = useLaunchForm();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<Draft>({ nume: '', prenume: '', email: '', telefon: '' });
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [state, setState] = useState<FormState>('form');
   const [duplicate, setDuplicate] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
-  const submittingRef = useRef(false);
 
   const closeForm = useCallback(() => {
     setOpen(false);
   }, []);
 
   const openForm = () => {
-    setDraft({ nume: '', prenume: '', email: '', telefon: '' });
-    setErrors({});
-    setState('form');
+    reset();
     setDuplicate(false);
     setOpen(true);
   };
 
-  // Închide modalul cu Esc; oprește fetch-ul în curs la unmount.
+  // Închide modalul cu Esc.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -73,64 +46,22 @@ export const ComingSoon = ({ showToast }: Props) => {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, closeForm]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
-
-  const setField = (name: keyof Draft, value: string) => {
-    setDraft((d) => ({ ...d, [name]: value }));
-    setErrors((prev) => {
-      if (!prev[name]) return prev;
-      const next = { ...prev };
-      delete next[name];
-      return next;
-    });
-  };
-
   const handleSubmit = async () => {
-    if (submittingRef.current) return;
-    const errs = validateDraft(draft);
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      showToast('error', 'Verifică câmpurile marcate cu roșu.');
-      return;
-    }
-    if (!navigator.onLine) {
-      showToast('error', 'Nu ai conexiune la internet. Reîncearcă când revii online.');
-      return;
-    }
-
-    setErrors({});
-    setState('loading');
-    submittingRef.current = true;
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      await submitLaunchNotification(draft, controller.signal);
-      // Emailul de confirmare pleacă best-effort — nu blocăm succesul.
-      void sendInfoEmail(draft.email.trim());
-      setDuplicate(false);
-      setState('success');
-      showToast('success', 'Gata! Verifică emailul pentru confirmare.');
-    } catch (err) {
-      if (isAbortError(err)) return;
-      if (isDuplicateError(err)) {
-        // Emailul e deja pe listă — tratăm ca succes, cu mesaj distinct.
-        setDuplicate(true);
-        setState('success');
-        showToast('success', 'Ești deja pe listă.');
-        return;
-      }
-      logClientError('launch-notification:coming-soon', err);
-      setState('form');
-      showToast(
-        'error',
-        isTimeoutError(err)
-          ? 'Serverul răspunde greu. Încearcă din nou.'
-          : 'Nu am putut trimite. Verifică conexiunea și încearcă din nou.'
-      );
-    } finally {
-      submittingRef.current = false;
+    const outcome = await submit();
+    switch (outcome.kind) {
+      case 'success':
+        setDuplicate(outcome.duplicate);
+        showToast(
+          'success',
+          outcome.duplicate ? 'Ești deja pe listă.' : 'Gata! Verifică emailul pentru confirmare.'
+        );
+        break;
+      case 'invalid':
+      case 'offline':
+      case 'error':
+        showToast('error', outcome.message);
+        break;
+      // 'busy' → fără feedback
     }
   };
 

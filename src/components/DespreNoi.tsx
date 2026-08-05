@@ -1,18 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import {
-  submitLaunchNotification,
-  sendInfoEmail,
-  isDuplicateError,
-  isTimeoutError,
-  isAbortError,
-} from '../lib/supabase';
-import { logClientError } from '../lib/monitoring';
-import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
+import { useState } from 'react';
+import { useLaunchForm } from '../hooks/useLaunchForm';
+import type { LaunchDraft } from '../lib/launchForm';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
-
-type Draft = { nume: string; prenume: string; email: string; telefon: string };
-type FieldErrors = Partial<Record<keyof Draft, boolean>>;
-type FormState = 'form' | 'loading' | 'success';
 
 const VALORI = [
   {
@@ -32,81 +21,29 @@ const STATISTICI = [
   { valoare: '100%', eticheta: 'În aer liber', accent: false },
 ];
 
-const validateDraft = (d: Draft): FieldErrors => {
-  const errors: FieldErrors = {};
-  if (d.nume.trim().length < 2) errors.nume = true;
-  if (d.prenume.trim().length < 2) errors.prenume = true;
-  if (!EMAIL_RE.test(d.email.trim())) errors.email = true;
-  if (!PHONE_RE.test(normalizePhone(d.telefon))) errors.telefon = true;
-  return errors;
-};
-
 export const DespreNoi = () => {
-  const [draft, setDraft] = useState<Draft>({ nume: '', prenume: '', email: '', telefon: '' });
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [state, setState] = useState<FormState>('form');
+  const { draft, setField: setFieldBase, errors, state, submit } = useLaunchForm('despre-noi');
   const [eroare, setEroare] = useState('');
   const [emailTrimis, setEmailTrimis] = useState('');
-  const abortRef = useRef<AbortController | null>(null);
-  const submittingRef = useRef(false);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
-
-  const setField = (name: keyof Draft, value: string) => {
-    setDraft((d) => ({ ...d, [name]: value }));
+  // La editarea unui câmp ștergem și eroarea inline (pe lângă marcajul de câmp).
+  const setField = (name: keyof LaunchDraft, value: string) => {
+    setFieldBase(name, value);
     setEroare('');
-    setErrors((prev) => {
-      if (!prev[name]) return prev;
-      const next = { ...prev };
-      delete next[name];
-      return next;
-    });
   };
 
   const handleSubmit = async () => {
-    if (submittingRef.current) return;
-    const errs = validateDraft(draft);
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      setEroare('Verifică câmpurile marcate cu roșu.');
-      return;
-    }
-    if (!navigator.onLine) {
-      setEroare('Nu ai conexiune la internet. Reîncearcă când revii online.');
-      return;
-    }
-
-    setErrors({});
-    setEroare('');
-    setState('loading');
-    submittingRef.current = true;
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const email = draft.email.trim();
-
-    try {
-      await submitLaunchNotification(draft, controller.signal, 'despre-noi');
-      void sendInfoEmail(email);
-      setEmailTrimis(email);
-      setState('success');
-    } catch (err) {
-      if (isAbortError(err)) return;
-      if (isDuplicateError(err)) {
-        // Deja pe listă — pentru utilizator e tot un succes.
-        setEmailTrimis(email);
-        setState('success');
-        return;
-      }
-      logClientError('launch-notification:despre-noi', err);
-      setState('form');
-      setEroare(
-        isTimeoutError(err)
-          ? 'Serverul răspunde greu. Încearcă din nou.'
-          : 'Nu am putut trimite. Verifică conexiunea și încearcă din nou.'
-      );
-    } finally {
-      submittingRef.current = false;
+    const outcome = await submit();
+    switch (outcome.kind) {
+      case 'success':
+        setEmailTrimis(outcome.email);
+        break;
+      case 'invalid':
+      case 'offline':
+      case 'error':
+        setEroare(outcome.message);
+        break;
+      // 'busy' → fără feedback
     }
   };
 
