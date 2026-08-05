@@ -1359,6 +1359,15 @@
     position: absolute; inset: 0;
     background: linear-gradient(180deg, rgba(18,20,16,0.25) 0%, rgba(18,20,16,0.85) 100%);
   }
+  /* Fundal video FPV — peste stripes, sub fade. La reduced-motion e ascuns și
+     rămân stripes-urile ca fallback. */
+  .dn-hero-video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; pointer-events: none; background: var(--e3-bg);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dn-hero-video { display: none; }
+  }
   .dn-hero-inner {
     position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; width: 100%;
     padding: clamp(48px, 9vw, 96px) clamp(20px, 5vw, 40px);

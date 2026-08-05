@@ -60,6 +60,17 @@ export const DespreNoi = () => {
 
       <section className="dn-hero">
         <div className="dn-hero-stripes" aria-hidden="true" />
+        <video
+          className="dn-hero-video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+        >
+          <source src="/fpv.mp4" type="video/mp4" />
+        </video>
         <div className="dn-hero-fade" aria-hidden="true" />
         <div className="dn-hero-inner">
           <p className="dn-kicker">Cine suntem</p>
