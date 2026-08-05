@@ -30,7 +30,10 @@ import {
   isAbortError,
   isDuplicateError,
   isWaitlistFullError,
+  isNetworkOrCspError,
+  SubmitHttpError,
 } from '../lib/supabase';
+import { logClientError } from '../lib/monitoring';
 import { validate, errorMessage, firstErrorField, dataNasteriiError } from '../lib/validation';
 import type { FieldName, FieldErrors, FormData } from '../lib/validation';
 import { rememberMySignup, getMySignups } from '../lib/mySignups';
@@ -301,10 +304,15 @@ export const Edition3Landing = () => {
         showToast('error', 'Lista de așteptare tocmai s-a umplut.');
         return;
       }
+      logClientError(asWaitlist ? 'waitlist' : 'registration', err, {
+        status: err instanceof SubmitHttpError ? err.status : undefined,
+      });
       const msg = isTimeoutError(err)
         ? 'Serverul răspunde greu. Încearcă din nou.'
         : isDuplicateError(err)
         ? 'Există deja o înscriere cu acest email.'
+        : isNetworkOrCspError(err)
+        ? 'Conexiune blocată sau indisponibilă. Reîncearcă.'
         : 'Înscrierea nu a putut fi trimisă.';
       finishError(msg);
     }

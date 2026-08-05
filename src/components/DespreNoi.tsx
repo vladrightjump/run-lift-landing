@@ -6,6 +6,7 @@ import {
   isTimeoutError,
   isAbortError,
 } from '../lib/supabase';
+import { logClientError } from '../lib/monitoring';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
 
@@ -97,6 +98,7 @@ export const DespreNoi = () => {
         setState('success');
         return;
       }
+      logClientError('launch-notification:despre-noi', err);
       setState('form');
       setEroare(
         isTimeoutError(err)

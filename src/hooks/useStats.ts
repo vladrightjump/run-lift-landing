@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchStats } from '../lib/supabase';
+import { fetchStats, isAbortError } from '../lib/supabase';
 import type { PublicStats } from '../lib/supabase';
+import { logClientError } from '../lib/monitoring';
 
 const REFRESH_MS = 15_000;
 
@@ -19,8 +20,10 @@ export const useStats = () => {
     abortRef.current = controller;
     fetchStats(controller.signal)
       .then(setStats)
-      .catch(() => {
-        // Păstrăm ultima valoare cunoscută (sau fallback-ul static).
+      .catch((err) => {
+        // Abort la refresh/unmount e normal — nu-l logăm. Restul (rețea/CSP/HTTP)
+        // lasă o urmă; UI-ul păstrează ultima valoare (sau fallback-ul static).
+        if (!isAbortError(err)) logClientError('fetch-stats', err);
       });
   }, []);
 

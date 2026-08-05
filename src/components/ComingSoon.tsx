@@ -9,6 +9,7 @@ import {
   isTimeoutError,
   isAbortError,
 } from '../lib/supabase';
+import { logClientError } from '../lib/monitoring';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import type { ToastKind } from '../hooks/useToast';
 
@@ -120,6 +121,7 @@ export const ComingSoon = ({ showToast }: Props) => {
         showToast('success', 'Ești deja pe listă.');
         return;
       }
+      logClientError('launch-notification:coming-soon', err);
       setState('form');
       showToast(
         'error',

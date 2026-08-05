@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "check:deploy-config": "tsx scripts/check-deploy-config.ts",
+    "build": "tsx scripts/check-deploy-config.ts && tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",

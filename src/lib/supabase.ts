@@ -1,4 +1,5 @@
 import { SUPABASE, CURRENT_EDITION } from './config';
+import { logClientError } from './monitoring';
 import { normalizePhone } from './validation';
 import type { FormData } from './validation';
 
@@ -91,8 +92,9 @@ export const sendConfirmationEmail = async (id: string): Promise<void> => {
       headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'confirm', id }),
     });
-  } catch {
-    // ignorăm — confirmarea e opțională
+  } catch (err) {
+    // Confirmarea e opțională — nu blocăm fluxul, dar lăsăm o urmă.
+    logClientError('send-confirmation-email', err);
   }
 };
 
@@ -160,8 +162,9 @@ export const sendInfoEmail = async (email: string): Promise<void> => {
       headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'info', email }),
     });
-  } catch {
-    // ignorăm — emailul e opțional
+  } catch (err) {
+    // Emailul e opțional — nu blocăm fluxul, dar lăsăm o urmă.
+    logClientError('send-info-email', err);
   }
 };
 
@@ -256,3 +259,12 @@ export const isTimeoutError = (err: unknown): boolean =>
 
 export const isAbortError = (err: unknown): boolean =>
   err instanceof DOMException && err.name === 'AbortError';
+
+/**
+ * `fetch` a eșuat la nivel de rețea — inclusiv când browserul BLOCHEAZĂ cererea
+ * prin CSP (`connect-src`). În ambele cazuri fetch aruncă `TypeError: Failed to
+ * fetch`, deci nu le putem separa în client; important e să nu le confundăm cu
+ * un răspuns HTTP de eroare (`SubmitHttpError`) și să dăm un mesaj potrivit.
+ */
+export const isNetworkOrCspError = (err: unknown): boolean =>
+  err instanceof TypeError && /fetch/i.test(err.message);
