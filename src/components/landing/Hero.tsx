@@ -1,4 +1,5 @@
 import { HERO_KICKER } from '../../content/format';
+import { HERO_POSTER, heroVideoSrc } from '../../lib/media';
 
 /** Hero: kicker + titlul „Hyrox / Trial." + rezumat + CTA. */
 export const Hero = () => {
@@ -20,6 +21,7 @@ export const Hero = () => {
           loop
           playsInline
           preload="auto"
+          poster={HERO_POSTER}
           aria-hidden="true"
           style={{
             position: 'absolute',
@@ -31,7 +33,7 @@ export const Hero = () => {
             pointerEvents: 'none',
           }}
         >
-          <source src="/fpv.mp4" type="video/mp4" />
+          <source src={heroVideoSrc()} type="video/mp4" />
         </video>
         {/* Overlay întunecat (mai dens spre stânga, unde e textul) pentru lizibilitate. */}
         <div

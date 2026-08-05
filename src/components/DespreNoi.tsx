@@ -3,6 +3,7 @@ import { useLaunchForm } from '../hooks/useLaunchForm';
 import type { LaunchDraft } from '../lib/launchForm';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
 import { EVENT_WHERE, MAP_EMBED_SRC, MAP_DIRECTIONS_URL } from '../content/format';
+import { HERO_POSTER, heroVideoSrc } from '../lib/media';
 
 const POVESTE = [
   'Am început antrenamentele în parc, în trei prieteni, cu un scop simplu: să devenim mai fit și mai funcționali.',
@@ -95,9 +96,10 @@ export const DespreNoi = () => {
           loop
           playsInline
           preload="auto"
+          poster={HERO_POSTER}
           aria-hidden="true"
         >
-          <source src="/fpv.mp4" type="video/mp4" />
+          <source src={heroVideoSrc()} type="video/mp4" />
         </video>
         <div className="dn-hero-fade" aria-hidden="true" />
         <div className="dn-hero-inner">
