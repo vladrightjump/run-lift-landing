@@ -28,10 +28,16 @@ test.describe('Despre noi — conținut', () => {
     await expect(page.locator('.dn-kicker')).toHaveText(/cine suntem/i);
     await expect(page.locator('.dn-hero-title')).toContainText('Mai mult decât');
 
-    for (const titlu of ['Povestea noastră', 'Comunitatea', 'Vrei mai multe informații?']) {
+    for (const titlu of [
+      'Povestea noastră',
+      'Comunitatea',
+      'Cum arată un antrenament',
+      'Unde ne antrenăm',
+      'Vrei mai multe informații?',
+    ]) {
       await expect(page.locator('.dn-section-head h2', { hasText: titlu })).toBeVisible();
     }
-    await expect(page.locator('.dn-value-card')).toHaveCount(2);
+    await expect(page.locator('.dn-value-card')).toHaveCount(3);
     await expect(page.locator('.dn-stat')).toHaveCount(4);
   });
 
