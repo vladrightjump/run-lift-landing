@@ -29,8 +29,11 @@ const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const SCHEMA = process.env.DB_SCHEMA ?? 'runlift';
 const ready = LIVE && !!BASE && !!ANON && !!SERVICE;
 
-// Ediție de test — mare, ca să nu coincidă niciodată cu o ediție reală.
-const TEST_EDITION = 90111;
+// Ediții de test — mari (dar sub limita `smallint` = 32767, tipul coloanei `editie`),
+// ca să nu coincidă niciodată cu o ediție reală. `PROMO_EDITION` e separată, ca testul
+// de auto-promovare să nu fie perturbat de rândurile de waitlist din alte teste.
+const TEST_EDITION = 30000;
+const PROMO_EDITION = 30001;
 // Prefix fără underscore (ca să nu se ciocnească cu wildcard-ul `_` din SQL LIKE).
 const RUN = `zzlive${Date.now()}`;
 const emailFor = (tag: string) => `${RUN}${tag}@example.com`;
@@ -126,6 +129,62 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
       }),
     });
     expect(res.status).toBe(201);
+  });
+
+  it('auto-promovare: ștergerea unei înscrieri promovează cel mai vechi din waitlist', async () => {
+    const regEmail = emailFor('promoreg');
+    const waitEmail = emailFor('promowait');
+
+    // O înscriere + un rând pe lista de așteptare, pe o ediție de test dedicată.
+    const reg = await fetch(`${BASE}/rest/v1/registrations`, {
+      method: 'POST',
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      body: JSON.stringify({
+        nume: 'ZZ Promo Reg',
+        telefon: '+37360000010',
+        email: regEmail,
+        acord: true,
+        editie: PROMO_EDITION,
+      }),
+    });
+    expect(reg.status).toBe(201);
+
+    const wait = await fetch(`${BASE}/rest/v1/event_waitlist`, {
+      method: 'POST',
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      body: JSON.stringify({
+        nume: 'ZZ Promo Wait',
+        telefon: '+37360000011',
+        email: waitEmail,
+        acord: true,
+        editie: PROMO_EDITION,
+      }),
+    });
+    expect(wait.status).toBe(201);
+
+    // Se eliberează locul → triggerul `auto_promote_from_waitlist` trage waitlist-ul.
+    const del = await fetch(
+      `${BASE}/rest/v1/registrations?email=eq.${encodeURIComponent(regEmail)}&editie=eq.${PROMO_EDITION}`,
+      { method: 'DELETE', headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }) }
+    );
+    expect(del.status).toBe(204);
+
+    // Cel de pe waitlist e acum în registrations… (filtrăm pe emailul concret, ca
+    // eventuale rânduri rămase din alte rulări pe aceeași ediție să nu perturbe testul).
+    const regs = await fetch(
+      `${BASE}/rest/v1/registrations?email=eq.${encodeURIComponent(waitEmail)}&editie=eq.${PROMO_EDITION}&select=email`,
+      { headers: serviceHeaders({ 'Accept-Profile': SCHEMA }) }
+    );
+    const regRows = (await regs.json()) as Array<{ email: string }>;
+    expect(regRows).toHaveLength(1);
+
+    // …și a dispărut de pe lista de așteptare.
+    const wl = await fetch(
+      `${BASE}/rest/v1/event_waitlist?email=eq.${encodeURIComponent(waitEmail)}&editie=eq.${PROMO_EDITION}&select=email`,
+      { headers: serviceHeaders({ 'Accept-Profile': SCHEMA }) }
+    );
+    const wlRows = (await wl.json()) as Array<{ email: string }>;
+    expect(wlRows).toHaveLength(0);
   });
 
   it('„Anunță-mă": insert anon în launch_notifications (ediția o pune serverul)', async () => {

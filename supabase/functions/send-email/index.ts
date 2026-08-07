@@ -167,6 +167,13 @@ const ANNOUNCE_TEXT_FALLBACK =
   `S-au deschis înscrierile la Run + Lift. Înscrie-te aici:\nhttps://parktraining.fit\n\n` +
   `Echipa Run + Lift`;
 
+const PROMOTED_SUBJECT_FALLBACK = "Ai loc confirmat — Run + Lift";
+const PROMOTED_TEXT_FALLBACK =
+  `Salut, {prenume}!\n\n` +
+  `S-a eliberat un loc și ai fost mutat de pe lista de așteptare pe lista de participanți. ` +
+  `Locul tău la Run + Lift este acum confirmat!\n\n` +
+  `Îți trimitem detaliile în curând. Echipa Run + Lift`;
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
@@ -215,6 +222,25 @@ Deno.serve(async (req: Request) => {
     const subject = tpl?.subiect || CONFIRM_SUBJECT_FALLBACK;
     const badge = await loadBadge();
     const text = fillVars(tpl?.text_email || CONFIRM_TEXT_FALLBACK, row.nume, row.email);
+    const r = await sendOne({ to: row.email, subject, text }, badge);
+    return json(200, { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1 });
+  }
+
+  // ---- PROMOTED: cineva a fost promovat automat de pe lista de așteptare ----
+  // Declanșat de triggerul DB `auto_promote_from_waitlist` (via pg_net) când se
+  // eliberează un loc. `id` e înscrierea nou-creată (recentă, ca la `confirm`).
+  // Subiectul + textul vin din șablonul `bulk_waitlist_promovare` (editabil din /admin).
+  if (mode === "promoted") {
+    const id = String(payload.id ?? "");
+    if (!id) return json(400, { error: "missing_id" });
+    const rows = await rpc<{ email: string; nume: string }[]>("confirm_lookup", { p_id: id });
+    const row = rows && rows[0];
+    if (!row?.email) return json(200, { sent: 0, skipped: true });
+
+    const tpl = await loadTemplate("bulk_waitlist_promovare");
+    const subject = tpl?.subiect || PROMOTED_SUBJECT_FALLBACK;
+    const badge = await loadBadge();
+    const text = fillVars(tpl?.text_email || PROMOTED_TEXT_FALLBACK, row.nume, row.email);
     const r = await sendOne({ to: row.email, subject, text }, badge);
     return json(200, { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1 });
   }

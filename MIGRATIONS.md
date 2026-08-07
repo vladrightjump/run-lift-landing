@@ -40,6 +40,7 @@ prefix `runlift_`:
 | 20260720092534 | `runlift_05_functions` | runlift | Funcțiile (`public_stats`, `confirm_signup`, `template_lookup`, `admin_*`, …) |
 | 20260720092558 | `runlift_06_triggers_rls_grants` | runlift | Triggere, RLS, grants |
 | 20260804113546 | `runlift_align_dynamic_event_edition` | runlift | Ediția curentă citită dinamic din `app_config` |
+| 20260807… | `runlift_waitlist_autopromote` | runlift | Auto-promovare din waitlist la ștergerea unei înscrieri (trigger + `event_capacity` + email via pg_net). Vezi `supabase-migration-waitlist-autopromote.sql` |
 
 **Migrări ale altei aplicații** (schema `public`, gym-app + bot — **hands-off**):
 `ironworks_initial_schema`, `monthly_summary_security_invoker`, `telegram_bot_phase1_attendance`,

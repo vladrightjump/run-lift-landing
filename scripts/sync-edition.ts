@@ -19,9 +19,13 @@ const sql = `-- Generat de scripts/sync-edition.ts — aliniază app_config la E
 
 update runlift.app_config set value = '${EDITION.number}'       where key = 'current_event_edition';
 update runlift.app_config set value = '${EDITION.launchNumber}' where key = 'current_launch_edition';
+-- Capacitatea trebuie să urmeze TOTAL_SLOTS: triggerul de auto-promovare din waitlist
+-- o citește din app_config (vezi supabase-migration-waitlist-autopromote.sql).
+insert into runlift.app_config (key, value) values ('event_capacity', '${EDITION.slots.total}')
+  on conflict (key) do update set value = excluded.value;
 
 select key, value from runlift.app_config
-where key in ('current_event_edition', 'current_launch_edition')
+where key in ('current_event_edition', 'current_launch_edition', 'event_capacity')
 order by key;`;
 
 console.log(sql);
