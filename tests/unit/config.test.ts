@@ -30,9 +30,10 @@ describe('date și ore', () => {
     );
   });
 
-  it('evenimentul ediției 4 e după anunțul de lansare (Faza B)', () => {
-    // Faza B: înscrieri deschise. EVENT_DATE = data ediției 4 (8 aug),
-    // după LAUNCH_DATE (anunțul de pe 4 aug).
+  // Faza B (înscrieri deschise, showComingSoon=false): evenimentul e după anunțul
+  // de lansare. În Faza A (Coming Soon) numărăm spre anunț (launchAt), iar data
+  // cursei (EDITION.start) poate fi încă TBD → invariantul nu se aplică, sărim testul.
+  it.skipIf(SHOW_COMING_SOON)('Faza B: evenimentul e după anunțul de lansare', () => {
     expect(EVENT_DATE.getTime()).toBeGreaterThan(LAUNCH_DATE.getTime());
   });
 });
