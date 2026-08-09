@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { TOTAL_SLOTS, INSTAGRAM_URL } from '../../lib/config';
+import { downloadEventIcs, shareSignup } from '../../lib/calendar';
 import { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } from '../../content/format';
 import type { FieldName } from '../../lib/validation';
 import type { PublicStats } from '../../lib/supabase';
@@ -489,6 +490,44 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                     ? 'Toate locurile sunt ocupate momentan. Te contactăm pe email sau telefon imediat ce se eliberează un loc — în ordinea înscrierii.'
                     : `Ți-am trimis un email de confirmare cu toate detaliile. ${SUCCESS_SEE_YOU}`}
                 </p>
+                {!submittedAsWaitlist && (
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={downloadEventIcs}
+                      style={{
+                        background: 'var(--e3-accent)',
+                        color: 'var(--e3-bg)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: 'Anton, sans-serif',
+                        fontSize: 15,
+                        letterSpacing: 1,
+                        textTransform: 'uppercase',
+                        padding: '12px 22px',
+                      }}
+                    >
+                      Adaugă în calendar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void shareSignup()}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid var(--e3-accent)',
+                        color: 'var(--e3-accent)',
+                        cursor: 'pointer',
+                        fontFamily: 'Anton, sans-serif',
+                        fontSize: 15,
+                        letterSpacing: 1,
+                        textTransform: 'uppercase',
+                        padding: '12px 22px',
+                      }}
+                    >
+                      Distribuie
+                    </button>
+                  </div>
+                )}
                 <button
                   type="button"
                   className="e3-ghost"

@@ -23,9 +23,17 @@ update runlift.app_config set value = '${EDITION.launchNumber}' where key = 'cur
 -- o citește din app_config (vezi supabase-migration-waitlist-autopromote.sql).
 insert into runlift.app_config (key, value) values ('event_capacity', '${EDITION.slots.total}')
   on conflict (key) do update set value = excluded.value;
+-- Deadline-ul de înscriere: guard-ul server-side (registrations_guard) îl citește de
+-- aici ca să respingă înscrierile după deadline. Vezi supabase-migration-registration-guards.sql.
+insert into runlift.app_config (key, value) values ('registration_deadline', '${EDITION.registrationDeadline}${EDITION.tz}')
+  on conflict (key) do update set value = excluded.value;
+-- Startul evenimentului: reminderul programat (maybe_send_reminder) îl folosește ca reper
+-- pentru fereastra de trimitere. Vezi supabase-migration-reminder-idempotent.sql.
+insert into runlift.app_config (key, value) values ('event_start', '${EDITION.start}${EDITION.tz}')
+  on conflict (key) do update set value = excluded.value;
 
 select key, value from runlift.app_config
-where key in ('current_event_edition', 'current_launch_edition', 'event_capacity')
+where key in ('current_event_edition', 'current_launch_edition', 'event_capacity', 'registration_deadline', 'event_start')
 order by key;`;
 
 console.log(sql);

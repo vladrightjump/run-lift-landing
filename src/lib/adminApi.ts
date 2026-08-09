@@ -142,6 +142,32 @@ export const addRegistration = (
 export const deleteRegistration = (token: string, id: string): Promise<void> =>
   rpc<void>('admin_delete_registration', { p_token: token, p_id: id });
 
+/** Editare in-place a unei înscrieri (păstrează `created_at`). Duplicat => HTTP 409. */
+export const updateRegistration = (
+  token: string,
+  id: string,
+  data: { nume: string; telefon: string; email: string }
+): Promise<void> =>
+  rpc<void>('admin_update_registration', {
+    p_token: token,
+    p_id: id,
+    p_nume: data.nume,
+    p_telefon: data.telefon,
+    p_email: data.email,
+  });
+
+/* ---- Feed de audit (admin_events): promovări automate etc. ---- */
+
+export type AdminEvent = {
+  id: string;
+  created_at: string;
+  tip: string;
+  detaliu: Record<string, unknown>;
+};
+
+export const listAdminEvents = (token: string, signal?: AbortSignal): Promise<AdminEvent[]> =>
+  rpc<AdminEvent[]>('admin_list_events', { p_token: token }, signal);
+
 /* ---- Lista de așteptare (event_waitlist) ---- */
 
 export type AdminWaitlistEntry = {

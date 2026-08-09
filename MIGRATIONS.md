@@ -41,6 +41,10 @@ prefix `runlift_`:
 | 20260720092558 | `runlift_06_triggers_rls_grants` | runlift | Triggere, RLS, grants |
 | 20260804113546 | `runlift_align_dynamic_event_edition` | runlift | Ediția curentă citită dinamic din `app_config` |
 | 20260807… | `runlift_waitlist_autopromote` | runlift | Auto-promovare din waitlist la ștergerea unei înscrieri (trigger + `event_capacity` + email via pg_net). Vezi `supabase-migration-waitlist-autopromote.sql` |
+| 2026…      | `runlift_registration_guards` | runlift | Cap capacitate + deadline pe `registrations` (trigger BEFORE INSERT → `event_full`/`registration_closed`), doar pt. formularul public; add/promote/auto-promote sar prin flag de bypass. `app_config.registration_deadline`. Vezi `supabase-migration-registration-guards.sql` |
+| 2026…      | `runlift_admin_events_and_edit` | runlift | Tabel `admin_events` (audit) + logare în auto-promovare; RPC `admin_list_events` (feed backoffice) + `admin_update_registration` (editare in-place, păstrează `created_at`). Vezi `supabase-migration-admin-events-edit.sql` |
+| 2026…      | `runlift_unsubscribe` | runlift | Dezabonare din emailurile în masă: `dezabonat_la` + `token_unsub` pe `registrations`/`launch_notifications`, RPC public `unsubscribe`, recipients (`edition2_recipients`/`waitlist_recipients`) exclud dezabonații + întorc `token_unsub`. Vezi `supabase-migration-unsubscribe.sql` |
+| 2026…      | `runlift_reminder_idempotent` | runlift | Reminder pre-eveniment idempotent: `broadcast_once` + `maybe_send_reminder` (fereastră de timp, server-only) + chei `event_start`/`reminder_offset_hours`. Armarea cron: `supabase-cron-reminder-ARM.sql` (manual). Vezi `supabase-migration-reminder-idempotent.sql` |
 
 **Migrări ale altei aplicații** (schema `public`, gym-app + bot — **hands-off**):
 `ironworks_initial_schema`, `monthly_summary_security_invoker`, `telegram_bot_phase1_attendance`,

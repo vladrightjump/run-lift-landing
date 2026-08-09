@@ -212,6 +212,17 @@ export const submitWaitlist = async (
 export const isWaitlistFullError = (err: unknown): boolean =>
   err instanceof SubmitHttpError && err.message.includes('waitlist_full');
 
+/**
+ * Locurile s-au ocupat între timp — serverul a respins înscrierea (trigger
+ * `registrations_guard` → `event_full`). Frontend-ul era stale; comutăm pe waitlist.
+ */
+export const isEventFullError = (err: unknown): boolean =>
+  err instanceof SubmitHttpError && err.message.includes('event_full');
+
+/** Deadline-ul de înscriere a trecut, verificat pe server (`registration_closed`). */
+export const isRegistrationClosedError = (err: unknown): boolean =>
+  err instanceof SubmitHttpError && err.message.includes('registration_closed');
+
 /** Date publice, ne-personale: număr înscriși + prenume mascat + echipă. */
 export const fetchStats = async (signal?: AbortSignal): Promise<PublicStats> => {
   const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/public_stats`, {
@@ -249,6 +260,30 @@ export const confirmSignup = async (
   }
   const result = (await res.json()) as string;
   return (['confirmat', 'deja_confirmat'].includes(result) ? result : 'invalid') as ConfirmResult;
+};
+
+export type UnsubResult = 'dezabonat' | 'deja_dezabonat' | 'invalid';
+
+/**
+ * Dezabonare din emailurile în masă, pe baza token-ului din link. Token-ul e
+ * secretul; RPC-ul întoarce doar starea, nu date personale.
+ */
+export const unsubscribe = async (token: string, signal?: AbortSignal): Promise<UnsubResult> => {
+  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/unsubscribe`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE.publishableKey,
+      'Content-Type': 'application/json',
+      'Content-Profile': SUPABASE.schema,
+    },
+    body: JSON.stringify({ p_token: token }),
+    signal,
+  });
+  if (!res.ok) {
+    throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
+  }
+  const result = (await res.json()) as string;
+  return (['dezabonat', 'deja_dezabonat'].includes(result) ? result : 'invalid') as UnsubResult;
 };
 
 export const isDuplicateError = (err: unknown): boolean =>

@@ -39,9 +39,9 @@ export const EDITION = {
   /** Până când se poate înscrie cineva — local, fără offset. */
   registrationDeadline: '2026-08-08T06:30:00',
   /** Momentul anunțului de lansare (comutarea Coming Soon → landing) — local. */
-  launchAt: '2026-08-04T18:00:00',
+  launchAt: '2026-08-29T18:00:00',
   /** `true` → homepage-ul arată Coming Soon; `false` → landing (înscrieri deschise). */
-  showComingSoon: false,
+  showComingSoon: true,
 
   venue: {
     name: 'Parcul Râșcani',

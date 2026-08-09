@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   addRegistration,
+  updateRegistration,
   deleteRegistration,
   listRegistrations,
   listWaitlist,
   deleteWaitlist,
   promoteWaitlist,
+  listAdminEvents,
   InvalidTokenError,
 } from '../lib/adminApi';
-import type { AdminRegistration, AdminWaitlistEntry } from '../lib/adminApi';
+import type { AdminRegistration, AdminWaitlistEntry, AdminEvent } from '../lib/adminApi';
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
@@ -44,12 +46,23 @@ const REFRESH_MS = 15_000;
 const dateFmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short' });
 const formatDate = (iso: string): string => dateFmt.format(new Date(iso)).replace('.', '');
 
+const eventFmt = new Intl.DateTimeFormat('ro-RO', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Chisinau',
+});
+const formatEventTime = (iso: string): string => eventFmt.format(new Date(iso));
+
 export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [rows, setRows] = useState<AdminRegistration[] | null>(null);
   const [waitlist, setWaitlist] = useState<AdminWaitlistEntry[] | null>(null);
+  const [events, setEvents] = useState<AdminEvent[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ nume: '', telefon: '', email: '' });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
@@ -84,6 +97,9 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   rowsRef.current = rows;
   const waitlistRef = useRef<AdminWaitlistEntry[] | null>(null);
   waitlistRef.current = waitlist;
+  // Id-urile evenimentelor deja văzute — ca să anunțăm (toast) doar promovările
+  // automate NOI, nu pe cele preexistente la primul load.
+  const seenEventsRef = useRef<Set<string> | null>(null);
 
   const refresh = useCallback(() => {
     abortRef.current?.abort();
@@ -105,7 +121,30 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         if (controller.signal.aborted) return;
         handleAuthError(err);
       });
-  }, [token, handleAuthError]);
+    listAdminEvents(token, controller.signal)
+      .then((data) => {
+        // Primul load: marcăm tot ca „văzut" fără toast. Apoi anunțăm doar noutățile.
+        if (seenEventsRef.current === null) {
+          seenEventsRef.current = new Set(data.map((e) => e.id));
+        } else {
+          for (const e of data) {
+            if (e.tip === 'auto_promote' && !seenEventsRef.current.has(e.id)) {
+              const nume = typeof e.detaliu?.nume === 'string' ? e.detaliu.nume : 'Cineva';
+              showToast({
+                kind: 'success',
+                msg: `${nume} a fost promovat automat din așteptare.`,
+              });
+            }
+            seenEventsRef.current.add(e.id);
+          }
+        }
+        setEvents(data);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        handleAuthError(err);
+      });
+  }, [token, handleAuthError, showToast]);
 
   useEffect(() => {
     refresh();
@@ -225,6 +264,50 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           msg: isDuplicateError(err)
             ? 'Există deja o înscriere cu acest email.'
             : 'Nu am putut salva. Încearcă din nou.',
+        });
+      })
+      .finally(() => setSaving(false));
+  };
+
+  const startEdit = (row: AdminRegistration) => {
+    setEditId(row.id);
+    setDraft({ nume: row.nume, telefon: row.telefon, email: row.email });
+    setAddOpen(true);
+  };
+
+  const handleUpdate = () => {
+    if (saving || !editId) return;
+    const nume = draft.nume.trim();
+    const telefon = normalizePhone(draft.telefon);
+    const email = draft.email.trim();
+    if (nume.split(/\s+/).length < 2) {
+      showToast({ kind: 'error', msg: 'Scrie numele complet (nume și prenume).' });
+      return;
+    }
+    if (!PHONE_RE.test(telefon)) {
+      showToast({ kind: 'error', msg: 'Numărul de telefon nu arată valid.' });
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      showToast({ kind: 'error', msg: 'Emailul nu arată valid.' });
+      return;
+    }
+    setSaving(true);
+    updateRegistration(token, editId, { nume, telefon, email })
+      .then(() => {
+        setAddOpen(false);
+        setEditId(null);
+        setDraft({ nume: '', telefon: '', email: '' });
+        refresh();
+        showToast({ kind: 'success', msg: `${nume} a fost actualizat.` });
+      })
+      .catch((err) => {
+        if (handleAuthError(err)) return;
+        showToast({
+          kind: 'error',
+          msg: isDuplicateError(err)
+            ? 'Există deja o înscriere cu acest email.'
+            : 'Nu am putut salva modificările. Încearcă din nou.',
         });
       })
       .finally(() => setSaving(false));
@@ -380,6 +463,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 className="admin-btn-outline"
                 onClick={() => {
                   setAddOpen((v) => !v);
+                  setEditId(null);
                   setDraft({ nume: '', telefon: '', email: '' });
                 }}
               >
@@ -420,10 +504,22 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
                 />
               </label>
-              <button type="button" className="admin-btn-accent" onClick={handleAdd} disabled={saving}>
-                {saving ? 'Se salvează…' : 'Salvează'}
+              <button
+                type="button"
+                className="admin-btn-accent"
+                onClick={editId ? handleUpdate : handleAdd}
+                disabled={saving}
+              >
+                {saving ? 'Se salvează…' : editId ? 'Salvează modificările' : 'Salvează'}
               </button>
-              <button type="button" className="admin-add-cancel" onClick={() => setAddOpen(false)}>
+              <button
+                type="button"
+                className="admin-add-cancel"
+                onClick={() => {
+                  setAddOpen(false);
+                  setEditId(null);
+                }}
+              >
                 Anulează
               </button>
             </div>
@@ -451,6 +547,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   </a>
                   <span className="admin-cell-date">{formatDate(r.created_at)}</span>
                   <div className="admin-cell-actions">
+                    <button
+                      type="button"
+                      className="admin-btn-promote"
+                      title="Editează înscrierea"
+                      onClick={() => startEdit(r)}
+                    >
+                      Editează
+                    </button>
                     <button
                       type="button"
                       className="admin-btn-delete"
@@ -531,6 +635,47 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 </div>
               )}
             </div>
+          </div>
+        </section>
+
+        <section className="admin-table-section">
+          <div className="admin-table-head admin-wait-head">
+            <h2>
+              Activitate recentă{' '}
+              <span className="admin-wait-count">{(events ?? []).length}</span>
+            </h2>
+            <span className="admin-wait-note">
+              Promovări automate din lista de așteptare (când ștergi un participant, locul se umple singur).
+            </span>
+          </div>
+          <div className="admin-activity">
+            {(events ?? [])
+              .filter((e) => e.tip === 'auto_promote')
+              .map((e) => {
+                const nume = typeof e.detaliu?.nume === 'string' ? e.detaliu.nume : 'Cineva';
+                const email = typeof e.detaliu?.email === 'string' ? e.detaliu.email : '';
+                const emailed = e.detaliu?.email_queued === true;
+                return (
+                  <div key={e.id} className="admin-activity-item">
+                    <span className="admin-activity-dot" />
+                    <span className="admin-activity-text">
+                      <strong>{nume}</strong> promovat automat din așteptare
+                      {email && <span className="admin-activity-email"> · {email}</span>}
+                    </span>
+                    <span
+                      className={`admin-activity-mail${emailed ? ' ok' : ''}`}
+                      title={emailed ? 'Email de confirmare trimis' : 'Emailul nu a plecat'}
+                    >
+                      {emailed ? '✉ trimis' : '✉ eșuat'}
+                    </span>
+                    <span className="admin-activity-time">{formatEventTime(e.created_at)}</span>
+                  </div>
+                );
+              })}
+            {events === null && <div className="admin-empty">Se încarcă…</div>}
+            {events !== null && (events ?? []).filter((e) => e.tip === 'auto_promote').length === 0 && (
+              <div className="admin-empty">Nicio promovare automată încă.</div>
+            )}
           </div>
         </section>
         </>

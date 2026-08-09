@@ -16,6 +16,8 @@ import {
   isAbortError,
   isDuplicateError,
   isWaitlistFullError,
+  isEventFullError,
+  isRegistrationClosedError,
   isNetworkOrCspError,
   SubmitHttpError,
 } from '../lib/supabase';
@@ -151,17 +153,17 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
       if (elapsed < MIN_LOADING_MS) await delay(MIN_LOADING_MS - elapsed);
     };
 
-    const finishSuccess = () => {
+    const finishSuccess = (wasWaitlist = asWaitlist) => {
       setConfirmName(firstName);
-      setSubmittedAsWaitlist(asWaitlist);
-      if (!asWaitlist) {
+      setSubmittedAsWaitlist(wasWaitlist);
+      if (!wasWaitlist) {
         setSessionSignups((n) => n + 1);
         rememberMySignup(data.nume);
       }
       if (isBackendConfigured()) refresh();
       setPhase('success');
       submittingRef.current = false;
-      showToast('success', asWaitlist ? 'Ai fost adăugat pe lista de așteptare!' : 'Înscrierea a fost trimisă!');
+      showToast('success', wasWaitlist ? 'Ai fost adăugat pe lista de așteptare!' : 'Înscrierea a fost trimisă!');
     };
 
     const finishError = (msg: string) => {
@@ -206,6 +208,36 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
         submittingRef.current = false;
         showToast('error', 'Lista de așteptare tocmai s-a umplut.');
         return;
+      }
+      // Serverul a închis înscrierile (deadline trecut, verificat server-side) —
+      // clientul putea avea ceasul în urmă. Mesaj clar, fără retry.
+      if (!asWaitlist && isRegistrationClosedError(err)) {
+        finishError('Înscrierile s-au închis.');
+        return;
+      }
+      // Locurile s-au ocupat între timp (numărătoarea din client era stale): serverul
+      // a respins înscrierea. Comutăm automat pe lista de așteptare, dacă mai e loc.
+      if (!asWaitlist && isEventFullError(err)) {
+        try {
+          await submitWaitlist(data, controller.signal);
+          finishSuccess(true);
+          return;
+        } catch (wlErr) {
+          if (isAbortError(wlErr)) return;
+          if (isWaitlistFullError(wlErr)) {
+            setWlFull(true);
+            if (isBackendConfigured()) refresh();
+            setPhase('form');
+            submittingRef.current = false;
+            showToast('error', 'Locurile și lista de așteptare s-au ocupat.');
+            return;
+          }
+          logClientError('waitlist', wlErr, {
+            status: wlErr instanceof SubmitHttpError ? wlErr.status : undefined,
+          });
+          finishError('Înscrierea nu a putut fi trimisă.');
+          return;
+        }
       }
       logClientError(asWaitlist ? 'waitlist' : 'registration', err, {
         status: err instanceof SubmitHttpError ? err.status : undefined,

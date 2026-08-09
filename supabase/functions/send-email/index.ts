@@ -79,7 +79,12 @@ const fillVars = (text: string, nume: string, email: string, telefon = ""): stri
 
 // Șablon HTML în stilistica Run + Lift (dark + lime), robust pentru email.
 // `badge` vine din DB (event_badge) — nu e hardcodat pe ediție.
-function renderHtml(subject: string, textBody: string, badge: string): string {
+function renderHtml(
+  subject: string,
+  textBody: string,
+  badge: string,
+  unsubscribeUrl?: string
+): string {
   const paragraphs = esc(textBody)
     .split(/\n{2,}/)
     .map((p) => p.replace(/\n/g, "<br>"))
@@ -119,6 +124,13 @@ function renderHtml(subject: string, textBody: string, badge: string): string {
             Organizatori: Vladislav Filip · +373 69 509 949 · @vladfillip<br>
             Roma Morari · +373 69 819 404 · @morarroma
           </p>
+          ${
+            unsubscribeUrl
+              ? `<p style="margin:12px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#6E7363;">Nu mai vrei aceste emailuri? <a href="${esc(
+                  unsubscribeUrl
+                )}" style="color:#9BA08F;text-decoration:underline;">Dezabonează-te</a>.</p>`
+              : ''
+          }
         </td></tr>
       </table>
     </td></tr>
@@ -128,7 +140,8 @@ function renderHtml(subject: string, textBody: string, badge: string): string {
 
 async function sendOne(
   m: Message,
-  badge: string
+  badge: string,
+  unsubscribeUrl?: string
 ): Promise<{ ok: boolean; status: number; body: string }> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -137,8 +150,12 @@ async function sendOne(
       from: MAIL_FROM,
       to: m.to,
       subject: m.subject,
-      text: m.text,
-      html: renderHtml(m.subject, m.text, badge),
+      text: unsubscribeUrl ? `${m.text}\n\n—\nDezabonare: ${unsubscribeUrl}` : m.text,
+      html: renderHtml(m.subject, m.text, badge, unsubscribeUrl),
+      // List-Unsubscribe: providerii afișează butonul nativ + îmbunătățește deliverability.
+      ...(unsubscribeUrl
+        ? { headers: { "List-Unsubscribe": `<${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } }
+        : {}),
     }),
   });
   return { ok: res.ok, status: res.status, body: await res.text().catch(() => "") };
@@ -312,14 +329,31 @@ Deno.serve(async (req: Request) => {
 
     const subject = String(payload.subject ?? tpl?.subiect ?? subjFallback);
     const text = String(payload.text ?? tpl?.text_email ?? textFallback);
-    const recipients = (await rpc<{ email: string; nume: string }[]>(rpcName, {})) ?? [];
+    const recipients =
+      (await rpc<{ email: string; nume: string; token_unsub: string }[]>(rpcName, {})) ?? [];
     if (recipients.length === 0) return json(200, { sent: 0, failed: 0, note: "no_recipients" });
+
+    // Idempotență opțională: dacă se dă `once_key`, trimitem o SINGURĂ dată pentru acea cheie
+    // (anti-dublură la reminder-ul programat / curl repetat). Broadcast-urile manuale din
+    // /admin nu dau cheie, deci pot fi retrimise intenționat.
+    const onceKey = typeof payload.once_key === "string" ? payload.once_key : "";
+    if (onceKey) {
+      const first = await rpc<boolean>("broadcast_once", { p_key: onceKey });
+      if (first !== true) return json(200, { sent: 0, skipped: true, note: "already_sent" });
+    }
 
     const badge = await loadBadge();
     let sent = 0;
     const errors: { to: string; status: number }[] = [];
     for (const r of recipients) {
-      const res = await sendOne({ to: r.email, subject, text: fillVars(text, r.nume, r.email) }, badge);
+      const unsubUrl = r.token_unsub
+        ? `https://parktraining.fit/unsubscribe?token=${r.token_unsub}`
+        : undefined;
+      const res = await sendOne(
+        { to: r.email, subject, text: fillVars(text, r.nume, r.email) },
+        badge,
+        unsubUrl
+      );
       if (res.ok) sent++;
       else errors.push({ to: r.email, status: res.status });
     }
