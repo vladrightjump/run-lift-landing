@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { HERO_KICKER, EVENT_WHEN, EVENT_WHERE, EVENT_START_TIME } from '../src/content/format';
+import { LAUNCH_DATE } from '../src/lib/config';
 
 /**
  * Landing-ul ediției curente („Hyrox Trial") — conținut + logica de reveal.
@@ -40,12 +41,11 @@ test.describe('App — comutarea Coming Soon ↔ landing', () => {
   });
 
   test('după ora lansării, „/" arată singur landing-ul (fără param)', async ({ page }) => {
-    // Ceasul din beforeEach (23 iulie) e înainte de LAUNCH_DATE (4 aug 18:00),
-    // deci pentru acest test îl mutăm după lansare ca „/" să comute pe landing.
-    await page.addInitScript(() => {
-      const fixed = new Date('2026-08-04T18:00:01+03:00').getTime();
+    // Ceasul din beforeEach e înainte de LAUNCH_DATE, deci pentru acest test îl
+    // mutăm imediat după lansare (derivat din EDITION) ca „/" să comute pe landing.
+    await page.addInitScript((fixed) => {
       Date.now = () => fixed;
-    });
+    }, LAUNCH_DATE.getTime() + 1000);
     await page.goto('/');
     await expect(page.locator('#inscriere')).toBeVisible();
     await expect(page.locator('.cs-root')).toHaveCount(0);

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { LAUNCH_DATE } from '../src/lib/config';
 
 /**
  * Pagina /despre-noi — prezentare + formular „Vreau info".
@@ -175,8 +176,12 @@ test.describe('Navigare între pagini', () => {
   });
 
   test('logoul din /despre-noi duce înapoi acasă (landing)', async ({ page }) => {
-    // Logoul duce la „/" fără query. Cu SHOW_COMING_SOON=false (înscrieri deschise),
-    // „/" arată landing-ul ediției curente. Mock la stats ca să nu atingem DB-ul real.
+    // Logoul duce la „/" fără query. Fixăm ceasul după LAUNCH_DATE ca „/" să
+    // arate landing-ul indiferent de faza curentă (Coming Soon vs. înscrieri).
+    // Mock la stats ca să nu atingem DB-ul real.
+    await page.addInitScript((fixed) => {
+      Date.now = () => fixed;
+    }, LAUNCH_DATE.getTime() + 1000);
     await page.route('**/rest/v1/rpc/public_stats', (route) =>
       route.fulfill({
         status: 200,

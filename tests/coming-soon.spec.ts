@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import { META } from '../src/content/meta';
+import { LAUNCH_DATE } from '../src/lib/config';
 
 /**
  * Pagina Coming Soon — Ediția a treia: countdown + formular „Anunță-mă la lansare".
@@ -73,11 +74,11 @@ test.describe('Coming Soon — ecran', () => {
 
   test('countdown expirat → cifrele dispar, CTA-ul rămâne', async ({ page }) => {
     // useCountdown citește ora doar prin Date.now() — e suficient să-l stubăm,
-    // înainte ca bundle-ul aplicației să ruleze.
-    await page.addInitScript(() => {
-      const fixed = new Date('2026-08-04T18:00:01+03:00').getTime();
+    // înainte ca bundle-ul aplicației să ruleze. Fixăm ceasul imediat DUPĂ
+    // LAUNCH_DATE (derivat din EDITION) ca să nu depindă de o dată hardcodată.
+    await page.addInitScript((fixed) => {
       Date.now = () => fixed;
-    });
+    }, LAUNCH_DATE.getTime() + 1000);
 
     await page.goto('/?preview=soon');
     await expect(page.locator('.cs-cd-unit')).toHaveCount(0);
