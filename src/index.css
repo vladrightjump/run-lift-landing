@@ -794,6 +794,58 @@
   .admin-wait.admin-table .admin-row {
     grid-template-columns: 48px 1.4fr 1fr 1.4fr 0.9fr 200px;
   }
+  /* Participanți: coloană în plus pentru statusul ultimului email. */
+  .admin-participanti.admin-table { min-width: 1000px; }
+  .admin-participanti.admin-table .admin-row {
+    grid-template-columns: 48px 1.4fr 1fr 1.4fr 0.8fr 120px 180px;
+  }
+  /* Arhivă: fără coloana de acțiuni (nu se mai poate modifica nimic). */
+  .admin-participanti.arhiva.admin-table { min-width: 880px; }
+  .admin-participanti.arhiva.admin-table .admin-row {
+    grid-template-columns: 48px 1.4fr 1fr 1.4fr 0.8fr 120px;
+  }
+  .admin-wait.arhiva.admin-table { min-width: 760px; }
+  .admin-wait.arhiva.admin-table .admin-row {
+    grid-template-columns: 48px 1.4fr 1fr 1.4fr 0.9fr;
+  }
+
+  /* ---- Tab Livrare (jurnalul de emailuri) ---- */
+  .admin-livrare.admin-table { min-width: 940px; }
+  .admin-livrare .admin-row-head {
+    display: grid; grid-template-columns: 110px 1.4fr 1fr 1.6fr 130px;
+    gap: 12px; padding: 12px 24px;
+  }
+  /* Rândul e un container: butonul-rând + detaliul expandabil sub el. */
+  .admin-livrare-row { display: block; padding: 0; }
+  .admin-livrare-row:hover { background: transparent; }
+  .admin-livrare-main {
+    display: grid; grid-template-columns: 110px 1.4fr 1fr 1.6fr 130px;
+    gap: 12px; align-items: center; width: 100%; text-align: left;
+    background: transparent; border: none; cursor: pointer;
+    padding: 12px 24px; font-family: inherit; color: inherit;
+    transition: background 0.15s ease;
+  }
+  .admin-livrare-main:hover { background: var(--e3-surface-hover); }
+  .admin-livrare-main .right { text-align: right; }
+  .admin-livrare-row.esuat { border-left: 3px solid var(--e3-danger); }
+  .admin-livrare-row.deschis .admin-livrare-main { background: var(--e3-surface-hover); }
+  .admin-livrare-email { display: block; font-size: 12px; font-weight: 400; color: var(--e3-muted-dim); }
+  .admin-cell-subject { font-size: 14px; color: var(--e3-muted-strong); }
+  .admin-livrare-detaliu {
+    padding: 0 24px 16px; display: grid; gap: 10px;
+    animation: row-in 0.25s ease-out;
+  }
+  .admin-livrare-eroare {
+    margin: 0; font-size: 13px; line-height: 1.6; color: var(--e3-danger);
+    overflow-wrap: anywhere;
+  }
+  .admin-livrare-eroare strong { color: var(--e3-danger); }
+  .admin-livrare-text {
+    margin: 0; padding: 12px 14px; max-height: 260px; overflow: auto;
+    background: var(--e3-bg); border: 1px solid var(--e3-hairline);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    line-height: 1.6; color: var(--e3-muted); white-space: pre-wrap; overflow-wrap: anywhere;
+  }
   .admin-btn-promote {
     background: transparent; border: 1px solid #3A4A22; color: var(--e3-accent); cursor: pointer;
     font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
@@ -839,6 +891,82 @@
   }
   .admin-tabs button:hover { color: var(--e3-text); }
   .admin-tabs button.active { color: var(--e3-accent); border-bottom-color: var(--e3-accent); }
+  /* Badge de alertă pe tab (ex. emailuri nelivrate). */
+  .admin-tab-alert {
+    display: inline-block; margin-left: 8px; padding: 1px 7px;
+    background: var(--e3-danger); color: var(--e3-bg);
+    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
+    vertical-align: middle; font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Taburi de ediție ---- */
+  .admin-editions {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    padding: 14px 18px;
+  }
+  .admin-editions-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--e3-muted-dim); flex: none;
+  }
+  .admin-editions-list { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
+  .admin-editions-loading { font-size: 13px; color: var(--e3-muted); }
+  .admin-edition {
+    display: grid; gap: 2px; justify-items: start; text-align: left;
+    background: var(--e3-bg); border: 1px solid var(--e3-border); cursor: pointer;
+    padding: 8px 14px; transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .admin-edition:hover { border-color: var(--e3-accent-dim); }
+  .admin-edition-nr {
+    font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 1px;
+    color: var(--e3-muted); font-variant-numeric: tabular-nums;
+  }
+  .admin-edition-meta { font-size: 11px; color: var(--e3-muted-dim); white-space: nowrap; }
+  .admin-edition.active { border-color: var(--e3-accent); background: #161A12; }
+  .admin-edition.active .admin-edition-nr { color: var(--e3-accent); }
+  /* Punct verde = ediția pe care backendul o consideră curentă. */
+  .admin-edition.curenta .admin-edition-nr::after {
+    content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 7px;
+    border-radius: 50%; background: var(--e3-accent); vertical-align: middle;
+  }
+  .admin-edition-new { flex: none; padding: 9px 14px; font-size: 13px; }
+  .admin-edition-new:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ---- Bannere de context (arhivă / desincronizare) ---- */
+  .admin-banner {
+    border: 1px solid var(--e3-border); border-left: 3px solid var(--e3-accent);
+    background: var(--e3-surface); padding: 14px 18px;
+    font-size: 14px; line-height: 1.6; color: var(--e3-muted);
+  }
+  .admin-banner strong { color: var(--e3-text); }
+  .admin-banner code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+    background: var(--e3-bg); border: 1px solid var(--e3-hairline); padding: 1px 5px;
+    color: var(--e3-accent);
+  }
+  .admin-banner.warn { border-left-color: var(--e3-danger); }
+  .admin-banner.warn strong { color: var(--e3-danger); }
+  .admin-confirm-note {
+    font-size: 13px !important; border-top: 1px solid var(--e3-hairline); padding-top: 12px;
+  }
+  .admin-confirm-note code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    background: var(--e3-bg); padding: 1px 4px; color: var(--e3-accent);
+  }
+
+  /* ---- Status de livrare email ---- */
+  .admin-mail-badge {
+    display: inline-block; background: transparent; cursor: pointer;
+    border: 1px solid var(--e3-border); color: var(--e3-muted-dim);
+    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.5px; padding: 5px 9px; white-space: nowrap;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .admin-mail-badge.trimis { border-color: #3A4A22; color: var(--e3-accent); }
+  .admin-mail-badge.esuat { border-color: #3A2A2A; color: var(--e3-danger); }
+  .admin-mail-badge.niciunul { cursor: default; }
+  button.admin-mail-badge:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
+  button.admin-mail-badge.niciunul:hover { border-color: var(--e3-border); color: var(--e3-muted-dim); }
 
   /* ---- Tab Emailuri ---- */
   .admin-email {
@@ -882,6 +1010,16 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .admin-email-recipient-list { max-height: 440px; overflow-y: auto; }
+  /* Dezabonat: rămâne vizibil (adminul vede de ce lipsește), dar nu se poate bifa. */
+  .admin-email-recipient.dezabonat { opacity: 0.55; cursor: not-allowed; }
+  .admin-email-recipient.dezabonat input[type="checkbox"] { cursor: not-allowed; }
+  .admin-email-unsub-tag {
+    display: inline-block; margin-left: 8px; padding: 1px 6px;
+    border: 1px solid #3A2A2A; color: var(--e3-danger);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    vertical-align: middle;
+  }
+  .admin-email-unsub-note { font-weight: 400; color: var(--e3-danger); }
 
   .admin-email-compose-col { display: grid; gap: 20px; min-width: 0; }
   .admin-email-compose {
