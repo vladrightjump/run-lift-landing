@@ -16,6 +16,10 @@ export type AdminRegistration = {
   telefon: string;
   email: string;
   echipa: string;
+  /** Ediția din care face parte rândul (listările sunt filtrate pe ediție). */
+  editie: number;
+  /** Dezabonat de la emailuri; null = primește în continuare. */
+  dezabonat_la: string | null;
 };
 
 export const getStoredToken = (): string | null => {
@@ -75,8 +79,42 @@ export const adminLogin = (username: string, password: string): Promise<string |
 export const checkToken = (token: string, signal?: AbortSignal): Promise<boolean> =>
   rpc<boolean>('admin_check_token', { p_token: token }, signal);
 
-export const listRegistrations = (token: string, signal?: AbortSignal): Promise<AdminRegistration[]> =>
-  rpc<AdminRegistration[]>('admin_list_registrations', { p_token: token }, signal);
+/** `editie` lipsă = ediția curentă din `app_config`. */
+export const listRegistrations = (
+  token: string,
+  editie?: number,
+  signal?: AbortSignal
+): Promise<AdminRegistration[]> =>
+  rpc<AdminRegistration[]>(
+    'admin_list_registrations',
+    { p_token: token, p_editie: editie ?? null },
+    signal
+  );
+
+/* ---- Ediții (taburile din backoffice) ---- */
+
+export type AdminEdition = {
+  editie: number;
+  participanti: number;
+  asteptare: number;
+  lansare: number;
+  /** Prima/ultima înscriere din ediție; null dacă ediția e goală. */
+  prima: string | null;
+  ultima: string | null;
+  /** Ediția pe care o consideră „curentă" backendul (`app_config`). */
+  este_curenta: boolean;
+};
+
+export const listEditions = (token: string, signal?: AbortSignal): Promise<AdminEdition[]> =>
+  rpc<AdminEdition[]>('admin_list_editions', { p_token: token }, signal);
+
+/**
+ * Deschide ediția următoare (tab nou, gol): mută ediția curentă din `app_config`
+ * pe max+1 și șterge reperele de timp ale ediției încheiate (deadline + start).
+ * Codul din `src/content/edition.ts` NU se schimbă — rămâne de aliniat manual.
+ */
+export const createEdition = (token: string): Promise<number> =>
+  rpc<number>('admin_create_edition', { p_token: token });
 
 export type AdminLaunchSignup = {
   id: string;
@@ -91,6 +129,8 @@ export type AdminLaunchSignup = {
   sursa: 'lansare' | 'despre-noi';
   /** Momentul confirmării din email; null = încă neconfirmat. */
   confirmat_la: string | null;
+  /** Dezabonat prin linkul din email; null = primește în continuare. */
+  dezabonat_la: string | null;
 };
 
 export type AdminEmailTemplate = {
@@ -176,10 +216,20 @@ export type AdminWaitlistEntry = {
   nume: string;
   telefon: string;
   email: string;
+  editie: number;
 };
 
-export const listWaitlist = (token: string, signal?: AbortSignal): Promise<AdminWaitlistEntry[]> =>
-  rpc<AdminWaitlistEntry[]>('admin_list_waitlist', { p_token: token }, signal);
+/** `editie` lipsă = ediția curentă din `app_config`. */
+export const listWaitlist = (
+  token: string,
+  editie?: number,
+  signal?: AbortSignal
+): Promise<AdminWaitlistEntry[]> =>
+  rpc<AdminWaitlistEntry[]>(
+    'admin_list_waitlist',
+    { p_token: token, p_editie: editie ?? null },
+    signal
+  );
 
 export const deleteWaitlist = (token: string, id: string): Promise<void> =>
   rpc<void>('admin_delete_waitlist', { p_token: token, p_id: id });
@@ -188,6 +238,45 @@ export const deleteWaitlist = (token: string, id: string): Promise<void> =>
  * dacă emailul era deja înscris). */
 export const promoteWaitlist = (token: string, id: string): Promise<string | null> =>
   rpc<string | null>('admin_promote_waitlist', { p_token: token, p_id: id });
+
+/* ---- Jurnal de livrare a emailurilor (email_log) ---- */
+
+export type AdminEmailLogEntry = {
+  id: string;
+  created_at: string;
+  email: string;
+  nume: string;
+  subiect: string;
+  text_email: string;
+  /** Cine a declanșat trimiterea. */
+  mod: 'admin' | 'confirm' | 'promoted' | 'info' | 'broadcast';
+  audienta: 'participanti' | 'asteptare' | '';
+  status: 'trimis' | 'esuat';
+  /** Codul HTTP de la Resend (200 la succes, 4xx/5xx la eșec). */
+  provider_status: number | null;
+  /** Corpul răspunsului de la provider — motivul concret al eșecului. */
+  eroare: string | null;
+  editie: number;
+};
+
+/**
+ * `editie` lipsă = ediția curentă. Cele mai noi primele.
+ *
+ * `cuText`: corpul emailului e câmpul greu și e nevoie de el doar în tab-ul
+ * „Livrare". Poll-ul de fundal îl cere `false` ca să nu care sute de KB la
+ * fiecare refresh — rândurile vin atunci cu `text_email: ''`.
+ */
+export const listEmailLog = (
+  token: string,
+  editie?: number,
+  cuText = true,
+  signal?: AbortSignal
+): Promise<AdminEmailLogEntry[]> =>
+  rpc<AdminEmailLogEntry[]>(
+    'admin_list_email_log',
+    { p_token: token, p_editie: editie ?? null, p_cu_text: cuText },
+    signal
+  );
 
 export const adminLogout = (token: string): Promise<void> =>
   rpc<void>('admin_logout', { p_token: token });
@@ -199,16 +288,27 @@ export type SendEmailResult = { sent: number; failed: number; errors?: { to: str
 
 const FUNCTIONS_URL = `${SUPABASE.url}/functions/v1`;
 
-/** Trimitere în masă din backoffice — protejată de token pe server. */
+/**
+ * Trimitere în masă din backoffice — protejată de token pe server.
+ * `audience`/`editie` nu schimbă ce se trimite; ajung doar în `email_log`, ca
+ * tab-ul „Livrare" să știe pe ce listă și pe ce ediție a fost trimis emailul.
+ */
 export const sendBulkEmail = async (
   token: string,
   messages: EmailMessage[],
+  meta?: { audience?: 'participanti' | 'asteptare'; editie?: number },
   signal?: AbortSignal
 ): Promise<SendEmailResult> => {
   const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
     method: 'POST',
     headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode: 'admin', token, messages }),
+    body: JSON.stringify({
+      mode: 'admin',
+      token,
+      messages,
+      audience: meta?.audience,
+      editie: meta?.editie,
+    }),
     signal,
   });
   const body = await res.json().catch(() => ({}));

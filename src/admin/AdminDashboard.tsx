@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addRegistration,
   updateRegistration,
@@ -8,16 +8,27 @@ import {
   deleteWaitlist,
   promoteWaitlist,
   listAdminEvents,
+  listEditions,
+  createEdition,
+  listEmailLog,
   InvalidTokenError,
 } from '../lib/adminApi';
-import type { AdminRegistration, AdminWaitlistEntry, AdminEvent } from '../lib/adminApi';
+import type {
+  AdminRegistration,
+  AdminWaitlistEntry,
+  AdminEvent,
+  AdminEdition,
+  AdminEmailLogEntry,
+} from '../lib/adminApi';
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
+import { AdminEditionTabs } from './AdminEditionTabs';
+import { AdminDeliveryTab } from './AdminDeliveryTab';
 import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
-import { LAUNCH_DATE, TOTAL_SLOTS, WAITLIST_SLOTS } from '../lib/config';
+import { CURRENT_EDITION, LAUNCH_DATE, TOTAL_SLOTS, WAITLIST_SLOTS } from '../lib/config';
 import { LAUNCH_EDITION_ORDINAL } from '../content/format';
 
 const launchFmt = new Intl.DateTimeFormat('ro-RO', {
@@ -59,6 +70,11 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [rows, setRows] = useState<AdminRegistration[] | null>(null);
   const [waitlist, setWaitlist] = useState<AdminWaitlistEntry[] | null>(null);
   const [events, setEvents] = useState<AdminEvent[] | null>(null);
+  const [emailLog, setEmailLog] = useState<AdminEmailLogEntry[] | null>(null);
+  const [editions, setEditions] = useState<AdminEdition[] | null>(null);
+  // Ediția deschisă în backoffice. null = încă nu știm ce ediții există.
+  const [editie, setEditie] = useState<number | null>(null);
+  const [creatingEdition, setCreatingEdition] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
@@ -67,12 +83,18 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
-  const [tab, setTab] = useState<'participanti' | 'email' | 'lansare' | 'sabloane'>(
-    'participanti'
-  );
+  const [tab, setTab] = useState<
+    'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane'
+  >('participanti');
   const toastTimerRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const cd = useCountdown(LAUNCH_DATE);
+
+  // Ediția pe care backendul o consideră curentă. Doar ea acceptă modificări:
+  // ascunderea butoanelor de aici e comoditate, refuzul real vine din RPC-urile
+  // de scriere (`edition_archived` — vezi supabase-migration-editii-si-email-log.sql).
+  const editieCurenta = editions?.find((e) => e.este_curenta)?.editie ?? null;
+  const arhiva = editie !== null && editieCurenta !== null && editie !== editieCurenta;
 
   // Sesiune expirată — orice RPC o semnalează; ieșim la login.
   const handleAuthError = useCallback(
@@ -101,11 +123,26 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // automate NOI, nu pe cele preexistente la primul load.
   const seenEventsRef = useRef<Set<string> | null>(null);
 
+  // Inventarul edițiilor — o dată la montare și după ce deschidem una nouă.
+  const refreshEditions = useCallback(() => {
+    listEditions(token)
+      .then((data) => {
+        setEditions(data);
+        // Prima încărcare: deschidem ediția curentă.
+        setEditie((prev) => prev ?? data.find((e) => e.este_curenta)?.editie ?? null);
+      })
+      .catch(handleAuthError);
+  }, [token, handleAuthError]);
+
+  useEffect(refreshEditions, [refreshEditions]);
+
   const refresh = useCallback(() => {
+    // Fără ediție știută n-avem ce cere — așteptăm inventarul.
+    if (editie === null) return;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    listRegistrations(token, controller.signal)
+    listRegistrations(token, editie, controller.signal)
       .then((data) => {
         setRows(data);
         setLoadError(false);
@@ -115,8 +152,16 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         // Păstrăm ultima listă cunoscută; eroarea contează doar la primul load.
         setLoadError((prev) => prev || rowsRef.current === null);
       });
-    listWaitlist(token, controller.signal)
+    listWaitlist(token, editie, controller.signal)
       .then(setWaitlist)
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        handleAuthError(err);
+      });
+    // Corpul emailurilor doar când e chiar folosit (tab-ul „Livrare"); în rest
+    // avem nevoie doar de status, pentru badge + coloana din tabelul de participanți.
+    listEmailLog(token, editie, tab === 'livrare', controller.signal)
+      .then(setEmailLog)
       .catch((err) => {
         if (controller.signal.aborted) return;
         handleAuthError(err);
@@ -144,7 +189,25 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         if (controller.signal.aborted) return;
         handleAuthError(err);
       });
-  }, [token, handleAuthError, showToast]);
+  }, [token, editie, tab, handleAuthError, showToast]);
+
+  // Schimbarea ediției înseamnă alt set de date — golim ca să nu se vadă o clipă
+  // lista ediției anterioare sub numărul nou.
+  const editiePrecedentaRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (editiePrecedentaRef.current !== null && editiePrecedentaRef.current !== editie) {
+      setRows(null);
+      setWaitlist(null);
+      setEmailLog(null);
+      setQuery('');
+      setAddOpen(false);
+      setEditId(null);
+      // Altfel dialogul de confirmare rămâne deschis peste ediția nouă și
+      // „Da, șterge" ar lovi un rând care nu mai e în lista vizibilă.
+      setConfirmRow(null);
+    }
+    editiePrecedentaRef.current = editie;
+  }, [editie]);
 
   useEffect(() => {
     refresh();
@@ -169,6 +232,50 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const remaining = Math.max(0, TOTAL_SLOTS - all.length);
   const percent = Math.round((all.length / TOTAL_SLOTS) * 100);
   const waitAll = waitlist ?? [];
+
+  // Ultimul email încercat pentru fiecare adresă — pentru indicatorul din tabel.
+  // `emailLog` vine cu cele mai noi primele, deci prima apariție e cea recentă.
+  const ultimulEmail = useMemo(() => {
+    const m = new Map<string, AdminEmailLogEntry>();
+    for (const e of emailLog ?? []) {
+      const k = e.email.toLowerCase();
+      if (!m.has(k)) m.set(k, e);
+    }
+    return m;
+  }, [emailLog]);
+
+  // Câte emailuri au rămas nelivrate (ultima încercare per adresă+subiect e eșec)
+  // — badge-ul roșu de pe tabul „Livrare".
+  const nelivrate = useMemo(() => {
+    const vazute = new Set<string>();
+    let n = 0;
+    for (const e of emailLog ?? []) {
+      const k = `${e.email.toLowerCase()}|${e.subiect}`;
+      if (vazute.has(k)) continue;
+      vazute.add(k);
+      if (e.status === 'esuat') n++;
+    }
+    return n;
+  }, [emailLog]);
+
+  const handleCreateEdition = () => {
+    if (creatingEdition) return;
+    setCreatingEdition(true);
+    createEdition(token)
+      .then((nou) => {
+        setEditie(nou);
+        refreshEditions();
+        showToast({
+          kind: 'success',
+          msg: `Ediția ${nou} e deschisă. Actualizează edition.ts și redeployează.`,
+        });
+      })
+      .catch((err) => {
+        if (handleAuthError(err)) return;
+        showToast({ kind: 'error', msg: 'Nu am putut deschide ediția nouă.' });
+      })
+      .finally(() => setCreatingEdition(false));
+  };
 
   // Promovează o persoană din așteptare în participanți + email de confirmare.
   const handlePromote = (row: AdminWaitlistEntry) => {
@@ -328,7 +435,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'run-lift-participanti.csv';
+    a.download = `run-lift-participanti-editia-${editie ?? CURRENT_EDITION}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -357,6 +464,22 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       </header>
 
       <main className="admin-main">
+        <AdminEditionTabs
+          editions={editions}
+          selected={editie}
+          onSelect={setEditie}
+          onCreate={handleCreateEdition}
+          creating={creatingEdition}
+        />
+
+        {arhiva && (
+          <div className="admin-banner" role="status">
+            <strong>Ediția {editie} e încheiată.</strong> O vezi ca arhivă: datele rămân
+            întregi, dar nu se mai poate adăuga, edita sau șterge nimic. Exportul CSV
+            funcționează. Ediția activă acum e {editieCurenta}.
+          </div>
+        )}
+
         <nav className="admin-tabs">
           <button
             type="button"
@@ -371,6 +494,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             onClick={() => setTab('email')}
           >
             Emailuri
+          </button>
+          <button
+            type="button"
+            className={tab === 'livrare' ? 'active' : ''}
+            onClick={() => setTab('livrare')}
+          >
+            Livrare
+            {nelivrate > 0 && <span className="admin-tab-alert">{nelivrate}</span>}
           </button>
           <button
             type="button"
@@ -393,7 +524,26 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         )}
 
         {tab === 'email' && (
-          <AdminEmailTab token={token} rows={all} formatDate={formatDate} showToast={showToast} />
+          <AdminEmailTab
+            token={token}
+            rows={all}
+            editie={editie ?? CURRENT_EDITION}
+            readOnly={arhiva}
+            formatDate={formatDate}
+            showToast={showToast}
+          />
+        )}
+
+        {tab === 'livrare' && (
+          <AdminDeliveryTab
+            token={token}
+            editie={editie ?? CURRENT_EDITION}
+            log={emailLog}
+            participanti={all}
+            readOnly={arhiva}
+            onRefresh={refresh}
+            showToast={showToast}
+          />
         )}
 
         {tab === 'lansare' && (
@@ -404,52 +554,66 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
         {tab === 'participanti' && (
         <>
+        {/* Capacitatea (TOTAL_SLOTS) e a ediției CURENTE — pe arhivă ar minți
+            (ediția 1 a avut 30 de locuri, nu 20), deci acolo arătăm doar cifrele reale. */}
         <section className="admin-stats">
           <div className="admin-stat">
             <span className="admin-stat-label">Înscriși</span>
             <span className="admin-stat-value" key={all.length}>
               {all.length}
-              <span className="admin-stat-total"> / {TOTAL_SLOTS}</span>
+              {!arhiva && <span className="admin-stat-total"> / {TOTAL_SLOTS}</span>}
             </span>
           </div>
-          <div className="admin-stat">
-            <span className="admin-stat-label">Locuri rămase</span>
-            <span className={`admin-stat-value${remaining <= 3 ? ' low' : ''}`} key={remaining}>
-              {remaining}
-            </span>
-          </div>
-          <div className="admin-stat">
-            <span className="admin-stat-label">Grad de ocupare</span>
-            <span className="admin-stat-value accent" key={percent}>
-              {percent}%
-            </span>
-          </div>
+          {!arhiva && (
+            <>
+              <div className="admin-stat">
+                <span className="admin-stat-label">Locuri rămase</span>
+                <span className={`admin-stat-value${remaining <= 3 ? ' low' : ''}`} key={remaining}>
+                  {remaining}
+                </span>
+              </div>
+              <div className="admin-stat">
+                <span className="admin-stat-label">Grad de ocupare</span>
+                <span className="admin-stat-value accent" key={percent}>
+                  {percent}%
+                </span>
+              </div>
+            </>
+          )}
           <div className="admin-stat">
             <span className="admin-stat-label">În așteptare</span>
             <span className="admin-stat-value" key={waitAll.length}>
               {waitAll.length}
-              <span className="admin-stat-total"> / {WAITLIST_SLOTS}</span>
+              {!arhiva && <span className="admin-stat-total"> / {WAITLIST_SLOTS}</span>}
+            </span>
+          </div>
+          <div className="admin-stat">
+            <span className="admin-stat-label">Emailuri nelivrate</span>
+            <span className={`admin-stat-value${nelivrate > 0 ? ' low' : ''}`} key={nelivrate}>
+              {nelivrate}
             </span>
           </div>
         </section>
 
-        <section className="admin-occupancy">
-          <div className="slots-head">
-            <span className="slots-label">Ocupare locuri</span>
-            <span className="admin-occupancy-count">
-              {all.length} din {TOTAL_SLOTS} locuri ocupate
-            </span>
-          </div>
-          <div className="slots-grid">
-            {Array.from({ length: TOTAL_SLOTS }, (_, i) => (
-              <div key={i} className={`slot admin-slot${i < all.length ? ' filled' : ''}`} />
-            ))}
-          </div>
-        </section>
+        {!arhiva && (
+          <section className="admin-occupancy">
+            <div className="slots-head">
+              <span className="slots-label">Ocupare locuri</span>
+              <span className="admin-occupancy-count">
+                {all.length} din {TOTAL_SLOTS} locuri ocupate
+              </span>
+            </div>
+            <div className="slots-grid">
+              {Array.from({ length: TOTAL_SLOTS }, (_, i) => (
+                <div key={i} className={`slot admin-slot${i < all.length ? ' filled' : ''}`} />
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="admin-table-section">
           <div className="admin-table-head">
-            <h2>Participanți</h2>
+            <h2>Participanți · ediția {editie ?? CURRENT_EDITION}</h2>
             <div className="admin-table-actions">
               <input
                 type="text"
@@ -458,24 +622,26 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
-              <button
-                type="button"
-                className="admin-btn-outline"
-                onClick={() => {
-                  setAddOpen((v) => !v);
-                  setEditId(null);
-                  setDraft({ nume: '', telefon: '', email: '' });
-                }}
-              >
-                + Adaugă
-              </button>
+              {!arhiva && (
+                <button
+                  type="button"
+                  className="admin-btn-outline"
+                  onClick={() => {
+                    setAddOpen((v) => !v);
+                    setEditId(null);
+                    setDraft({ nume: '', telefon: '', email: '' });
+                  }}
+                >
+                  + Adaugă
+                </button>
+              )}
               <button type="button" className="admin-btn-accent" onClick={exportCsv}>
                 Export CSV
               </button>
             </div>
           </div>
 
-          {addOpen && (
+          {addOpen && !arhiva && (
             <div className="admin-add-row">
               <label className="admin-add-field grow">
                 <span>Nume</span>
@@ -526,16 +692,19 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           )}
 
           <div className="admin-table-wrap">
-            <div className="admin-table">
+            <div className={`admin-table admin-participanti${arhiva ? ' arhiva' : ''}`}>
               <div className="admin-row admin-row-head">
                 <span>#</span>
                 <span>Nume</span>
                 <span>Telefon</span>
                 <span>Email</span>
                 <span>Înscris</span>
-                <span className="right">Acțiuni</span>
+                <span>Ultimul email</span>
+                {!arhiva && <span className="right">Acțiuni</span>}
               </div>
-              {filtered.map((r, i) => (
+              {filtered.map((r, i) => {
+                const mail = ultimulEmail.get(r.email.toLowerCase());
+                return (
                 <div key={r.id} className="admin-row">
                   <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
                   <span className="admin-cell-name">{r.nume}</span>
@@ -546,26 +715,45 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                     {r.email}
                   </a>
                   <span className="admin-cell-date">{formatDate(r.created_at)}</span>
-                  <div className="admin-cell-actions">
+                  <span>
                     <button
                       type="button"
-                      className="admin-btn-promote"
-                      title="Editează înscrierea"
-                      onClick={() => startEdit(r)}
+                      className={`admin-mail-badge ${mail ? mail.status : 'niciunul'}`}
+                      title={
+                        mail
+                          ? `${mail.subiect} · ${formatEventTime(mail.created_at)}${
+                              mail.status === 'esuat' ? ` · ${mail.eroare ?? 'eșuat'}` : ''
+                            } — click pentru detalii`
+                          : 'Nu i s-a trimis niciun email pe ediția asta'
+                      }
+                      onClick={() => setTab('livrare')}
                     >
-                      Editează
+                      {mail ? (mail.status === 'trimis' ? '✓ trimis' : '✕ nelivrat') : '— niciunul'}
                     </button>
-                    <button
-                      type="button"
-                      className="admin-btn-delete"
-                      title="Șterge înscrierea"
-                      onClick={() => setConfirmRow(r)}
-                    >
-                      Șterge
-                    </button>
-                  </div>
+                  </span>
+                  {!arhiva && (
+                    <div className="admin-cell-actions">
+                      <button
+                        type="button"
+                        className="admin-btn-promote"
+                        title="Editează înscrierea"
+                        onClick={() => startEdit(r)}
+                      >
+                        Editează
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-btn-delete"
+                        title="Șterge înscrierea"
+                        onClick={() => setConfirmRow(r)}
+                      >
+                        Șterge
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
               {rows === null && !loadError && <div className="admin-empty">Se încarcă…</div>}
               {rows === null && loadError && (
                 <div className="admin-empty">Nu am putut încărca lista. Reîncercăm automat.</div>
@@ -587,14 +775,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             </span>
           </div>
           <div className="admin-table-wrap">
-            <div className="admin-table admin-wait">
+            <div className={`admin-table admin-wait${arhiva ? ' arhiva' : ''}`}>
               <div className="admin-row admin-row-head">
                 <span>#</span>
                 <span>Nume</span>
                 <span>Telefon</span>
                 <span>Email</span>
                 <span>Înscris</span>
-                <span className="right">Acțiuni</span>
+                {!arhiva && <span className="right">Acțiuni</span>}
               </div>
               {waitAll.map((w, i) => (
                 <div key={w.id} className="admin-row">
@@ -607,24 +795,26 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                     {w.email}
                   </a>
                   <span className="admin-cell-date">{formatDate(w.created_at)}</span>
-                  <div className="admin-cell-actions">
-                    <button
-                      type="button"
-                      className="admin-btn-promote"
-                      title="Mută la participanți"
-                      onClick={() => handlePromote(w)}
-                    >
-                      Promovează
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-btn-delete"
-                      title="Șterge din lista de așteptare"
-                      onClick={() => handleDeleteWaitlist(w)}
-                    >
-                      Șterge
-                    </button>
-                  </div>
+                  {!arhiva && (
+                    <div className="admin-cell-actions">
+                      <button
+                        type="button"
+                        className="admin-btn-promote"
+                        title="Mută la participanți"
+                        onClick={() => handlePromote(w)}
+                      >
+                        Promovează
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-btn-delete"
+                        title="Șterge din lista de așteptare"
+                        onClick={() => handleDeleteWaitlist(w)}
+                      >
+                        Șterge
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
               {waitlist === null && <div className="admin-empty">Se încarcă…</div>}
@@ -645,13 +835,27 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
               <span className="admin-wait-count">{(events ?? []).length}</span>
             </h2>
             <span className="admin-wait-note">
-              Promovări automate din lista de așteptare (când ștergi un participant, locul se umple singur).
+              Promovări automate din lista de așteptare (când ștergi un participant, locul se
+              umple singur) și deschiderea edițiilor noi. Feed-ul e comun tuturor edițiilor.
             </span>
           </div>
           <div className="admin-activity">
             {(events ?? [])
-              .filter((e) => e.tip === 'auto_promote')
+              .filter((e) => e.tip === 'auto_promote' || e.tip === 'editie_noua')
               .map((e) => {
+                if (e.tip === 'editie_noua') {
+                  const ed = e.detaliu?.editie;
+                  return (
+                    <div key={e.id} className="admin-activity-item">
+                      <span className="admin-activity-dot" />
+                      <span className="admin-activity-text">
+                        S-a deschis <strong>ediția {typeof ed === 'number' ? ed : '?'}</strong> —
+                        înscrierile noi intră aici
+                      </span>
+                      <span className="admin-activity-time">{formatEventTime(e.created_at)}</span>
+                    </div>
+                  );
+                }
                 const nume = typeof e.detaliu?.nume === 'string' ? e.detaliu.nume : 'Cineva';
                 const email = typeof e.detaliu?.email === 'string' ? e.detaliu.email : '';
                 const emailed = e.detaliu?.email_queued === true;
@@ -673,9 +877,9 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 );
               })}
             {events === null && <div className="admin-empty">Se încarcă…</div>}
-            {events !== null && (events ?? []).filter((e) => e.tip === 'auto_promote').length === 0 && (
-              <div className="admin-empty">Nicio promovare automată încă.</div>
-            )}
+            {events !== null &&
+              (events ?? []).filter((e) => e.tip === 'auto_promote' || e.tip === 'editie_noua')
+                .length === 0 && <div className="admin-empty">Nicio activitate încă.</div>}
           </div>
         </section>
         </>

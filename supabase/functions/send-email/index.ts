@@ -6,6 +6,11 @@
 //  • "broadcast" — trimitere către toți participanții ediției curente; folosit de
 //                  reminder-ul programat. Protejat cu secret (header x-broadcast-secret).
 //
+// Fiecare încercare de trimitere, în orice mod, lasă un rând în `runlift.email_log`
+// (via RPC `log_emails`): adresă, subiect, text, status + răspunsul providerului la
+// eșec. Adminul îl citește din /admin → „Livrare". Logarea e best-effort — dacă pică,
+// emailul rămâne trimis, doar urma se pierde.
+//
 // Conținutul emailurilor NU e hardcodat aici: subiectul + textul vin din tabelul
 // `email_templates` (editabile din /admin → „Șabloane de email"), iar badge-ul din
 // capul fiecărui email din `email_templates.event_badge`. Constantele *_FALLBACK de
@@ -38,6 +43,22 @@ const json = (status: number, body: unknown) =>
 type Message = { to: string; subject: string; text: string };
 type Template = { subiect: string; text_email: string };
 
+// Un rând din jurnalul de livrare (`runlift.email_log`). Scriem CÂTE UNUL pentru
+// fiecare adresă la care am încercat să trimitem, ca adminul să vadă în /admin →
+// „Livrare" cine a primit, cine nu și ce a răspuns providerul.
+type LogRow = {
+  email: string;
+  nume?: string;
+  subiect: string;
+  text_email: string;
+  mod: string;
+  audienta?: string;
+  ok: boolean;
+  provider_status?: number;
+  eroare?: string;
+  editie?: number;
+};
+
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T | null> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: "POST",
@@ -51,6 +72,17 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T | nu
   });
   if (!res.ok) return null;
   return (await res.json().catch(() => null)) as T | null;
+}
+
+// Scrie jurnalul de livrare. Best-effort: dacă RPC-ul pică, trimiterea rămâne
+// validă — pierdem doar urma, nu emailul.
+async function logSends(rows: LogRow[]): Promise<void> {
+  if (rows.length === 0) return;
+  try {
+    await rpc("log_emails", { p_rows: rows });
+  } catch {
+    // fără jurnal, dar fără să stricăm răspunsul
+  }
 }
 
 // Citește un șablon (subiect + text) din `email_templates`, după cheie.
@@ -214,15 +246,32 @@ Deno.serve(async (req: Request) => {
     const messages = Array.isArray(payload.messages) ? (payload.messages as Message[]) : [];
     if (messages.length === 0) return json(400, { error: "no_recipients" });
 
+    // Metadate doar pentru jurnal — nu schimbă ce se trimite.
+    const audienta = payload.audience === "asteptare" ? "asteptare" : "participanti";
+    const editie = typeof payload.editie === "number" ? payload.editie : undefined;
+
     const badge = await loadBadge();
     let sent = 0;
     const errors: { to: string; status: number }[] = [];
+    const logs: LogRow[] = [];
     for (const m of messages) {
       if (!m?.to || !m?.subject) continue;
       const r = await sendOne(m, badge);
       if (r.ok) sent++;
       else errors.push({ to: m.to, status: r.status });
+      logs.push({
+        email: m.to,
+        subiect: m.subject,
+        text_email: m.text,
+        mod: "admin",
+        audienta,
+        ok: r.ok,
+        provider_status: r.status,
+        eroare: r.ok ? undefined : r.body,
+        editie,
+      });
     }
+    await logSends(logs);
     return json(200, { sent, failed: errors.length, errors });
   }
 
@@ -240,6 +289,19 @@ Deno.serve(async (req: Request) => {
     const badge = await loadBadge();
     const text = fillVars(tpl?.text_email || CONFIRM_TEXT_FALLBACK, row.nume, row.email);
     const r = await sendOne({ to: row.email, subject, text }, badge);
+    await logSends([
+      {
+        email: row.email,
+        nume: row.nume,
+        subiect: subject,
+        text_email: text,
+        mod: "confirm",
+        audienta: "participanti",
+        ok: r.ok,
+        provider_status: r.status,
+        eroare: r.ok ? undefined : r.body,
+      },
+    ]);
     return json(200, { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1 });
   }
 
@@ -259,6 +321,19 @@ Deno.serve(async (req: Request) => {
     const badge = await loadBadge();
     const text = fillVars(tpl?.text_email || PROMOTED_TEXT_FALLBACK, row.nume, row.email);
     const r = await sendOne({ to: row.email, subject, text }, badge);
+    await logSends([
+      {
+        email: row.email,
+        nume: row.nume,
+        subiect: subject,
+        text_email: text,
+        mod: "promoted",
+        audienta: "participanti",
+        ok: r.ok,
+        provider_status: r.status,
+        eroare: r.ok ? undefined : r.body,
+      },
+    ]);
     return json(200, { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1 });
   }
 
@@ -299,6 +374,19 @@ Deno.serve(async (req: Request) => {
 
     const badge = await loadBadge();
     const r = await sendOne({ to: row.email, subject: tpl.subiect, text }, badge);
+    await logSends([
+      {
+        email: row.email,
+        nume: `${row.prenume ?? ""} ${row.nume ?? ""}`.trim(),
+        subiect: tpl.subiect,
+        text_email: text,
+        mod: "info",
+        audienta: "asteptare",
+        ok: r.ok,
+        provider_status: r.status,
+        eroare: r.ok ? undefined : r.body,
+      },
+    ]);
     if (r.ok) await rpc("mark_confirmation_sent", { p_email: row.email });
     // Statusul de la provider face eșecurile diagnosticabile din exterior.
     return json(200, {
@@ -345,18 +433,28 @@ Deno.serve(async (req: Request) => {
     const badge = await loadBadge();
     let sent = 0;
     const errors: { to: string; status: number }[] = [];
+    const logs: LogRow[] = [];
     for (const r of recipients) {
       const unsubUrl = r.token_unsub
         ? `https://parktraining.fit/unsubscribe?token=${r.token_unsub}`
         : undefined;
-      const res = await sendOne(
-        { to: r.email, subject, text: fillVars(text, r.nume, r.email) },
-        badge,
-        unsubUrl
-      );
+      const body = fillVars(text, r.nume, r.email);
+      const res = await sendOne({ to: r.email, subject, text: body }, badge, unsubUrl);
       if (res.ok) sent++;
       else errors.push({ to: r.email, status: res.status });
+      logs.push({
+        email: r.email,
+        nume: r.nume,
+        subiect: subject,
+        text_email: body,
+        mod: "broadcast",
+        audienta: audience,
+        ok: res.ok,
+        provider_status: res.status,
+        eroare: res.ok ? undefined : res.body,
+      });
     }
+    await logSends(logs);
     return json(200, { sent, failed: errors.length, errors });
   }
 

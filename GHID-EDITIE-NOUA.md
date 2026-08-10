@@ -36,6 +36,11 @@ npm run sync-edition
 Îți printează SQL-ul pentru `app_config`. **Îl revezi** și-l rulezi în Supabase (SQL Editor sau
 MCP). Doar `app_config` (numerele de ediție) — nimic altceva.
 
+> **Scurtătură din `/admin`:** butonul „+ Ediție nouă" din bara de ediții face exact partea de
+> `app_config` (mută ediția curentă pe max+1 și șterge `registration_deadline` + `event_start`
+> ale ediției încheiate). Restul pașilor de aici rămân obligatorii — până actualizezi
+> `edition.ts` și redeployezi, backoffice-ul afișează un banner roșu de desincronizare.
+
 ### 3. (Opțional) Textul emailurilor
 Emailurile (confirmare/reminder/anunț + badge) sunt în DB, editabile din **`/admin` → „Șabloane
 de email"**. Le ajustezi acolo dacă vrei alt text; NU se ating din cod.

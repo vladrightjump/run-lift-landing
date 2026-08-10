@@ -10,6 +10,10 @@ import type { AdminRegistration, AdminLaunchSignup, AdminEmailTemplate } from '.
 type Props = {
   token: string;
   rows: AdminRegistration[];
+  /** Ediția deschisă în backoffice — ajunge în jurnalul de livrare. */
+  editie: number;
+  /** Ediție de arhivă: nu mai trimitem emailuri în numele ei. */
+  readOnly: boolean;
   formatDate: (iso: string) => string;
   showToast: (toast: { kind: 'error' | 'success'; msg: string }) => void;
 };
@@ -26,6 +30,13 @@ type Recipient = {
   email: string;
   telefon: string;
   created_at: string;
+  /**
+   * S-a dezabonat prin linkul din email. Broadcast-ul îi filtrează pe server
+   * (`edition2_recipients`/`waitlist_recipients`), dar trimiterea manuală din
+   * backoffice merge prin modul `admin`, care NU aplică filtrul — deci îi
+   * excludem aici, altfel ar primi exact ce au cerut să nu mai primească.
+   */
+  dezabonat: boolean;
 };
 
 // Template-urile de trimitere în masă stau acum în DB (tabelul `email_templates`)
@@ -53,6 +64,7 @@ const normalizeParticipant = (r: AdminRegistration): Recipient => ({
   email: r.email,
   telefon: r.telefon,
   created_at: r.created_at,
+  dezabonat: r.dezabonat_la !== null,
 });
 
 const normalizeLaunch = (r: AdminLaunchSignup): Recipient => ({
@@ -62,9 +74,17 @@ const normalizeLaunch = (r: AdminLaunchSignup): Recipient => ({
   email: r.email,
   telefon: r.telefon,
   created_at: r.created_at,
+  dezabonat: r.dezabonat_la !== null,
 });
 
-export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => {
+export const AdminEmailTab = ({
+  token,
+  rows,
+  editie,
+  readOnly,
+  formatDate,
+  showToast,
+}: Props) => {
   const [audience, setAudience] = useState<Audience>('participanti');
   const [launchRows, setLaunchRows] = useState<AdminLaunchSignup[]>([]);
   const [dbTemplates, setDbTemplates] = useState<AdminEmailTemplate[]>([]);
@@ -119,8 +139,13 @@ export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => 
   const subjectCur = subject ?? templates[0].subiect;
   const bodyCur = body ?? templates[0].corp;
 
-  const isSelected = (r: Recipient) => (selected ? !!selected[r.id] : true);
+  // Dezabonații rămân vizibili în listă (adminul trebuie să știe de ce lipsesc),
+  // dar nu pot fi bifați și nu intră niciodată în trimitere.
+  const isSelected = (r: Recipient) =>
+    !r.dezabonat && (selected ? !!selected[r.id] : true);
   const recipients = baseRows.filter(isSelected);
+  const selectabile = baseRows.filter((r) => !r.dezabonat);
+  const nrDezabonati = baseRows.length - selectabile.length;
   const pvIdx = Math.min(previewIdx, Math.max(0, recipients.length - 1));
   const pv = recipients.length ? recipients[pvIdx] : null;
 
@@ -145,9 +170,9 @@ export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => 
   };
 
   const toggleAll = () => {
-    const allSelected = recipients.length === baseRows.length;
+    const allSelected = recipients.length === selectabile.length;
     const next: Record<string, boolean> = {};
-    baseRows.forEach((r) => {
+    selectabile.forEach((r) => {
       next[r.id] = !allSelected;
     });
     setSelected(next);
@@ -155,8 +180,9 @@ export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => 
   };
 
   const toggleOne = (row: Recipient) => {
+    if (row.dezabonat) return;
     const next: Record<string, boolean> = {};
-    baseRows.forEach((r) => {
+    selectabile.forEach((r) => {
       next[r.id] = isSelected(r);
     });
     next[row.id] = !next[row.id];
@@ -181,6 +207,10 @@ export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => 
 
   const send = async () => {
     if (sending) return;
+    if (readOnly) {
+      showToast({ kind: 'error', msg: 'Ediția e arhivată — comută pe ediția curentă ca să trimiți.' });
+      return;
+    }
     if (!recipients.length) {
       showToast({ kind: 'error', msg: 'Selectează cel puțin un destinatar.' });
       return;
@@ -196,7 +226,7 @@ export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => 
     }));
     setSending(true);
     try {
-      const res = await sendBulkEmail(token, messages);
+      const res = await sendBulkEmail(token, messages, { audience, editie });
       if (res.failed > 0) {
         showToast({
           kind: res.sent > 0 ? 'success' : 'error',
@@ -249,19 +279,37 @@ export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => 
         <label className="admin-email-recipient all">
           <input
             type="checkbox"
-            checked={baseRows.length > 0 && recipients.length === baseRows.length}
+            checked={selectabile.length > 0 && recipients.length === selectabile.length}
             onChange={toggleAll}
           />
           <span className="admin-email-all-label">
             {audience === 'participanti' ? 'Toți participanții' : 'Toată lista de așteptare'}
+            {nrDezabonati > 0 && (
+              <span className="admin-email-unsub-note">
+                {' '}
+                · {nrDezabonati} dezabonat{nrDezabonati === 1 ? '' : 'i'}, excluși
+              </span>
+            )}
           </span>
         </label>
         <div className="admin-email-recipient-list">
           {baseRows.map((r) => (
-            <label key={r.id} className="admin-email-recipient">
-              <input type="checkbox" checked={isSelected(r)} onChange={() => toggleOne(r)} />
+            <label
+              key={r.id}
+              className={`admin-email-recipient${r.dezabonat ? ' dezabonat' : ''}`}
+              title={r.dezabonat ? 'S-a dezabonat — nu poate fi selectat' : undefined}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected(r)}
+                disabled={r.dezabonat}
+                onChange={() => toggleOne(r)}
+              />
               <span className="admin-email-recipient-info">
-                <span className="name">{r.nume}</span>
+                <span className="name">
+                  {r.nume}
+                  {r.dezabonat && <span className="admin-email-unsub-tag">dezabonat</span>}
+                </span>
                 <span className="email">{r.email}</span>
               </span>
             </label>
@@ -364,12 +412,24 @@ export const AdminEmailTab = ({ token, rows, formatDate, showToast }: Props) => 
         </div>
 
         <div className="admin-email-actions">
-          <button type="button" className="admin-btn-accent" onClick={send} disabled={sending}>
+          <button
+            type="button"
+            className="admin-btn-accent"
+            onClick={send}
+            disabled={sending || readOnly}
+          >
             {sending ? 'Se trimite…' : `Trimite email (${recipients.length})`}
           </button>
           <span className="admin-email-note">
-            Trimiți către {audienceLabel}. „Confirmare" pleacă automat la fiecare înscriere; restul le
-            trimiți tu de aici. Toate sunt brandate Run + Lift, prin Resend.
+            {readOnly ? (
+              <>Ediția deschisă e arhivată — trimiterea e blocată. Comută pe ediția curentă.</>
+            ) : (
+              <>
+                Trimiți către {audienceLabel}. „Confirmare" pleacă automat la fiecare înscriere;
+                restul le trimiți tu de aici. Toate sunt brandate Run + Lift, prin Resend. Fiecare
+                trimitere apare în tab-ul „Livrare", cu cine a primit și cine nu.
+              </>
+            )}
           </span>
         </div>
       </div>
