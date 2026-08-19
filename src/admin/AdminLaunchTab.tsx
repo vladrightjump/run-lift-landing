@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toCsv } from '../lib/csv';
 import { listLaunchNotifications } from '../lib/adminApi';
 import type { AdminLaunchSignup } from '../lib/adminApi';
 import { CURRENT_LAUNCH_EDITION } from '../lib/config';
@@ -80,9 +81,7 @@ export const AdminLaunchTab = ({ token, formatDate, onAuthError }: Props) => {
       r.sursa,
       r.confirmat_la ? new Date(r.confirmat_la).toLocaleString('ro-RO') : 'nu',
     ]);
-    const csv = [header, ...lines]
-      .map((cells) => cells.map((c) => `"${c.replace(/"/g, '""')}"`).join(','))
-      .join('\n');
+    const csv = toCsv([header, ...lines]);
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);

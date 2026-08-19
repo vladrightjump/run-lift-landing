@@ -60,17 +60,18 @@ describe('useLaunchForm', () => {
     expect(outcome).toMatchObject({ kind: 'success', duplicate: true });
   });
 
-  it('fără conexiune → outcome „offline", fără fetch', async () => {
-    const fetchMock = stubFetch({ ok: true });
+  it('navigator.onLine=false (fals-offline) NU blochează — încearcă submit-ul', async () => {
+    // Regresie: pe unele rețele/VPN `navigator.onLine` e fals `false`. Formularul nu
+    // trebuie să refuze preemptiv, ci să încerce trimiterea (ca la înscriere).
+    const fetchMock = stubFetch({ ok: true, status: 201 });
     Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
     try {
       const { result } = renderHook(() => useLaunchForm());
       fillValid(result);
       const outcome = await submitOnce(result);
-      expect(outcome.kind).toBe('offline');
-      expect(fetchMock).not.toHaveBeenCalled();
+      expect(outcome.kind).toBe('success');
+      expect(fetchMock).toHaveBeenCalled();
     } finally {
-      // Șterge getter-ul propriu → revine la cel din prototip (onLine === true).
       delete (navigator as { onLine?: boolean }).onLine;
     }
   });

@@ -1,6 +1,14 @@
-import { useMemo, useState } from 'react';
-import { sendBulkEmail, InvalidTokenError } from '../lib/adminApi';
+import { useEffect, useMemo, useState } from 'react';
+import { toCsv } from '../lib/csv';
+import { sendBulkEmail, listEmailTemplates, InvalidTokenError } from '../lib/adminApi';
 import type { AdminEmailLogEntry, AdminRegistration } from '../lib/adminApi';
+import { normalizeParticipant, fillTemplate } from './emailAudience';
+import {
+  motivEsec as motiv,
+  ultimaIncercarePerCheie,
+  emailuriRetrimisibile,
+  participantiFaraEmail,
+} from './deliveryLog';
 
 type Props = {
   token: string;
@@ -32,20 +40,6 @@ const timpFmt = new Intl.DateTimeFormat('ro-RO', {
   timeZone: 'Europe/Chisinau',
 });
 
-/** Resend întoarce JSON cu `message`; dacă nu-l putem citi, arătăm corpul brut. */
-const motiv = (e: AdminEmailLogEntry): string => {
-  if (!e.eroare) return e.provider_status ? `HTTP ${e.provider_status}` : 'Motiv necunoscut';
-  try {
-    const parsed = JSON.parse(e.eroare) as { message?: string; name?: string };
-    return parsed.message || parsed.name || e.eroare;
-  } catch {
-    return e.eroare;
-  }
-};
-
-/** Cheia unei „trimiteri" — aceeași adresă + același subiect = aceeași încercare. */
-const cheie = (e: AdminEmailLogEntry): string => `${e.email.toLowerCase()}|${e.subiect}`;
-
 export const AdminDeliveryTab = ({
   token,
   editie,
@@ -59,17 +53,27 @@ export const AdminDeliveryTab = ({
   const [query, setQuery] = useState('');
   const [deschis, setDeschis] = useState<string | null>(null);
   const [retrimit, setRetrimit] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [confTpl, setConfTpl] = useState<{ subiect: string; text_email: string } | null>(null);
+
+  // Șablonul de confirmare (editabil din „Șabloane"), pentru retrimiterea manuală
+  // către un participant care nu a primit (ex. s-a înscris cu email greșit, apoi
+  // l-ai corectat în „Participanți"). Fallback generic dacă lipsește din DB.
+  useEffect(() => {
+    const c = new AbortController();
+    listEmailTemplates(token, c.signal)
+      .then((ts) => setConfTpl(ts.find((t) => t.cheie === 'bulk_participant_confirmare') ?? null))
+      .catch(() => {
+        /* liniște — folosim fallback-ul */
+      });
+    return () => c.abort();
+  }, [token]);
 
   const intrari = useMemo(() => log ?? [], [log]);
 
   // Ultima încercare pentru fiecare (adresă + subiect). O retrimitere reușită
   // „repară" un eșec vechi, deci contorul de eșecuri se uită doar la ultima stare.
-  const ultimele = useMemo(() => {
-    const m = new Map<string, AdminEmailLogEntry>();
-    // `intrari` vine deja cele mai noi primele — prima apariție e cea mai recentă.
-    for (const e of intrari) if (!m.has(cheie(e))) m.set(cheie(e), e);
-    return m;
-  }, [intrari]);
+  const ultimele = useMemo(() => ultimaIncercarePerCheie(intrari), [intrari]);
 
   const nelivrate = useMemo(
     () => [...ultimele.values()].filter((e) => e.status === 'esuat'),
@@ -90,17 +94,14 @@ export const AdminDeliveryTab = ({
    *  • `confirm`/`promoted` — se re-declanșează din fluxul lor, nu de aici.
    * Pentru astea reîncercarea corectă e din fluxul propriu, nu o retrimitere oarbă.
    */
-  const retrimisibile = useMemo(
-    () => nelivrate.filter((e) => e.mod === 'admin'),
-    [nelivrate]
-  );
+  const retrimisibile = useMemo(() => emailuriRetrimisibile(nelivrate), [nelivrate]);
   const nerezolvabile = nelivrate.length - retrimisibile.length;
 
   // Participanți care nu apar deloc în jurnal — n-au primit niciun email.
-  const fataDeEmail = useMemo(() => {
-    const cuEmail = new Set(intrari.map((e) => e.email.toLowerCase()));
-    return participanti.filter((p) => !cuEmail.has(p.email.toLowerCase()));
-  }, [intrari, participanti]);
+  const fataDeEmail = useMemo(
+    () => participantiFaraEmail(participanti, intrari),
+    [participanti, intrari]
+  );
 
   const nrTrimise = intrari.filter((e) => e.status === 'trimis').length;
   const destinatari = new Set(intrari.map((e) => e.email.toLowerCase())).size;
@@ -151,6 +152,54 @@ export const AdminDeliveryTab = ({
     }
   };
 
+  // Retrimite confirmarea către UN participant, la adresa lui curentă (după ce ai
+  // corectat un email greșit). Merge prin modul `admin` (spre deosebire de `confirm`,
+  // care are fereastră de 15 min) și apare în jurnal.
+  const CONF_FALLBACK = {
+    subiect: 'Confirmare înscriere — Run + Lift',
+    text_email:
+      'Salut, {prenume}!\n\nÎnscrierea ta la Run + Lift este confirmată. Ne vedem la start!\n\nEchipa Run + Lift',
+  };
+
+  const trimiteConfirmare = async (p: AdminRegistration) => {
+    if (sendingId || readOnly) return;
+    const tpl = confTpl ?? CONF_FALLBACK;
+    const r = normalizeParticipant(p);
+    const data = new Date(p.created_at).toLocaleDateString('ro-RO');
+    setSendingId(p.id);
+    try {
+      const res = await sendBulkEmail(
+        token,
+        [
+          {
+            to: p.email,
+            subject: fillTemplate(tpl.subiect, r, data),
+            text: fillTemplate(tpl.text_email, r, data),
+          },
+        ],
+        { audience: 'participanti', editie }
+      );
+      showToast({
+        kind: res.sent > 0 ? 'success' : 'error',
+        msg:
+          res.sent > 0
+            ? `Confirmare trimisă către ${p.email}.`
+            : 'Nu s-a putut trimite. Verifică adresa și încearcă din nou.',
+      });
+      onRefresh();
+    } catch (err) {
+      showToast({
+        kind: 'error',
+        msg:
+          err instanceof InvalidTokenError
+            ? 'Sesiune expirată — reautentifică-te.'
+            : 'Trimiterea nu a mers. Încearcă din nou.',
+      });
+    } finally {
+      setSendingId(null);
+    }
+  };
+
   const exportCsv = () => {
     // Filtrul „fără niciun email" arată participanți, nu rânduri de jurnal —
     // exportul trebuie să scoată exact ce e pe ecran.
@@ -177,9 +226,7 @@ export const AdminDeliveryTab = ({
             e.provider_status === null ? '' : String(e.provider_status),
             e.status === 'esuat' ? motiv(e) : '',
           ]);
-    const csv = [header, ...lines]
-      .map((cells) => cells.map((c) => `"${c.replace(/"/g, '""')}"`).join(','))
-      .join('\n');
+    const csv = toCsv([header, ...lines]);
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -301,7 +348,19 @@ export const AdminDeliveryTab = ({
                   {new Date(p.created_at).toLocaleDateString('ro-RO')}
                 </span>
                 <span className="admin-cell-actions">
-                  <span className="admin-mail-badge niciunul">niciun email</span>
+                  {readOnly ? (
+                    <span className="admin-mail-badge niciunul">niciun email</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="admin-btn-outline"
+                      onClick={() => trimiteConfirmare(p)}
+                      disabled={sendingId !== null}
+                      title={`Trimite confirmarea către ${p.email}`}
+                    >
+                      {sendingId === p.id ? 'Se trimite…' : 'Trimite confirmarea'}
+                    </button>
+                  )}
                 </span>
               </div>
             ))}

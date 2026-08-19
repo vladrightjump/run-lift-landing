@@ -5,11 +5,20 @@ import {
   listEmailTemplates,
   InvalidTokenError,
 } from '../lib/adminApi';
-import type { AdminRegistration, AdminLaunchSignup, AdminEmailTemplate } from '../lib/adminApi';
+import type {
+  AdminRegistration,
+  AdminLaunchSignup,
+  AdminWaitlistEntry,
+  AdminEmailTemplate,
+} from '../lib/adminApi';
+import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
+import type { Audience, Recipient } from './emailAudience';
 
 type Props = {
   token: string;
   rows: AdminRegistration[];
+  /** Lista de așteptare a evenimentului (event_waitlist) a ediției deschise. */
+  waitlist: AdminWaitlistEntry[];
   /** Ediția deschisă în backoffice — ajunge în jurnalul de livrare. */
   editie: number;
   /** Ediție de arhivă: nu mai trimitem emailuri în numele ei. */
@@ -19,25 +28,6 @@ type Props = {
 };
 
 type Template = { nume: string; subiect: string; corp: string };
-type Audience = 'participanti' | 'asteptare';
-
-// Destinatar normalizat — funcționează atât pentru participanți cât și pentru
-// lista de așteptare (launch_notifications).
-type Recipient = {
-  id: string;
-  nume: string;
-  prenume: string;
-  email: string;
-  telefon: string;
-  created_at: string;
-  /**
-   * S-a dezabonat prin linkul din email. Broadcast-ul îi filtrează pe server
-   * (`edition2_recipients`/`waitlist_recipients`), dar trimiterea manuală din
-   * backoffice merge prin modul `admin`, care NU aplică filtrul — deci îi
-   * excludem aici, altfel ar primi exact ce au cerut să nu mai primească.
-   */
-  dezabonat: boolean;
-};
 
 // Template-urile de trimitere în masă stau acum în DB (tabelul `email_templates`)
 // și se editează din tab-ul „Șabloane de email". Aici le doar încărcăm și le
@@ -57,29 +47,10 @@ const FREE_TEMPLATE: Template = { nume: 'Mesaj liber', subiect: '', corp: '' };
 
 const VARIABLES = ['{nume}', '{prenume}', '{telefon}', '{email}', '{data_inscrierii}'] as const;
 
-const normalizeParticipant = (r: AdminRegistration): Recipient => ({
-  id: r.id,
-  nume: r.nume,
-  prenume: r.nume.split(/\s+/)[0] ?? '',
-  email: r.email,
-  telefon: r.telefon,
-  created_at: r.created_at,
-  dezabonat: r.dezabonat_la !== null,
-});
-
-const normalizeLaunch = (r: AdminLaunchSignup): Recipient => ({
-  id: r.id,
-  nume: `${r.prenume} ${r.nume}`.trim(),
-  prenume: r.prenume,
-  email: r.email,
-  telefon: r.telefon,
-  created_at: r.created_at,
-  dezabonat: r.dezabonat_la !== null,
-});
-
 export const AdminEmailTab = ({
   token,
   rows,
+  waitlist,
   editie,
   readOnly,
   formatDate,
@@ -133,8 +104,10 @@ export const AdminEmailTab = ({
 
   const templates =
     audience === 'participanti' ? buildTemplates(PARTICIPANT_KEYS) : buildTemplates(WAITLIST_KEYS);
-  const baseRows: Recipient[] =
-    audience === 'participanti' ? rows.map(normalizeParticipant) : launchRows.map(normalizeLaunch);
+
+  const sources = { participants: rows, eventWaitlist: waitlist, launch: launchRows };
+  const totiRecipients = recipientsFor('toti', sources);
+  const baseRows: Recipient[] = recipientsFor(audience, sources);
 
   const subjectCur = subject ?? templates[0].subiect;
   const bodyCur = body ?? templates[0].corp;
@@ -149,15 +122,17 @@ export const AdminEmailTab = ({
   const pvIdx = Math.min(previewIdx, Math.max(0, recipients.length - 1));
   const pv = recipients.length ? recipients[pvIdx] : null;
 
-  const audienceLabel = audience === 'participanti' ? 'participanți' : 'din lista de așteptare';
+  const audienceLabel =
+    audience === 'participanti'
+      ? 'participanți'
+      : audience === 'eveniment'
+      ? 'lista de așteptare a evenimentului'
+      : audience === 'lansare'
+      ? 'lista „Anunță-mă la lansare"'
+      : 'toți (participanți + liste de așteptare)';
 
   const fill = (text: string, r: Recipient): string =>
-    text
-      .replace(/\{nume\}/g, r.nume)
-      .replace(/\{prenume\}/g, r.prenume || r.nume.split(/\s+/)[0] || '')
-      .replace(/\{telefon\}/g, r.telefon)
-      .replace(/\{email\}/g, r.email)
-      .replace(/\{data_inscrierii\}/g, formatDate(r.created_at));
+    fillTemplate(text, r, formatDate(r.created_at));
 
   const switchAudience = (a: Audience) => {
     if (a === audience) return;
@@ -226,7 +201,10 @@ export const AdminEmailTab = ({
     }));
     setSending(true);
     try {
-      const res = await sendBulkEmail(token, messages, { audience, editie });
+      const res = await sendBulkEmail(token, messages, {
+        audience: audientaLog(audience),
+        editie,
+      });
       if (res.failed > 0) {
         showToast({
           kind: res.sent > 0 ? 'success' : 'error',
@@ -269,10 +247,24 @@ export const AdminEmailTab = ({
           </button>
           <button
             type="button"
-            className={`admin-email-template${audience === 'asteptare' ? ' active' : ''}`}
-            onClick={() => switchAudience('asteptare')}
+            className={`admin-email-template${audience === 'eveniment' ? ' active' : ''}`}
+            onClick={() => switchAudience('eveniment')}
           >
-            Listă de așteptare ({launchRows.length})
+            Listă de așteptare ({waitlist.length})
+          </button>
+          <button
+            type="button"
+            className={`admin-email-template${audience === 'lansare' ? ' active' : ''}`}
+            onClick={() => switchAudience('lansare')}
+          >
+            Anunță-mă la lansare ({launchRows.length})
+          </button>
+          <button
+            type="button"
+            className={`admin-email-template${audience === 'toti' ? ' active' : ''}`}
+            onClick={() => switchAudience('toti')}
+          >
+            Toți ({totiRecipients.length})
           </button>
         </div>
 
@@ -283,7 +275,13 @@ export const AdminEmailTab = ({
             onChange={toggleAll}
           />
           <span className="admin-email-all-label">
-            {audience === 'participanti' ? 'Toți participanții' : 'Toată lista de așteptare'}
+            {audience === 'participanti'
+              ? 'Toți participanții'
+              : audience === 'eveniment'
+              ? 'Toată lista de așteptare'
+              : audience === 'lansare'
+              ? 'Toată lista de lansare'
+              : 'Toți (fără dubluri)'}
             {nrDezabonati > 0 && (
               <span className="admin-email-unsub-note">
                 {' '}
@@ -318,7 +316,11 @@ export const AdminEmailTab = ({
             <div className="admin-empty">
               {audience === 'participanti'
                 ? 'Niciun participant încă.'
-                : 'Nimeni pe lista de așteptare încă.'}
+                : audience === 'eveniment'
+                ? 'Nimeni pe lista de așteptare a evenimentului.'
+                : audience === 'lansare'
+                ? 'Nimeni pe lista de lansare încă.'
+                : 'Nicio adresă încă.'}
             </div>
           )}
         </div>

@@ -67,10 +67,10 @@ export const useLaunchForm = (sursa: SursaInscriere = 'lansare') => {
       setErrors(errs);
       return { kind: 'invalid', message: LAUNCH_MESSAGES.validation };
     }
-    if (!navigator.onLine) {
-      return { kind: 'offline', message: LAUNCH_MESSAGES.offline };
-    }
 
+    // NU blocăm preemptiv pe `navigator.onLine`: pe unele rețele/VPN raportează greșit
+    // „offline" și ar refuza trimiterea (același fals-offline scos din formularul de
+    // înscriere). Încercăm submit-ul; un eșec real de rețea e prins în catch.
     setErrors({});
     setState('loading');
     submittingRef.current = true;

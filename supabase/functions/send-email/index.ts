@@ -180,7 +180,8 @@ function renderHtml(
 async function sendOne(
   m: Message,
   badge: string,
-  unsubscribeUrl?: string
+  unsubPageUrl?: string,
+  unsubApiUrl?: string
 ): Promise<{ ok: boolean; status: number; body: string }> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -189,11 +190,12 @@ async function sendOne(
       from: MAIL_FROM,
       to: m.to,
       subject: m.subject,
-      text: unsubscribeUrl ? `${m.text}\n\n—\nDezabonare: ${unsubscribeUrl}` : m.text,
-      html: renderHtml(m.subject, m.text, badge, unsubscribeUrl),
-      // List-Unsubscribe: providerii afișează butonul nativ + îmbunătățește deliverability.
-      ...(unsubscribeUrl
-        ? { headers: { "List-Unsubscribe": `<${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } }
+      text: unsubPageUrl ? `${m.text}\n\n—\nDezabonare: ${unsubPageUrl}` : m.text,
+      html: renderHtml(m.subject, m.text, badge, unsubPageUrl),
+      // List-Unsubscribe pointează spre endpoint-ul care ONORează POST-ul one-click (RFC 8058):
+      // funcția Edge `unsubscribe`. Linkul vizibil din email rămâne pagina brandată.
+      ...(unsubApiUrl
+        ? { headers: { "List-Unsubscribe": `<${unsubApiUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } }
         : {}),
     }),
   });
@@ -442,11 +444,14 @@ Deno.serve(async (req: Request) => {
     const errors: { to: string; status: number }[] = [];
     const logs: LogRow[] = [];
     for (const r of recipients) {
-      const unsubUrl = r.token_unsub
+      const unsubPage = r.token_unsub
         ? `https://parktraining.fit/unsubscribe?token=${r.token_unsub}`
         : undefined;
+      const unsubApi = r.token_unsub
+        ? `${SUPABASE_URL}/functions/v1/unsubscribe?token=${r.token_unsub}`
+        : undefined;
       const body = fillVars(text, r.nume, r.email);
-      const res = await sendOne({ to: r.email, subject, text: body }, badge, unsubUrl);
+      const res = await sendOne({ to: r.email, subject, text: body }, badge, unsubPage, unsubApi);
       if (res.ok) sent++;
       else errors.push({ to: r.email, status: res.status });
       logs.push({

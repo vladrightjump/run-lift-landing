@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toCsv } from '../lib/csv';
 import {
   addRegistration,
   updateRegistration,
@@ -429,9 +430,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       r.email,
       new Date(r.created_at).toLocaleString('ro-RO'),
     ]);
-    const csv = [header, ...lines]
-      .map((cells) => cells.map((c) => `"${c.replace(/"/g, '""')}"`).join(','))
-      .join('\n');
+    const csv = toCsv([header, ...lines]);
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -527,6 +526,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           <AdminEmailTab
             token={token}
             rows={all}
+            waitlist={waitAll}
             editie={editie ?? CURRENT_EDITION}
             readOnly={arhiva}
             formatDate={formatDate}
