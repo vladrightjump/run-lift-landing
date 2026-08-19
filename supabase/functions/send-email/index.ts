@@ -19,8 +19,15 @@
 // schimbi șabloanele + badge-ul din /admin (sau din DB).
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+// Cheia pentru apelurile RPC server-side. `log_emails` (jurnalul de livrare) e
+// grant-uita DOAR pentru service_role. Pe proiectele cu chei noi
+// (sb_publishable/sb_secret), env-ul legacy SUPABASE_SERVICE_ROLE_KEY poate
+// lipsi -> functia cadea pe cheia anon si logarea esua tacut. RUNLIFT_SERVICE_KEY
+// (secret manual = sb_secret_...) are prioritate; restul raman fallback compatibil.
 const SERVICE_KEY =
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
+  Deno.env.get("RUNLIFT_SERVICE_KEY") ??
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  Deno.env.get("SUPABASE_ANON_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const MAIL_FROM = Deno.env.get("MAIL_FROM") ?? "Run + Lift <noreply@parktraining.fit>";
 // Tabelele/funcțiile Run + Lift stau în schema `runlift` a proiectului ironworks-gym.
