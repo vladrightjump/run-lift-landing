@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { HERO_KICKER, EVENT_WHEN, EVENT_WHERE, EVENT_START_TIME } from '../src/content/format';
-import { LAUNCH_DATE } from '../src/lib/config';
+import { LAUNCH_DATE, TOTAL_SLOTS } from '../src/lib/config';
 
 /**
  * Landing-ul ediției curente („Hyrox Trial") — conținut + logica de reveal.
@@ -117,7 +117,7 @@ test.describe('Landing — lista de participanți (din public_stats)', () => {
 
     await expect(page.getByText('Vlad F.')).toBeVisible();
     await expect(page.getByText('Ana P.')).toBeVisible();
-    await expect(page.getByText('2 / 20')).toBeVisible();
+    await expect(page.getByText(`2 / ${TOTAL_SLOTS}`)).toBeVisible();
   });
 
   test('gol → mesajul „fii primul"', async ({ page }) => {

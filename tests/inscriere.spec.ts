@@ -51,7 +51,7 @@ const fillValid = async (page: Page) => {
 
 const submitBtn = (page: Page) => page.getByRole('button', { name: /trimite înscrierea/i });
 
-test.describe('Înscriere — formular ediția 4', () => {
+test.describe('Înscriere — formular ediția curentă', () => {
   test('formularul e vizibil cu buton activ „Trimite înscrierea"', async ({ page }) => {
     await fixClock(page);
     await mockStats(page, 0);
@@ -86,7 +86,7 @@ test.describe('Înscriere — formular ediția 4', () => {
     await expect(page.getByText(/te-ai înregistrat/i)).toBeVisible();
   });
 
-  test('submit valid → trimite ediția 4, schema runlift și data compusă din selectoare', async ({
+  test('submit valid → trimite ediția curentă, schema runlift și data compusă din selectoare', async ({
     page,
   }) => {
     await fixClock(page);
@@ -166,11 +166,11 @@ test.describe('Înscriere — formular ediția 4', () => {
     await expect(page.getByText(/ceva n-a mers/i)).toBeVisible();
   });
 
-  test('sold-out (20/20) → butonul devine „listă de așteptare" și scrie în event_waitlist', async ({
+  test('sold-out (la capacitate) → butonul devine „listă de așteptare" și scrie în event_waitlist', async ({
     page,
   }) => {
     await fixClock(page);
-    await mockStats(page, 20);
+    await mockStats(page, EDITION.slots.total);
     await mockEmail(page);
 
     let waitlistHit = false;
@@ -202,7 +202,7 @@ test.describe('Înscriere — formular ediția 4', () => {
     await mockStats(page, 0);
     await page.goto('/?preview=landing');
 
-    // Harta embed a locației (Parcul Râșcani) e prezentă.
+    // Harta embed a locației (Scările de Granit) e prezentă.
     await expect(page.locator('iframe[title*="hartă"]')).toHaveAttribute('src', /maps\.google\.com/);
 
     // Linkul „Deschide în Google Maps" duce chiar la Google Maps, într-un tab nou.

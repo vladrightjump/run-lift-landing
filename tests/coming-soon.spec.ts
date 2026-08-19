@@ -2,9 +2,10 @@ import { test, expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import { META } from '../src/content/meta';
 import { LAUNCH_DATE } from '../src/lib/config';
+import { LAUNCH_EDITION_ORDINAL } from '../src/content/format';
 
 /**
- * Pagina Coming Soon — Ediția a treia: countdown + formular „Anunță-mă la lansare".
+ * Pagina Coming Soon — ediția curentă de lansare: countdown + formular „Anunță-mă la lansare".
  * Testele mock-uiesc endpointul Supabase, deci nu scriu în baza de date reală.
  */
 
@@ -45,8 +46,12 @@ test.describe('Coming Soon — ecran', () => {
     await expect(title).toContainText('Soon');
 
     // Regex case-insensitive: CSS-ul aplică text-transform: uppercase pe badge.
-    await expect(page.locator('.cs-badge')).toHaveText(/antrenament nou · ediția a patra/i);
-    await expect(page.locator('.cs-brand-meta')).toHaveText(/run \+ lift · ediția a patra/i);
+    await expect(page.locator('.cs-badge')).toHaveText(
+      new RegExp(`antrenament nou · ediția ${LAUNCH_EDITION_ORDINAL}`, 'i')
+    );
+    await expect(page.locator('.cs-brand-meta')).toHaveText(
+      new RegExp(`run \\+ lift · ediția ${LAUNCH_EDITION_ORDINAL}`, 'i')
+    );
 
     const units = page.locator('.cs-cd-unit');
     await expect(units).toHaveCount(4);
@@ -99,7 +104,7 @@ test.describe('Coming Soon — ecran', () => {
     expect(overflow).toBeLessThanOrEqual(1);
   });
 
-  test('titlul paginii și meta description reflectă evenimentul (8 august)', async ({ page }) => {
+  test('titlul paginii și meta description reflectă evenimentul', async ({ page }) => {
     // Meta e statică în index.html și reprezintă evenimentul ediției curente,
     // fiindcă asta se distribuie ca preview de share.
     await page.goto('/?preview=soon');
