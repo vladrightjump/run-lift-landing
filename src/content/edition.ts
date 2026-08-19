@@ -17,11 +17,11 @@
  */
 export const EDITION = {
   /** Ediția evenimentului (coloana `editie` + `public_stats`). */
-  number: 4,
+  number: 5,
   /** Ediția pentru „Anunță-mă la lansare" (de regulă egală cu `number`). */
-  launchNumber: 4,
+  launchNumber: 5,
 
-  /** Branding. `ordinal(number)` derivă „a patra" în `content/format.ts`. */
+  /** Branding. `ordinal(number)` derivă „a cincea" în `content/format.ts`. */
   brand: 'Run + Lift',
   eventName: 'Hyrox Trial',
   concept: 'Outdoor Adaptive',
@@ -31,28 +31,28 @@ export const EDITION = {
   /** Fusul orar al evenimentului (Chișinău, UTC+3 vara). */
   tz: '+03:00',
   /** Startul cursei — local, fără offset. */
-  start: '2026-08-08T06:30:00',
+  start: '2026-08-22T07:00:00',
   /** Durata (h) — pentru EVENT_END_DATE (start + durată). */
   durationHours: 6,
   /** Ora de check-in (afișată în emailuri/landing). */
-  checkinFrom: '06:00',
+  checkinFrom: '06:30',
   /** Până când se poate înscrie cineva — local, fără offset. */
-  registrationDeadline: '2026-08-08T06:30:00',
+  registrationDeadline: '2026-08-22T07:00:00',
   /** Momentul anunțului de lansare (comutarea Coming Soon → landing) — local. */
-  launchAt: '2026-08-29T18:00:00',
+  launchAt: '2026-08-19T12:00:00',
   /** `true` → homepage-ul arată Coming Soon; `false` → landing (înscrieri deschise). */
-  showComingSoon: true,
+  showComingSoon: false,
 
   venue: {
-    name: 'Parcul Râșcani',
-    city: 'Chișinău',
-    // Căutarea Google Maps (pinul „Новая спортплощадка" din Parcul Râșcani).
-    mapQuery:
-      '%D0%9D%D0%BE%D0%B2%D0%B0%D1%8F%20%D1%81%D0%BF%D0%BE%D1%80%D1%82%D0%BF%D0%BB%D0%BE%D1%89%D0%B0%D0%B4%D0%BA%D0%B0%20Chi%C8%99in%C4%83u',
+    name: 'Scările de Granit',
+    city: 'Valea Morilor',
+    // Căutarea Google Maps — pinul „Granit Stairs" (scările de granit din Valea
+    // Morilor). Coordonate exacte, ca embed-ul și direcțiile să cadă fix pe punct.
+    mapQuery: '47.0182357,28.8213041',
   },
 
   slots: {
-    total: 20,
+    total: 40,
     waitlist: 10,
     /** Fallback static pentru „locuri ocupate" dacă `public_stats` nu răspunde. */
     occupiedFallback: 0,
@@ -65,7 +65,7 @@ export const EDITION = {
   },
 
   /** Bump la fiecare ediție ca share-preview-ul (og.png) să nu vină din cache. */
-  ogImageVersion: 4,
+  ogImageVersion: 5,
 } as const;
 
 export type Edition = typeof EDITION;
