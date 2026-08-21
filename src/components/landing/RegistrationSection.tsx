@@ -5,6 +5,7 @@ import { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } from '../../content/format';
 import type { FieldName } from '../../lib/validation';
 import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
+import { BirthDateField } from './BirthDateField';
 import { sectionNum, sectionTitle } from './shared';
 
 const SUMMARY_ITEMS = [
@@ -14,13 +15,6 @@ const SUMMARY_ITEMS = [
   'Deschis oricui, indiferent de nivel',
   'Adu cu tine: apă pentru hidratare și bună dispoziție',
 ];
-
-const MONTHS = [
-  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
-  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
-];
-// Ani permiși: de la 14 ani (2012) în urmă până la 100 (1926).
-const BIRTH_YEARS = Array.from({ length: 2012 - 1926 + 1 }, (_, i) => 2012 - i);
 
 const label: CSSProperties = {
   fontSize: 12,
@@ -34,29 +28,13 @@ const inputStyle: CSSProperties = {
   border: '1px solid var(--e3-border)',
   color: 'var(--e3-text)',
   fontFamily: 'Archivo, sans-serif',
-  fontSize: 15,
+  // 16px, nu 15: sub 16 Safari pe iOS face zoom la focus și aruncă layoutul
+  // în lateral la jumătatea formularului.
+  fontSize: 16,
   padding: '13px 14px',
   outline: 'none',
   width: '100%',
   boxSizing: 'border-box',
-};
-const selectStyle: CSSProperties = {
-  background: 'var(--e3-bg)',
-  border: '1px solid var(--e3-border)',
-  color: 'var(--e3-text)',
-  fontFamily: 'Archivo, sans-serif',
-  fontSize: 15,
-  padding: '13px 28px 13px 12px',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-  appearance: 'none',
-  cursor: 'pointer',
-  colorScheme: 'dark',
-  backgroundImage:
-    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239BA08F' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
-  backgroundRepeat: 'no-repeat',
-  backgroundPosition: 'right 10px center',
 };
 const fieldErr: CSSProperties = { fontSize: 13, color: 'var(--e3-danger)' };
 
@@ -66,9 +44,16 @@ type Props = { reg: ReturnType<typeof useRegistration>; stats: PublicStats | nul
 export const RegistrationSection = ({ reg, stats }: Props) => {
   const {
     waitlistMode, waitlistLeft, slots, isSoldOut, isWaitlistFull, showForm, closedReason,
-    phase, errors, birth, birthISO, dateErrMsg, confirmName, submittedAsWaitlist,
+    phase, errors, birthISO, dateErrMsg, confirmName, submittedAsWaitlist,
     formRef, handleSubmit, clearErrorFor, setBirth, resetForm, setErrors, setPhase,
   } = reg;
+
+  /** BirthDateField ne dă ISO; `useRegistration` ține {d,m,y}. */
+  const setBirthFromISO = (iso: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    setBirth(m ? { d: String(Number(m[3])), m: String(Number(m[2])), y: m[1] } : { d: '', m: '', y: '' });
+  };
+
   return (
       <section
         id="inscriere"
@@ -228,64 +213,15 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                     />
                     {errors.email && <span style={fieldErr}>Adresa de email nu e validă.</span>}
                   </label>
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    <span style={label}>Data nașterii *</span>
-                    <input type="hidden" name="dataNasterii" value={birthISO} readOnly />
-                    <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.6fr 1.1fr', gap: 10 }}>
-                      <select
-                        aria-label="Ziua nașterii"
-                        className="e3-input"
-                        value={birth.d}
-                        onChange={(e) => {
-                          setBirth((b) => ({ ...b, d: e.target.value }));
-                          clearErrorFor('dataNasterii');
-                        }}
-                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                      >
-                        <option value="">Zi</option>
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                          <option key={d} value={String(d)}>
-                            {d}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        aria-label="Luna nașterii"
-                        className="e3-input"
-                        value={birth.m}
-                        onChange={(e) => {
-                          setBirth((b) => ({ ...b, m: e.target.value }));
-                          clearErrorFor('dataNasterii');
-                        }}
-                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                      >
-                        <option value="">Luna</option>
-                        {MONTHS.map((name, i) => (
-                          <option key={name} value={String(i + 1)}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        aria-label="Anul nașterii"
-                        className="e3-input"
-                        value={birth.y}
-                        onChange={(e) => {
-                          setBirth((b) => ({ ...b, y: e.target.value }));
-                          clearErrorFor('dataNasterii');
-                        }}
-                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                      >
-                        <option value="">An</option>
-                        {BIRTH_YEARS.map((y) => (
-                          <option key={y} value={String(y)}>
-                            {y}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {errors.dataNasterii && <span style={fieldErr}>{dateErrMsg}</span>}
-                  </div>
+                  <BirthDateField
+                    value={birthISO}
+                    onChange={(iso) => {
+                      setBirthFromISO(iso);
+                      clearErrorFor('dataNasterii');
+                    }}
+                    error={!!errors.dataNasterii}
+                    errMsg={dateErrMsg}
+                  />
                 </div>
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-muted)', textWrap: 'pretty' }}>
                   Participanții trebuie să aibă minim 14 ani în ziua evenimentului. Stațiile și greutățile sunt
