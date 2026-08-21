@@ -4,10 +4,12 @@ import { HERO_POSTER, heroVideoSrc } from '../../lib/media';
 type Props = {
   /** Deschide formularul ca overlay. Fără el, CTA-ul navighează la /inscriere. */
   onInscrie?: () => void;
+  /** `false` ascunde CTA-ul „Rezervă-ți locul" (fereastra din ziua cursei). */
+  showCta?: boolean;
 };
 
 /** Hero: kicker + titlul „Hyrox / Trial." + rezumat + CTA. */
-export const Hero = ({ onInscrie }: Props) => {
+export const Hero = ({ onInscrie, showCta = true }: Props) => {
   return (
       <section
         style={{
@@ -105,29 +107,31 @@ export const Hero = ({ onInscrie }: Props) => {
               Cursă în stil HYROX în aer liber: alergare combinată cu stații funcționale — contra
               cronometru, în ritmul tău. Stațiile și greutățile se adaptează nivelului tău.
             </p>
-            <a
-              href="/inscriere"
-              onClick={(e) => {
-                if (onInscrie) {
-                  e.preventDefault();
-                  onInscrie();
-                }
-              }}
-              className="e3-cta-lg"
-              style={{
-                display: 'inline-block',
-                background: 'var(--e3-accent)',
-                color: 'var(--e3-bg)',
-                fontFamily: 'Anton, sans-serif',
-                fontSize: 20,
-                letterSpacing: 1.5,
-                textTransform: 'uppercase',
-                padding: '18px 36px',
-                textDecoration: 'none',
-              }}
-            >
-              Rezervă-ți locul
-            </a>
+            {showCta && (
+              <a
+                href="/inscriere"
+                onClick={(e) => {
+                  if (onInscrie) {
+                    e.preventDefault();
+                    onInscrie();
+                  }
+                }}
+                className="e3-cta-lg"
+                style={{
+                  display: 'inline-block',
+                  background: 'var(--e3-accent)',
+                  color: 'var(--e3-bg)',
+                  fontFamily: 'Anton, sans-serif',
+                  fontSize: 20,
+                  letterSpacing: 1.5,
+                  textTransform: 'uppercase',
+                  padding: '18px 36px',
+                  textDecoration: 'none',
+                }}
+              >
+                Rezervă-ți locul
+              </a>
+            )}
           </div>
         </div>
       </section>

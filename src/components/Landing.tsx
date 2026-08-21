@@ -16,12 +16,22 @@ import { SignupBanner } from './landing/SignupBanner';
 import { ParticipantsSection } from './landing/ParticipantsSection';
 import { Footer } from './landing/Footer';
 
+type Props = {
+  /**
+   * `full` (implicit) — landing-ul complet, cu înscriere.
+   * `leaderboard` — fereastra din ziua cursei: fără nicio cale spre formular,
+   * cu „cine vine" mutat imediat sub hero. Vezi `usePagePhase`.
+   */
+  mode?: 'full' | 'leaderboard';
+};
+
 /**
  * Landing-ul ediției curente („Hyrox Trial"). Compozitor subțire: leagă hookurile
  * (countdown, stats, timp, înscriere) și randează secțiunile. Logica de înscriere
  * stă în `useRegistration`; fiecare secțiune într-un fișier din `landing/`.
  */
-export const Landing = () => {
+export const Landing = ({ mode = 'full' }: Props) => {
+  const lista = mode === 'leaderboard';
   const cd = useCountdown(EVENT_DATE);
   const { stats, refresh } = useStats();
   const now = useNow(30_000);
@@ -72,14 +82,27 @@ export const Landing = () => {
       )}
 
       <SignupBanner />
-      <TopBar cd={cd} onInscrie={() => setOverlay(true)} />
-      <Hero onInscrie={() => setOverlay(true)} />
-      <FormatSection />
-      <VenueSection />
-      <RegistrationSection reg={reg} stats={stats} />
-      <ParticipantsSection stats={stats} />
+      <TopBar cd={cd} onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
+      <Hero onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
+      {lista ? (
+        // În fereastra de dinaintea startului singurul lucru care contează e
+        // cine vine — formatul și locația rămân dedesubt, pentru cine tocmai
+        // deschide harta în drum spre Valea Morilor.
+        <>
+          <ParticipantsSection stats={stats} canSignUp={false} />
+          <FormatSection />
+          <VenueSection />
+        </>
+      ) : (
+        <>
+          <FormatSection />
+          <VenueSection />
+          <RegistrationSection reg={reg} stats={stats} />
+          <ParticipantsSection stats={stats} />
+        </>
+      )}
       <Footer />
-      {overlay && (
+      {!lista && overlay && (
         <RegistrationOverlay reg={reg} stats={stats} onClose={() => setOverlay(false)} />
       )}
     </div>
