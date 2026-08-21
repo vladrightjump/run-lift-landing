@@ -9,6 +9,7 @@
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/despre-noi", "destination": "/index.html" },
     { "source": "/confirmare", "destination": "/index.html" },
+    { "source": "/inscriere", "destination": "/index.html" },
     { "source": "/unsubscribe", "destination": "/index.html" }
   ],
   "headers": [

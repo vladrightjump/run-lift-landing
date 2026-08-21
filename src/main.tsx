@@ -4,6 +4,7 @@ import { App } from './App';
 import { AdminApp } from './admin/AdminApp';
 import { DespreNoi } from './components/DespreNoi';
 import { Confirmare } from './components/Confirmare';
+import { Inscriere } from './components/Inscriere';
 import { Unsubscribe } from './components/Unsubscribe';
 import { installGlobalMonitoring } from './lib/monitoring';
 import './index.css';
@@ -16,7 +17,8 @@ const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('Root element #root not found');
 
 // Pagini fără router: /admin → backoffice, /despre-noi → prezentare + formular,
-// /confirmare → confirmarea înscrierii din email, /unsubscribe → dezabonare, restul → landing.
+// /confirmare → confirmarea înscrierii din email, /inscriere → formularul singur
+// (linkul din bio/story), /unsubscribe → dezabonare, restul → landing.
 const path = window.location.pathname.replace(/\/+$/, '');
 
 const page =
@@ -26,6 +28,8 @@ const page =
     <DespreNoi />
   ) : path === '/confirmare' ? (
     <Confirmare />
+  ) : path === '/inscriere' ? (
+    <Inscriere />
   ) : path === '/unsubscribe' ? (
     <Unsubscribe />
   ) : (
