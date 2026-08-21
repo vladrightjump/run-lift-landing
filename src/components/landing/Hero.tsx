@@ -1,8 +1,13 @@
 import { HERO_KICKER } from '../../content/format';
 import { HERO_POSTER, heroVideoSrc } from '../../lib/media';
 
+type Props = {
+  /** Deschide formularul ca overlay. Fără el, CTA-ul navighează la /inscriere. */
+  onInscrie?: () => void;
+};
+
 /** Hero: kicker + titlul „Hyrox / Trial." + rezumat + CTA. */
-export const Hero = () => {
+export const Hero = ({ onInscrie }: Props) => {
   return (
       <section
         style={{
@@ -101,7 +106,13 @@ export const Hero = () => {
               cronometru, în ritmul tău. Stațiile și greutățile se adaptează nivelului tău.
             </p>
             <a
-              href="#inscriere"
+              href="/inscriere"
+              onClick={(e) => {
+                if (onInscrie) {
+                  e.preventDefault();
+                  onInscrie();
+                }
+              }}
               className="e3-cta-lg"
               style={{
                 display: 'inline-block',

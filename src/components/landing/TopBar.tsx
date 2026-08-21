@@ -1,10 +1,14 @@
 import { EVENT_META } from '../../content/format';
 import { useCountdown } from '../../hooks/useCountdown';
 
-type Props = { cd: ReturnType<typeof useCountdown> };
+type Props = {
+  cd: ReturnType<typeof useCountdown>;
+  /** Deschide formularul ca overlay. Fără el, CTA-ul navighează la /inscriere. */
+  onInscrie?: () => void;
+};
 
 /** Antetul sticky: brand, countdown „start în" și acțiuni. */
-export const TopBar = ({ cd }: Props) => {
+export const TopBar = ({ cd, onInscrie }: Props) => {
   return (
       <header
         style={{
@@ -101,7 +105,13 @@ export const TopBar = ({ cd }: Props) => {
             Despre noi
           </a>
           <a
-            href="#inscriere"
+            href="/inscriere"
+            onClick={(e) => {
+              if (onInscrie) {
+                e.preventDefault();
+                onInscrie();
+              }
+            }}
             className="e3-cta"
             style={{
               display: 'inline-block',

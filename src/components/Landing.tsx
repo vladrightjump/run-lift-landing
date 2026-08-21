@@ -11,6 +11,7 @@ import { Hero } from './landing/Hero';
 import { FormatSection } from './landing/FormatSection';
 import { VenueSection } from './landing/VenueSection';
 import { RegistrationSection } from './landing/RegistrationSection';
+import { RegistrationOverlay } from './landing/RegistrationOverlay';
 import { ParticipantsSection } from './landing/ParticipantsSection';
 import { Footer } from './landing/Footer';
 
@@ -25,6 +26,9 @@ export const Landing = () => {
   const now = useNow(30_000);
 
   // Toast propriu (vizual specific landing-ului). showToast e dat înscrierii.
+  // Formularul ca overlay: CTA-urile îl deschid pe loc, fără să piardă pagina.
+  const [overlay, setOverlay] = useState(false);
+
   const [toast, setToast] = useState<{ kind: ToastKind; msg: string } | null>(null);
   const toastTimerRef = useRef<number | undefined>(undefined);
   const showToast = (kind: ToastKind, msg: string) => {
@@ -66,13 +70,16 @@ export const Landing = () => {
         </div>
       )}
 
-      <TopBar cd={cd} />
-      <Hero />
+      <TopBar cd={cd} onInscrie={() => setOverlay(true)} />
+      <Hero onInscrie={() => setOverlay(true)} />
       <FormatSection />
       <VenueSection />
       <RegistrationSection reg={reg} stats={stats} />
       <ParticipantsSection stats={stats} />
       <Footer />
+      {overlay && (
+        <RegistrationOverlay reg={reg} stats={stats} onClose={() => setOverlay(false)} />
+      )}
     </div>
   );
 };
