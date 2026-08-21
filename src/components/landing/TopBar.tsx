@@ -5,10 +5,12 @@ type Props = {
   cd: ReturnType<typeof useCountdown>;
   /** Deschide formularul ca overlay. Fără el, CTA-ul navighează la /inscriere. */
   onInscrie?: () => void;
+  /** `false` ascunde butonul „Înscrie-te" (fereastra din ziua cursei). */
+  showCta?: boolean;
 };
 
 /** Antetul sticky: brand, countdown „start în" și acțiuni. */
-export const TopBar = ({ cd, onInscrie }: Props) => {
+export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
   return (
       <header
         style={{
@@ -57,6 +59,22 @@ export const TopBar = ({ cd, onInscrie }: Props) => {
               animation: 'e3-dot-blink 1.4s ease-in-out infinite',
             }}
           />
+          {/* După ora de start countdown-ul ar sta pe patru zerouri, care arată
+              a pagină stricată. Îl înlocuim cu starea „se întâmplă acum". */}
+          {cd.done ? (
+            <span
+              style={{
+                fontFamily: 'Anton, sans-serif',
+                fontSize: 19,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                color: 'var(--e3-accent)',
+              }}
+            >
+              Live acum
+            </span>
+          ) : (
+            <>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
             Start în
           </span>
@@ -85,6 +103,8 @@ export const TopBar = ({ cd, onInscrie }: Props) => {
               </span>
             ))}
           </div>
+            </>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
@@ -104,29 +124,31 @@ export const TopBar = ({ cd, onInscrie }: Props) => {
           >
             Despre noi
           </a>
-          <a
-            href="/inscriere"
-            onClick={(e) => {
-              if (onInscrie) {
-                e.preventDefault();
-                onInscrie();
-              }
-            }}
-            className="e3-cta"
-            style={{
-              display: 'inline-block',
-              background: 'var(--e3-accent)',
-              color: 'var(--e3-bg)',
-              fontWeight: 700,
-              fontSize: 13,
-              letterSpacing: 1.5,
-              textTransform: 'uppercase',
-              padding: '11px 22px',
-              textDecoration: 'none',
-            }}
-          >
-            Înscrie-te
-          </a>
+          {showCta && (
+            <a
+              href="/inscriere"
+              onClick={(e) => {
+                if (onInscrie) {
+                  e.preventDefault();
+                  onInscrie();
+                }
+              }}
+              className="e3-cta"
+              style={{
+                display: 'inline-block',
+                background: 'var(--e3-accent)',
+                color: 'var(--e3-bg)',
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+                padding: '11px 22px',
+                textDecoration: 'none',
+              }}
+            >
+              Înscrie-te
+            </a>
+          )}
         </div>
       </header>
   );

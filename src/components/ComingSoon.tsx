@@ -7,21 +7,41 @@ import type { ToastKind } from '../hooks/useToast';
 
 type Props = {
   showToast: (kind: ToastKind, msg: string) => void;
+  /** Ținta countdown-ului. Implicit: momentul anunțului (`LAUNCH_DATE`). */
+  target?: Date;
+  /**
+   * `launch` (implicit) — ecranul de dinainte de anunț, textul de azi.
+   * `next-session` — același ecran, dar numărând spre următorul antrenament;
+   * folosit de homepage după ce se termină cursa (vezi `usePagePhase`).
+   */
+  variant?: 'launch' | 'next-session';
 };
 
 const MARQUEE_ITEMS = ['Aleargă · Ridică · Rezistă', 'Antrenament nou', 'Run + Lift'];
 
-const LAUNCH_LABEL = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-}).format(LAUNCH_DATE);
+/** „19 august 2026, 12:00" — mereu pe fusul Chișinăului, nu pe cel al vizitatorului. */
+const formatMoment = (d: Date) =>
+  new Intl.DateTimeFormat('ro-RO', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Chisinau',
+  }).format(d);
 
-export const ComingSoon = ({ showToast }: Props) => {
-  const cd = useCountdown(LAUNCH_DATE);
+/** „29 august" — fără an și fără oră, pentru badge. */
+const formatZi = (d: Date) =>
+  new Intl.DateTimeFormat('ro-RO', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'Europe/Chisinau',
+  }).format(d);
+
+export const ComingSoon = ({ showToast, target = LAUNCH_DATE, variant = 'launch' }: Props) => {
+  const cd = useCountdown(target);
+  const urmatorul = variant === 'next-session';
+  const momentLabel = formatMoment(target);
   const { draft, setField, errors, state, submit, reset } = useLaunchForm();
   const [open, setOpen] = useState(false);
   const [duplicate, setDuplicate] = useState(false);
@@ -74,7 +94,9 @@ export const ComingSoon = ({ showToast }: Props) => {
           R<span className="cs-accent">+</span>L
         </span>
         <nav className="cs-nav">
-          <span className="cs-brand-meta">Run + Lift · Ediția {LAUNCH_EDITION_ORDINAL}</span>
+          <span className="cs-brand-meta">
+            {urmatorul ? 'Run + Lift · Chișinău' : `Run + Lift · Ediția ${LAUNCH_EDITION_ORDINAL}`}
+          </span>
           <a className="cs-tab" href="/despre-noi">Despre noi</a>
         </nav>
       </header>
@@ -82,23 +104,49 @@ export const ComingSoon = ({ showToast }: Props) => {
       <main className="cs-main">
         <span className="cs-badge">
           <span className="cs-badge-dot" />
-          Antrenament nou · Ediția {LAUNCH_EDITION_ORDINAL}
+          {urmatorul
+            ? `Următorul antrenament · ${formatZi(target)}`
+            : `Antrenament nou · Ediția ${LAUNCH_EDITION_ORDINAL}`}
         </span>
 
-        <h1 className="cs-title">
-          Coming<br />
-          <span className="cs-accent">Soon</span>
+        <h1 className={`cs-title${urmatorul ? ' cs-title--diacritice' : ''}`}>
+          {urmatorul ? (
+            <>
+              Ne vedem<br />
+              <span className="cs-accent">curând</span>
+            </>
+          ) : (
+            <>
+              Coming<br />
+              <span className="cs-accent">Soon</span>
+            </>
+          )}
         </h1>
 
         <p className="cs-sub">
-          {cd.done ? (
+          {urmatorul ? (
+            // Și după ce trece ținta textul rămâne adevărat: nu promite un anunț
+            // „gata", ci trimite spre lista de notificare — singurul lucru sigur
+            // până când ediția următoare e configurată.
+            cd.done ? (
+              <>
+                Următorul antrenament Run <span className="cs-accent">+</span> Lift e aproape.
+                Lasă-ți datele și te anunțăm când deschidem înscrierile.
+              </>
+            ) : (
+              <>
+                Următorul antrenament Run <span className="cs-accent">+</span> Lift e pe{' '}
+                {momentLabel}. Lasă-ți datele și te anunțăm când deschidem înscrierile.
+              </>
+            )
+          ) : cd.done ? (
             <>
               Anunțul pentru noul antrenament Run <span className="cs-accent">+</span> Lift este
               gata. Lasă-ți datele și îți scriem imediat.
             </>
           ) : (
             <>
-              Pe {LAUNCH_LABEL} anunțăm noul antrenament Run <span className="cs-accent">+</span>{' '}
+              Pe {momentLabel} anunțăm noul antrenament Run <span className="cs-accent">+</span>{' '}
               Lift. Lasă-ți datele și te anunțăm primii.
             </>
           )}

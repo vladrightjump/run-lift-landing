@@ -31,6 +31,14 @@ export const EVENT_END_DATE = new Date(
 );
 export const REGISTRATION_DEADLINE = at(EDITION.registrationDeadline);
 
+// --- Fazele zilei de eveniment ----------------------------------------------
+/** Momentul în care homepage-ul trece pe „cine vine" (start − avansul din ediție). */
+export const LEADERBOARD_DATE = new Date(
+  EVENT_DATE.getTime() - EDITION.leaderboardLeadHours * 60 * 60 * 1000
+);
+/** Ținta countdown-ului de după cursă — următorul antrenament. */
+export const NEXT_EDITION_DATE = at(EDITION.nextEditionAt);
+
 // --- Coming Soon / lansare --------------------------------------------------
 export const SHOW_COMING_SOON = EDITION.showComingSoon;
 export const LAUNCH_DATE = at(EDITION.launchAt);

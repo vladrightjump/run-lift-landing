@@ -3,10 +3,19 @@ import { getMySignups } from '../../lib/mySignups';
 import type { PublicStats } from '../../lib/supabase';
 import { sectionNum, sectionTitle } from './shared';
 
-type Props = { stats: PublicStats | null };
+type Props = {
+  stats: PublicStats | null;
+  /**
+   * `false` scoate invitația „fii primul" din starea goală — în fereastra din
+   * ziua cursei nu mai există secțiunea de înscriere spre care să trimită.
+   */
+  canSignUp?: boolean;
+  /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
+  num?: string;
+};
 
 /** Secțiunea „Cine vine": lista publică de participanți + contorul listei de așteptare. */
-export const ParticipantsSection = ({ stats }: Props) => {
+export const ParticipantsSection = ({ stats, canSignUp = true, num = '04' }: Props) => {
   const participants = stats?.participants ?? [];
   const mine = new Set(getMySignups());
   const waitlistCount = stats?.waitlist ?? 0;
@@ -14,7 +23,7 @@ export const ParticipantsSection = ({ stats }: Props) => {
       <section id="participanti" style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderTop: '1px solid var(--e3-border)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-            <span style={sectionNum}>04</span>
+            <span style={sectionNum}>{num}</span>
             <h2 style={sectionTitle}>Cine vine</h2>
           </div>
           <div
@@ -74,10 +83,16 @@ export const ParticipantsSection = ({ stats }: Props) => {
             ))}
             {stats && participants.length === 0 && (
               <div style={{ padding: '36px 22px', textAlign: 'center', fontSize: 15, color: 'var(--e3-muted)' }}>
-                Încă nimeni înscris — fii primul!{' '}
-                <a href="#inscriere" style={{ color: 'var(--e3-accent)', fontWeight: 600 }}>
-                  Înscrie-te
-                </a>
+                {canSignUp ? (
+                  <>
+                    Încă nimeni înscris — fii primul!{' '}
+                    <a href="#inscriere" style={{ color: 'var(--e3-accent)', fontWeight: 600 }}>
+                      Înscrie-te
+                    </a>
+                  </>
+                ) : (
+                  'Nicio înscriere pentru ediția asta.'
+                )}
               </div>
             )}
             {!stats && (

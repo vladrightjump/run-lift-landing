@@ -1277,6 +1277,12 @@
     color: var(--e3-text);
     animation: fade-up 0.6s ease-out 0.1s both;
   }
+  /* „Coming Soon" n-are diacritice, deci 0.92 e sigur. Un „CURÂND" pe rândul
+     al doilea urcă circumflexul peste rândul de deasupra — titlurile cu
+     diacritice primesc aer în plus. */
+  .cs-title--diacritice {
+    line-height: 1.04;
+  }
   .cs-sub {
     max-width: 520px;
     margin: 0;

@@ -6,13 +6,18 @@ const FORMAT_CARDS = [
   { t: 'REPEAT', d: 'Alternezi alergarea cu stațiile până la finish — contra cronometru.' },
 ];
 
+type Props = {
+  /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
+  num?: string;
+};
+
 /** Secțiunea „Formatul": descriere + cardurile RUN / LIFT / REPEAT. */
-export const FormatSection = () => {
+export const FormatSection = ({ num = '01' }: Props) => {
   return (
       <section style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderBottom: '1px solid var(--e3-border)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 44 }}>
-            <span style={sectionNum}>01</span>
+            <span style={sectionNum}>{num}</span>
             <h2 style={sectionTitle}>Formatul</h2>
           </div>
           <p style={{ margin: '0 0 40px', maxWidth: 620, fontSize: 17, lineHeight: 1.55, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>

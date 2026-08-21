@@ -2,6 +2,7 @@ import '../edition3.css';
 import { useEffect, useRef, useState } from 'react';
 import { EVENT_DATE, LAUNCH_DATE, SHOW_COMING_SOON } from '../lib/config';
 import { useCountdown } from '../hooks/useCountdown';
+import { usePagePhase } from '../hooks/usePagePhase';
 import { useStats } from '../hooks/useStats';
 import { useNow } from '../hooks/useNow';
 import { useRegistration } from '../hooks/useRegistration';
@@ -29,6 +30,7 @@ const SUMMARY_ITEMS = [
 export const Inscriere = () => {
   const cd = useCountdown(EVENT_DATE);
   const launch = useCountdown(LAUNCH_DATE);
+  const phase = usePagePhase();
   const { stats, refresh } = useStats();
   const now = useNow(30_000);
   const [openSummary, setOpenSummary] = useState(false);
@@ -38,9 +40,18 @@ export const Inscriere = () => {
   // Azi e inertă (showComingSoon: false), dar la o ediție viitoare care repune
   // poarta, linkul direct ar scurge înscrierile înainte de lansare.
   const comingSoon = SHOW_COMING_SOON && !launch.done;
+  // După ce se termină cursa, teaserul pentru următorul antrenament trăiește
+  // într-un singur loc — homepage-ul. Linkul direct trimite acolo.
+  //
+  // Atenție: NU redirectăm în faza „leaderboard". Homepage-ul ascunde formularul
+  // cu o oră înainte de start, dar linkul direct rămâne viu până la deadline-ul
+  // real (07:00) — e linkul de dat la fața locului. Îl închide `useRegistration`,
+  // pe deadline, nu faza.
+  const dupaCursa = phase === 'next';
+  const redirect = comingSoon || dupaCursa;
   useEffect(() => {
-    if (comingSoon) window.location.replace('/');
-  }, [comingSoon]);
+    if (redirect) window.location.replace('/');
+  }, [redirect]);
 
   const [toast, setToast] = useState<{ kind: ToastKind; msg: string } | null>(null);
   const toastTimerRef = useRef<number | undefined>(undefined);
@@ -55,7 +66,7 @@ export const Inscriere = () => {
 
   // Ieșirea stă DUPĂ toate hookurile, ca ordinea lor să nu se schimbe între
   // randări (regulile hookurilor). Redirectul de mai sus face restul.
-  if (comingSoon) return null;
+  if (redirect) return null;
 
   return (
     <div className="e3-root">
