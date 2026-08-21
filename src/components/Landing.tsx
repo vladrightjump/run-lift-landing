@@ -12,6 +12,7 @@ import { FormatSection } from './landing/FormatSection';
 import { VenueSection } from './landing/VenueSection';
 import { RegistrationSection } from './landing/RegistrationSection';
 import { RegistrationOverlay } from './landing/RegistrationOverlay';
+import { SignupBanner } from './landing/SignupBanner';
 import { ParticipantsSection } from './landing/ParticipantsSection';
 import { Footer } from './landing/Footer';
 
@@ -70,6 +71,7 @@ export const Landing = () => {
         </div>
       )}
 
+      <SignupBanner />
       <TopBar cd={cd} onInscrie={() => setOverlay(true)} />
       <Hero onInscrie={() => setOverlay(true)} />
       <FormatSection />
