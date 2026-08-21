@@ -9,6 +9,7 @@ const KEY = 'runlift_abia_inscris';
 export type JustSignedUp = { prenume: string; loc: number | null; waitlist: boolean };
 
 export const markJustSignedUp = (data: JustSignedUp): void => {
+  citit = undefined; // un flag nou trebuie să poată fi citit, chiar și fără reload
   try {
     sessionStorage.setItem(KEY, JSON.stringify(data));
   } catch {
@@ -16,8 +17,25 @@ export const markJustSignedUp = (data: JustSignedUp): void => {
   }
 };
 
+/**
+ * Rezultatul primei citiri din încărcarea CURENTĂ a paginii.
+ *
+ * `undefined` = încă nu s-a citit. Cache-ul există pentru `<StrictMode>`, care
+ * în dev montează componenta de două ori: fără el, prima montare consuma flagul
+ * din sessionStorage, iar a doua primea `null` — deci bannerul nu apărea
+ * niciodată în dev, dar apărea în producție. Un reload golește modulul, iar
+ * sessionStorage e deja șters, deci „o singură dată" rămâne adevărat.
+ */
+let citit: JustSignedUp | null | undefined;
+
 /** Citește ȘI șterge flagul: bannerul apare o singură dată, nu la fiecare reload. */
 export const consumeJustSignedUp = (): JustSignedUp | null => {
+  if (citit !== undefined) return citit;
+  citit = citesteSiSterge();
+  return citit;
+};
+
+const citesteSiSterge = (): JustSignedUp | null => {
   try {
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return null;

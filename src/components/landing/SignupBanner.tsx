@@ -16,11 +16,20 @@ export const SignupBanner = () => {
     setData(consumeJustSignedUp());
   }, []);
 
+  // Ascundem la primul scroll AL UTILIZATORULUI. Ascultătorul se pune cu
+  // întârziere pentru că aterizarea e pe `/#participanti`: browserul sare
+  // singur la ancoră, iar acel scroll automat ar închide bannerul înainte să
+  // apuce cineva să-l vadă.
   useEffect(() => {
     if (!data) return;
     const onScroll = () => setHidden(true);
-    window.addEventListener('scroll', onScroll, { passive: true, once: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const armId = window.setTimeout(() => {
+      window.addEventListener('scroll', onScroll, { passive: true, once: true });
+    }, 1200);
+    return () => {
+      window.clearTimeout(armId);
+      window.removeEventListener('scroll', onScroll);
+    };
   }, [data]);
 
   if (!data || hidden) return null;
