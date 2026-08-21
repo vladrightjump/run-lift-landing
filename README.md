@@ -23,7 +23,7 @@ run-lift-landing/
 │   │   └── meta.ts       #   title/description/OG derivate din EDITION
 │   ├── components/       # Edition3Landing, ComingSoon, Confirmare, DespreNoi, Toast
 │   ├── admin/            # backoffice /admin (login, dashboard, email, șabloane)
-│   ├── hooks/            # useCountdown, useScrollReveal, useToast, useOnlineStatus, useNow, useStats
+│   ├── hooks/            # useCountdown, usePagePhase, useScrollReveal, useToast, useOnlineStatus, useNow, useStats
 │   └── lib/
 │       ├── config.ts     # derivă din content/edition.ts (NU edita valori aici)
 │       ├── backend.ts    # config Supabase (url/key/schema) — mediu, nu ediție
@@ -65,6 +65,14 @@ botul de Telegram. Run + Lift trăiește în schema **`runlift`** (rutată prin 
 4. `npm run verify` → `git push` (Vercel publică automat).
 
 Runbook complet: **`GHID-EDITIE-NOUA.md`**. Decizii de arhitectură: **`TASK-FOR-CLAUDE.md`**.
+
+## Ziua evenimentului
+
+Homepage-ul trece singur prin trei faze, pe ceas, fără redeploy: landing normal → landing fără
+înscriere cu „cine vine" sub hero (de la `start` − `leaderboardLeadHours`) → countdown spre
+`nextEditionAt` (de la finalul cursei). Logica: `src/hooks/usePagePhase.ts`. Le vezi înainte de
+ora lor cu `?preview=leaderboard` și `?preview=next`. Detalii + pașii de după cursă:
+**`GHID-EDITIE-NOUA.md`**.
 
 ## Deploy (Vercel)
 

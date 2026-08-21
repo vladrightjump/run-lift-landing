@@ -22,6 +22,7 @@ Câmpurile uzuale de schimbat:
 - `start`, `checkinFrom`, `durationHours`, `registrationDeadline`, `launchAt` — **local, fără
   offset** (se compun cu `tz`).
 - `showComingSoon` — `true` (Faza A) / `false` (Faza B).
+- `leaderboardLeadHours`, `nextEditionAt` — fazele zilei de eveniment (vezi mai jos).
 - `venue` — dacă se schimbă locația (nume, oraș, `mapQuery` din Google Maps).
 - `slots` — dacă se schimbă capacitatea.
 - `ogImageVersion` — **incrementează** (altfel share-preview-ul vine din cache).
@@ -57,6 +58,36 @@ git add -A && git commit -m "Ediția <N>" && git push
 ```
 Vercel publică automat. Preview înainte: `parktraining.fit/?preview=soon` (Coming Soon) sau
 `?preview=landing` (landing).
+
+---
+
+## Ziua evenimentului (automat, fără redeploy)
+
+Homepage-ul își schimbă singur forma de două ori, pe ceas:
+
+| Moment | Ce arată „/" | Ce arată `/inscriere` |
+|---|---|---|
+| până la `start` − `leaderboardLeadHours` | landing normal, înscrieri deschise | formularul |
+| de acolo până la `start` + `durationHours` | landing fără formular și fără CTA, „cine vine" sub hero | formularul, până la `registrationDeadline` |
+| după `start` + `durationHours` | countdown spre `nextEditionAt` | redirect spre „/" |
+
+Le vezi înainte de ora lor cu `?preview=leaderboard` și `?preview=next`.
+**Verifică-le seara dinainte** — sunt singurele ecrane care apar când nu ești la laptop.
+
+`durationHours` e durata reală a cursei: mută a doua graniță, deci nu-l lăsa pe o valoare
+aproximativă. `nextEditionAt` trebuie să fie mereu după finalul cursei — există un test care
+pică dacă rămâne în urmă.
+
+### După ce se termină cursa
+
+1. Bumpează `launchNumber` la ediția următoare și rulează `npm run sync-edition`.
+   **NU face asta înainte de cursă:** `launchNumber` alimentează „Ediția a N-a" de pe
+   `/confirmare` și `/unsubscribe`, adică exact paginile pe care le deschid din email cei
+   înscriși la ediția în curs.
+2. Înainte să te bazezi pe sincronizare pentru atribuire, verifică ce `DEFAULT` are
+   `launch_notifications.editie`. Inserarea din client omite coloana intenționat
+   (`src/lib/supabase.ts`), deci dacă default-ul e o valoare fixă și nu o citire din
+   `app_config`, sincronizarea singură nu redirijează înscrierile noi.
 
 ---
 
