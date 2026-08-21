@@ -10,10 +10,12 @@ type Props = {
    * ziua cursei nu mai există secțiunea de înscriere spre care să trimită.
    */
   canSignUp?: boolean;
+  /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
+  num?: string;
 };
 
 /** Secțiunea „Cine vine": lista publică de participanți + contorul listei de așteptare. */
-export const ParticipantsSection = ({ stats, canSignUp = true }: Props) => {
+export const ParticipantsSection = ({ stats, canSignUp = true, num = '04' }: Props) => {
   const participants = stats?.participants ?? [];
   const mine = new Set(getMySignups());
   const waitlistCount = stats?.waitlist ?? 0;
@@ -21,7 +23,7 @@ export const ParticipantsSection = ({ stats, canSignUp = true }: Props) => {
       <section id="participanti" style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderTop: '1px solid var(--e3-border)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-            <span style={sectionNum}>04</span>
+            <span style={sectionNum}>{num}</span>
             <h2 style={sectionTitle}>Cine vine</h2>
           </div>
           <div

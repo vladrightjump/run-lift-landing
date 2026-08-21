@@ -155,6 +155,26 @@ test.describe('/inscriere — pe deadline-ul real, nu pe faza homepage-ului', ()
   });
 });
 
+// Ecranele fazelor apar exact când organizatorul e pe teren cu telefonul în
+// mână — sunt cele mai mobile ecrane din tot site-ul.
+test.describe('pe telefon (375px)', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  for (const [nume, moment] of [
+    ['fereastra „cine vine"', IN_FEREASTRA],
+    ['countdown-ul spre următorul antrenament', DUPA_CURSA],
+  ] as const) {
+    test(`${nume}: fără scroll orizontal`, async ({ page }) => {
+      await fixClock(page, moment);
+      await page.goto('/');
+      const depasire = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
+      expect(depasire).toBeLessThanOrEqual(0);
+    });
+  }
+});
+
 test.describe('?preview bate ceasul', () => {
   test('„leaderboard" se vede înainte de ora lui', async ({ page }) => {
     await fixClock(page, INAINTE);

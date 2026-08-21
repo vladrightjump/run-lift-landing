@@ -89,9 +89,10 @@ export const Landing = ({ mode = 'full' }: Props) => {
         // cine vine — formatul și locația rămân dedesubt, pentru cine tocmai
         // deschide harta în drum spre Valea Morilor.
         <>
-          <ParticipantsSection stats={stats} canSignUp={false} />
-          <FormatSection />
-          <VenueSection />
+          {/* Numerele urmează ordinea de pe ecran, nu ordinea din modul complet. */}
+          <ParticipantsSection stats={stats} canSignUp={false} num="01" />
+          <FormatSection num="02" />
+          <VenueSection num="03" />
         </>
       ) : (
         <>

@@ -109,7 +109,7 @@ export const ComingSoon = ({ showToast, target = LAUNCH_DATE, variant = 'launch'
             : `Antrenament nou · Ediția ${LAUNCH_EDITION_ORDINAL}`}
         </span>
 
-        <h1 className="cs-title">
+        <h1 className={`cs-title${urmatorul ? ' cs-title--diacritice' : ''}`}>
           {urmatorul ? (
             <>
               Ne vedem<br />

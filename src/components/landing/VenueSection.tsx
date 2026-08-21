@@ -10,8 +10,13 @@ import { sectionNum, sectionTitle } from './shared';
 const MAP_SRC = MAP_EMBED_SRC;
 const DIRECTIONS_URL = MAP_DIRECTIONS_URL;
 
+type Props = {
+  /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
+  num?: string;
+};
+
 /** Secțiunea „Locația": detalii (unde/când/start) + hartă + link Google Maps. */
-export const VenueSection = () => {
+export const VenueSection = ({ num = '02' }: Props) => {
   return (
       <section style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderBottom: '1px solid var(--e3-border)' }}>
         <div
@@ -26,7 +31,7 @@ export const VenueSection = () => {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-              <span style={sectionNum}>02</span>
+              <span style={sectionNum}>{num}</span>
               <h2 style={sectionTitle}>Locația</h2>
             </div>
             <div style={{ display: 'grid', gap: 0, border: '1px solid var(--e3-border)' }}>
