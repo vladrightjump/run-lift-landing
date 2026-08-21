@@ -75,11 +75,8 @@ test.describe('Confirmare înscriere', () => {
 
 test.describe('Formularele anunță confirmarea', () => {
   test('Coming Soon: succesul cere verificarea emailului', async ({ page }) => {
-    await page.route('**/rest/v1/launch_notifications', (route) =>
-      route.fulfill({ status: 201, body: '' })
-    );
-    await page.route('**/functions/v1/send-email', (route) =>
-      route.fulfill({ status: 200, body: '{"sent":1}' })
+    await page.route('**/functions/v1/submit-form', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' })
     );
 
     await page.goto('/?preview=soon');
@@ -94,13 +91,18 @@ test.describe('Formularele anunță confirmarea', () => {
     await expect(modal.getByText(/linkul din el ca să confirmi/i)).toBeVisible();
   });
 
-  test('Coming Soon: succesul declanșează emailul de confirmare', async ({ page }) => {
-    let emailBody: Record<string, unknown> = {};
-    await page.route('**/rest/v1/launch_notifications', (route) =>
-      route.fulfill({ status: 201, body: '' })
-    );
-    await page.route('**/functions/v1/send-email', async (route) => {
-      emailBody = JSON.parse(route.request().postData() ?? '{}');
+  test('Coming Soon: înscrierea pleacă spre submit-form, care trimite emailul', async ({ page }) => {
+    // Emailul de confirmare nu mai e declanșat din browser: îl trimite funcția
+    // Edge, după ce a verificat token-ul Turnstile. Aici verificăm doar că plicul
+    // ajunge corect la ea — restul e responsabilitatea serverului.
+    let plic: Record<string, unknown> = {};
+    await page.route('**/functions/v1/submit-form', async (route) => {
+      plic = JSON.parse(route.request().postData() ?? '{}');
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+    });
+    let emailCerut = false;
+    await page.route('**/functions/v1/send-email', (route) => {
+      emailCerut = true;
       return route.fulfill({ status: 200, body: '{"sent":1}' });
     });
 
@@ -113,7 +115,8 @@ test.describe('Formularele anunță confirmarea', () => {
     await modal.getByPlaceholder('07xx xxx xxx').fill('069123456');
     await modal.getByRole('button', { name: /^anunță-mă$/i }).click();
 
-    await expect.poll(() => emailBody.mode).toBe('info');
-    expect(emailBody.email).toBe('conf@example.com');
+    await expect.poll(() => plic.mode).toBe('launch');
+    expect((plic.data as Record<string, unknown>).email).toBe('conf@example.com');
+    expect(emailCerut).toBe(false);
   });
 });

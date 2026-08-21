@@ -28,6 +28,9 @@ const regData = {
 
 const launchData = { nume: 'Popescu', prenume: 'Andrei', email: 'a@b.ro', telefon: '069123456' };
 
+/** Dovezile anti-bot pe care le colectează hook-urile înainte de submit. */
+const proofs = { token: 'tok-turnstile', hp: '', elapsed: 9000 };
+
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
@@ -48,18 +51,25 @@ describe('rutarea spre schema runlift', () => {
     expect(SUPABASE.schema).toBe('runlift');
   });
 
-  it('scrierile trimit Content-Profile = schema (runlift)', async () => {
-    const writes: Array<() => Promise<unknown>> = [
-      () => submitRegistration(regData),
-      () => submitWaitlist(regData),
-      () => submitLaunchNotification(launchData),
-      () => confirmSignup('tok-123'),
-    ];
-    for (const call of writes) {
+  it('apelurile RPC directe trimit Content-Profile = schema (runlift)', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify('invalid'), { status: 200 }));
+    await confirmSignup('tok-123').catch(() => {});
+    expect(headersOf()['Content-Profile']).toBe(SUPABASE.schema);
+  });
+
+  it('formularele NU mai trimit Content-Profile — rutarea o face funcția Edge', async () => {
+    // De când scrierile trec prin `submit-form`, schema o pune funcția Edge
+    // (`DB_SCHEMA`), nu clientul. Un `Content-Profile` trimis de aici ar fi
+    // ignorat și ar sugera fals că browserul mai vorbește direct cu PostgREST.
+    for (const call of [
+      () => submitRegistration(regData, proofs),
+      () => submitWaitlist(regData, proofs),
+      () => submitLaunchNotification(launchData, proofs),
+    ]) {
       fetchMock.mockClear();
-      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify('invalid'), { status: 200 }));
-      await call().catch(() => {});
-      expect(headersOf()['Content-Profile']).toBe(SUPABASE.schema);
+      await call();
+      expect(headersOf()['Content-Profile']).toBeUndefined();
+      expect(urlOf()).toMatch(/\/functions\/v1\/submit-form$/);
     }
   });
 
@@ -75,9 +85,9 @@ describe('rutarea spre schema runlift', () => {
 describe('țintirea proiectului corect', () => {
   it('toate cererile pleacă spre SUPABASE.url', async () => {
     const calls: Array<() => Promise<unknown>> = [
-      () => submitRegistration(regData),
-      () => submitWaitlist(regData),
-      () => submitLaunchNotification(launchData),
+      () => submitRegistration(regData, proofs),
+      () => submitWaitlist(regData, proofs),
+      () => submitLaunchNotification(launchData, proofs),
     ];
     for (const call of calls) {
       fetchMock.mockClear();
@@ -95,7 +105,7 @@ describe('țintirea proiectului corect', () => {
   });
 
   it('nu se scurge niciun URL de proiect vechi (hardcodat) în cereri', async () => {
-    await submitRegistration(regData);
+    await submitRegistration(regData, proofs);
     // Orice host Supabase din cerere trebuie să fie exact cel din config.
     const host = new URL(urlOf()).host;
     expect(host).toBe(new URL(SUPABASE.url).host);

@@ -67,7 +67,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
   const {
     waitlistMode, waitlistLeft, slots, isSoldOut, isWaitlistFull, showForm, closedReason,
     phase, errors, birth, birthISO, dateErrMsg, confirmName, submittedAsWaitlist,
-    formRef, handleSubmit, clearErrorFor, setBirth, resetForm, setErrors, setPhase,
+    formRef, handleSubmit, clearErrorFor, setBirth, resetForm, setErrors, setPhase, hpProps,
   } = reg;
   return (
       <section
@@ -189,6 +189,9 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                   gap: 22,
                 }}
               >
+                {/* Capcană anti-bot: invizibilă pentru oameni, tentantă pentru
+                    scripturile care completează orice câmp. Verificată pe server. */}
+                <input type="text" {...hpProps} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 18 }}>
                   <label style={{ display: 'grid', gap: 8 }}>
                     <span style={label}>Nume complet *</span>

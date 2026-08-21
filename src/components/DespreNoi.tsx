@@ -51,7 +51,7 @@ const ORAR = [
 ];
 
 export const DespreNoi = () => {
-  const { draft, setField: setFieldBase, errors, state, submit } = useLaunchForm('despre-noi');
+  const { draft, setField: setFieldBase, errors, state, submit, hpProps } = useLaunchForm('despre-noi');
   const [eroare, setEroare] = useState('');
   const [emailTrimis, setEmailTrimis] = useState('');
 
@@ -291,6 +291,8 @@ export const DespreNoi = () => {
                 handleSubmit();
               }}
             >
+              {/* Capcană anti-bot — invizibilă; verificată pe server. */}
+              <input type="text" {...hpProps} />
               <div className="dn-form-row">
                 <label className={`dn-field${errors.nume ? ' invalid' : ''}`}>
                   <span>Nume</span>

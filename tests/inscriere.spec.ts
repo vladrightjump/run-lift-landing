@@ -10,9 +10,29 @@ import { EDITION } from '../src/content/edition';
  */
 
 const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
-const REG_ROUTE = '**/rest/v1/registrations';
-const WAITLIST_ROUTE = '**/rest/v1/event_waitlist';
+// Toate formularele trec acum prin aceeași funcție Edge, care verifică Turnstile
+// înainte de a scrie (browserul nu mai are voie să insereze direct în PostgREST).
+// Testele disting înscrierea de lista de așteptare după câmpul `mode` din plic.
+const SUBMIT_ROUTE = '**/functions/v1/submit-form';
 const EMAIL_ROUTE = '**/functions/v1/send-email';
+
+type Plic = { mode: string; token: string; hp: string; elapsed: number; data: Record<string, unknown> };
+
+/**
+ * Interceptează `submit-form`. `handler` primește plicul decodat și decide
+ * răspunsul; ce nu e tratat primește un 200 „ok".
+ */
+const mockSubmit = (
+  page: Page,
+  handler: (plic: Plic, route: Route) => unknown | Promise<unknown>
+) =>
+  page.route(SUBMIT_ROUTE, async (route: Route) => {
+    const plic = route.request().postDataJSON() as Plic;
+    await handler(plic, route);
+  });
+
+const ok = (route: Route, body = '{"ok":true}') =>
+  route.fulfill({ status: 200, contentType: 'application/json', body });
 
 // Ora fixată înainte de start (8 august) ca formularul să fie mereu deschis,
 // indiferent când rulează testul.
@@ -73,7 +93,7 @@ test.describe('Înscriere — formular ediția curentă', () => {
     );
     await mockStats(page, 0);
     await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 201, body: '' }));
+    await mockSubmit(page, (_plic, route) => ok(route));
 
     await page.goto('/?preview=landing');
 
@@ -86,19 +106,17 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await expect(page.getByText(/te-ai înregistrat/i)).toBeVisible();
   });
 
-  test('submit valid → trimite ediția curentă, schema runlift și data compusă din selectoare', async ({
+  test('submit valid → plic corect spre submit-form, cu dovezi anti-bot și fără ediție', async ({
     page,
   }) => {
     await fixClock(page);
     await mockStats(page, 0);
     await mockEmail(page);
 
-    let body: Record<string, unknown> = {};
-    let headers: Record<string, string> = {};
-    await page.route(REG_ROUTE, (route: Route) => {
-      body = route.request().postDataJSON();
-      headers = route.request().headers();
-      return route.fulfill({ status: 201, body: '' });
+    let plic: Plic | null = null;
+    await mockSubmit(page, (p, route) => {
+      plic = p;
+      return ok(route);
     });
 
     await page.goto('/?preview=landing');
@@ -106,19 +124,24 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await submitBtn(page).click();
 
     await expect(page.getByText(/te-ai înregistrat/i)).toBeVisible();
-    expect(body.editie).toBe(EDITION.number);
-    expect(body.data_nasterii).toBe('1994-05-15');
-    expect(body.telefon).toBe('069509949');
-    // Regresia din 4 aug: fără Content-Profile: runlift, PostgREST caută în
-    // schema `public` și insert-ul pică. Playwright dă headerele cu litere mici.
-    expect(headers['content-profile']).toBe('runlift');
+    const trimis = plic as unknown as Plic;
+    expect(trimis.mode).toBe('registration');
+    expect(trimis.data.dataNasterii).toBe('1994-05-15');
+    expect(trimis.data.telefon).toBe('069509949');
+    // Ediția o decide serverul (DEFAULT din DB): dacă ar veni din client, un bot
+    // ar putea scrie în edițiile de arhivă.
+    expect(trimis.data).not.toHaveProperty('editie');
+    expect(trimis).not.toHaveProperty('editie');
+    // Dovezile anti-bot însoțesc fiecare submit: capcana goală + timp plauzibil.
+    expect(trimis.hp).toBe('');
+    expect(typeof trimis.elapsed).toBe('number');
   });
 
   test('validare: submit gol NU trimite request și afișează eroare', async ({ page }) => {
     await fixClock(page);
     await mockStats(page, 0);
     let requested = false;
-    await page.route(REG_ROUTE, (route: Route) => {
+    await mockSubmit(page, (_plic, route) => {
       requested = true;
       return route.abort();
     });
@@ -134,7 +157,7 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await fixClock(page);
     await mockStats(page, 0);
     let requested = false;
-    await page.route(REG_ROUTE, (route: Route) => {
+    await mockSubmit(page, (_plic, route) => {
       requested = true;
       return route.abort();
     });
@@ -155,7 +178,7 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await fixClock(page);
     await mockStats(page, 0);
     await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) =>
+    await mockSubmit(page, (_plic, route) =>
       route.fulfill({ status: 409, contentType: 'application/json', body: '{"code":"23505"}' })
     );
 
@@ -174,9 +197,9 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await mockEmail(page);
 
     let waitlistHit = false;
-    await page.route(WAITLIST_ROUTE, (route: Route) => {
-      waitlistHit = true;
-      return route.fulfill({ status: 201, body: '' });
+    await mockSubmit(page, (plic, route) => {
+      if (plic.mode === 'waitlist') waitlistHit = true;
+      return ok(route);
     });
 
     await page.goto('/?preview=landing');

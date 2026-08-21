@@ -22,7 +22,7 @@ const LAUNCH_LABEL = new Intl.DateTimeFormat('ro-RO', {
 
 export const ComingSoon = ({ showToast }: Props) => {
   const cd = useCountdown(LAUNCH_DATE);
-  const { draft, setField, errors, state, submit, reset } = useLaunchForm();
+  const { draft, setField, errors, state, submit, reset, hpProps } = useLaunchForm();
   const [open, setOpen] = useState(false);
   const [duplicate, setDuplicate] = useState(false);
 
@@ -196,6 +196,8 @@ export const ComingSoon = ({ showToast }: Props) => {
                     handleSubmit();
                   }}
                 >
+                  {/* Capcană anti-bot — invizibilă; verificată pe server. */}
+                  <input type="text" {...hpProps} />
                   <div className="cs-form-row">
                     <label className={`cs-field${errors.nume ? ' invalid' : ''}`}>
                       <span>Nume</span>

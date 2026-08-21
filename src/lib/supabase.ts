@@ -1,4 +1,4 @@
-import { SUPABASE, CURRENT_EDITION } from './config';
+import { SUPABASE } from './config';
 import { logClientError } from './monitoring';
 import { normalizePhone } from './validation';
 import type { FormData } from './validation';
@@ -37,47 +37,83 @@ const timeoutSignal = (externalSignal?: AbortSignal): { signal: AbortSignal; don
 };
 
 /**
- * INSERT în `registrations`. RLS permite doar insert cu `acord = true`;
- * emailul e unic (case-insensitive) — duplicat => HTTP 409.
+ * Dovezile anti-bot care însoțesc fiecare submit public.
+ *  • `token`   — Turnstile, verificat server-side (vezi `src/lib/turnstile.ts`)
+ *  • `hp`      — honeypot; orice conținut = bot
+ *  • `elapsed` — ms de la afișarea formularului; prea puțin = bot
  */
-export const submitRegistration = async (
-  data: FormData,
+export type AntiBot = { token: string; hp: string; elapsed: number };
+
+type SubmitMode = 'registration' | 'waitlist' | 'launch';
+
+/**
+ * Trimite un formular public prin funcția Edge `submit-form`.
+ *
+ * De ce nu mai scriem direct în PostgREST: cheia publishable e vizibilă în
+ * bundle, deci un bot putea insera fără să treacă vreodată prin pagină. Acum RLS
+ * interzice INSERT din `anon`, iar funcția scrie cu cheia de service DOAR după ce
+ * a validat token-ul Turnstile la Cloudflare.
+ *
+ * Funcția propagă statusul și textul de eroare de la PostgREST ca atare, deci
+ * `isDuplicateError` (409) și `isEventFullError` &co. (textul erorii) rămân
+ * valabile neschimbate.
+ */
+const postForm = async (
+  mode: SubmitMode,
+  data: Record<string, unknown>,
+  antiBot: AntiBot,
   externalSignal?: AbortSignal
-): Promise<string> => {
+): Promise<Response> => {
   const { signal, done } = timeoutSignal(externalSignal);
-  // Generăm id-ul în client (RLS blochează citirea rândului înapoi) ca să-l
-  // putem folosi la trimiterea emailului de confirmare.
-  const id =
-    typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : undefined;
   try {
-    const res = await fetch(`${SUPABASE.url}/rest/v1/registrations`, {
+    const res = await fetch(`${SUPABASE.url}/functions/v1/submit-form`, {
       method: 'POST',
-      headers: {
-        apikey: SUPABASE.publishableKey,
-        'Content-Type': 'application/json',
-        'Content-Profile': SUPABASE.schema,
-        Prefer: 'return=minimal',
-      },
+      headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ...(id ? { id } : {}),
-        nume: data.nume.trim(),
-        telefon: normalizePhone(data.telefon),
-        email: data.email.trim(),
-        data_nasterii: data.dataNasterii || null,
-        acord: data.acord,
-        editie: CURRENT_EDITION,
+        mode,
+        token: antiBot.token,
+        hp: antiBot.hp,
+        elapsed: antiBot.elapsed,
+        data,
       }),
       signal,
     });
     if (!res.ok) {
       throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
     }
-    return id ?? '';
+    return res;
   } finally {
     done();
   }
+};
+
+/**
+ * INSERT în `registrations`, prin `submit-form`. Emailul e unic
+ * (case-insensitive) — duplicat => HTTP 409. Întoarce id-ul rândului, generat de
+ * server (`Prefer: return=minimal` nu întoarce rândul înapoi).
+ *
+ * `editie` NU se trimite: o pune DEFAULT-ul din DB (`current_event_edition()`),
+ * ca ediția să fie decisă de server, nu de client.
+ */
+export const submitRegistration = async (
+  data: FormData,
+  antiBot: AntiBot,
+  externalSignal?: AbortSignal
+): Promise<string> => {
+  const res = await postForm(
+    'registration',
+    {
+      nume: data.nume.trim(),
+      telefon: normalizePhone(data.telefon),
+      email: data.email.trim(),
+      dataNasterii: data.dataNasterii || '',
+      acord: data.acord,
+    },
+    antiBot,
+    externalSignal
+  );
+  const body = (await res.json().catch(() => ({}))) as { id?: string };
+  return body.id ?? '';
 };
 
 /**
@@ -112,100 +148,58 @@ export type LaunchNotificationData = {
 export type SursaInscriere = 'lansare' | 'despre-noi';
 
 /**
- * INSERT în `launch_notifications` (formularul „Anunță-mă la lansare").
- * RLS permite doar insert pentru `anon`; emailul e unic (case-insensitive) — duplicat => HTTP 409.
+ * INSERT în `launch_notifications` (formularul „Anunță-mă la lansare"), prin
+ * `submit-form`. Emailul e unic (case-insensitive) — duplicat => HTTP 409.
+ *
+ * Emailul de bun venit („info") îl trimite tot funcția Edge, best-effort, imediat
+ * după insert — clientul nu mai face un al doilea apel.
  */
 export const submitLaunchNotification = async (
   data: LaunchNotificationData,
+  antiBot: AntiBot,
   externalSignal?: AbortSignal,
   sursa: SursaInscriere = 'lansare'
 ): Promise<void> => {
-  const { signal, done } = timeoutSignal(externalSignal);
-  try {
-    const res = await fetch(`${SUPABASE.url}/rest/v1/launch_notifications`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE.publishableKey,
-        'Content-Type': 'application/json',
-        'Content-Profile': SUPABASE.schema,
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify({
-        nume: data.nume.trim(),
-        prenume: data.prenume.trim(),
-        email: data.email.trim(),
-        telefon: normalizePhone(data.telefon),
-        sursa,
-        // `editie` NU se trimite: o pune serverul din DEFAULT, iar politica
-        // RLS respinge orice valoare venită din client.
-      }),
-      signal,
-    });
-    if (!res.ok) {
-      throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
-    }
-  } finally {
-    done();
-  }
-};
-
-/**
- * Emailul de bun venit pentru cei care cer informații (best-effort).
- * Șablonul e configurabil din /admin; dacă trimiterea eșuează, înscrierea
- * rămâne validă — nu blocăm fluxul de succes.
- */
-export const sendInfoEmail = async (email: string): Promise<void> => {
-  if (!email) return;
-  try {
-    await fetch(`${SUPABASE.url}/functions/v1/send-email`, {
-      method: 'POST',
-      headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'info', email }),
-    });
-  } catch (err) {
-    // Emailul e opțional — nu blocăm fluxul, dar lăsăm o urmă.
-    logClientError('send-info-email', err);
-  }
+  await postForm(
+    'launch',
+    {
+      nume: data.nume.trim(),
+      prenume: data.prenume.trim(),
+      email: data.email.trim(),
+      telefon: normalizePhone(data.telefon),
+      sursa,
+      // `editie` NU se trimite: o pune DEFAULT-ul din DB.
+    },
+    antiBot,
+    externalSignal
+  );
 };
 
 export type PublicParticipant = { nume: string; echipa: string };
 export type PublicStats = { count: number; participants: PublicParticipant[]; waitlist: number };
 
 /**
- * INSERT în `event_waitlist` (lista de așteptare, când locurile sunt pline).
- * RLS permite doar insert cu `acord = true`; un trigger limitează la 10/ediție
- * (eroare `waitlist_full`); emailul e unic pe ediție (duplicat => HTTP 409).
+ * INSERT în `event_waitlist` (lista de așteptare, când locurile sunt pline), prin
+ * `submit-form`. Un trigger limitează la 10/ediție (eroare `waitlist_full`);
+ * emailul e unic pe ediție (duplicat => HTTP 409).
  */
 export const submitWaitlist = async (
   data: FormData,
+  antiBot: AntiBot,
   externalSignal?: AbortSignal
 ): Promise<void> => {
-  const { signal, done } = timeoutSignal(externalSignal);
-  try {
-    const res = await fetch(`${SUPABASE.url}/rest/v1/event_waitlist`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE.publishableKey,
-        'Content-Type': 'application/json',
-        'Content-Profile': SUPABASE.schema,
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify({
-        nume: data.nume.trim(),
-        telefon: normalizePhone(data.telefon),
-        email: data.email.trim(),
-        data_nasterii: data.dataNasterii || null,
-        acord: data.acord,
-        editie: CURRENT_EDITION,
-      }),
-      signal,
-    });
-    if (!res.ok) {
-      throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
-    }
-  } finally {
-    done();
-  }
+  await postForm(
+    'waitlist',
+    {
+      nume: data.nume.trim(),
+      telefon: normalizePhone(data.telefon),
+      email: data.email.trim(),
+      dataNasterii: data.dataNasterii || '',
+      acord: data.acord,
+    },
+    antiBot,
+    externalSignal
+  );
 };
 
 /** Lista de așteptare e plină (trigger `waitlist_full`). */
@@ -288,6 +282,14 @@ export const unsubscribe = async (token: string, signal?: AbortSignal): Promise<
 
 export const isDuplicateError = (err: unknown): boolean =>
   err instanceof SubmitHttpError && err.status === 409;
+
+/**
+ * `submit-form` a respins submit-ul ca fiind automat: token Turnstile invalid
+ * (403), honeypot completat sau submit prea rapid (400 `bot`/`too_fast`).
+ * Merită un mesaj propriu — „mai încearcă o dată" e inutil aici.
+ */
+export const isBotRejectedError = (err: unknown): boolean =>
+  err instanceof SubmitHttpError && /captcha_failed|"bot"|too_fast/.test(err.message);
 
 export const isTimeoutError = (err: unknown): boolean =>
   err instanceof DOMException && err.name === 'TimeoutError';

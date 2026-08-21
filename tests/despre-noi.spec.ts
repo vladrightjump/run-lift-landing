@@ -7,8 +7,11 @@ import { LAUNCH_DATE } from '../src/lib/config';
  * și nu trimit emailuri.
  */
 
-const INSERT_ROUTE = '**/rest/v1/launch_notifications';
+// Formularul trece prin funcția Edge `submit-form` (verifică Turnstile înainte
+// de a scrie); emailul de bun venit îl trimite tot ea, server-side.
+const INSERT_ROUTE = '**/functions/v1/submit-form';
 const EMAIL_ROUTE = '**/functions/v1/send-email';
+const OK = { status: 200, contentType: 'application/json', body: '{"ok":true}' };
 
 const completeaza = async (page: import('@playwright/test').Page) => {
   await page.getByPlaceholder('Nume', { exact: true }).fill('Popescu');
@@ -88,28 +91,39 @@ test.describe('Despre noi — formular', () => {
     expect(cerut).toBe(false);
   });
 
-  test('trimite sursa "despre-noi" și NU trimite ediția', async ({ page }) => {
-    let body: Record<string, unknown> = {};
+  test('trimite sursa "despre-noi", dovezile anti-bot și NU trimite ediția', async ({ page }) => {
+    let plic: Record<string, unknown> = {};
     await page.route(INSERT_ROUTE, async (route) => {
-      body = JSON.parse(route.request().postData() ?? '{}');
-      return route.fulfill({ status: 201, body: '' });
+      plic = JSON.parse(route.request().postData() ?? '{}');
+      return route.fulfill(OK);
     });
-    await page.route(EMAIL_ROUTE, (route) => route.fulfill({ status: 200, body: '{}' }));
 
     await page.goto('/despre-noi');
     await completeaza(page);
     await page.locator('.dn-submit').click();
 
     await expect(page.locator('.dn-success')).toBeVisible();
-    expect(body.sursa).toBe('despre-noi');
-    expect(body).not.toHaveProperty('editie');
+    expect(plic.mode).toBe('launch');
+    const date = plic.data as Record<string, unknown>;
+    expect(date.sursa).toBe('despre-noi');
+    // Ediția o decide serverul (DEFAULT din DB), nu clientul.
+    expect(date).not.toHaveProperty('editie');
+    expect(plic).not.toHaveProperty('editie');
+    // Capcana goală + timp pe formular: dovezile pe care le verifică serverul.
+    expect(plic.hp).toBe('');
+    expect(typeof plic.elapsed).toBe('number');
   });
 
-  test('declanșează emailul automat de bun venit', async ({ page }) => {
-    let emailBody: Record<string, unknown> = {};
-    await page.route(INSERT_ROUTE, (route) => route.fulfill({ status: 201, body: '' }));
-    await page.route(EMAIL_ROUTE, async (route) => {
-      emailBody = JSON.parse(route.request().postData() ?? '{}');
+  test('emailul de bun venit NU mai pleacă din browser — îl trimite funcția Edge', async ({
+    page,
+  }) => {
+    // Înainte, clientul apela `send-email` cu modul „info" folosind cheia
+    // publishable, deci oricine putea declanșa trimiteri. Acum emailul pleacă
+    // server-side, imediat după insert, în aceeași funcție care a validat captcha.
+    let emailCerut = false;
+    await page.route(INSERT_ROUTE, (route) => route.fulfill(OK));
+    await page.route(EMAIL_ROUTE, (route) => {
+      emailCerut = true;
       return route.fulfill({ status: 200, body: '{"sent":1}' });
     });
 
@@ -118,8 +132,7 @@ test.describe('Despre noi — formular', () => {
     await page.locator('.dn-submit').click();
 
     await expect(page.locator('.dn-success')).toBeVisible();
-    await expect.poll(() => emailBody.mode).toBe('info');
-    expect(emailBody.email).toBe('andrei@email.ro');
+    expect(emailCerut).toBe(false);
   });
 
   test('duplicatul (409) e tratat tot ca succes', async ({ page }) => {

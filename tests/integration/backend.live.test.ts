@@ -5,7 +5,8 @@ import { EDITION } from '../../src/content/edition';
  * Teste de integrare LIVE — lovesc backendul Supabase REAL (proiectul ironworks-gym,
  * schema `runlift`). NU rulează în CI-ul obișnuit și NU sunt incluse în `npm test`.
  * Sunt opt-in și verifică lucrul pe care testele mock-uite nu-l pot verifica:
- * că schema e expusă, RLS-ul permite insert-ul public, iar RPC-urile răspund.
+ * că schema e expusă, că lockdown-ul anti-bot chiar blochează scrierea directă
+ * din browser, iar RPC-urile răspund.
  *
  * Rulează:
  *   RUNLIFT_LIVE=1 \
@@ -66,11 +67,51 @@ afterAll(async () => {
 });
 
 describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
-  it('înscriere: insert anon în registrations (Content-Profile: runlift), citit cu service_role', async () => {
+  // TESTUL CARE CONTEAZĂ pentru protecția anti-bot: cheia publishable e vizibilă
+  // în bundle-ul JS, deci oricine o poate lua. Dacă vreuna dintre cererile de mai
+  // jos reușește, un bot poate insera fără să treacă prin captcha, iar Turnstile
+  // devine decorativ. Vezi `supabase-migration-turnstile-lockdown.sql`.
+  it('lockdown: cheia publishable NU mai poate insera direct în niciun tabel public', async () => {
+    const tabele: Array<[string, Record<string, unknown>]> = [
+      [
+        'registrations',
+        { nume: 'ZZ Bot Reg', telefon: '+37360000900', email: emailFor('botreg'), acord: true },
+      ],
+      [
+        'event_waitlist',
+        { nume: 'ZZ Bot Wait', telefon: '+37360000901', email: emailFor('botwait'), acord: true },
+      ],
+      [
+        'launch_notifications',
+        {
+          nume: 'ZZ',
+          prenume: 'Bot',
+          email: emailFor('botlaunch'),
+          telefon: '+37360000902',
+          sursa: 'lansare',
+        },
+      ],
+    ];
+
+    for (const [tabel, rand] of tabele) {
+      const res = await fetch(`${BASE}/rest/v1/${tabel}`, {
+        method: 'POST',
+        headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+        body: JSON.stringify(rand),
+      });
+      expect([401, 403], `${tabel} a acceptat un insert anon (status ${res.status})`).toContain(
+        res.status
+      );
+    }
+  });
+
+  it('înscriere: insert cu service_role în registrations (Content-Profile: runlift)', async () => {
+    // Calea reală de scriere e funcția Edge `submit-form`, care folosește cheia de
+    // service. Aici verificăm că schema/coloanele/trigger-ele răspund pe acea cale.
     const email = emailFor('reg');
     const res = await fetch(`${BASE}/rest/v1/registrations`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body: JSON.stringify({
         nume: 'ZZ Live Test',
         telefon: '+37360000000',
@@ -82,7 +123,6 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     });
     expect(res.status).toBe(201);
 
-    // RLS blochează citirea pentru anon → verificăm cu service_role.
     const check = await fetch(
       `${BASE}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}&select=email,editie`,
       { headers: serviceHeaders({ 'Accept-Profile': SCHEMA }) }
@@ -90,6 +130,51 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     const rows = (await check.json()) as Array<{ email: string; editie: number }>;
     expect(rows).toHaveLength(1);
     expect(rows[0].editie).toBe(TEST_EDITION);
+  });
+
+  it('submit-form respinge capcana completată, fără să scrie nimic', async () => {
+    // Filtru ieftin, înaintea apelului la Cloudflare. Nu depinde de configurarea
+    // Turnstile, deci e sigur de rulat pe orice mediu.
+    const email = emailFor('honeypot');
+    const res = await fetch(`${BASE}/functions/v1/submit-form`, {
+      method: 'POST',
+      headers: anonHeaders(),
+      body: JSON.stringify({
+        mode: 'launch',
+        token: 'x',
+        hp: 'http://spam.example',
+        elapsed: 30_000,
+        data: { nume: 'ZZ', prenume: 'Bot', email, telefon: '+37360000903', sursa: 'lansare' },
+      }),
+    });
+    expect(res.status).toBe(400);
+
+    const check = await fetch(
+      `${BASE}/rest/v1/launch_notifications?email=eq.${encodeURIComponent(email)}&select=email`,
+      { headers: serviceHeaders({ 'Accept-Profile': SCHEMA }) }
+    );
+    expect(await check.json()).toHaveLength(0);
+  });
+
+  it('submit-form respinge submit-ul instantaneu (sub 3 secunde pe formular)', async () => {
+    const res = await fetch(`${BASE}/functions/v1/submit-form`, {
+      method: 'POST',
+      headers: anonHeaders(),
+      body: JSON.stringify({
+        mode: 'launch',
+        token: 'x',
+        hp: '',
+        elapsed: 120,
+        data: {
+          nume: 'ZZ',
+          prenume: 'Rapid',
+          email: emailFor('fast'),
+          telefon: '+37360000904',
+          sursa: 'lansare',
+        },
+      }),
+    });
+    expect(res.status).toBe(400);
   });
 
   it('duplicat: al doilea insert cu același email+ediție dă 409', async () => {
@@ -103,22 +188,24 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     });
     const first = await fetch(`${BASE}/rest/v1/registrations`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body,
     });
     expect(first.status).toBe(201);
     const second = await fetch(`${BASE}/rest/v1/registrations`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body,
     });
+    // 409 e statusul pe care `submit-form` îl propagă neschimbat spre client,
+    // ca `isDuplicateError` din UI să continue să funcționeze.
     expect(second.status).toBe(409);
   });
 
-  it('listă de așteptare: insert anon în event_waitlist', async () => {
+  it('listă de așteptare: insert cu service_role în event_waitlist', async () => {
     const res = await fetch(`${BASE}/rest/v1/event_waitlist`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body: JSON.stringify({
         nume: 'ZZ Live Waitlist',
         telefon: '+37360000002',
@@ -187,10 +274,10 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     expect(wlRows).toHaveLength(0);
   });
 
-  it('„Anunță-mă": insert anon în launch_notifications (ediția o pune serverul)', async () => {
+  it('„Anunță-mă": insert cu service_role în launch_notifications (ediția o pune serverul)', async () => {
     const res = await fetch(`${BASE}/rest/v1/launch_notifications`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body: JSON.stringify({
         nume: 'ZZ Live',
         prenume: 'Test',
