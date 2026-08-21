@@ -3,6 +3,9 @@ import {
   SHOW_COMING_SOON,
   LAUNCH_DATE,
   EVENT_DATE,
+  EVENT_END_DATE,
+  LEADERBOARD_DATE,
+  NEXT_EDITION_DATE,
   CURRENT_EDITION,
   CURRENT_LAUNCH_EDITION,
   TOTAL_SLOTS,
@@ -35,6 +38,32 @@ describe('date și ore', () => {
   // cursei (EDITION.start) poate fi încă TBD → invariantul nu se aplică, sărim testul.
   it.skipIf(SHOW_COMING_SOON)('Faza B: evenimentul e după anunțul de lansare', () => {
     expect(EVENT_DATE.getTime()).toBeGreaterThan(LAUNCH_DATE.getTime());
+  });
+});
+
+describe('fazele zilei de eveniment', () => {
+  it('LEADERBOARD_DATE = startul minus avansul configurat', () => {
+    expect(LEADERBOARD_DATE.getTime()).toBe(
+      EVENT_DATE.getTime() - EDITION.leaderboardLeadHours * 60 * 60 * 1000
+    );
+  });
+
+  it('NEXT_EDITION_DATE e fixată pe fusul Chișinăului, nu pe cel local', () => {
+    // Aceeași garanție ca la LAUNCH_DATE: countdown-ul spre următorul antrenament
+    // trebuie să arate același moment absolut din orice fus.
+    expect(NEXT_EDITION_DATE.toISOString()).toBe(
+      new Date(`${EDITION.nextEditionAt}${EDITION.tz}`).toISOString()
+    );
+  });
+
+  // Garda care prinde ediția următoare configurată pe jumătate: cineva mută
+  // `start` și uită `nextEditionAt`, iar countdown-ul de după cursă ar porni
+  // deja expirat. Ordinea celor patru momente e invariantul care nu se negociază.
+  it('cele patru momente sunt strict ordonate', () => {
+    const momente = [LEADERBOARD_DATE, EVENT_DATE, EVENT_END_DATE, NEXT_EDITION_DATE];
+    for (let i = 1; i < momente.length; i++) {
+      expect(momente[i].getTime()).toBeGreaterThan(momente[i - 1].getTime());
+    }
   });
 });
 

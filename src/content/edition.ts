@@ -33,7 +33,7 @@ export const EDITION = {
   /** Startul cursei — local, fără offset. */
   start: '2026-08-22T07:00:00',
   /** Durata (h) — pentru EVENT_END_DATE (start + durată). */
-  durationHours: 6,
+  durationHours: 2,
   /** Ora de check-in (afișată în emailuri/landing). */
   checkinFrom: '06:30',
   /** Până când se poate înscrie cineva — local, fără offset. */
@@ -42,6 +42,16 @@ export const EDITION = {
   launchAt: '2026-08-19T12:00:00',
   /** `true` → homepage-ul arată Coming Soon; `false` → landing (înscrieri deschise). */
   showComingSoon: false,
+
+  // --- Fazele zilei de eveniment -------------------------------------------
+  // Homepage-ul își schimbă singur forma de două ori în ziua cursei, fără
+  // redeploy: cu `leaderboardLeadHours` înainte de start trece pe „cine vine"
+  // (fără formular), iar la finalul cursei (start + durationHours) trece pe
+  // countdown-ul spre `nextEditionAt`. Vezi `usePagePhase`.
+  /** Cu câte ore înainte de start dispare înscrierea de pe homepage. */
+  leaderboardLeadHours: 1,
+  /** Următorul antrenament — ținta countdown-ului de după cursă, local. */
+  nextEditionAt: '2026-08-29T07:00:00',
 
   venue: {
     name: 'Scările de Granit',
