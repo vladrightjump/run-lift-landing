@@ -26,6 +26,8 @@ import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
+import { emailuriNelivrate } from './deliveryLog';
+import { useAdminPolling } from './useAdminPolling';
 import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
@@ -53,8 +55,6 @@ type AdminToast = {
   msg: string;
   undo?: () => void;
 };
-
-const REFRESH_MS = 15_000;
 
 const dateFmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short' });
 const formatDate = (iso: string): string => dateFmt.format(new Date(iso)).replace('.', '');
@@ -89,7 +89,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane'
   >('participanti');
   const toastTimerRef = useRef<number | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const cd = useCountdown(LAUNCH_DATE);
 
   // Ediția pe care backendul o consideră curentă. Doar ea acceptă modificări:
@@ -138,37 +137,35 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
   useEffect(refreshEditions, [refreshEditions]);
 
-  const refresh = useCallback(() => {
+  const fetchAll = useCallback(
+    (signal: AbortSignal) => {
     // Fără ediție știută n-avem ce cere — așteptăm inventarul.
     if (editie === null) return;
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    listRegistrations(token, editie, controller.signal)
+    listRegistrations(token, editie, signal)
       .then((data) => {
         setRows(data);
         setLoadError(false);
       })
       .catch((err) => {
-        if (controller.signal.aborted || handleAuthError(err)) return;
+        if (signal.aborted || handleAuthError(err)) return;
         // Păstrăm ultima listă cunoscută; eroarea contează doar la primul load.
         setLoadError((prev) => prev || rowsRef.current === null);
       });
-    listWaitlist(token, editie, controller.signal)
+    listWaitlist(token, editie, signal)
       .then(setWaitlist)
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         handleAuthError(err);
       });
     // Corpul emailurilor doar când e chiar folosit (tab-ul „Livrare"); în rest
     // avem nevoie doar de status, pentru badge + coloana din tabelul de participanți.
-    listEmailLog(token, editie, tab === 'livrare', controller.signal)
+    listEmailLog(token, editie, tab === 'livrare', signal)
       .then(setEmailLog)
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         handleAuthError(err);
       });
-    listAdminEvents(token, controller.signal)
+    listAdminEvents(token, signal)
       .then((data) => {
         // Primul load: marcăm tot ca „văzut" fără toast. Apoi anunțăm doar noutățile.
         if (seenEventsRef.current === null) {
@@ -188,10 +185,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         setEvents(data);
       })
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         handleAuthError(err);
       });
-  }, [token, editie, tab, handleAuthError, showToast]);
+    },
+    [token, editie, tab, handleAuthError, showToast]
+  );
+
+  const refresh = useAdminPolling(fetchAll);
 
   // Schimbarea ediției înseamnă alt set de date — golim ca să nu se vadă o clipă
   // lista ediției anterioare sub numărul nou.
@@ -211,20 +212,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     editiePrecedentaRef.current = editie;
   }, [editie]);
 
-  useEffect(() => {
-    refresh();
-    const id = window.setInterval(refresh, REFRESH_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener('visibilitychange', onVisible);
-      abortRef.current?.abort();
+  // Poll-ul stă în `useAdminPolling`; aici rămâne doar cronometrul toast-ului,
+  // care nu ține de ciclul de date.
+  useEffect(
+    () => () => {
       if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-    };
-  }, [refresh]);
+    },
+    []
+  );
 
   const all = rows ?? [];
   const q = query.trim().toLowerCase();
@@ -247,18 +242,9 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   }, [emailLog]);
 
   // Câte emailuri au rămas nelivrate (ultima încercare per adresă+subiect e eșec)
-  // — badge-ul roșu de pe tabul „Livrare".
-  const nelivrate = useMemo(() => {
-    const vazute = new Set<string>();
-    let n = 0;
-    for (const e of emailLog ?? []) {
-      const k = `${e.email.toLowerCase()}|${e.subiect}`;
-      if (vazute.has(k)) continue;
-      vazute.add(k);
-      if (e.status === 'esuat') n++;
-    }
-    return n;
-  }, [emailLog]);
+  // — badge-ul roșu de pe tabul „Livrare". Aceeași logică pe care o consumă și
+  // tabul, din `deliveryLog.ts` — înainte era rescrisă aici, în paralel.
+  const nelivrate = useMemo(() => emailuriNelivrate(emailLog ?? []).length, [emailLog]);
 
   const handleCreateEdition = () => {
     if (creatingEdition) return;

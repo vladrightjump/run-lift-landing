@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toCsv } from '../lib/csv';
 import { listLaunchNotifications } from '../lib/adminApi';
 import type { AdminLaunchSignup } from '../lib/adminApi';
 import { CURRENT_LAUNCH_EDITION } from '../lib/config';
+import { useAdminPolling } from './useAdminPolling';
 
 type Props = {
   token: string;
@@ -10,46 +11,31 @@ type Props = {
   onAuthError: (err: unknown) => boolean;
 };
 
-const REFRESH_MS = 15_000;
-
 export const AdminLaunchTab = ({ token, formatDate, onAuthError }: Props) => {
   const [rows, setRows] = useState<AdminLaunchSignup[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [query, setQuery] = useState('');
   const [showAllEditions, setShowAllEditions] = useState(false);
   const [sursa, setSursa] = useState<'toate' | 'lansare' | 'despre-noi'>('toate');
-  const abortRef = useRef<AbortController | null>(null);
   const rowsRef = useRef<AdminLaunchSignup[] | null>(null);
   rowsRef.current = rows;
 
-  const refresh = useCallback(() => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    listLaunchNotifications(token, controller.signal)
-      .then((data) => {
-        setRows(data);
-        setLoadError(false);
-      })
-      .catch((err) => {
-        if (controller.signal.aborted || onAuthError(err)) return;
-        setLoadError((prev) => prev || rowsRef.current === null);
-      });
-  }, [token, onAuthError]);
+  const fetchRows = useCallback(
+    (signal: AbortSignal) => {
+      listLaunchNotifications(token, signal)
+        .then((data) => {
+          setRows(data);
+          setLoadError(false);
+        })
+        .catch((err) => {
+          if (signal.aborted || onAuthError(err)) return;
+          setLoadError((prev) => prev || rowsRef.current === null);
+        });
+    },
+    [token, onAuthError]
+  );
 
-  useEffect(() => {
-    refresh();
-    const id = window.setInterval(refresh, REFRESH_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener('visibilitychange', onVisible);
-      abortRef.current?.abort();
-    };
-  }, [refresh]);
+  useAdminPolling(fetchRows);
 
   const rowsAll = rows ?? [];
   // Lista e per-ediție: implicit arătăm doar ediția curentă, dar arhiva
