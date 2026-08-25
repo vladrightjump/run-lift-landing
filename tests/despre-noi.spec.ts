@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { LAUNCH_DATE } from '../src/lib/config';
+import {
+  EVENT_WHERE,
+  TRAINING_WHERE,
+  TRAINING_MAP_EMBED_SRC,
+  TRAINING_MAP_DIRECTIONS_URL,
+} from '../src/content/format';
 
 /**
  * Pagina /despre-noi — prezentare + formular „Vreau info".
@@ -40,6 +46,26 @@ test.describe('Despre noi — conținut', () => {
     }
     await expect(page.locator('.dn-value-card')).toHaveCount(3);
     await expect(page.locator('.dn-stat')).toHaveCount(4);
+  });
+
+  /**
+   * Regresie: „Unde ne antrenăm" trăgea locul CURSEI (`EVENT_WHERE`), care se
+   * mută de la o ediție la alta. Pe ediția 5 pagina a trimis oameni la Scările
+   * de Granit pentru un antrenament de marți din Parcul Râșcani.
+   */
+  test('„Unde ne antrenăm" arată locul antrenamentelor, nu al cursei', async ({ page }) => {
+    await page.goto('/despre-noi');
+    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+
+    await expect(orar).toContainText(TRAINING_WHERE);
+    await expect(orar).not.toContainText(EVENT_WHERE);
+
+    // Harta și direcțiile trebuie să ducă tot în parc, nu la locul cursei.
+    await expect(orar.locator('iframe')).toHaveAttribute('src', TRAINING_MAP_EMBED_SRC);
+    await expect(orar.locator('a', { hasText: /google maps/i })).toHaveAttribute(
+      'href',
+      TRAINING_MAP_DIRECTIONS_URL,
+    );
   });
 
   test('linkul de Instagram e corect și se deschide în tab nou', async ({ page }) => {

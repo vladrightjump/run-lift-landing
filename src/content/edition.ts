@@ -53,12 +53,31 @@ export const EDITION = {
   /** Următorul antrenament — ținta countdown-ului de după cursă, local. */
   nextEditionAt: '2026-08-29T07:00:00',
 
+  /**
+   * Locul CURSEI — se schimbă de la o ediție la alta (evenimentele sunt
+   * flexibile). NU e locul antrenamentelor săptămânale: pentru acelea vezi
+   * `training` mai jos. Confuzia dintre cele două a trimis oameni în locul
+   * greșit, deci ține-le separate.
+   */
   venue: {
     name: 'Scările de Granit',
     city: 'Valea Morilor',
     // Căutarea Google Maps — pinul „Granit Stairs" (scările de granit din Valea
     // Morilor). Coordonate exacte, ca embed-ul și direcțiile să cadă fix pe punct.
     mapQuery: '47.0182357,28.8213041',
+  },
+
+  /**
+   * Locul ANTRENAMENTELOR săptămânale (marți și joi) — fix, NU se schimbă la
+   * ediție nouă. Îl folosește doar `/despre-noi`, secțiunea „Unde ne antrenăm".
+   */
+  training: {
+    name: 'Parcul Râșcani',
+    city: 'Chișinău',
+    days: 'Marți și joi',
+    time: '06:30',
+    /** Căutare text (nu coordonate) — antrenamentul e „în parc", nu într-un punct. */
+    mapQuery: 'Parcul Râșcani, Chișinău',
   },
 
   slots: {

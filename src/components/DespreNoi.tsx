@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { useLaunchForm } from '../hooks/useLaunchForm';
 import type { LaunchDraft } from '../lib/launchForm';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
-import { EVENT_WHERE, MAP_EMBED_SRC, MAP_DIRECTIONS_URL } from '../content/format';
+// Antrenamentele, NU cursa: pagina asta descrie marțea și joia din parc, care nu
+// se mută odată cu ediția. Constantele `EVENT_*`/`MAP_*` sunt ale cursei — a le
+// folosi aici a trimis oameni la locul greșit.
+import {
+  TRAINING_WHERE,
+  TRAINING_MAP_EMBED_SRC,
+  TRAINING_MAP_DIRECTIONS_URL,
+} from '../content/format';
+import { EDITION } from '../content/edition';
 import { HERO_POSTER, heroVideoSrc } from '../lib/media';
 
 const POVESTE = [
@@ -44,9 +52,9 @@ const ETAPE = [
 ];
 
 const ORAR = [
-  { k: 'Când', v: 'Marți și joi', accent: false },
-  { k: 'Unde', v: EVENT_WHERE, accent: false },
-  { k: 'Ora', v: '06:30', accent: true },
+  { k: 'Când', v: EDITION.training.days, accent: false },
+  { k: 'Unde', v: TRAINING_WHERE, accent: false },
+  { k: 'Ora', v: EDITION.training.time, accent: true },
   { k: 'Unde ne găsești', v: 'În aer liber, în parc', accent: false },
 ];
 
@@ -221,7 +229,7 @@ export const DespreNoi = () => {
                 ))}
               </div>
               <a
-                href={MAP_DIRECTIONS_URL}
+                href={TRAINING_MAP_DIRECTIONS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -242,11 +250,11 @@ export const DespreNoi = () => {
             </div>
             <div style={{ border: '1px solid var(--e3-border)', aspectRatio: '4 / 3', overflow: 'hidden', background: 'var(--e3-surface)' }}>
               <iframe
-                title={`${EVENT_WHERE} — hartă`}
+                title={`${TRAINING_WHERE} — hartă`}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 allowFullScreen
-                src={MAP_EMBED_SRC}
+                src={TRAINING_MAP_EMBED_SRC}
                 style={{ width: '100%', height: '100%', border: 'none', display: 'block', filter: 'grayscale(0.3) contrast(1.05)' }}
               />
             </div>
