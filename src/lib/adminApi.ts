@@ -167,20 +167,40 @@ export const listLaunchNotifications = (
 ): Promise<AdminLaunchSignup[]> =>
   rpc<AdminLaunchSignup[]>('admin_list_launch_notifications', { p_token: token }, signal);
 
-/** Adaugă o înscriere (acord = true implicit). Email duplicat => HTTP 409. */
+/**
+ * Adaugă o înscriere (acord = true implicit). Email duplicat => HTTP 409.
+ * Serverul refuză peste `event_capacity` cu `event_full`; `force` e derogarea
+ * explicită a operatorului, nu un implicit.
+ */
 export const addRegistration = (
   token: string,
-  data: { nume: string; telefon: string; email: string }
+  data: { nume: string; telefon: string; email: string },
+  force = false
 ): Promise<string> =>
   rpc<string>('admin_add_registration', {
     p_token: token,
     p_nume: data.nume,
     p_telefon: data.telefon,
     p_email: data.email,
+    p_force: force,
   });
 
+/** Ștergere LOGICĂ — rândul rămâne, cu `deleted_at` setat. */
 export const deleteRegistration = (token: string, id: string): Promise<void> =>
   rpc<void>('admin_delete_registration', { p_token: token, p_id: id });
+
+/**
+ * Reversarea ștergerii: același rând, deci același `created_at` și aceeași
+ * poziție în ordinea de promovare. Refuză cu `event_full` dacă locul a fost
+ * ocupat între timp (auto-promovare) și cu `duplicate_email` dacă adresa a fost
+ * re-înscrisă — ambele erau, înainte, supraîncărcări tăcute.
+ */
+export const undeleteRegistration = (
+  token: string,
+  id: string,
+  force = false
+): Promise<void> =>
+  rpc<void>('admin_undelete_registration', { p_token: token, p_id: id, p_force: force });
 
 /** Editare in-place a unei înscrieri (păstrează `created_at`). Duplicat => HTTP 409. */
 export const updateRegistration = (
@@ -205,8 +225,16 @@ export type AdminEvent = {
   detaliu: Record<string, unknown>;
 };
 
-export const listAdminEvents = (token: string, signal?: AbortSignal): Promise<AdminEvent[]> =>
-  rpc<AdminEvent[]>('admin_list_events', { p_token: token }, signal);
+/**
+ * Feedul de audit. Plafonul nu mai e fix la 50: de când fiecare scriere din
+ * admin lasă urmă, feedul e răspunsul la „ce s-a întâmplat cu Ana?".
+ */
+export const listAdminEvents = (
+  token: string,
+  limit = 200,
+  signal?: AbortSignal
+): Promise<AdminEvent[]> =>
+  rpc<AdminEvent[]>('admin_list_events', { p_token: token, p_limit: limit }, signal);
 
 /* ---- Lista de așteptare (event_waitlist) ---- */
 

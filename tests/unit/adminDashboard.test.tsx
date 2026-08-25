@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
 import type { adminApiMock } from './helpers/adminHarness';
 
 /**
@@ -83,5 +83,60 @@ describe('AdminDashboard', () => {
     expect(aleiAna.textContent).toBe('1/2');
     expect(aleiAna.getAttribute('title')).toContain('Confirmare: trimis');
     expect(aleiAna.getAttribute('title')).toContain('Reminder: lipsă');
+  });
+});
+
+describe('AdminDashboard — undo la ștergere', () => {
+  /** Șterge primul participant și întoarce funcția de undo din toast. */
+  const stergePrimul = async () => {
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Ana Popescu');
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Șterge' })[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Da, șterge' }));
+
+    await waitFor(() => expect(api.current?.deleteRegistration).toHaveBeenCalled());
+    const toast = await screen.findByRole('status');
+    return within(toast).getByRole('button', { name: 'Anulează' });
+  };
+
+  it('undo reversează ștergerea — NU reinserează', async () => {
+    // Defectul: undo apela `addRegistration`, care sare peste garda de
+    // capacitate și dă rândului recreat un `created_at` nou, deci persoana își
+    // pierdea locul în ordinea de promovare.
+    const undo = await stergePrimul();
+    fireEvent.click(undo);
+
+    await waitFor(() => expect(api.current?.undeleteRegistration).toHaveBeenCalled());
+    expect(api.current?.addRegistration).not.toHaveBeenCalled();
+  });
+
+  it('undo trimite id-ul rândului șters, nu datele lui', async () => {
+    const undo = await stergePrimul();
+    fireEvent.click(undo);
+
+    await waitFor(() => expect(api.current?.undeleteRegistration).toHaveBeenCalled());
+    const [, id] = api.current!.undeleteRegistration.mock.calls.at(-1)!;
+    expect(id).toBe('r1');
+  });
+
+  it('undo refuzat pentru că locul s-a ocupat spune de ce', async () => {
+    const undo = await stergePrimul();
+    api.current!.undeleteRegistration.mockRejectedValueOnce(
+      new Error('Supabase 400: {"message":"event_full"}')
+    );
+    fireEvent.click(undo);
+
+    expect(await screen.findByText(/ediția e plină/i)).toBeDefined();
+  });
+
+  it('undo refuzat pentru adresă re-înscrisă spune de ce', async () => {
+    const undo = await stergePrimul();
+    api.current!.undeleteRegistration.mockRejectedValueOnce(
+      new Error('Supabase 400: {"message":"duplicate_email"}')
+    );
+    fireEvent.click(undo);
+
+    expect(await screen.findByText(/re-înscrisă/i)).toBeDefined();
   });
 });

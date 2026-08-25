@@ -118,13 +118,19 @@ export const adminApiMock = (
       async (_token: string, _editie?: number, _cuText?: boolean, _signal?: AbortSignal) =>
         s.emailLog
     ),
-    listAdminEvents: vi.fn(async (_token: string, _signal?: AbortSignal) => s.events),
+    listAdminEvents: vi.fn(
+      async (_token: string, _limit?: number, _signal?: AbortSignal) => s.events
+    ),
     listEditions: vi.fn(async (_token: string, _signal?: AbortSignal) => s.editions),
     listLaunchNotifications: vi.fn(async (_token: string, _signal?: AbortSignal) => s.launch),
     listEmailTemplates: vi.fn(async (_token: string, _signal?: AbortSignal) => s.templates),
 
     addRegistration: vi.fn(
-      async (_token: string, _data: { nume: string; telefon: string; email: string }) => 'id-nou'
+      async (
+        _token: string,
+        _data: { nume: string; telefon: string; email: string },
+        _force?: boolean
+      ) => 'id-nou'
     ),
     updateRegistration: vi.fn(
       async (
@@ -134,6 +140,9 @@ export const adminApiMock = (
       ) => undefined
     ),
     deleteRegistration: vi.fn(async (_token: string, _id: string) => undefined),
+    undeleteRegistration: vi.fn(
+      async (_token: string, _id: string, _force?: boolean) => undefined
+    ),
     deleteWaitlist: vi.fn(async (_token: string, _id: string) => undefined),
     promoteWaitlist: vi.fn(async (_token: string, _id: string) => 'id-promovat'),
     createEdition: vi.fn(async (_token: string) => 6),

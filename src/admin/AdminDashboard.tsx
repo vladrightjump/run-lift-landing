@@ -4,6 +4,7 @@ import {
   addRegistration,
   updateRegistration,
   deleteRegistration,
+  undeleteRegistration,
   listRegistrations,
   listWaitlist,
   deleteWaitlist,
@@ -29,7 +30,12 @@ import { AdminDeliveryTab } from './AdminDeliveryTab';
 import { emailuriNelivrate, acoperire, COMUNICARI_EDITIE } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
 import { useAdminPolling } from './useAdminPolling';
-import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
+import {
+  isDuplicateError,
+  isTimeoutError,
+  isNetworkOrCspError,
+  sendConfirmationEmail,
+} from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
 import { CURRENT_EDITION, LAUNCH_DATE, TOTAL_SLOTS, WAITLIST_SLOTS } from '../lib/config';
@@ -97,6 +103,26 @@ const rezumaAcoperire = (
     };
   }
   return { clasa: 'trimis', eticheta: '✓ complet', detaliu };
+};
+
+/**
+ * De ce n-a mers reversarea. Ambele cauze sunt reale și au apărut exact în
+ * fereastra dintre ștergere și undo: locul poate fi luat de auto-promovare, iar
+ * adresa poate fi re-înscrisă. Înainte, undo-ul trecea peste amândouă în tăcere.
+ */
+const motivUndoEsuat = (err: unknown, nume: string): string => {
+  // `SubmitHttpError.message` poartă corpul răspunsului, deci și numele excepției
+  // ridicate de RPC (`event_full`, `duplicate_email`).
+  const text = err instanceof Error ? err.message : String(err);
+  if (text.includes('event_full')) {
+    return `Locul lui ${nume} a fost ocupat între timp — ediția e plină. Șterge pe altcineva sau adaugă-l manual peste capacitate.`;
+  }
+  if (text.includes('duplicate_email')) {
+    return `Adresa lui ${nume} a fost re-înscrisă între timp, deci nu se mai poate readuce rândul vechi.`;
+  }
+  if (isTimeoutError(err)) return 'Serverul răspunde greu. Verifică lista și încearcă din nou.';
+  if (isNetworkOrCspError(err)) return 'Conexiune blocată sau indisponibilă. Reîncearcă.';
+  return 'Nu am putut anula ștergerea.';
 };
 
 const STARE_TEXT: Record<StareCelula, string> = {
@@ -202,7 +228,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         if (signal.aborted) return;
         handleAuthError(err);
       });
-    listAdminEvents(token, signal)
+    listAdminEvents(token, 200, signal)
       .then((data) => {
         // Primul load: marcăm tot ca „văzut" fără toast. Apoi anunțăm doar noutățile.
         if (seenEventsRef.current === null) {
@@ -341,15 +367,20 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         showToast({
           kind: 'error',
           msg: `${row.nume} a fost șters.`,
+          // Reversare, nu reinserare: același rând, deci același `created_at` și
+          // aceeași poziție în ordinea de promovare. Înainte, undo apela
+          // `addRegistration`, care sărea peste garda de capacitate și dădea
+          // rândului recreat un `created_at` nou.
           undo: () => {
-            addRegistration(token, { nume: row.nume, telefon: row.telefon, email: row.email })
+            undeleteRegistration(token, row.id)
               .then(() => {
                 refresh();
-                showToast({ kind: 'success', msg: `${row.nume} a fost readăugat.` });
+                showToast({ kind: 'success', msg: `${row.nume} a fost readus în listă.` });
               })
               .catch((err) => {
                 if (handleAuthError(err)) return;
-                showToast({ kind: 'error', msg: 'Nu am putut anula ștergerea.' });
+                refresh();
+                showToast({ kind: 'error', msg: motivUndoEsuat(err, row.nume) });
               });
           },
         });
@@ -392,10 +423,15 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       })
       .catch((err) => {
         if (handleAuthError(err)) return;
+        // Garda de capacitate stă acum pe server, nu doar în verificarea de mai
+        // sus: numărătoarea din client e mereu cu până la 15 secunde în urmă.
+        const text = err instanceof Error ? err.message : String(err);
         showToast({
           kind: 'error',
           msg: isDuplicateError(err)
             ? 'Există deja o înscriere cu acest email.'
+            : text.includes('event_full')
+            ? 'Ediția e plină — s-a ocupat ultimul loc între timp.'
             : 'Nu am putut salva. Încearcă din nou.',
         });
       })
