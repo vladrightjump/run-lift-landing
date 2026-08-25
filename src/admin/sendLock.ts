@@ -11,8 +11,19 @@
  * consumă. Vezi `tests/unit/sendLock.test.ts`.
  */
 import type { AdminEmailLogEntry } from '../lib/adminApi';
+import type { Audience } from './emailAudience';
 
 export type AudientaLog = 'participanti' | 'asteptare';
+
+/**
+ * `email_log.audienta` cunoaște doar două valori, deci eticheta din jurnal NU
+ * poate distinge lista de așteptare a evenimentului de lista „Anunță-mă la
+ * lansare" — amândouă se scriu `asteptare`. Cheia de idempotență trebuie să
+ * folosească audiența REALĂ, altfel o difuzare legitimă către a doua listă ar fi
+ * refuzată ca dublură a primei.
+ */
+export const audienteAmbigue = (audienta: Audience): boolean =>
+  audienta === 'eveniment' || audienta === 'lansare';
 
 /**
  * Subiectul, adus la o formă canonică. Un spațiu în plus sau o majusculă nu fac
@@ -50,7 +61,8 @@ const amprenta = (text: string): string => {
  */
 export const cheieDifuzare = (
   editie: number,
-  audienta: AudientaLog,
+  /** Audiența reală (patru valori), nu eticheta din jurnal (două). */
+  audienta: Audience,
   subiect: string,
   suprascriere?: string
 ): string => {

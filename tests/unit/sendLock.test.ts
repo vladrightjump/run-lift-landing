@@ -33,7 +33,23 @@ describe('cheieDifuzare', () => {
 
   it('audiență schimbată → cheie diferită', () => {
     expect(cheieDifuzare(5, 'participanti', 'Acelasi')).not.toBe(
-      cheieDifuzare(5, 'asteptare', 'Acelasi')
+      cheieDifuzare(5, 'eveniment', 'Acelasi')
+    );
+  });
+
+  it('lista de așteptare și lista de lansare NU împart aceeași cheie', () => {
+    // `email_log.audienta` scrie `asteptare` pentru amândouă. Dacă cheia s-ar
+    // deriva din eticheta din jurnal, o difuzare legitimă către lista de lansare
+    // ar fi refuzată ca dublură a uneia trimise listei de așteptare — oameni
+    // diferiți, același zăvor.
+    expect(cheieDifuzare(5, 'eveniment', 'Acelasi')).not.toBe(
+      cheieDifuzare(5, 'lansare', 'Acelasi')
+    );
+  });
+
+  it('„toți" e o difuzare distinctă de „participanți"', () => {
+    expect(cheieDifuzare(5, 'toti', 'Acelasi')).not.toBe(
+      cheieDifuzare(5, 'participanti', 'Acelasi')
     );
   });
 

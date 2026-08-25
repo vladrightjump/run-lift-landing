@@ -12,7 +12,7 @@ import type {
   AdminEmailTemplate,
   AdminEmailLogEntry,
 } from '../lib/adminApi';
-import { cheieDifuzare, ultimaDifuzare } from './sendLock';
+import { cheieDifuzare, ultimaDifuzare, audienteAmbigue } from './sendLock';
 import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
 import type { Audience, Recipient } from './emailAudience';
 
@@ -141,8 +141,17 @@ export const AdminEmailTab = ({
     [emailLog, editie, audience, subjectCur]
   );
 
+  /**
+   * Jurnalul nu poate distinge lista de așteptare a evenimentului de cea de
+   * lansare (ambele se scriu `asteptare`), deci pentru audiențele astea o
+   * trimitere anterioară e doar un AVERTISMENT, nu un blocaj: altfel a doua
+   * listă ar fi refuzată pentru un email trimis primei. Serverul rămâne
+   * autoritatea — cheia lui poartă audiența reală.
+   */
+  const ambiguu = audienteAmbigue(audience);
+
   /** Cheia difuzării compuse acum, fără suprascriere. */
-  const cheieCurenta = cheieDifuzare(editie, audientaLog(audience), subjectCur);
+  const cheieCurenta = cheieDifuzare(editie, audience, subjectCur);
   /** Jetonul e valabil doar pentru difuzarea pentru care a fost emis. */
   const jetonValid = suprascriere?.cheie === cheieCurenta ? suprascriere.jeton : null;
 
@@ -238,7 +247,7 @@ export const AdminEmailTab = ({
       const res = await sendBulkEmail(token, messages, {
         audience: audientaLog(audience),
         editie,
-        onceKey: cheieDifuzare(editie, audientaLog(audience), subjectCur, jetonValid ?? undefined),
+        onceKey: cheieDifuzare(editie, audience, subjectCur, jetonValid ?? undefined),
       });
       // Serverul a refuzat: aceeași ediție + audiență + subiect a plecat deja.
       if (res.skipped) {
@@ -487,7 +496,9 @@ export const AdminEmailTab = ({
             type="button"
             className="admin-btn-accent"
             onClick={send}
-            disabled={sending || readOnly || (anterioara !== null && jetonValid === null)}
+            disabled={
+              sending || readOnly || (anterioara !== null && !ambiguu && jetonValid === null)
+            }
           >
             {sending ? 'Se trimite…' : `Trimite email (${recipients.length})`}
           </button>
