@@ -60,12 +60,29 @@ test.describe('Despre noi — conținut', () => {
     await expect(orar).toContainText(TRAINING_WHERE);
     await expect(orar).not.toContainText(EVENT_WHERE);
 
-    // Harta și direcțiile trebuie să ducă tot în parc, nu la locul cursei.
+    // Harta și direcțiile trebuie să ducă tot pe teren, nu la locul cursei.
     await expect(orar.locator('iframe')).toHaveAttribute('src', TRAINING_MAP_EMBED_SRC);
     await expect(orar.locator('a', { hasText: /google maps/i })).toHaveAttribute(
       'href',
       TRAINING_MAP_DIRECTIONS_URL,
     );
+  });
+
+  test('secțiunea are două căi spre hartă: sub orar și peste hartă', async ({ page }) => {
+    await page.goto('/despre-noi');
+    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+
+    const sub = orar.locator('a', { hasText: /google maps/i });
+    const peste = orar.locator('a.dn-map-link');
+    await expect(sub).toBeVisible();
+    await expect(peste).toBeVisible();
+
+    // Amândouă duc în același loc — și în locul antrenamentului, nu al cursei.
+    for (const link of [sub, peste]) {
+      await expect(link).toHaveAttribute('href', TRAINING_MAP_DIRECTIONS_URL);
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', /noopener/);
+    }
   });
 
   test('linkul de Instagram e corect și se deschide în tab nou', async ({ page }) => {

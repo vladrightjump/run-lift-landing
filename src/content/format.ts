@@ -10,7 +10,27 @@
  * (`EDITION.start` etc.), NU din `Date` + fusul mașinii — ca ziua/ziua-săptămânii
  * să fie deterministe indiferent de fusul pe care rulează build-ul/testul.
  */
-import { EDITION } from './edition';
+import { EDITION, type Place } from './edition';
+
+/**
+ * Derivatele unui loc — rândul „Unde", embed-ul de hartă și linkul de direcții —
+ * calculate ÎNTR-UN SINGUR LOC, pentru orice `Place`.
+ *
+ * Ăsta e antidotul la bug-ul care a mutat antrenamentele odată cu cursa:
+ * cât timp fiecare loc își avea propria copie a șabloanelor, sursa greșită se
+ * putea strecura într-una din ele fără să sară în ochi. Acum există un singur
+ * șablon, iar alegerea locului e argumentul de mai jos — la vedere.
+ */
+const placeStrings = (p: Place) => ({
+  /** „Teren Sportiv, Parcul Râșcani" sau, fără reper, „Scările de Granit, Valea Morilor". */
+  where: `${p.name}, ${p.landmark ?? p.city}`,
+  embedSrc: `https://maps.google.com/maps?q=${p.mapQuery}&z=${p.zoom}&hl=ro&output=embed`,
+  directionsUrl: `https://www.google.com/maps/search/?api=1&query=${p.mapQuery}`,
+});
+
+/** Cele două locuri ale proiectului. Singurele două apeluri; restul derivă din ele. */
+const EVENT_PLACE = placeStrings(EDITION.venue);
+const TRAINING_PLACE = placeStrings(EDITION.training.place);
 
 const MONTHS_RO = [
   'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
@@ -68,17 +88,18 @@ export const weekdayRo = (localIso: string, caps = false): string => {
 export const EDITION_ORDINAL = ordinal(EDITION.number);
 export const LAUNCH_EDITION_ORDINAL = ordinal(EDITION.launchNumber);
 
-/** „8 august 2026 · Parcul Râșcani". */
+/** „22 august 2026 · Scările de Granit". */
 export const EVENT_META = `${formatRoDate(EDITION.start)} · ${EDITION.venue.name}`;
 
-/** „Sâmbătă, 8 august 2026 · Parcul Râșcani, Chișinău · Outdoor Adaptive". */
-export const HERO_KICKER = `${weekdayRo(EDITION.start, true)}, ${formatRoDate(EDITION.start)} · ${EDITION.venue.name}, ${EDITION.venue.city} · ${EDITION.concept}`;
+/** „Sâmbătă, 22 august 2026 · Scările de Granit, Valea Morilor · Outdoor Adaptive". */
+export const HERO_KICKER = `${weekdayRo(EDITION.start, true)}, ${formatRoDate(EDITION.start)} · ${EVENT_PLACE.where} · ${EDITION.concept}`;
 
 /** „Sâmbătă, 8 august 2026" (rândul „Când" din Locație). */
 export const EVENT_WHEN = `${weekdayRo(EDITION.start, true)}, ${formatRoDate(EDITION.start)}`;
 
-/** „Parcul Râșcani, Chișinău" (rândul „Unde"). */
-export const EVENT_WHERE = `${EDITION.venue.name}, ${EDITION.venue.city}`;
+/** „Scările de Granit, Valea Morilor" (rândul „Unde"). Sursa unică a locului cursei
+ *  — `meta.ts` și `lib/calendar.ts` importă de aici, nu recalculează. */
+export const EVENT_WHERE = EVENT_PLACE.where;
 
 /** „06:30" (rândul „Start" + ora din copy). */
 export const EVENT_START_TIME = timeOf(EDITION.start);
@@ -93,18 +114,17 @@ export const SUCCESS_SEE_YOU = `Ne vedem pe ${dayMonth(EDITION.start)} la start,
  *  aici e doar valoarea derivată, pt. seed/sync și teste. */
 export const EVENT_BADGE = `${EDITION.eventName} · ${dayMonth(EDITION.start)}`;
 
-/** Google Maps: embed + link de direcții (aceeași căutare). */
-export const MAP_EMBED_SRC = `https://maps.google.com/maps?q=${EDITION.venue.mapQuery}&z=16&hl=ro&output=embed`;
-export const MAP_DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${EDITION.venue.mapQuery}`;
+/** Google Maps pentru locul CURSEI: embed + link de direcții. */
+export const MAP_EMBED_SRC = EVENT_PLACE.embedSrc;
+export const MAP_DIRECTIONS_URL = EVENT_PLACE.directionsUrl;
 
 // --- Antrenamentele săptămânale --------------------------------------------
 // Separate de cursă: antrenamentele sunt mereu în același parc, evenimentele se
 // mută. `/despre-noi` folosește EXCLUSIV constantele de mai jos.
 
-/** „Parcul Râșcani, Chișinău" (rândul „Unde" din „Unde ne antrenăm"). */
-export const TRAINING_WHERE = `${EDITION.training.name}, ${EDITION.training.city}`;
+/** „Teren Sportiv, Parcul Râșcani" (rândul „Unde" din „Unde ne antrenăm"). */
+export const TRAINING_WHERE = TRAINING_PLACE.where;
 
-/** Căutarea e text cu diacritice, deci trebuie encodată (spre deosebire de coordonate). */
-const trainingQuery = encodeURIComponent(EDITION.training.mapQuery);
-export const TRAINING_MAP_EMBED_SRC = `https://maps.google.com/maps?q=${trainingQuery}&z=15&hl=ro&output=embed`;
-export const TRAINING_MAP_DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${trainingQuery}`;
+/** Google Maps pentru locul ANTRENAMENTELOR: embed + link de direcții. */
+export const TRAINING_MAP_EMBED_SRC = TRAINING_PLACE.embedSrc;
+export const TRAINING_MAP_DIRECTIONS_URL = TRAINING_PLACE.directionsUrl;

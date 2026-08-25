@@ -7,9 +7,11 @@
  */
 import { EVENT_DATE, EVENT_END_DATE } from './config';
 import { EDITION } from '../content/edition';
+import { EVENT_WHERE } from '../content/format';
 
 const EVENT_TITLE = `${EDITION.brand} · ${EDITION.eventName}`;
-const EVENT_LOCATION = `${EDITION.venue.name}, ${EDITION.venue.city}`;
+/** Locul cursei vine din `format.ts`, nu recalculat — o singură sursă. */
+const EVENT_LOCATION = EVENT_WHERE;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 

@@ -1563,6 +1563,21 @@
   }
   .dn-topbar-cta:hover { background: var(--e3-accent-hover); transform: translateY(-2px); }
 
+  /* Butonul de direcții ancorat peste harta antrenamentelor. Același tipar ca
+     `.venue-map-link` de la locația cursei, în namespace-ul paginii. */
+  .dn-map-link {
+    position: absolute; right: 12px; bottom: 12px; z-index: 2;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-family: Anton, sans-serif; font-size: 13px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 9px 16px; text-decoration: none;
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .dn-map-link:hover {
+    background: var(--e3-accent-hover); transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(201,242,75,0.28);
+  }
+  .dn-map-link:active { transform: translateY(0) scale(0.97); box-shadow: none; }
+
   .dn-hero {
     position: relative; min-height: 82vh; display: flex; align-items: flex-end;
     overflow: hidden; border-bottom: 1px solid var(--e3-border);
