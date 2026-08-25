@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ideation: Site-ul Run + Lift</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&display=swap">
+<style>
+  :root{
+    --bg:#121410; --surface:#181b15; --surface-2:#1e2219;
+    --border:#2c3126; --hairline:#242820;
+    --text:#eceee7; --text-bright:#fbfcf8; --muted:#9aa291; --muted-dim:#6f7767;
+    --accent:#c9f24b; --accent-text:#d9f97a; --accent-soft:rgba(201,242,75,.10);
+    --warn:#f2b84b; --warn-soft:rgba(242,184,75,.10);
+    --info:#7bc8f2; --info-soft:rgba(123,200,242,.10);
+    --display:'Anton', 'Haettenschweiler', 'Arial Narrow', sans-serif;
+    --body:'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--body); font-size:15.5px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:62rem; margin-inline:auto; padding:clamp(28px,5vw,64px) clamp(18px,4vw,40px) 96px}
+  p,li{max-width:72ch}
+  a{color:var(--accent-text)}
+  code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em;
+    background:var(--surface-2); border:1px solid var(--hairline);
+    padding:.1em .38em; border-radius:3px; color:var(--text-bright);
+  }
+  .eyebrow{
+    font-size:11px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase;
+    color:var(--muted-dim); margin:0 0 10px;
+  }
+  h1{
+    font-family:var(--display); font-weight:400; font-size:clamp(38px,7vw,68px);
+    line-height:1.04; letter-spacing:.5px; text-transform:uppercase;
+    margin:0 0 18px; color:var(--text-bright);
+  }
+  h1 .ac{color:var(--accent)}
+  h2{
+    font-family:var(--display); font-weight:400; font-size:clamp(23px,3.4vw,31px);
+    letter-spacing:.6px; text-transform:uppercase; color:var(--text-bright);
+    margin:56px 0 6px; padding-bottom:10px; border-bottom:1px solid var(--border);
+  }
+  h3{font-size:17px; font-weight:700; margin:0; color:var(--text-bright); letter-spacing:.1px}
+  .lede{font-size:17px; color:var(--muted); max-width:66ch; margin:0 0 26px}
+
+  .meta{
+    display:flex; flex-wrap:wrap; gap:8px; margin:0 0 30px; padding:0; list-style:none;
+  }
+  .meta li{
+    font-size:12px; letter-spacing:.4px; color:var(--muted);
+    background:var(--surface); border:1px solid var(--border);
+    padding:5px 11px; border-radius:999px; max-width:none;
+  }
+  .meta b{color:var(--text-bright); font-weight:600}
+
+  .stats{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:1px;
+    background:var(--border); border:1px solid var(--border); margin:0 0 8px;
+  }
+  .stats div{background:var(--surface); padding:15px 16px}
+  .stats .v{font-family:var(--display); font-size:27px; color:var(--accent); line-height:1}
+  .stats .k{font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted-dim); margin-top:5px}
+
+  .axes{list-style:none; padding:0; margin:14px 0 0; display:grid; gap:1px; background:var(--border); border:1px solid var(--border)}
+  .axes li{background:var(--surface); padding:13px 17px; display:flex; gap:14px; align-items:baseline; max-width:none}
+  .axes .n{font-family:var(--display); font-size:13px; color:var(--muted-dim); min-width:22px}
+  .axes .t{font-weight:700; color:var(--text-bright)}
+  .axes .d{color:var(--muted); font-size:14px}
+
+  .jump{list-style:none; padding:0; margin:18px 0 34px; display:grid; gap:7px}
+  .jump li{max-width:none}
+  .jump a{
+    display:flex; gap:13px; align-items:baseline; text-decoration:none;
+    padding:9px 14px; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); font-size:14.5px;
+  }
+  .jump a:hover{border-color:var(--accent); background:var(--surface-2)}
+  .jump .rk{font-family:var(--display); color:var(--accent); min-width:20px; font-size:15px}
+  .jump .ax{margin-left:auto; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted-dim); white-space:nowrap}
+
+  article.idea{
+    background:var(--surface); border:1px solid var(--border);
+    padding:24px clamp(16px,3vw,28px); margin:0 0 20px;
+  }
+  .ihead{display:flex; gap:14px; align-items:baseline; flex-wrap:wrap; margin-bottom:4px}
+  .rank{font-family:var(--display); font-size:26px; color:var(--accent); line-height:1}
+  .chips{display:flex; gap:7px; flex-wrap:wrap; margin:13px 0 17px}
+  .chip{
+    font-size:11px; font-weight:700; letter-spacing:1.1px; text-transform:uppercase;
+    padding:4px 10px; border-radius:999px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--muted);
+  }
+  .chip.axis{background:var(--accent-soft); border-color:rgba(201,242,75,.34); color:var(--accent-text)}
+  .chip.hi{background:var(--accent-soft); border-color:rgba(201,242,75,.34); color:var(--accent-text)}
+  .chip.md{background:var(--warn-soft); border-color:rgba(242,184,75,.34); color:var(--warn)}
+
+  .idea dl{margin:18px 0 0; display:grid; gap:0; border-top:1px solid var(--hairline)}
+  .idea dt{
+    font-size:10.5px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase;
+    color:var(--muted-dim); padding-top:15px;
+  }
+  .idea dd{margin:5px 0 15px; color:var(--text)}
+  .idea dd.basis{color:var(--muted); font-size:14.5px}
+  .idea dd.basis .tag{
+    font-family:ui-monospace,monospace; font-size:12px; color:var(--accent-text);
+    font-weight:700; letter-spacing:.3px;
+  }
+  .idea dd.down{color:var(--muted)}
+
+  figure{margin:20px 0 4px; padding:18px 14px; background:var(--bg); border:1px solid var(--hairline); overflow-x:auto}
+  figure svg{display:block; margin-inline:auto; max-width:100%; height:auto}
+  figcaption{font-size:12.5px; color:var(--muted-dim); text-align:center; margin-top:12px; max-width:none}
+
+  .tblwrap{overflow-x:auto; border:1px solid var(--border)}
+  table{border-collapse:collapse; width:100%; min-width:520px; font-size:14.5px}
+  th,td{text-align:left; padding:11px 15px; border-bottom:1px solid var(--hairline); vertical-align:top}
+  th{
+    background:var(--surface-2); font-size:10.5px; letter-spacing:1.6px;
+    text-transform:uppercase; color:var(--muted-dim); font-weight:700;
+  }
+  td:first-child{color:var(--muted-dim); font-family:var(--display); width:36px}
+  tbody tr:last-child td{border-bottom:none}
+  td.idea-name{color:var(--text-bright); font-weight:600}
+  tr.gap td{background:var(--info-soft)}
+
+  footer.composition-signal{
+    margin-top:68px; padding-top:20px; border-top:1px solid var(--border);
+    font-size:12.5px; color:var(--muted-dim); max-width:none;
+  }
+  @media (max-width:640px){
+    .jump .ax{display:none}
+    .idea dl{gap:0}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<p class="eyebrow">Ideation · Repo-grounded</p>
+<h1>Site-ul <span class="ac">Run + Lift</span></h1>
+<p class="lede">Șase direcții care au supraviețuit criticii, dintr-un set de 25 de candidați generați pe cinci axe ale produsului. Fiecare are o bază verificabilă în cod, în backlog sau în prior art — nu sugestii generice.</p>
+
+<ul class="meta">
+  <li><b>Data:</b> <time datetime="2026-08-21">2026-08-21</time></li>
+  <li><b>Subiect:</b> run-lift-site</li>
+  <li><b>Focus:</b> deschis — produsul în ansamblu</li>
+  <li><b>Mod:</b> repo-grounded</li>
+</ul>
+
+<div class="stats">
+  <div><div class="v">25</div><div class="k">candidați</div></div>
+  <div><div class="v">6</div><div class="k">supraviețuitori</div></div>
+  <div><div class="v">13</div><div class="k">respinși</div></div>
+  <div><div class="v">5</div><div class="k">axe acoperite</div></div>
+  <div><div class="v">7</div><div class="k">zile între ediții</div></div>
+</div>
+
+<h2 id="grounding-context">Grounding Context</h2>
+<p><strong>Codebase Context.</strong> React 19 + Vite + TypeScript, Supabase ca backend (schema <code>runlift</code>), deploy pe Vercel, domeniu <code>parktraining.fit</code>. Sursa unică pentru ediție e <code>src/content/edition.ts</code>; <code>src/lib/config.ts</code> derivă din ea, iar <code>scripts/sync-edition.ts</code> emite SQL pentru <code>app_config</code>. Emailurile sunt DB-driven, editabile din <code>/admin</code>.</p>
+<p><strong>Faptul care schimbă totul: cadența e săptămânală.</strong> Ediția 5 e pe 22 august, următoarea pe 29 august. Toată arhitectura „ediției" — fișierul SSOT, scriptul de sincronizare, runbook-ul din <code>GHID-EDITIE-NOUA.md</code>, ordinalele scrise de mână — e proiectată pentru evenimente rare, configurate manual. La o cadență săptămânală, runbook-ul acela rulează de ~52 de ori pe an.</p>
+<p><strong>Ce s-a livrat azi:</strong> homepage-ul comută singur prin trei faze în ziua cursei (landing → „cine vine" fără formular → countdown spre următorul antrenament). Countdown-ul acela se oprește pe 29 august fără succesor configurat — o consecință directă a modelului „ediție unică".</p>
+<p><strong>Ce spune backlogul:</strong> lipsesc politica de confidențialitate și regulamentul (ambele marcate ca necesare legal), pagina <code>/rezultate</code> („motivul nr. 1 de revenire la HYROX", niciodată construită), istoricul personal, reminderul automat și regenerarea <code>og.png</code>. Backlogul e datat 4 august și e parțial depășit — <code>.ics</code> și share-ul post-înscriere sunt deja livrate în <code>src/lib/calendar.ts</code>.</p>
+<p><strong>Ce am verificat în timpul grounding-ului:</strong> prezența la eveniment nu e înregistrată nicăieri (nici în <code>src/</code>, nici în migrări) — înscrierea e singurul semnal. <code>ORDINALS_RO</code> din <code>src/content/format.ts</code> acoperă doar 1–12. Promovarea de pe lista de așteptare trimite deja email prin <code>pg_net</code>. Nu există <code>docs/solutions/</code> — niciun learning capturat între sesiuni.</p>
+
+<h2 id="topic-axes">Topic Axes</h2>
+<ol class="axes">
+  <li><span class="n">01</span><span><span class="t">Ediția următoare</span> — <span class="d">tot ce trebuie să se întâmple între o sâmbătă și următoarea.</span></span></li>
+  <li><span class="n">02</span><span><span class="t">Ziua cursei</span> — <span class="d">orele petrecute la Valea Morilor, cu telefonul în mână.</span></span></li>
+  <li><span class="n">03</span><span><span class="t">Revenirea</span> — <span class="d">ce face pe cineva care a alergat o dată să revină și să aducă pe cineva.</span></span></li>
+  <li><span class="n">04</span><span><span class="t">Ce colectezi și ce datorezi</span> — <span class="d">obligațiile care vin la pachet cu nume, telefon și dată de naștere.</span></span></li>
+  <li><span class="n">05</span><span><span class="t">Ce vezi tu</span> — <span class="d">ce poate ști organizatorul despre ce se întâmplă de fapt.</span></span></li>
+</ol>
+
+<h2 id="ranked-ideas">Ranked Ideas</h2>
+
+<ul class="jump">
+  <li><a href="#idea-1"><span class="rk">1</span><span>Pagina <code>/rezultate</code> și istoricul personal</span><span class="ax">Revenirea</span></a></li>
+  <li><a href="#idea-2"><span class="rk">2</span><span>Ediția se rostogolește singură</span><span class="ax">Ediția următoare</span></a></li>
+  <li><a href="#idea-3"><span class="rk">3</span><span>Regulamentul pe care 29 de oameni l-au acceptat</span><span class="ax">Ce colectezi</span></a></li>
+  <li><a href="#idea-4"><span class="rk">4</span><span>Rezervare recurentă, nu înscriere de fiecare dată</span><span class="ax">Revenirea</span></a></li>
+  <li><a href="#idea-5"><span class="rk">5</span><span>Lista de start și prezența la fața locului</span><span class="ax">Ziua cursei</span></a></li>
+  <li><a href="#idea-6"><span class="rk">6</span><span>Organizatorul are un telefon, nu un laptop</span><span class="ax">Ce vezi tu</span></a></li>
+</ul>
+
+<article class="idea" id="idea-1">
+  <div class="ihead"><span class="rank">1</span><h3>Pagina <code>/rezultate</code> și istoricul personal</h3></div>
+  <div class="chips">
+    <span class="chip axis">Axă: Revenirea</span>
+    <span class="chip hi">Încredere 90%</span>
+    <span class="chip">Complexitate: mare</span>
+  </div>
+
+  <p>Publică timpii și clasamentul după fiecare sesiune, și dă fiecărui participant un istoric personal peste ediții. Site-ul colectează azi înscrieri și apoi uită ce s-a întâmplat: nimic nu persistă rezultatul unei curse. La cadență săptămânală bucla e de șapte zile — alergi sâmbătă, îți vezi timpul seara, te înscrii pentru sâmbăta următoare.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 190" role="img" aria-label="Bucla de șapte zile: cursă, rezultat, comparație cu ediția trecută, înscriere pentru sâmbăta următoare">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="#6f7767"/>
+        </marker>
+      </defs>
+      <g font-family="Archivo, sans-serif" font-size="12.5" fill="#eceee7" text-anchor="middle">
+        <rect x="14" y="62" width="122" height="52" fill="#181b15" stroke="#2c3126"/>
+        <text x="75" y="84">Sâmbătă</text><text x="75" y="101" fill="#9aa291">alergi</text>
+
+        <rect x="176" y="62" width="122" height="52" fill="#181b15" stroke="#c9f24b"/>
+        <text x="237" y="84" fill="#c9f24b">Sâmbătă seara</text><text x="237" y="101" fill="#9aa291">îți vezi timpul</text>
+
+        <rect x="338" y="62" width="122" height="52" fill="#181b15" stroke="#2c3126"/>
+        <text x="399" y="84">Istoricul tău</text><text x="399" y="101" fill="#9aa291">față de data trecută</text>
+
+        <rect x="500" y="62" width="122" height="52" fill="#181b15" stroke="#2c3126"/>
+        <text x="561" y="84">Te înscrii</text><text x="561" y="101" fill="#9aa291">pentru următoarea</text>
+
+        <line x1="140" y1="88" x2="170" y2="88" stroke="#6f7767" stroke-width="1.4" marker-end="url(#a1)"/>
+        <line x1="302" y1="88" x2="332" y2="88" stroke="#6f7767" stroke-width="1.4" marker-end="url(#a1)"/>
+        <line x1="464" y1="88" x2="494" y2="88" stroke="#6f7767" stroke-width="1.4" marker-end="url(#a1)"/>
+
+        <path d="M561 118 L561 154 L75 154 L75 120" fill="none" stroke="#6f7767" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#a1)"/>
+        <text x="318" y="172" fill="#6f7767" font-size="11.5">șapte zile</text>
+      </g>
+    </svg>
+    <figcaption>Bucla pe care cadența săptămânală o face posibilă — și pe care lipsa rezultatelor o rupe după primul pas.</figcaption>
+  </figure>
+
+  <dl>
+    <dt>Bază</dt>
+    <dd class="basis"><span class="tag">direct:</span> <code>BACKLOG.md</code> linia 24 numește pagina <code>/rezultate</code> „motivul nr. 1 de revenire la HYROX", iar linia 30 cere istoricul personal „la ediția 3+" — ești la ediția 5 și niciuna nu e construită.<br>
+    <span class="tag">external:</span> parkrun — 5 km, gratuit, săptămânal, aceeași buclă structurală. Modelul lor de retenție e construit pe rezultatul <em>personal</em> trimis în aceeași zi și pe recunoașterea etapelor (50/100/250 de curse), nu pe podium.</dd>
+
+    <dt>Rațiune</dt>
+    <dd>Un rezultat e singurul artefact care face ca ediția N+1 să fie o continuare, nu o vânzare de la zero. Fără el, fiecare sâmbătă e un stranger acquisition problem. Cu el, absența devine o întrerupere a unei serii — costul de a nu veni crește de la sine.</dd>
+
+    <dt>Compromisuri</dt>
+    <dd class="down">Are nevoie de cronometrare la fața locului (la 40 de oameni, introducerea manuală e suficientă) și depinde de ideea 5 — nu poți publica rezultate fără să știi cine a alergat de fapt. Schimbă și natura datelor: lista publică e azi anonimizată („Vladislav F."), iar rezultatele o transformă în date de performanță identificate, ceea ce mută sfera consimțământului.</dd>
+  </dl>
+</article>
+
+<article class="idea" id="idea-2">
+  <div class="ihead"><span class="rank">2</span><h3>Ediția se rostogolește singură</h3></div>
+  <div class="chips">
+    <span class="chip axis">Axă: Ediția următoare</span>
+    <span class="chip hi">Încredere 85%</span>
+    <span class="chip">Complexitate: medie</span>
+  </div>
+
+  <p>Când countdown-ul ajunge la zero, <code>nextEditionAt</code> devine noul <code>start</code>, numărul ediției crește, <code>app_config</code> urmează, iar <code>og.png</code> se regenerează la build. Omul intervine doar când se schimbă ceva real — locația, capacitatea, o săptămână sărită. Azi, fiecare sâmbătă costă un runbook de cinci pași.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 234" role="img" aria-label="Comparație: runbook manual de cinci pași față de rostogolire automată cu o singură decizie umană">
+      <g font-family="Archivo, sans-serif" font-size="12" fill="#eceee7">
+        <text x="14" y="20" font-size="11" letter-spacing="1.6" fill="#6f7767">ACUM · ×52 PE AN</text>
+        <g fill="#9aa291" font-size="11.5">
+          <rect x="14" y="32" width="108" height="34" fill="#181b15" stroke="#2c3126"/><text x="24" y="53">edition.ts</text>
+          <rect x="132" y="32" width="108" height="34" fill="#181b15" stroke="#2c3126"/><text x="142" y="53">sync-edition</text>
+          <rect x="250" y="32" width="108" height="34" fill="#181b15" stroke="#2c3126"/><text x="260" y="53">SQL în Supabase</text>
+          <rect x="368" y="32" width="108" height="34" fill="#181b15" stroke="#2c3126"/><text x="378" y="53">og.png manual</text>
+          <rect x="486" y="32" width="108" height="34" fill="#181b15" stroke="#2c3126"/><text x="496" y="53">verify + deploy</text>
+        </g>
+        <text x="14" y="90" font-size="11.5" fill="#f2b84b">fiecare pas e o ocazie de desincronizare — bannerul roșu din /admin există fix pentru asta</text>
+
+        <line x1="14" y1="112" x2="626" y2="112" stroke="#2c3126"/>
+
+        <text x="14" y="140" font-size="11" letter-spacing="1.6" fill="#6f7767">PROPUS · O DECIZIE PE SĂPTĂMÂNĂ</text>
+        <rect x="14" y="152" width="168" height="42" fill="#181b15" stroke="#c9f24b"/>
+        <text x="26" y="172" fill="#c9f24b" font-size="12">Confirmi sâmbăta</text>
+        <text x="26" y="188" fill="#9aa291" font-size="11.5">sau schimbi ce e diferit</text>
+
+        <rect x="214" y="152" width="380" height="42" fill="#181b15" stroke="#2c3126"/>
+        <text x="228" y="172" font-size="12">Restul se derivă</text>
+        <text x="228" y="188" fill="#9aa291" font-size="11.5">dată · număr · app_config · og.png · deploy</text>
+
+        <line x1="186" y1="173" x2="208" y2="173" stroke="#6f7767" stroke-width="1.4"/>
+        <path d="M208 173 l-7 -4 l0 8 z" fill="#6f7767"/>
+
+        <text x="14" y="222" font-size="11.5" fill="#6f7767">ORDINALS_RO se oprește la 12 — la cadență săptămânală ajungi acolo în trei luni</text>
+      </g>
+    </svg>
+    <figcaption>Modelul „ediție rară, configurată de mână" față de „ocurență a unei sesiuni recurente".</figcaption>
+  </figure>
+
+  <dl>
+    <dt>Bază</dt>
+    <dd class="basis"><span class="tag">direct:</span> <code>GHID-EDITIE-NOUA.md</code> descrie cinci pași per ediție și avertizează explicit că „până actualizezi <code>edition.ts</code> și redeployezi, backoffice-ul afișează un banner roșu de desincronizare" — bannerul e dovada că cele două jumătăți deja divergează în practică. <code>BACKLOG.md</code> linia 36 marchează <code>og.png</code> ca asset manual per ediție. <code>ORDINALS_RO</code> din <code>src/content/format.ts</code> acoperă doar 1–12. Iar countdown-ul livrat azi se oprește pe 29 august fără succesor.</dd>
+
+    <dt>Rațiune</dt>
+    <dd>„Ediția" e o presupunere, nu un dat. Codul tratează fiecare sâmbătă ca pe o campanie configurată manual, când de fapt e o ocurență a unei sesiuni recurente — mai aproape de un orar de clase decât de un eveniment. Cadența săptămânală înmulțește o corvoadă tolerabilă cu 52 și face driftul aproape sigur.</dd>
+
+    <dt>Compromisuri</dt>
+    <dd class="down">Automatizarea care schimbă date de producție nesupravegheat e riscantă: are nevoie de o poartă de confirmare sau de un dry-run, nu de o rostogolire tăcută. Săptămânile sărite, schimbările de locație și capacitatea rămân decizii umane — automatizarea trebuie să le ceară, nu să le presupună.</dd>
+  </dl>
+</article>
+
+<article class="idea" id="idea-3">
+  <div class="ihead"><span class="rank">3</span><h3>Regulamentul pe care 29 de oameni l-au acceptat</h3></div>
+  <div class="chips">
+    <span class="chip axis">Axă: Ce colectezi și ce datorezi</span>
+    <span class="chip hi">Încredere 95%</span>
+    <span class="chip">Complexitate: mică</span>
+  </div>
+
+  <p>Formularul cere bifarea acordului, iar baza de date refuză inserarea fără el — dar regulamentul la care trimite nu există scris, și nu există nici politică de confidențialitate, deși colectezi nume, telefon, email și dată de naștere. Scrie ambele pagini. Apoi întreabă-te dacă data nașterii e folosită la ceva.</p>
+
+  <dl>
+    <dt>Bază</dt>
+    <dd class="basis"><span class="tag">direct:</span> <code>BACKLOG.md</code> liniile 9–10 listează ambele ca deschise și „necesare legal", iar linia 10 spune explicit că „checkbox-ul de acord trimite la un regulament care nu există scris". Bifa <code>acord</code> e impusă în <code>useRegistration</code> și în politica RLS. <code>src/lib/validation.ts</code> cere <code>dataNasterii</code>, dar nicio suprafață din aplicație nu o consumă.</dd>
+
+    <dt>Rațiune</dt>
+    <dd>E singurul element din set cu un prag legal, nu cu un plafon de creștere — restul sunt oportunități, asta e o obligație. Și se agravează cu fiecare ediție: 29 de consimțământe noi doar săptămâna asta, la un document inexistent. La cadență săptămânală, întârzierea nu e statică, e cumulativă.</dd>
+
+    <dt>Compromisuri</dt>
+    <dd class="down">Tehnic, niciunul — e scris, nu construit. Întrebarea despre data nașterii e cea incomodă: dacă nimic nu o folosește, principiul minimizării spune să nu o mai colectezi, dar rezultatele și categoriile de vârstă din ideea 1 ar putea avea nevoie de ea. Decide întâi dacă o vrei, apoi justific-o în politică.</dd>
+  </dl>
+</article>
+
+<article class="idea" id="idea-4">
+  <div class="ihead"><span class="rank">4</span><h3>Rezervare recurentă, nu înscriere de fiecare dată</h3></div>
+  <div class="chips">
+    <span class="chip axis">Axă: Revenirea</span>
+    <span class="chip md">Încredere 65%</span>
+    <span class="chip">Complexitate: medie</span>
+  </div>
+
+  <p>Pentru cineva care a venit săptămâna trecută, inversează implicitul: îi ții locul pentru sâmbăta următoare dacă nu îl eliberează. Formularul rămâne pentru cei noi. Azi, un obișnuit întâlnește același formular de patru câmpuri de 52 de ori pe an.</p>
+
+  <dl>
+    <dt>Bază</dt>
+    <dd class="basis"><span class="tag">external:</span> modelul de rezervare recurentă din fitness (ClassPass, Mindbody) — o rezervare permanentă cu anulare ușoară e ce susține clienții fideli, pentru că frecarea de reintrare e proporțională cu nimic.<br>
+    <span class="tag">reasoned:</span> la 40 de locuri, 29 ocupate și o rotație de 7 zile, formularul curent e proiectat pentru un străin. Costul lui e plătit de cel mai valoros segment — participantul recurent, pe care <code>BACKLOG.md</code> linia 28 îl numește „cel mai mare ROI".</dd>
+
+    <dt>Rațiune</dt>
+    <dd>Inversarea implicitului mută efortul de la cel care revine la cel care pleacă — exact în direcția în care vrei să se acumuleze inerția. Eliberează și locuri automat: cine nu confirmă, cedează locul listei de așteptare, care are deja promovare automată prin trigger.</dd>
+
+    <dt>Compromisuri</dt>
+    <dd class="down">Locurile ținute și neeliberate înfometează lista de așteptare — are nevoie de un termen de eliberare și de o consecință pentru neprezentare (care depinde de ideea 5). Ridică și o așteptare pe care nu vrei neapărat s-o creezi: că vei organiza în fiecare săptămână, la nesfârșit.</dd>
+  </dl>
+</article>
+
+<article class="idea" id="idea-5">
+  <div class="ihead"><span class="rank">5</span><h3>Lista de start și prezența la fața locului</h3></div>
+  <div class="chips">
+    <span class="chip axis">Axă: Ziua cursei</span>
+    <span class="chip md">Încredere 70%</span>
+    <span class="chip">Complexitate: mică</span>
+  </div>
+
+  <p>Faza „cine vine" livrată azi e la un pas de o listă de start: adaugă un număr lângă fiecare nume cu o seară înainte, și lasă organizatorul să bifeze cine a ajuns de fapt. Momentan nimic nu înregistrează prezența — înscrierea e singurul semnal pe care îl ai.</p>
+
+  <dl>
+    <dt>Bază</dt>
+    <dd class="basis"><span class="tag">direct:</span> prezența nu e urmărită nicăieri — nici în <code>src/</code>, nici în migrările SQL (verificat prin căutare în timpul grounding-ului). <code>ParticipantsSection</code> randează deja o listă publică numerotată, iar fereastra 06:00–09:00 livrată azi o pune deja în fața oamenilor exact când sunt la Valea Morilor.<br>
+    <span class="tag">external:</span> cursele de trail publică lista de start cu numere de concurs cu o seară înainte — participantul își caută numărul, iar organizatorul are un roster tipărit care devine foaia de prezență.</dd>
+
+    <dt>Rațiune</dt>
+    <dd>Fără prezență nu poți distinge 29 de înscriși de 20 de prezenți, nu poți calcula rata de neprezentare și nu poți publica rezultate — ideea 1 are nevoie de un roster al celor care chiar au alergat. E cea mai ieftină dintre cele șase și deblochează cea mai scumpă.</dd>
+
+    <dt>Compromisuri</dt>
+    <dd class="down">Bifarea prezenței e prima acțiune de administrare făcută la fața locului, nu la birou: are nevoie de o suprafață care funcționează pe telefon, cu sesiune autentificată, în condiții de teren. Numărul de concurs adaugă și o așteptare de formalitate pe care un antrenament de sâmbătă dimineață poate nu o vrea.</dd>
+  </dl>
+</article>
+
+<article class="idea" id="idea-6">
+  <div class="ihead"><span class="rank">6</span><h3>Organizatorul are un telefon, nu un laptop</h3></div>
+  <div class="chips">
+    <span class="chip axis">Axă: Ce vezi tu</span>
+    <span class="chip md">Încredere 70%</span>
+    <span class="chip">Complexitate: medie</span>
+  </div>
+
+  <p>Backoffice-ul presupune un birou. Inversează: o sarcină programată verifică invarianții care chiar se strică — e armat cron-ul de reminder, e <code>app_config</code> sincron cu <code>edition.ts</code>, mai e <code>nextEditionAt</code> în viitor, s-au livrat emailurile de confirmare — și îți scrie când unul cade. Proiectul Supabase e deja partajat cu un bot de Telegram.</p>
+
+  <dl>
+    <dt>Bază</dt>
+    <dd class="basis"><span class="tag">direct:</span> <code>README.md</code> descrie proiectul Supabase ca „partajat cu gym-app + botul de Telegram" — canalul există deja. <code>BACKLOG.md</code> linia 34 listează reminderul automat ca deschis, iar <code>supabase-cron-reminder-ARM.sql</code> e un script de armare/dezarmare pe care cineva trebuie să-și amintească să-l ruleze. Corecția <code>durationHours</code> de azi (6→2) a arătat că driftul de configurare e tăcut până când cineva se uită.</dd>
+
+    <dt>Rațiune</dt>
+    <dd>Fiecare mod de eșec de aici e silențios: nimic nu-ți spune că reminderul n-a plecat până când nu se prezintă nimeni. Tot planul de azi a existat pentru că organizatorul e la Valea Morilor, nu la laptop — aceeași observație se aplică la tot ce se poate strica între sâmbete.</dd>
+
+    <dt>Compromisuri</dt>
+    <dd class="down">O santinelă care dă alarme false e ignorată în două săptămâni și devine mai rea decât nimic. Are nevoie de un set mic de invarianți adevărați, nu de un dashboard. Și adaugă o dependență operațională de un bot partajat cu alt produs — o graniță pe care <code>MIGRATIONS.md</code> o păzește deliberat.</dd>
+  </dl>
+</article>
+
+<h2 id="rejection-summary">Rejection Summary</h2>
+<div class="tblwrap">
+<table>
+  <thead><tr><th>#</th><th>Idee</th><th>Motiv</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td class="idea-name">Elimină <code>launchNumber</code></td><td>Sub pragul de ambiție — capcană reală (nu atribuie nimic, doar schimbă textul afișat), dar e o curățenie de o linie, nu o direcție care merită discutată în echipă.</td></tr>
+    <tr><td>2</td><td class="idea-name"><code>ORDINALS_RO</code> se oprește la 12</td><td>Duplică o idee mai puternică — bug real la cadență săptămânală, dar se rezolvă în interiorul ideii 2.</td></tr>
+    <tr><td>3</td><td class="idea-name">Magazin de learnings în <code>docs/solutions/</code></td><td>Interesantă, dar e proces de lucru, nu îmbunătățire de produs — se rezolvă printr-un obicei, nu printr-o direcție de ideare.</td></tr>
+    <tr><td>4</td><td class="idea-name">Actualizează BACKLOG-ul depășit</td><td>Sub pragul de ambiție — igienă de documentație (<code>.ics</code> și share-ul sunt deja livrate), nu o decizie.</td></tr>
+    <tr><td>5</td><td class="idea-name">FAQ, preț explicit, rând de beneficii</td><td>Deja acoperite de documentele existente — enumerate în secțiunea „Conversie" din <code>BACKLOG.md</code>, cu estimări; nu e nimic de decis.</td></tr>
+    <tr><td>6</td><td class="idea-name">Poze reale de la edițiile trecute</td><td>Deja acoperită de backlog — muncă de asset, fără decizie structurală.</td></tr>
+    <tr><td>7</td><td class="idea-name">Turnstile pe formulare</td><td>Deja acoperită de backlog, cu estimare (~1h) — execuție, nu ideare.</td></tr>
+    <tr><td>8</td><td class="idea-name">Format pe echipe / perechi</td><td>Mai potrivită ca brainstorm separat — e o decizie despre formatul evenimentului, nu despre site.</td></tr>
+    <tr><td>9</td><td class="idea-name">Grup WhatsApp/Telegram + hashtag</td><td>Deja acoperită de backlog — operațiuni de comunitate, fără suprafață în produs.</td></tr>
+    <tr><td>10</td><td class="idea-name">Notificare la promovarea de pe lista de așteptare</td><td>Bază infirmată la verificare — <code>supabase-migration-waitlist-autopromote.sql</code> trimite deja email prin <code>pg_net</code>, cu șablon editabil.</td></tr>
+    <tr><td>11</td><td class="idea-name">Serii, numere de concurs și capacitate pentru 400</td><td>Prea scumpă față de valoarea probabilă la 29/40 — inversarea de constrângere a produs totuși prezența, care a supraviețuit ca ideea 5.</td></tr>
+    <tr><td>12</td><td class="idea-name">Vercel Analytics</td><td>Sub pragul de ambiție — un comutator în dashboard, deja notat în backlog.</td></tr>
+    <tr><td>13</td><td class="idea-name">Sesiune permanentă, fără granițe de ediție</td><td>Prea scumpă față de valoarea probabilă — elimină identitatea de eveniment pe care e construit tot produsul, inclusiv emailurile și fazele zilei.</td></tr>
+  </tbody>
+</table>
+</div>
+<p style="margin-top:14px; color:var(--muted); font-size:14px">Toate cele cinci axe au cel puțin un supraviețuitor — nicio lacună de acoperire.</p>
+
+<footer class="composition-signal">
+  Compus 2026-08-21 de ce-ideate din codebase-ul <code>run-lift-landing</code> (repo-grounded). Cele șase idei au fost generate ca parte a unui set de 25 de candidați și critici înainte de selecție; lentilele au rulat secvențial într-un singur context, nu ca agenți independenți, deci diversitatea între ele e mai mică decât într-o rulare cu flotă.
+</footer>
+
+</div>
+</body>
+</html>
