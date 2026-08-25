@@ -1,6 +1,7 @@
 import { TOTAL_SLOTS } from '../../lib/config';
 import { getMySignups } from '../../lib/mySignups';
 import type { PublicStats } from '../../lib/supabase';
+import { useCountUp } from '../../hooks/useCountUp';
 import { sectionNum, sectionTitle } from './shared';
 
 type Props = {
@@ -19,12 +20,14 @@ export const ParticipantsSection = ({ stats, canSignUp = true, num = '04' }: Pro
   const participants = stats?.participants ?? [];
   const mine = new Set(getMySignups());
   const waitlistCount = stats?.waitlist ?? 0;
+  // Contorul urcă spre numărul real în loc să apară dintr-odată.
+  const countShown = useCountUp(stats ? stats.count : null);
   return (
       <section id="participanti" style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderTop: '1px solid var(--e3-border)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-            <span style={sectionNum}>{num}</span>
-            <h2 style={sectionTitle}>Cine vine</h2>
+            <span className="e3-title-num" style={sectionNum}>{num}</span>
+            <h2 className="e3-title" style={sectionTitle}>Cine vine</h2>
           </div>
           <div
             style={{
@@ -43,13 +46,14 @@ export const ParticipantsSection = ({ stats, canSignUp = true, num = '04' }: Pro
               Participanți înscriși
             </span>
             <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 20, letterSpacing: 1, color: 'var(--e3-accent)' }}>
-              {stats ? stats.count : '–'} / {TOTAL_SLOTS}
+              {countShown ?? '–'} / {TOTAL_SLOTS}
             </span>
           </div>
-          <div style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)' }}>
+          <div data-reveal style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)' }}>
             {participants.map((p, i) => (
               <div
                 key={`${p.nume}-${i}`}
+                className="e3-row"
                 style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '15px 22px', borderBottom: '1px solid var(--e3-hairline)' }}
               >
                 <span
@@ -96,7 +100,15 @@ export const ParticipantsSection = ({ stats, canSignUp = true, num = '04' }: Pro
               </div>
             )}
             {!stats && (
-              <div style={{ padding: '36px 22px', textAlign: 'center', fontSize: 15, color: 'var(--e3-muted)' }}>Se încarcă lista…</div>
+              <div role="status" aria-busy="true">
+                <span className="e3-sr">Se încarcă lista…</span>
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="e3-skel-row" aria-hidden="true">
+                    <span className="e3-skel" style={{ width: 20 }} />
+                    <span className="e3-skel" style={{ flex: 1, maxWidth: 120 + i * 26 }} />
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           {waitlistCount > 0 && (

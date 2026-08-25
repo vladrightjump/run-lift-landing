@@ -31,6 +31,7 @@ import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
 import { CURRENT_EDITION, LAUNCH_DATE, TOTAL_SLOTS, WAITLIST_SLOTS } from '../lib/config';
 import { LAUNCH_EDITION_ORDINAL } from '../content/format';
+import { AdminSkeleton, AdminFeedSkeleton } from './AdminSkeleton';
 
 const launchFmt = new Intl.DateTimeFormat('ro-RO', {
   day: 'numeric',
@@ -754,7 +755,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 </div>
                 );
               })}
-              {rows === null && !loadError && <div className="admin-empty">Se încarcă…</div>}
+              {rows === null && !loadError && <AdminSkeleton cols={arhiva ? 6 : 7} />}
               {rows === null && loadError && (
                 <div className="admin-empty">Nu am putut încărca lista. Reîncercăm automat.</div>
               )}
@@ -817,7 +818,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   )}
                 </div>
               ))}
-              {waitlist === null && <div className="admin-empty">Se încarcă…</div>}
+              {waitlist === null && <AdminSkeleton cols={arhiva ? 5 : 6} rows={3} />}
               {waitlist !== null && waitAll.length === 0 && (
                 <div className="admin-empty">
                   Nicio persoană în așteptare. Lista se completează automat când toate cele{' '}
@@ -876,7 +877,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   </div>
                 );
               })}
-            {events === null && <div className="admin-empty">Se încarcă…</div>}
+            {events === null && <AdminFeedSkeleton />}
             {events !== null &&
               (events ?? []).filter((e) => e.tip === 'auto_promote' || e.tip === 'editie_noua')
                 .length === 0 && <div className="admin-empty">Nicio activitate încă.</div>}
