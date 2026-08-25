@@ -5,6 +5,7 @@ import { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } from '../../content/format';
 import type { FieldName } from '../../lib/validation';
 import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
+import { useCountUp } from '../../hooks/useCountUp';
 import { BirthDateField } from './BirthDateField';
 import { sectionNum, sectionTitle } from './shared';
 
@@ -48,6 +49,10 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
     formRef, handleSubmit, clearErrorFor, setBirth, resetForm, setErrors, setPhase,
   } = reg;
 
+  // Contorul urcă spre valoarea reală în loc să sară de la „–". `null` cât
+  // timp statisticile n-au sosit, ca marcajul de gol să rămână.
+  const remainingShown = useCountUp(stats ? slots.remaining : null);
+
   /** BirthDateField ne dă ISO; `useRegistration` ține {d,m,y}. */
   const setBirthFromISO = (iso: string) => {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -71,8 +76,8 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-              <span style={sectionNum}>03</span>
-              <h2 style={sectionTitle}>Înscriere</h2>
+              <span className="e3-title-num" style={sectionNum}>03</span>
+              <h2 className="e3-title" style={sectionTitle}>Înscriere</h2>
             </div>
             <p style={{ margin: '0 0 28px', fontSize: 17, lineHeight: 1.55, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
               {waitlistMode ? (
@@ -91,7 +96,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                 </>
               )}
             </p>
-            <div style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)', padding: 26 }}>
+            <div data-reveal className="e3-card e3-spot" style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)', padding: 26 }}>
               <div
                 style={{
                   fontFamily: 'Anton, sans-serif',
@@ -139,13 +144,27 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                     color: slots.remaining <= 3 ? 'var(--e3-danger)' : 'var(--e3-accent)',
                   }}
                 >
-                  {stats ? slots.remaining : '–'} / {TOTAL_SLOTS}
+                  {remainingShown ?? '–'} / {TOTAL_SLOTS}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 4 }} aria-hidden="true">
-                {Array.from({ length: TOTAL_SLOTS }, (_, i) => (
-                  <div key={i} style={{ height: 8, flex: 1, background: i < slots.occupied ? 'var(--e3-accent)' : 'var(--e3-border)' }} />
-                ))}
+                {Array.from({ length: TOTAL_SLOTS }, (_, i) => {
+                  const filled = i < slots.occupied;
+                  return (
+                    <div
+                      key={i}
+                      // Doar segmentele ocupate se umplu în lanț; cele goale sunt
+                      // fundal, n-au ce anunța. `--i` dă decalajul din CSS.
+                      className={filled ? 'e3-slot-fill' : undefined}
+                      style={{
+                        height: 8,
+                        flex: 1,
+                        background: filled ? 'var(--e3-accent)' : 'var(--e3-border)',
+                        ...(filled ? ({ '--i': i } as CSSProperties) : null),
+                      }}
+                    />
+                  );
+                })}
               </div>
               {isSoldOut && !isWaitlistFull && (
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-accent)', fontWeight: 600, textWrap: 'pretty' }}>

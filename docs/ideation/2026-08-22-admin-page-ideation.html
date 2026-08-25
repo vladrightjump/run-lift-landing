@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ideation: Pagina de admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&display=swap">
+<style>
+  :root{
+    --bg:#121410; --surface:#181b15; --surface-2:#1e2219;
+    --border:#2c3126; --hairline:#242820;
+    --text:#eceee7; --text-bright:#fbfcf8; --muted:#9aa291; --muted-dim:#6f7767;
+    --accent:#c9f24b; --accent-text:#d9f97a; --accent-soft:rgba(201,242,75,.10);
+    --warn:#f2b84b; --warn-text:#f6cd7d; --warn-soft:rgba(242,184,75,.10);
+    --info:#7bc8f2; --info-text:#a6dbf7; --info-soft:rgba(123,200,242,.10);
+    --display:'Anton','Haettenschweiler','Arial Narrow',sans-serif;
+    --body:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--body); font-size:15.5px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:62rem; margin-inline:auto; padding:clamp(28px,5vw,64px) clamp(18px,4vw,40px) 96px}
+  p,li{max-width:72ch}
+  a{color:var(--accent-text)}
+  code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em;
+    background:var(--surface-2); border:1px solid var(--hairline);
+    padding:.1em .38em; border-radius:3px; color:var(--text-bright);
+  }
+  strong{color:inherit; font-weight:700}
+  .eyebrow{
+    font-size:11px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase;
+    color:var(--muted-dim); margin:0 0 10px;
+  }
+  h1{
+    font-family:var(--display); font-weight:400; font-size:clamp(38px,7vw,68px);
+    line-height:1.04; letter-spacing:.5px; text-transform:uppercase;
+    margin:0 0 18px; color:var(--text-bright);
+  }
+  h1 .ac{color:var(--accent)}
+  h2{
+    font-family:var(--display); font-weight:400; font-size:clamp(23px,3.4vw,31px);
+    letter-spacing:.6px; text-transform:uppercase; color:var(--text-bright);
+    margin:56px 0 6px; padding-bottom:10px; border-bottom:1px solid var(--border);
+  }
+  h3{font-size:18px; font-weight:700; margin:0; color:var(--text-bright); letter-spacing:.1px}
+  h4{font-size:12px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase;
+     color:var(--muted-dim); margin:22px 0 6px}
+  .lede{font-size:17px; color:var(--muted); max-width:66ch; margin:0 0 26px}
+  .meta{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 30px; padding:0; list-style:none}
+  .meta li{
+    font-size:12px; letter-spacing:.4px; color:var(--muted);
+    background:var(--surface); border:1px solid var(--border);
+    padding:5px 11px; border-radius:999px; max-width:none;
+  }
+  .meta b{color:var(--text-bright); font-weight:600}
+  .stats{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px;
+    margin:0 0 8px; padding:0; list-style:none;
+  }
+  .stats li{
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; max-width:none;
+  }
+  .stats .n{display:block; font-family:var(--display); font-size:27px; color:var(--accent); line-height:1.1}
+  .stats .k{font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted-dim)}
+  .jump{
+    margin:18px 0 34px; padding:16px 18px; list-style:none;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+  }
+  .jump li{margin:0 0 7px; max-width:none; font-size:14px}
+  .jump li:last-child{margin-bottom:0}
+  .jump .rank{
+    display:inline-block; min-width:22px; font-family:var(--display); color:var(--accent);
+    font-size:15px;
+  }
+  .jump a{text-decoration:none; border-bottom:1px solid transparent}
+  .jump a:hover{border-bottom-color:var(--accent-text)}
+  .jump .ax{color:var(--muted-dim); font-size:12px}
+  article.idea{
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:22px 24px; margin:0 0 20px;
+  }
+  .idea-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px}
+  .rankchip{
+    font-family:var(--display); font-size:22px; color:var(--accent); line-height:1;
+  }
+  .chips{display:flex; flex-wrap:wrap; gap:7px; margin:12px 0 16px; padding:0; list-style:none}
+  .chips li{
+    font-size:11px; letter-spacing:1px; text-transform:uppercase; font-weight:700;
+    border-radius:999px; padding:4px 11px; max-width:none;
+    background:var(--surface-2); border:1px solid var(--border); color:var(--muted);
+  }
+  .chips li.ax{background:var(--info-soft); border-color:rgba(123,200,242,.3); color:var(--info-text)}
+  .chips li.cf{background:var(--accent-soft); border-color:rgba(201,242,75,.28); color:var(--accent-text)}
+  .chips li.cx{background:var(--warn-soft); border-color:rgba(242,184,75,.28); color:var(--warn-text)}
+  .field{margin:0 0 12px}
+  .field p{margin:0}
+  .basis{
+    background:var(--surface-2); border:1px solid var(--hairline); border-radius:7px;
+    padding:12px 14px; margin:0;
+  }
+  .basis p{max-width:68ch}
+  .tag{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px;
+    color:var(--accent-text); letter-spacing:.3px;
+  }
+  .down{color:var(--muted)}
+  figure{margin:20px 0 4px}
+  figure svg{display:block; width:100%; height:auto; max-width:100%}
+  figcaption{font-size:12.5px; color:var(--muted-dim); margin-top:8px; max-width:70ch}
+  .scroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse; width:100%; font-size:14px; min-width:620px}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--hairline); vertical-align:top}
+  th{
+    font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted-dim);
+    font-weight:700; border-bottom:1px solid var(--border);
+  }
+  td.id{font-family:var(--display); color:var(--muted); font-size:15px; white-space:nowrap}
+  tr td:nth-child(2){color:var(--text-bright)}
+  tr td:nth-child(3){color:var(--muted)}
+  .note{
+    background:var(--warn-soft); border:1px solid rgba(242,184,75,.28); border-radius:8px;
+    padding:14px 16px; margin:20px 0;
+  }
+  .note .lbl{
+    display:block; font-size:11px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase;
+    color:var(--warn-text); margin-bottom:5px;
+  }
+  .note p{margin:0; color:var(--text); max-width:70ch}
+  .composition-signal{
+    margin-top:64px; padding-top:18px; border-top:1px solid var(--border);
+    font-size:12px; color:var(--muted-dim);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<p class="eyebrow">Compound Engineering · Ideation</p>
+<h1>Pagina de <span class="ac">admin</span></h1>
+<p class="lede">Șapte direcții pentru back-office-ul organizatorului, filtrate din 44 de candidate. Trei dintre ele pornesc de la defecte verificate în cod, nu de la idei generice.</p>
+
+<ul class="meta">
+  <li><b>Data:</b> <time datetime="2026-08-22">2026-08-22</time></li>
+  <li><b>Topic:</b> admin-page</li>
+  <li><b>Focus:</b> the admin page</li>
+  <li><b>Mode:</b> repo-grounded</li>
+</ul>
+
+<ul class="stats">
+  <li><span class="n">44</span><span class="k">idei brute</span></li>
+  <li><span class="n">7</span><span class="k">supraviețuitoare</span></li>
+  <li><span class="n">5</span><span class="k">axe acoperite</span></li>
+  <li><span class="n">3</span><span class="k">bug-uri verificate</span></li>
+</ul>
+
+<h2 id="grounding-context">Grounding Context</h2>
+
+<h4>Codebase Context</h4>
+<p><code>src/admin/</code> este un SPA protejat prin parolă: <code>AdminApp.tsx</code> (poarta de sesiune), <code>AdminDashboard.tsx</code> (941 de linii, deține aproape toată starea) și cinci taburi — Participanți, Emailuri, Livrare, Lansare, Șabloane. Logica pură e extrasă în <code>emailAudience.ts</code> și <code>deliveryLog.ts</code>, ambele testate unitar. Accesul la date trece exclusiv prin RPC-uri Postgres <code>SECURITY DEFINER</code> care validează <code>p_token</code> (<code>src/lib/adminApi.ts</code>); tabelele de bază au RLS fără politici, deci cheia publicabilă singură nu poate citi nimic.</p>
+<p>Starea e făcută de mână: <code>useState</code> + <code>refresh()</code> + <code>setInterval(REFRESH_MS = 15s)</code> + listener pe <code>visibilitychange</code> + <code>AbortController</code> per fetch — duplicat aproape identic în <code>AdminDashboard</code> și <code>AdminLaunchTab</code>. Actualizări optimiste cu rollback manual; toast cu undo de 6 secunde la ștergere.</p>
+<p><strong>Puncte de fricțiune identificate:</strong> componenta-dumnezeu de 941 de linii cu 16+ hook-uri de stare și 13 handlere; boilerplate-ul de polling copiat; zero paginare; niciun cron de reminder armat (deși mașinăria e scrisă și idempotentă); desincronizarea ediției între <code>app_config</code> și <code>src/content/edition.ts</code>, semnalată ca „recurring operational footgun”; zero acoperire de teste pe UI-ul de admin; toast-urile de eroare sunt string-uri generice, deși <code>src/lib/supabase.ts</code> conține deja o taxonomie de erori scrisă după incidentul CSP; și <strong>nicio suprafață pentru ziua evenimentului</strong> — organizatorul se uită la homepage-ul public în timpul cursei.</p>
+<p><strong>Limite de produs:</strong> <code>src/content/edition.ts</code> e canonic și se aplică la build; deschiderea unei ediții e deliberat un proces manual documentat, iar butonul din admin face doar jumătatea <code>app_config</code>. Un organizator, ~30 de participanți pe ediție, ediția 4 în curs.</p>
+
+<h4>External Context</h4>
+<p>Piața de unelte pentru organizatori separă net <em>înregistrarea</em> de <em>ziua cursei</em>: RunSignup RaceDay e o aplicație de companion distinctă, cu căutare după nume, atribuire de numere pe loc și scanare care funcționează offline și se sincronizează mai târziu. Modelul de la box-office (will-call) e și mai apropiat: lista se sincronizează pe dispozitiv <em>înainte</em> de a deschide ușile, scanările se pun într-o coadă locală și se contopesc oportunist, cu deduplicare explicită pentru momentele în care semnalul pâlpâie. Pentru echipe de un singur om (Spond, Heja), viteza și simplitatea bat configurabilitatea.</p>
+<p>Pe partea de email, ghidajele converg pe același set: gestionarea automată a bounce-urilor, dezabonare obligatorie de îndată ce un mail tranzacțional conține și conținut promoțional, și preview/test-send înainte de orice difuzare. Nicio sursă nu oferă însă o barieră serioasă împotriva difuzării duble — e o zonă de oportunitate reală, iar aici primitivul necesar există deja în cod.</p>
+
+<h2 id="topic-axes">Topic Axes</h2>
+<ol>
+  <li><strong>Ziua evenimentului</strong> — ce face organizatorul în ziua cursei, cu telefonul în mână: prezență, listă de start, status live, trecerea între faze.</li>
+  <li><strong>Comunicare &amp; email</strong> — șabloane, audiențe, difuzări, jurnal de livrare, retrimiteri, dezabonări, remindere, siguranța trimiterii.</li>
+  <li><strong>Ciclul ediției</strong> — deschiderea și închiderea unei ediții, granița <code>app_config</code> ↔ <code>edition.ts</code>, arhive, ce se transmite între ediții.</li>
+  <li><strong>Lista de participanți</strong> — lista, lista de așteptare și promovarea, capacitatea, exportul, căutarea, înscrierea din admin, istoricul unei persoane.</li>
+  <li><strong>Fundația UI &amp; state</strong> — sesiune, polling și refresh, structura componentelor, afișarea erorilor, undo/confirmare, tratamentul pe mobil, testabilitatea adminului.</li>
+</ol>
+
+<h2 id="ranked-ideas">Ranked Ideas</h2>
+
+<ul class="jump">
+  <li><span class="rank">1.</span> <a href="#idea-1">Undo-ul care nu anulează nimic</a> <span class="ax">· Lista de participanți</span></li>
+  <li><span class="rank">2.</span> <a href="#idea-2">Macazul: comutarea ediției nu se încheie singură</a> <span class="ax">· Ciclul ediției</span></li>
+  <li><span class="rank">3.</span> <a href="#idea-3">Zăvor pe trimitere: <code>once_key</code> și pentru difuzările manuale</a> <span class="ax">· Comunicare &amp; email</span></li>
+  <li><span class="rank">4.</span> <a href="#idea-4">Fișa de acoperire: cine n-a primit ce</a> <span class="ax">· Comunicare &amp; email</span></li>
+  <li><span class="rank">5.</span> <a href="#idea-5">Arhiva vie: istoricul care se scrie deja singur</a> <span class="ax">· Lista de participanți</span></li>
+  <li><span class="rank">6.</span> <a href="#idea-6">Ziua cursei: un ecran care merge fără semnal</a> <span class="ax">· Ziua evenimentului</span></li>
+  <li><span class="rank">7.</span> <a href="#idea-7">Panoul de stare: ce e pornit și ce e aliniat</a> <span class="ax">· Fundația UI &amp; state</span></li>
+</ul>
+
+<!-- ============ IDEA 1 ============ -->
+<article class="idea" id="idea-1">
+  <div class="idea-head"><span class="rankchip">1.</span><h3>Undo-ul care nu anulează nimic</h3></div>
+  <ul class="chips">
+    <li class="ax">Lista de participanți</li>
+    <li class="cf">Confidence 92%</li>
+    <li class="cx">Complexity Medium</li>
+  </ul>
+
+  <div class="field">
+    <h4>Description</h4>
+    <p>Butonul „Undo” din toast-ul de ștergere nu restaurează nimic — reinserează. Între ștergere și undo se strecoară trigger-ul de auto-promovare, iar reinserarea ocolește garda de capacitate, așa că ediția se poate supraîncărca în tăcere. În plus, rândul recreat primește un <code>created_at</code> nou, ceea ce îi schimbă poziția în ordinea FIFO. Direcția: ștergere logică reală (<code>deleted_at</code>), auto-promovare mutată pe <code>AFTER UPDATE OF deleted_at</code>, și fiecare scriere din admin înregistrată în <code>events</code>, astfel încât „undo” devine o reversare adevărată în loc de un cronometru de 6 secunde.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 860 200" role="img" aria-label="Diagramă: cursa dintre ștergere, auto-promovare și undo">
+      <defs>
+        <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6f7767"/>
+        </marker>
+      </defs>
+      <rect x="176" y="34" width="556" height="96" rx="8" fill="rgba(242,184,75,.07)" stroke="#f2b84b" stroke-width="1" stroke-dasharray="5 4"/>
+      <text x="454" y="26" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.4" fill="#f6cd7d">FEREASTRA DE 6 SECUNDE</text>
+
+      <rect x="10" y="56" width="156" height="52" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="88" y="80" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#eceee7">Ștergi un</text>
+      <text x="88" y="96" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#eceee7">participant</text>
+
+      <rect x="192" y="56" width="164" height="52" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="274" y="80" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#eceee7">AFTER DELETE</text>
+      <text x="274" y="96" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#9aa291">promovează de pe listă</text>
+
+      <rect x="382" y="56" width="150" height="52" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="457" y="80" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#eceee7">Apeși „Undo”</text>
+      <text x="457" y="96" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#9aa291">= reinserare</text>
+
+      <rect x="558" y="56" width="164" height="52" rx="7" fill="rgba(242,184,75,.12)" stroke="#f2b84b"/>
+      <text x="640" y="80" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#f6cd7d">guard_bypass = 1</text>
+      <text x="640" y="96" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#f6cd7d">fără verificare</text>
+
+      <rect x="748" y="56" width="102" height="52" rx="7" fill="#1e2219" stroke="#f2b84b"/>
+      <text x="799" y="87" text-anchor="middle" font-family="Anton,sans-serif" font-size="21" fill="#f2b84b">31 / 30</text>
+
+      <line x1="168" y1="82" x2="188" y2="82" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah1)"/>
+      <line x1="358" y1="82" x2="378" y2="82" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah1)"/>
+      <line x1="534" y1="82" x2="554" y2="82" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah1)"/>
+      <line x1="724" y1="82" x2="744" y2="82" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah1)"/>
+
+      <text x="10" y="164" font-family="Archivo,sans-serif" font-size="12.5" fill="#9aa291">Al doilea efect: rândul reinserat primește un <tspan font-family="ui-monospace,Menlo,monospace" fill="#eceee7">created_at</tspan> nou —</text>
+      <text x="10" y="182" font-family="Archivo,sans-serif" font-size="12.5" fill="#9aa291">persoana își pierde locul în ordinea de promovare, fără niciun semn.</text>
+    </svg>
+    <figcaption>Ilustrativ. Cele două efecte ale reinserării: capacitatea depășită și poziția FIFO schimbată.</figcaption>
+  </figure>
+
+  <div class="field">
+    <h4>Basis</h4>
+    <div class="basis">
+      <p><span class="tag">direct:</span> <code>supabase-migration-registration-guards.sql:83-91</code> — <code>admin_add_registration</code> apelează necondiționat <code>set_config('runlift.guard_bypass','1',true)</code> și nu verifică niciodată <code>event_capacity</code>. <code>AdminDashboard.tsx:319-324</code> — acțiunea de undo apelează exact <code>addRegistration</code>. <code>supabase-migration-waitlist-autopromote.sql:121</code> — trigger-ul de auto-promovare este <code>AFTER DELETE</code>, deci se poate declanșa înăuntrul ferestrei de 6 secunde. Un grep confirmă că <code>admin_add_registration</code> nu primește niciun parametru <code>created_at</code>. Tot un grep confirmă că singurele două locuri care scriu în <code>events</code> sunt <code>auto_promote</code> și <code>editie_noua</code> — nicio operație CRUD din admin nu lasă urmă.</p>
+      <p><span class="tag">direct:</span> tiparul de rezolvare există deja în acest repo: <code>supabase-migration-hyrox.sql:19-42</code> implementează exact ștergerea logică cu <code>deleted_at</code> pe <code>registrations_backup</code>. Decizia a fost deja luată o dată, doar că nu a fost aplicată pe tabelul viu.</p>
+    </div>
+  </div>
+
+  <div class="field">
+    <h4>Rationale</h4>
+    <p>Ambele simptome sunt tăcute: RPC-urile reușesc, toast-ul spune „readăugat”, iar singurul semn e un număr de locuri greșit sau o persoană care sare peste alta la promovare. La 30 de locuri, o supraîncărcare cu unu e o problemă logistică reală în ziua cursei. Iar pentru că adminul nu jurnalizează nicio scriere, întrebarea „ce s-a întâmplat cu Ana?” nu are astăzi niciun răspuns în sistem.</p>
+  </div>
+
+  <div class="field">
+    <h4>Downsides</h4>
+    <p class="down">Ștergerea logică schimbă contractul trigger-ului de auto-promovare și obligă la filtrarea <code>deleted_at is null</code> în fiecare interogare — se ratează ușor una. Jurnalul de scrieri cere ridicarea limitei actuale de „ultimele 50 de evenimente” din <code>admin_list_events</code>. E o migrare de schemă pe tabelul cel mai sensibil, făcută pentru un scenariu care apare rar.</p>
+  </div>
+</article>
+
+<!-- ============ IDEA 2 ============ -->
+<article class="idea" id="idea-2">
+  <div class="idea-head"><span class="rankchip">2.</span><h3>Macazul: comutarea ediției nu se încheie singură</h3></div>
+  <ul class="chips">
+    <li class="ax">Ciclul ediției</li>
+    <li class="cf">Confidence 88%</li>
+    <li class="cx">Complexity Medium</li>
+  </ul>
+
+  <div class="field">
+    <h4>Description</h4>
+    <p>Butonul „+ Ediție nouă” trage un singur macaz din două. Backendul trece instantaneu pe ediția următoare și șterge <code>registration_deadline</code> și <code>event_start</code>, în timp ce site-ul live continuă să servească build-ul ediției vechi până când cineva editează <code>edition.ts</code>, rulează <code>sync-edition</code> și redeployează. Astăzi acest interval e doar <em>detectat</em>, printr-un banner. Direcția: interblocare mecanică — <code>admin_create_edition()</code> scrie o ediție <em>în așteptare</em>, frontend-ul își raportează la încărcare ediția din build, iar comutarea se încheie doar când cele două sunt de acord. Alături, un diff câmp-cu-câmp între <code>app_config</code> și <code>EDITION</code>, plus verificări pentru celelalte capcane documentate.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 860 250" role="img" aria-label="Diagramă: comutarea ediției azi versus cu interblocare">
+      <defs>
+        <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6f7767"/>
+        </marker>
+      </defs>
+
+      <text x="14" y="18" font-family="Archivo,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.8" fill="#6f7767">ACUM</text>
+      <line x1="418" y1="0" x2="418" y2="250" stroke="#2c3126" stroke-width="1"/>
+      <text x="446" y="18" font-family="Archivo,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.8" fill="#6f7767">CU INTERBLOCARE</text>
+
+      <rect x="14" y="34" width="380" height="40" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="204" y="59" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12.5" fill="#eceee7">Apeși „+ Ediție nouă”</text>
+      <line x1="204" y1="76" x2="204" y2="96" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah2)"/>
+
+      <rect x="14" y="100" width="182" height="62" rx="7" fill="rgba(242,184,75,.12)" stroke="#f2b84b"/>
+      <text x="105" y="122" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#f6cd7d">Backend: ediția 5</text>
+      <text x="105" y="139" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" fill="#f6cd7d">instant, iar gărzile</text>
+      <text x="105" y="154" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" fill="#f6cd7d">de înscriere dispar</text>
+
+      <rect x="212" y="100" width="182" height="62" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="303" y="122" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#eceee7">Site live: ediția 4</text>
+      <text x="303" y="139" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" fill="#9aa291">până la editare +</text>
+      <text x="303" y="154" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" fill="#9aa291">sync + redeploy</text>
+
+      <text x="204" y="192" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" font-weight="700" fill="#f2b84b">fereastră de desincronizare</text>
+      <text x="204" y="210" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" fill="#9aa291">semnalată printr-un banner, nu împiedicată</text>
+
+      <rect x="446" y="34" width="400" height="40" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="646" y="59" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12.5" fill="#eceee7">Apeși „+ Ediție nouă”</text>
+      <line x1="646" y1="76" x2="646" y2="96" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah2)"/>
+
+      <rect x="446" y="100" width="192" height="62" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="542" y="122" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#eceee7">Backend: ediția 5</text>
+      <text x="542" y="139" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" fill="#9aa291">în așteptare —</text>
+      <text x="542" y="154" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" fill="#9aa291">gărzile rămân</text>
+
+      <rect x="654" y="100" width="192" height="62" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="750" y="122" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#eceee7">Build-ul raportează</text>
+      <text x="750" y="139" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" fill="#9aa291">ce ediție servește</text>
+      <text x="750" y="154" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" fill="#9aa291">după redeploy</text>
+
+      <line x1="542" y1="164" x2="600" y2="188" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah2)"/>
+      <line x1="750" y1="164" x2="692" y2="188" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah2)"/>
+
+      <rect x="560" y="192" width="172" height="40" rx="7" fill="rgba(201,242,75,.12)" stroke="#c9f24b"/>
+      <text x="646" y="217" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12.5" font-weight="700" fill="#d9f97a">comutarea se încheie</text>
+    </svg>
+    <figcaption>Ilustrativ. Jumătatea periculoasă a comutării devine cea care așteaptă, nu cea care se aplică prima.</figcaption>
+  </figure>
+
+  <div class="field">
+    <h4>Basis</h4>
+    <div class="basis">
+      <p><span class="tag">direct:</span> <code>admin_create_edition()</code> (<code>supabase-migration-editii-si-email-log.sql</code>) suprascrie imediat <code>current_event_edition</code> / <code>current_launch_edition</code> și <em>șterge</em> <code>registration_deadline</code> și <code>event_start</code> din <code>app_config</code> — exact valorile pe care le citește <code>registrations_guard()</code>. <code>AdminEditionTabs.tsx:29</code> — <code>const desincronizat = curenta !== null &amp;&amp; curenta !== CURRENT_EDITION;</code>: detecția există, aplicarea nu. <code>scripts/sync-edition.ts</code> emite necondiționat toate cele 5 chei <code>app_config</code>, fără niciun diff față de starea reală din DB, deci organizatorul citește la fiecare rotire un bloc de SQL identic și trebuie să ghicească ce s-a schimbat.</p>
+      <p><span class="tag">direct:</span> <code>GHID-EDITIE-NOUA.md:105-122</code> enumeră cinci capcane recurente (schema <code>runlift</code> neexpusă, CSP nealiniat, <code>ogImageVersion</code> neincrementat, default-ul lui <code>launch_notifications.editie</code>, desincronizarea). Fiecare e un boolean pe care aplicația l-ar putea evalua; astăzi doar una are o verificare.</p>
+    </div>
+  </div>
+
+  <div class="field">
+    <h4>Rationale</h4>
+    <p>Problema nu e că organizatorul uită pașii — e că sistemul face jumătatea ireversibilă instantanee și jumătatea sigură manuală, apoi raportează inconsistența rezultată ca pe un avertisment. Interblocarea inversează asta: partea care strică nu poate ateriza înaintea perechii ei. E o soluție la bug-ul operațional cel mai des repetat din proiect și nu atinge disciplina SSOT — <code>edition.ts</code> rămâne canonic și se aplică la build.</p>
+  </div>
+
+  <div class="field">
+    <h4>Downsides</h4>
+    <p class="down">Introduce o stare nouă („ediție în așteptare”) pe care fiecare consumator al lui <code>app_config</code> trebuie s-o înțeleagă, și adaugă un pas de raportare din frontend către backend care nu există azi. Există un design alternativ, mai ambițios, care merită cântărit împotriva acestuia: adminul să <em>emită</em> patch-ul pentru <code>edition.ts</code> (un diff descărcabil sau un PR), iar <code>app_config</code> să se actualizeze abia după ce deploy-ul aterizează — atunci desincronizarea devine imposibilă, nu doar blocată. Costul e că adminul capătă dreptul de a scrie în git.</p>
+  </div>
+</article>
+
+<!-- ============ IDEA 3 ============ -->
+<article class="idea" id="idea-3">
+  <div class="idea-head"><span class="rankchip">3.</span><h3>Zăvor pe trimitere: <code>once_key</code> și pentru difuzările manuale</h3></div>
+  <ul class="chips">
+    <li class="ax">Comunicare &amp; email</li>
+    <li class="cf">Confidence 90%</li>
+    <li class="cx">Complexity Low</li>
+  </ul>
+
+  <div class="field">
+    <h4>Description</h4>
+    <p>Funcția <code>send-email</code> are deja o primitivă de idempotență atomică — <code>broadcast_once(key)</code>, garantată printr-o constrângere de unicitate — dar e folosită doar de reminderul programat. Difuzarea manuală din tabul Emailuri nu o atinge și nu citește niciodată <code>email_log</code> înainte de trimitere. Direcția: derivă automat o cheie <code>{ediție}:{audiență}:{șablon}</code> pentru fiecare difuzare manuală, arată ultima trimitere spre aceeași combinație (când, către câți) și cere o confirmare explicită de tip „trimite oricum” în loc să lase butonul fără memorie.</p>
+  </div>
+
+  <div class="field">
+    <h4>Basis</h4>
+    <div class="basis">
+      <p><span class="tag">direct:</span> <code>supabase/functions/send-email/index.ts</code> — <code>broadcast_once(p_key)</code> returnează <code>true</code> prima dată și <code>false</code> după, atomic; comentariul din cod spune explicit că difuzările manuale fără cheie pot fi reluate intenționat. Un grep confirmă că nici <code>AdminEmailTab.tsx</code>, nici <code>adminApi.ts</code> nu menționează vreodată <code>once_key</code>. Singurul cooldown pe audiență se aplică modului <code>info</code>, nu <code>admin</code> / <code>broadcast</code>.</p>
+      <p><span class="tag">external:</span> ghidajele de operare a emailului tranzacțional converg pe bounce-uri, dezabonare și test-send, dar nu oferă nicio barieră serioasă împotriva difuzării duble — e o zonă în care uneltele mici nu au un răspuns bun. Aici răspunsul e deja scris, doar că e conectat pe cealaltă cale.</p>
+    </div>
+  </div>
+
+  <div class="field">
+    <h4>Rationale</h4>
+    <p>Un singur organizator, fără o a doua pereche de ochi, poate trimite de două ori aceeași difuzare către 30 de oameni care se cunosc între ei — eșecul cu cel mai mare cost de jenă și cel mai mic cost de reparat. Partea grea (o cheie unică, sigură la curse) e deja construită și rulează în producție pe calea de cron. Diferența dintre a fi în siguranță și a nu fi e un parametru.</p>
+  </div>
+
+  <div class="field">
+    <h4>Downsides</h4>
+    <p class="down">Cheia trebuie derivată suficient de precis încât o retrimitere legitimă (audiență corectată, subiect schimbat) să nu fie blocată din greșeală — prea grosier, și zăvorul devine un obstacol pe care organizatorul învață să-l ignore. Override-ul „trimite oricum” trebuie să existe de la început, altfel prima retrimitere justificată transformă protecția în frustrare.</p>
+  </div>
+</article>
+
+<!-- ============ IDEA 4 ============ -->
+<article class="idea" id="idea-4">
+  <div class="idea-head"><span class="rankchip">4.</span><h3>Fișa de acoperire: cine n-a primit ce</h3></div>
+  <ul class="chips">
+    <li class="ax">Comunicare &amp; email</li>
+    <li class="cf">Confidence 85%</li>
+    <li class="cx">Complexity Low</li>
+  </ul>
+
+  <div class="field">
+    <h4>Description</h4>
+    <p>Insigna de livrare de lângă fiecare participant se construiește dintr-o hartă cheiată doar pe adresa de email, nu pe email + subiect. Consecința: orice trimitere reușită ulterioară acoperă un eșec anterior, iar o bifă verde poate coexista cu un reminder care n-a ajuns niciodată. Direcția: înlocuiește insigna „ultimul email” cu o mică matrice — rânduri = oamenii din ediția curentă, coloane = comunicările pe care ediția le presupune (confirmare, reminder, post-eveniment), celule = trimis / eșuat / lipsă. Întrebarea operațională nu e „ce am trimis”, ci „cui îi lipsește ceva”.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 860 200" role="img" aria-label="Diagramă: insigna actuală versus matricea de acoperire">
+      <text x="14" y="18" font-family="Archivo,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.8" fill="#6f7767">ACUM</text>
+      <line x1="326" y1="0" x2="326" y2="200" stroke="#2c3126" stroke-width="1"/>
+      <text x="354" y="18" font-family="Archivo,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.8" fill="#6f7767">FIȘA DE ACOPERIRE</text>
+
+      <rect x="14" y="40" width="290" height="52" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="32" y="72" font-family="Archivo,sans-serif" font-size="13" fill="#eceee7">Ana Popescu</text>
+      <rect x="196" y="55" width="88" height="24" rx="12" fill="rgba(201,242,75,.12)" stroke="#c9f24b"/>
+      <text x="240" y="71" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" font-weight="700" fill="#d9f97a">✓ trimis</text>
+
+      <text x="14" y="118" font-family="Archivo,sans-serif" font-size="12.5" fill="#9aa291">Cea mai recentă trimitere, de orice fel.</text>
+      <text x="14" y="138" font-family="Archivo,sans-serif" font-size="12.5" fill="#f6cd7d">Reminderul eșuat de săptămâna trecută</text>
+      <text x="14" y="156" font-family="Archivo,sans-serif" font-size="12.5" fill="#f6cd7d">nu mai apare nicăieri.</text>
+
+      <text x="354" y="52" font-family="Archivo,sans-serif" font-size="11" letter-spacing=".8" fill="#6f7767">PERSOANĂ</text>
+      <text x="618" y="52" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11" letter-spacing=".8" fill="#6f7767">CONFIRMARE</text>
+      <text x="722" y="52" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11" letter-spacing=".8" fill="#6f7767">REMINDER</text>
+      <text x="820" y="52" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11" letter-spacing=".8" fill="#6f7767">REZULTATE</text>
+      <line x1="354" y1="62" x2="850" y2="62" stroke="#2c3126"/>
+
+      <text x="354" y="88" font-family="Archivo,sans-serif" font-size="13" fill="#eceee7">Ana Popescu</text>
+      <text x="618" y="88" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14" fill="#c9f24b">✓</text>
+      <text x="722" y="88" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14" fill="#f2b84b">✗</text>
+      <text x="820" y="88" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14" fill="#6f7767">–</text>
+      <line x1="354" y1="100" x2="850" y2="100" stroke="#242820"/>
+
+      <text x="354" y="126" font-family="Archivo,sans-serif" font-size="13" fill="#eceee7">Mihai Ionescu</text>
+      <text x="618" y="126" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14" fill="#c9f24b">✓</text>
+      <text x="722" y="126" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14" fill="#c9f24b">✓</text>
+      <text x="820" y="126" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14" fill="#6f7767">–</text>
+      <line x1="354" y1="138" x2="850" y2="138" stroke="#242820"/>
+
+      <text x="354" y="164" font-family="Archivo,sans-serif" font-size="13" fill="#eceee7">Ioana Radu</text>
+      <text x="618" y="164" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14" fill="#f2b84b">✗</text>
+      <text x="722" y="164" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14" fill="#f2b84b">✗</text>
+      <text x="820" y="164" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14" fill="#6f7767">–</text>
+    </svg>
+    <figcaption>Ilustrativ. Aceleași date, întoarse dinspre „ce am trimis” spre „cui îi lipsește ceva”.</figcaption>
+  </figure>
+
+  <div class="field">
+    <h4>Basis</h4>
+    <div class="basis">
+      <p><span class="tag">direct:</span> <code>AdminDashboard.tsx:237-241</code> construiește <code>ultimulEmail</code> ca <code>Map</code> cheiat pe adresa de email, păstrând doar prima apariție (cea mai recentă trimitere), și îl randează ca insignă de status. <code>deliveryLog.ts:26-35</code> reține doar ultima încercare per cheie, așa că o retrimitere reușită „repară” un eșec vechi în loc să-l păstreze vizibil. Verificat: o trimitere ulterioară de <em>orice</em> tip ascunde un reminder eșuat anterior în spatele unei bife verzi.</p>
+      <p><span class="tag">direct:</span> primitivul parțial există deja — <code>AdminDeliveryTab.tsx:100-104</code> calculează <code>participantiFaraEmail</code>, dar doar pentru cazul tot-sau-nimic, nu per tip de comunicare.</p>
+    </div>
+  </div>
+
+  <div class="field">
+    <h4>Rationale</h4>
+    <p>Nu e o preferință de UI, e un bug de afișare care poate minți afirmativ despre exact mesajul care conta. Structura de registru dă în plus un loc unde reminderul automat (când va fi armat) poate <em>raporta</em>, în loc să tragă în orb — iar „a fost anunțată ediția 4 pe toată lumea?” devine o privire, nu o derulare prin jurnal.</p>
+  </div>
+
+  <div class="field">
+    <h4>Downsides</h4>
+    <p class="down">Presupune definirea explicită a setului de comunicări pe care o ediție le „datorează” — o listă care azi nu există nicăieri și care va trebui întreținută pe măsură ce apar tipuri noi de mesaje. La 30 de rânduri și 3 coloane matricea încape pe ecran; nu ar mai încăpea la scări mai mari, dar nici nu e proiectată pentru ele.</p>
+  </div>
+</article>
+
+<!-- ============ IDEA 5 ============ -->
+<article class="idea" id="idea-5">
+  <div class="idea-head"><span class="rankchip">5.</span><h3>Arhiva vie: istoricul care se scrie deja singur</h3></div>
+  <ul class="chips">
+    <li class="ax">Lista de participanți</li>
+    <li class="cf">Confidence 85%</li>
+    <li class="cx">Complexity Low</li>
+  </ul>
+
+  <div class="field">
+    <h4>Description</h4>
+    <p>Există în bază un tabel-umbră întreținut de trigger, <code>registrations_backup</code>, care oglindește fiecare INSERT / UPDATE / DELETE pe <code>registrations</code>, cu <code>editie</code>, <code>deleted_at</code> și <code>backed_up_at</code>. Adună date de la prima ediție încoace și nu-l citește absolut nimic din admin. Direcția: o căutare read-only după email sau telefon care răspunde la „a mai fost pe aici?” — la ce ediții a participat, când s-a retras, când s-a reînscris — și, în forma sa mai ambițioasă, mută unitatea de identitate a listei de la „rând într-o ediție” la „persoană”.</p>
+  </div>
+
+  <div class="field">
+    <h4>Basis</h4>
+    <div class="basis">
+      <p><span class="tag">direct:</span> <code>supabase-migration-hyrox.sql:21-44</code> — <code>registrations_backup_sync()</code> inserează / actualizează / marchează logic ca șters în <code>registrations_backup</code> la fiecare scriere, păstrând <code>editie</code>. Un grep după <code>registrations_backup</code> în <code>src/lib/adminApi.ts</code> și <code>src/admin/*.tsx</code> nu returnează nimic: tabelul e complet nefolosit de aplicație.</p>
+      <p><span class="tag">direct:</span> <code>admin_list_registrations</code> primește <code>p_editie</code> și e strict scopat pe o ediție; nicio interogare din admin nu traversează ediții. Ca să recunoască un obișnuit, organizatorul trebuie azi să deschidă pe rând taburile ediților trecute sau vechile export-uri CSV.</p>
+    </div>
+  </div>
+
+  <div class="field">
+    <h4>Rationale</h4>
+    <p>E cea mai curată investiție cu dobândă din tot setul: datele s-au acumulat gratuit, patru ediții la rând, ca efect secundar al unui trigger pe care nimeni nu l-a proiectat ca funcționalitate. Singura piesă lipsă e calea de citire. La ediția a zecea, diferența e între „cine vine constant la Run + Lift” ca amintire personală și ca fapt interogabil. Explicit diferit de ideea de rezervare recurentă din ideația de ieri: aceea schimbă modul în care oamenii se înscriu; asta schimbă doar ce știe organizatorul despre cineva care e deja în fața lui.</p>
+  </div>
+
+  <div class="field">
+    <h4>Downsides</h4>
+    <p class="down">Un tabel de backup ridicat la rang de sursă de produs devine ceva ce nu mai poți schimba liber — schema lui începe să conteze. La 30 de persoane pe ediție, organizatorul recunoaște oricum jumătate dintre obișnuiți, deci valoarea e reală dar modestă pe termen scurt; se acumulează, nu se simte imediat. Traversarea ediților ridică și o întrebare de retenție a datelor pe care proiectul n-a pus-o încă.</p>
+  </div>
+</article>
+
+<!-- ============ IDEA 6 ============ -->
+<article class="idea" id="idea-6">
+  <div class="idea-head"><span class="rankchip">6.</span><h3>Ziua cursei: un ecran care merge fără semnal</h3></div>
+  <ul class="chips">
+    <li class="ax">Ziua evenimentului</li>
+    <li class="cf">Confidence 70%</li>
+    <li class="cx">Complexity High</li>
+  </ul>
+
+  <div class="field">
+    <h4>Description</h4>
+    <p>Adminul are cinci taburi și toate sunt de dinainte de eveniment. În ziua cursei organizatorul se uită la homepage-ul public, pentru că nu există nimic altceva. Direcția: o suprafață dedicată zilei, sincronizată pe telefon <em>înainte</em> de plecarea de acasă, care marchează prezența cu o atingere, scrie local și se contopește oportunist la reconectare — plus un buton de amânare a startului care expiră singur după eveniment, pentru ora în care ploaia decide altceva.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 860 176" role="img" aria-label="Diagramă: sincronizare înainte, coadă locală în parc, contopire la reconectare">
+      <defs>
+        <marker id="ah6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6f7767"/>
+        </marker>
+      </defs>
+
+      <rect x="304" y="26" width="256" height="102" rx="8" fill="rgba(242,184,75,.07)" stroke="#f2b84b" stroke-width="1" stroke-dasharray="5 4"/>
+      <text x="432" y="18" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11.5" font-weight="700" letter-spacing="1.4" fill="#f6cd7d">FĂRĂ SEMNAL</text>
+
+      <rect x="14" y="46" width="268" height="62" rx="7" fill="#1e2219" stroke="#2c3126"/>
+      <text x="148" y="72" text-anchor="middle" font-family="Archivo,sans-serif" font-size="13" fill="#eceee7">Acasă, cu semnal bun</text>
+      <text x="148" y="92" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#9aa291">lista de start ajunge pe telefon</text>
+
+      <rect x="320" y="46" width="224" height="62" rx="7" fill="#1e2219" stroke="#f2b84b"/>
+      <text x="432" y="72" text-anchor="middle" font-family="Archivo,sans-serif" font-size="13" fill="#eceee7">În parc</text>
+      <text x="432" y="92" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#f6cd7d">bifezi, se scrie local</text>
+
+      <rect x="582" y="46" width="264" height="62" rx="7" fill="rgba(201,242,75,.10)" stroke="#c9f24b"/>
+      <text x="714" y="72" text-anchor="middle" font-family="Archivo,sans-serif" font-size="13" fill="#eceee7">La reconectare</text>
+      <text x="714" y="92" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#d9f97a">contopire idempotentă</text>
+
+      <line x1="286" y1="77" x2="316" y2="77" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah6)"/>
+      <line x1="548" y1="77" x2="578" y2="77" stroke="#6f7767" stroke-width="1.4" marker-end="url(#ah6)"/>
+
+      <text x="14" y="152" font-family="Archivo,sans-serif" font-size="12.5" fill="#9aa291">Prezența e o scriere append-only și idempotentă — a o relua nu strică nimic.</text>
+      <text x="14" y="170" font-family="Archivo,sans-serif" font-size="12.5" fill="#9aa291">De asta coada locală costă aproape nimic, spre deosebire de un motor de sincronizare general.</text>
+    </svg>
+    <figcaption>Ilustrativ. Forma scrierii (append-only, idempotentă) e ce face varianta offline ieftină.</figcaption>
+  </figure>
+
+  <div class="field">
+    <h4>Basis</h4>
+    <div class="basis">
+      <p><span class="tag">direct:</span> tabelul <code>registrations</code> nu are nicio coloană <code>present_at</code>, <code>status</code> sau <code>checked_in</code>, iar niciun cod nu se referă la vreuna — dovada că prezența nu e modelată nicăieri. Cele trei faze ale zilei (pre / leaderboard / următoarea) sunt deja implementate și comută singure, dar pe pagina <em>publică</em>; adminul nu are nicio reprezentare a lor. <code>src/lib/config.ts:28-38</code> — <code>EVENT_DATE</code>, <code>EVENT_END_DATE</code> și <code>LEADERBOARD_DATE</code> derivă toate din <code>EDITION.start</code>, o constantă de build, deci o întârziere a startului nu se poate reflecta nicăieri fără redeploy.</p>
+      <p><span class="tag">external:</span> tiparul de la box-office (will-call) și aplicația RaceDay de la RunSignup fac același lucru și din același motiv: lista se sincronizează pe dispozitiv înainte de deschidere, scanările se pun într-o coadă locală și se contopesc oportunist, cu deduplicare explicită pentru momentele în care conexiunea pâlpâie. Structura se potrivește — un roster cunoscut și fix, un singur operator, o fereastră scurtă, conectivitate nesigură.</p>
+      <p><span class="tag">reasoned:</span> fereastra offline e mărginită (start la 07:00, durată ~2 ore), deci un motor de sincronizare complet ar fi nejustificat; iar bifarea prezenței e prin construcție append-only și idempotentă — o persoană e prezentă sau nu, iar rejucarea aceleiași bifări nu schimbă nimic. E exact forma de scriere pentru care offline-first costă aproape nimic.</p>
+    </div>
+  </div>
+
+  <div class="field">
+    <h4>Rationale</h4>
+    <p>E singura zonă din admin care nu are absolut nimic — un zero-la-unu, nu o îmbunătățire. E și momentul cu cea mai mare presiune din tot ciclul: în picioare, într-un parc, cu 30 de oameni care așteaptă. Amânarea startului merită menționată separat pentru că e singurul scenariu în care procedura manuală de ediție e operațional prea lentă: oamenii sunt deja pe drum. O variantă mai ieftină merită cântărită înainte de a construi tot: lista de start se randează deja corect pe pagina publică la ora potrivită, deci adminul ar putea doar s-o <em>îmbogățească</em> atunci când tokenul e prezent, în loc să primească un al șaselea tab.</p>
+  </div>
+
+  <div class="field">
+    <h4>Downsides</h4>
+    <p class="down">E cel mai scump element din set și singurul care cere o coloană nouă, un RPC nou și o strategie de stocare locală. Butonul de amânare atinge explicit granița SSOT — chiar și ca derogare cu expirare, e primul precedent de conținut editabil la runtime, iar proiectul și-a construit disciplina exact pe absența lui. Iar dacă organizatorul, în practică, se descurcă bine uitându-se la pagina publică, tot efortul rezolvă o problemă resimțită mai puțin decât pare pe hârtie.</p>
+  </div>
+</article>
+
+<!-- ============ IDEA 7 ============ -->
+<article class="idea" id="idea-7">
+  <div class="idea-head"><span class="rankchip">7.</span><h3>Panoul de stare: ce e pornit și ce e aliniat</h3></div>
+  <ul class="chips">
+    <li class="ax">Fundația UI &amp; state</li>
+    <li class="cf">Confidence 75%</li>
+    <li class="cx">Complexity Medium</li>
+  </ul>
+
+  <div class="field">
+    <h4>Description</h4>
+    <p>Proiectul are mai multe moduri de eșec tăcut, iar toate se descoperă în cel mai prost moment posibil: schema neexpusă, CSP nealiniat, șabloane care cad pe varianta generică fără ca cineva să afle, Resend neconfigurat descoperit abia după apăsarea butonului, cronul de reminder scris dar nearmat. Direcția: la încărcarea adminului, câteva sonde ieftine și o singură bandă de status — tokenul răspunde, șabloanele vin din DB și nu din fallback, ediția din <code>app_config</code> se potrivește cu cea din build, funcția de email e accesibilă, automatizările sunt armate și când au tras ultima dată. Ca parte din același efort, erorile din admin trec prin taxonomia care există deja în loc să fie string-uri generice.</p>
+  </div>
+
+  <div class="field">
+    <h4>Basis</h4>
+    <div class="basis">
+      <p><span class="tag">direct:</span> <code>supabase-migration-reminder-idempotent.sql:40-74</code> — <code>maybe_send_reminder()</code> e scrisă, idempotentă prin <code>broadcast_once</code> și mărginită la fereastra dinaintea startului; există un fișier separat <code>supabase-cron-reminder-ARM.sql</code> care n-a fost rulat, iar <code>BACKLOG.md</code> listează reminderul automat ca element deschis. Mașinăria e terminată și la un pas manual de a fi live.</p>
+      <p><span class="tag">direct:</span> <code>send-email/index.ts</code> — funcția nu distinge între „DB indisponibil” și „șablon inexistent”, așa că o trimitere pe șablonul de rezervă e azi imposibil de deosebit de una reală. Lanțul de chei cade pe <code>SUPABASE_ANON_KEY</code>, iar comentariul din cod avertizează că jurnalizarea eșuează în tăcere.</p>
+      <p><span class="tag">direct:</span> <code>src/lib/supabase.ts</code> conține <code>isTimeoutError</code> / <code>isNetworkOrCspError</code> și e scris după incidentul de derivă CSP documentat în <code>ERROR-HANDLING.md</code>; în <code>AdminDashboard.tsx</code> doar ~2 din 13 blocuri <code>catch</code> folosesc vreo clasificare, restul cad pe „Nu am putut salva. Încearcă din nou.”</p>
+    </div>
+  </div>
+
+  <div class="field">
+    <h4>Rationale</h4>
+    <p>Fiecare dintre aceste eșecuri e descoperit azi fie de un participant, fie de organizator în mijlocul unei trimiteri. Taxonomia de erori a fost deja plătită o dată, după un incident real, iar suprafața cea mai probabilă să ascundă următorul incident e exact cea care n-o folosește. Cazul reminderului e cel mai revelator: nu e armat probabil pentru că starea lui e invizibilă din admin — nu poți vedea dacă a tras, deci trimiți manual ca să fii sigur, deci nu-l armezi niciodată. A face starea vizibilă e ce transformă mașinăria construită în mașinărie folosită.</p>
+  </div>
+
+  <div class="field">
+    <h4>Downsides</h4>
+    <p class="down">Sondele la încărcare adaugă latență și pot deveni ele însele o sursă de fals-pozitive care se ignoră cu timpul — un panou care arată mereu un avertisment inofensiv e mai rău decât niciun panou. Verificarea CSP și cea de schemă sunt greu de făcut ieftin din browser fără a duplica logica de deploy. Și, spre deosebire de ideile 1–4, aceasta nu remediază un defect confirmat; previne o categorie.</p>
+  </div>
+</article>
+
+<h2 id="rejection-summary">Rejection Summary</h2>
+
+<div class="note">
+  <span class="lbl">O idee respinsă la verificare</span>
+  <p>Un candidat pretindea un defect verificabil: că <code>fillTemplate</code> tratează doar acoladele simple, deci un șablon cu <code>{{acolade duble}}</code> ar ajunge literal la 30 de oameni. Verificarea a arătat că <code>fillTemplate</code> se aplică exclusiv pe șabloanele bulk, care sunt scrise cu acolade simple, iar șablonul cu acolade duble e completat de o cale complet separată din funcția edge. Defectul nu e accesibil. Ideea a fost eliminată împreună cu justificarea ei.</p>
+</div>
+
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>#</th><th>Idea</th><th>Reason Rejected</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="id">R1</td><td>Linia de întârziere — hold de 60s + copie-santinelă la trimitere</td><td>Basis refuted by verification: defectul de randare invocat nu e accesibil pe nicio cale reală de trimitere (vezi nota de mai sus). Ideea de hold rămâne fără justificarea care o făcea urgentă.</td></tr>
+    <tr><td class="id">R2</td><td>Apelul — listă de prezență ca apel nominal maritim, cu invariant „câți mai sunt pe traseu”</td><td>Analogie forțată: cadrul de siguranță SOLAS / plonjare rezolvă o problemă pe care un eveniment de 30 de oameni într-un parc nu o are.</td></tr>
+    <tr><td class="id">R3</td><td>Prioritate pe lista de așteptare după câte ediții a ratat cineva</td><td>Nepotrivire de scară: precedentele (balotajul de la Wimbledon, 9+1 la New York) rezolvă penurie structurală la mii de aplicanți.</td></tr>
+    <tr><td class="id">R4</td><td>SSOT peste regula de recurență în loc de instanța ediției</td><td>Scope overrun: e o schimbare a modelului de conținut și deploy, nu a paginii de admin; premisa cadenței săptămânale nu se potrivește nici cu ritmul real.</td></tr>
+    <tr><td class="id">R5</td><td>Realtime Supabase în locul polling-ului la 15 secunde</td><td>Rezolvă o non-problemă la 30 de rânduri și un singur operator; motivația e puritate arhitecturală.</td></tr>
+    <tr><td class="id">R6</td><td>Rata de neprezentare ca intrare pentru capacitatea ediției următoare</td><td>Depinde de o infrastructură de prezență care nu există încă; de revizitat după ideea 6, nu înaintea ei.</td></tr>
+    <tr><td class="id">R7</td><td>Istoric versionat al șabloanelor de email</td><td>Constatarea e reală (formulările ediților 1–3 sunt deja pierdute), dar miza e prea mică pentru un singur organizator ca să merite o discuție.</td></tr>
+    <tr><td class="id">R8</td><td>Indicator de conectivitate Resend la compunere</td><td>Subsumat de ideea 7, care face aceeași verificare într-un loc unde e utilă și pentru celelalte moduri de eșec.</td></tr>
+    <tr><td class="id">R9</td><td>Caietul de regie — adminul reorganizat ca o secvență cronologică, cu taburile retrogradate</td><td>Cea mai ascuțită reformulare din set și singura care atacă structura, nu simptomele — dar e un pariu de rearhitecturare. Merită propriul brainstorm înainte să concureze cu remediile de mai sus, nu un slot în coada de execuție.</td></tr>
+    <tr><td class="id">R10</td><td><code>admin_snapshot</code> — un singur RPC cu hash de conținut pentru toate cele patru fluxuri</td><td>Fundația corectă, dar fără efect vizibil în sine; devine prima unitate de implementare a ideii 6, nu o direcție de ales separat.</td></tr>
+    <tr><td class="id">R11</td><td>Hook comun de polling și descompunerea componentei de 941 de linii</td><td>Igienă de dezvoltare, nu o direcție: se face odată cu prima funcționalitate care aterizează, oricare ar fi ea.</td></tr>
+    <tr><td class="id">R12</td><td><code>token_unsub</code> ca login de participant pentru „nu mai pot veni”</td><td>Mecanismul stă pe partea participantului; adminul doar observă. Merită o ideație pe suprafața publică, unde e de fapt.</td></tr>
+    <tr><td class="id">R13</td><td>Canal de rezervă pe telefon când Resend cade</td><td>Constatare reală și ieftină (telefonul e validat, stocat, exportat și interpolat în text, dar nicio cale de trimitere nu-l folosește) — dar e o randare, nu o direcție. De făcut, nu de brainstormat.</td></tr>
+    <tr><td class="id">R14</td><td>Digest săptămânal cu acțiuni semnate într-un singur click</td><td>Reutilizare inteligentă a tiparului de dezabonare, dar optimizează un volum de muncă (câteva decizii pe săptămână) care nu e raportat ca dureros.</td></tr>
+    <tr><td class="id">R15</td><td>Lista de așteptare și lista principală ca o singură coadă cu linie de tăiere</td><td>Simplificare reală care ar aduce și retrogradarea/reordonarea (verbe care azi nu există) — dar urgență mai mică decât remediile de integritate 1–4.</td></tr>
+    <tr><td class="id">R16</td><td>13 idei absorbite în supraviețuitoare</td><td>Duplicates a stronger idea: variantele de diff, checklist și derivări automate au intrat în ideea 2; cele patru formulări ale zăvorului de trimitere în ideea 3; recunoașterea participantului revenit în ideea 5; varianta offline și amânarea startului în ideea 6; armarea cronului și clasificarea erorilor în ideea 7.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<footer class="composition-signal">Composed 2026-08-22 by ce-ideate from the prompt „for the admin page” · grounding: <code>src/admin/</code>, cinci dosare de evidență, cercetare externă · 44 candidate, 1 verificator cu context propriu, 7 supraviețuitoare</footer>
+
+</div>
+</body>
+</html>

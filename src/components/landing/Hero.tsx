@@ -53,7 +53,7 @@ export const Hero = ({ onInscrie, showCta = true }: Props) => {
               'linear-gradient(90deg, rgba(18,20,16,0.94) 0%, rgba(18,20,16,0.8) 42%, rgba(18,20,16,0.5) 100%)',
           }}
         />
-        <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative', zIndex: 2 }}>
+        <div className="e3-hero-copy" style={{ maxWidth: 1200, margin: '0 auto', position: 'relative', zIndex: 2 }}>
           <p
             style={{
               margin: '0 0 24px',
@@ -116,7 +116,7 @@ export const Hero = ({ onInscrie, showCta = true }: Props) => {
                     onInscrie();
                   }
                 }}
-                className="e3-cta-lg"
+                className="e3-cta-lg e3-shine"
                 style={{
                   display: 'inline-block',
                   background: 'var(--e3-accent)',

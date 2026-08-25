@@ -5,6 +5,8 @@ import { useCountdown } from '../hooks/useCountdown';
 import { useStats } from '../hooks/useStats';
 import { useNow } from '../hooks/useNow';
 import { useRegistration } from '../hooks/useRegistration';
+import { useScrollReveal } from '../hooks/useScrollReveal';
+import { useSpotlight } from '../hooks/useSpotlight';
 import type { ToastKind } from '../hooks/useToast';
 import { TopBar } from './landing/TopBar';
 import { Hero } from './landing/Hero';
@@ -35,6 +37,10 @@ export const Landing = ({ mode = 'full' }: Props) => {
   const cd = useCountdown(EVENT_DATE);
   const { stats, refresh } = useStats();
   const now = useNow(30_000);
+  // Secțiunile de sub fold intră cu fade-up în cascadă, nu dintr-odată.
+  useScrollReveal();
+  // Haloul care urmărește cursorul peste carduri.
+  useSpotlight();
 
   // Toast propriu (vizual specific landing-ului). showToast e dat înscrierii.
   // Formularul ca overlay: CTA-urile îl deschid pe loc, fără să piardă pagina.
@@ -53,6 +59,9 @@ export const Landing = ({ mode = 'full' }: Props) => {
 
   return (
     <div className="e3-root">
+      {/* Firul de progres al paginii. Decorativ — scroll-ul e deja indicat de
+          bara nativă; aici doar dublează, în culoarea brandului. */}
+      <div className="e3-progress" aria-hidden="true" />
       {toast && (
         <div
           role="status"

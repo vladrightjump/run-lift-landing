@@ -31,10 +31,23 @@
     /* Pe mobil topbar-ul are două rânduri — ancora coboară mai mult */
     section[id] { scroll-margin-top: 116px; }
   }
-  body { color: var(--e3-text); font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  body { color: var(--e3-text); font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100dvh; }
   ::selection { background: var(--e3-accent); color: var(--e3-bg); }
   a { text-decoration: none; }
   [hidden] { display: none !important; }
+
+  /* Focus vizibil, pe toate paginile. Doar inputurile aveau inel — restul se
+     navigau cu tastatura pe nevăzute. `:focus-visible`, deci mouse-ul nu-l vede.
+     Panourile cu focus programatic (tabindex=-1) și-l scot explicit mai jos. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 2px solid var(--e3-accent);
+    outline-offset: 2px;
+  }
 
   @keyframes toast-in {
     from { opacity: 0; transform: translate(-50%, -16px); }
@@ -574,7 +587,7 @@
 
   /* ---- Auth ---- */
   .admin-auth {
-    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    min-height: 100dvh; display: flex; align-items: center; justify-content: center;
     padding: 24px; box-sizing: border-box;
     background: radial-gradient(ellipse 70% 50% at 50% 0%, var(--e3-surface) 0%, var(--e3-bg) 70%);
   }
@@ -781,6 +794,41 @@
   }
   .admin-btn-delete:hover { background: var(--e3-danger); color: var(--e3-bg); border-color: var(--e3-danger); }
   .admin-empty { padding: 36px 24px; text-align: center; font-size: 15px; color: var(--e3-muted); }
+
+  /* Tabelele au min-width și scrollează orizontal pe telefon. Umbra din dreapta
+     spune că mai e conținut; dispare singură la capăt (background-attachment:
+     local pe straturile de gradient). */
+  .admin-table-wrap {
+    background:
+      linear-gradient(90deg, var(--e3-surface) 30%, rgba(26,29,23,0)) left / 40px 100% no-repeat local,
+      linear-gradient(90deg, rgba(26,29,23,0), var(--e3-surface) 70%) right / 40px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgba(10,14,8,0.5), rgba(10,14,8,0)) left / 16px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgba(10,14,8,0.5), rgba(10,14,8,0)) right / 16px 100% no-repeat scroll,
+      var(--e3-surface);
+  }
+
+  /* ---- Skeleton (admin) ----
+     Barele stau în `.admin-row`, deci moștenesc grila fiecărui tabel și se aliniază
+     singure la coloanele lui. Tabelul nu mai sare la sosirea datelor.
+     Perechea de pe landing stă în edition3.css. */
+  .admin-skel {
+    height: 12px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--e3-border) 0%, var(--e3-surface-hover) 50%, var(--e3-border) 100%);
+    background-size: 200% 100%;
+    animation: admin-shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes admin-shimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+  }
+
+  /* Text doar pentru cititoarele de ecran. */
+  .admin-sr {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
 
   /* ---- Lista de așteptare ---- */
   .admin-wait-head { display: block; }
@@ -1170,7 +1218,6 @@
 
   .cs-root {
     position: relative;
-    min-height: 100vh;
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
@@ -1494,7 +1541,7 @@
     to   { background-position: 56px 56px; }
   }
 
-  .dn-root { background: var(--e3-bg); min-height: 100vh; }
+  .dn-root { background: var(--e3-bg); min-height: 100dvh; }
   .dn-accent { color: var(--e3-accent); }
   .dn-container { max-width: 1200px; margin: 0 auto; }
 

@@ -80,13 +80,17 @@ export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
           </span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }} role="timer" aria-label="Timp rămas până la start">
             {[
-              { v: cd.zile, l: 'z', lime: true },
-              { v: cd.ore, l: 'h', lime: false },
-              { v: cd.minute, l: 'm', lime: false },
-              { v: cd.secunde, l: 's', lime: false },
+              { v: cd.zile, l: 'z', lime: true, tick: false },
+              { v: cd.ore, l: 'h', lime: false, tick: false },
+              { v: cd.minute, l: 'm', lime: false, tick: false },
+              { v: cd.secunde, l: 's', lime: false, tick: true },
             ].map((u) => (
               <span key={u.l} style={{ display: 'inline-flex', alignItems: 'baseline' }}>
+                {/* Cheia care include valoarea remontează secundele la fiecare
+                    tick, ca animația să repornească. Restul unităților stau. */}
                 <span
+                  key={u.tick ? u.v : u.l}
+                  className={u.tick ? 'e3-tick' : undefined}
                   style={{
                     fontFamily: 'Anton, sans-serif',
                     fontSize: 24,
@@ -133,7 +137,7 @@ export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
                   onInscrie();
                 }
               }}
-              className="e3-cta"
+              className="e3-cta e3-shine"
               style={{
                 display: 'inline-block',
                 background: 'var(--e3-accent)',
