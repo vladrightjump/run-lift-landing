@@ -10,10 +10,11 @@
  * din `EDITION`.
  */
 import { EDITION } from './edition';
-import { formatRoDate, weekdayRo, timeOf } from './format';
+import { formatRoDate, weekdayRo, timeOf, EVENT_WHERE } from './format';
 
 const when = `${weekdayRo(EDITION.start, true)}, ${formatRoDate(EDITION.start)}`;
-const place = `${EDITION.venue.name}, ${EDITION.venue.city}`;
+/** Locul cursei vine din `format.ts`, nu recalculat — o singură sursă. */
+const place = EVENT_WHERE;
 
 export const META = {
   /** „Run + Lift — Hyrox Trial · 8 august 2026". */

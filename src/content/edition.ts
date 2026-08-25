@@ -15,6 +15,28 @@
  * și se compun cu `tz` (fusul Chișinăului), ca vizitatorii din alte fusuri să
  * vadă același moment absolut.
  */
+/**
+ * Un loc de pe hartă. Aceeași formă pentru cursă și pentru antrenamente, ca
+ * derivatele lor (rândul „Unde", embed-ul, linkul de direcții) să treacă toate
+ * prin `placeStrings()` din `content/format.ts` — o singură implementare.
+ *
+ * De ce contează: cât timp fiecare loc își avea propriile șabloane de URL
+ * copiate, se putea strecura sursa greșită într-una din copii. Așa s-a ajuns ca
+ * schimbarea locului cursei să mute și antrenamentele. Acum greșeala ar fi un
+ * argument greșit, la vedere, nu un `${EDITION.venue…}` pierdut într-un string.
+ */
+export type Place = {
+  /** Numele punctului, așa cum apare pe pagină. */
+  name: string;
+  /** Reper opțional — parcul/zona, pentru cine nu cunoaște punctul. */
+  landmark?: string;
+  city: string;
+  /** „lat,lng". Punct exact: căutarea text cade oriunde în zonă. */
+  mapQuery: string;
+  /** Zoom-ul hărții — un teren cere mai mult decât un cartier. */
+  zoom: number;
+};
+
 export const EDITION = {
   /** Ediția evenimentului (coloana `editie` + `public_stats`). */
   number: 5,
@@ -62,29 +84,34 @@ export const EDITION = {
   venue: {
     name: 'Scările de Granit',
     city: 'Valea Morilor',
-    // Căutarea Google Maps — pinul „Granit Stairs" (scările de granit din Valea
-    // Morilor). Coordonate exacte, ca embed-ul și direcțiile să cadă fix pe punct.
+    // Pinul „Granit Stairs" (scările de granit din Valea Morilor). Coordonate
+    // exacte, ca embed-ul și direcțiile să cadă fix pe punct.
     mapQuery: '47.0182357,28.8213041',
-  },
+    zoom: 16,
+  } satisfies Place,
 
   /**
    * Locul ANTRENAMENTELOR săptămânale (marți și joi) — fix, NU se schimbă la
    * ediție nouă. Îl folosește doar `/despre-noi`, secțiunea „Unde ne antrenăm".
    */
   training: {
-    /** Terenul exact, nu tot parcul — pinul „Teren Sportiv" din Google Maps. */
-    name: 'Teren Sportiv',
-    /** Reperul pentru cine nu cunoaște terenul: parcul în care se află. */
-    landmark: 'Parcul Râșcani',
-    city: 'Chișinău',
     days: 'Marți și joi',
     time: '06:30',
-    /**
-     * Coordonatele terenului de lângă terenurile de volei (str. Braniștii).
-     * Punct exact, nu căutare text: „Parcul Râșcani" cădea oriunde în parc, iar
-     * parcul e destul de mare cât să ratezi antrenamentul căutându-l.
-     */
-    mapQuery: '47.0411377,28.8714638',
+    /** Locul e imbricat: antrenamentul e un eveniment recurent CU un loc, nu un loc. */
+    place: {
+      /** Terenul exact, nu tot parcul — pinul „Teren Sportiv" din Google Maps. */
+      name: 'Teren Sportiv',
+      /** Reperul pentru cine nu cunoaște terenul: parcul în care se află. */
+      landmark: 'Parcul Râșcani',
+      city: 'Chișinău',
+      /**
+       * Coordonatele terenului de lângă terenurile de volei (str. Braniștii).
+       * Punct exact, nu căutare text: „Parcul Râșcani" cădea oriunde în parc,
+       * iar parcul e destul de mare cât să ratezi antrenamentul căutându-l.
+       */
+      mapQuery: '47.0411377,28.8714638',
+      zoom: 17,
+    } satisfies Place,
   },
 
   slots: {
