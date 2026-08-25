@@ -101,10 +101,16 @@ export const MAP_DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&que
 // Separate de cursă: antrenamentele sunt mereu în același parc, evenimentele se
 // mută. `/despre-noi` folosește EXCLUSIV constantele de mai jos.
 
-/** „Parcul Râșcani, Chișinău" (rândul „Unde" din „Unde ne antrenăm"). */
-export const TRAINING_WHERE = `${EDITION.training.name}, ${EDITION.training.city}`;
+/** „Teren Sportiv, Parcul Râșcani" (rândul „Unde" din „Unde ne antrenăm"). */
+export const TRAINING_WHERE = `${EDITION.training.name}, ${EDITION.training.landmark}`;
 
-/** Căutarea e text cu diacritice, deci trebuie encodată (spre deosebire de coordonate). */
-const trainingQuery = encodeURIComponent(EDITION.training.mapQuery);
-export const TRAINING_MAP_EMBED_SRC = `https://maps.google.com/maps?q=${trainingQuery}&z=15&hl=ro&output=embed`;
-export const TRAINING_MAP_DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${trainingQuery}`;
+/**
+ * Coordonate, deci fără encodare — ca la `venue`. Zoom mai mare decât la cursă:
+ * ținta e un teren anume din parc, nu un cartier.
+ *
+ * Derivă EXCLUSIV din `EDITION.training`. Dacă vreodată ajunge să citească din
+ * `EDITION.venue`, pagina trimite lumea la locul cursei pentru un antrenament
+ * de marți — exact regresia păzită de `tests/unit/locatii.test.ts`.
+ */
+export const TRAINING_MAP_EMBED_SRC = `https://maps.google.com/maps?q=${EDITION.training.mapQuery}&z=17&hl=ro&output=embed`;
+export const TRAINING_MAP_DIRECTIONS_URL = `https://www.google.com/maps/search/?api=1&query=${EDITION.training.mapQuery}`;

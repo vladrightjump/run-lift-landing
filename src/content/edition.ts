@@ -72,12 +72,19 @@ export const EDITION = {
    * ediție nouă. Îl folosește doar `/despre-noi`, secțiunea „Unde ne antrenăm".
    */
   training: {
-    name: 'Parcul Râșcani',
+    /** Terenul exact, nu tot parcul — pinul „Teren Sportiv" din Google Maps. */
+    name: 'Teren Sportiv',
+    /** Reperul pentru cine nu cunoaște terenul: parcul în care se află. */
+    landmark: 'Parcul Râșcani',
     city: 'Chișinău',
     days: 'Marți și joi',
     time: '06:30',
-    /** Căutare text (nu coordonate) — antrenamentul e „în parc", nu într-un punct. */
-    mapQuery: 'Parcul Râșcani, Chișinău',
+    /**
+     * Coordonatele terenului de lângă terenurile de volei (str. Braniștii).
+     * Punct exact, nu căutare text: „Parcul Râșcani" cădea oriunde în parc, iar
+     * parcul e destul de mare cât să ratezi antrenamentul căutându-l.
+     */
+    mapQuery: '47.0411377,28.8714638',
   },
 
   slots: {

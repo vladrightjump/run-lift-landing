@@ -248,7 +248,16 @@ export const DespreNoi = () => {
                 Deschide în Google Maps →
               </a>
             </div>
-            <div style={{ border: '1px solid var(--e3-border)', aspectRatio: '4 / 3', overflow: 'hidden', background: 'var(--e3-surface)' }}>
+            {/* `position: relative` ancorează butonul de direcții peste hartă. */}
+            <div
+              style={{
+                position: 'relative',
+                border: '1px solid var(--e3-border)',
+                aspectRatio: '4 / 3',
+                overflow: 'hidden',
+                background: 'var(--e3-surface)',
+              }}
+            >
               <iframe
                 title={`${TRAINING_WHERE} — hartă`}
                 loading="lazy"
@@ -257,6 +266,14 @@ export const DespreNoi = () => {
                 src={TRAINING_MAP_EMBED_SRC}
                 style={{ width: '100%', height: '100%', border: 'none', display: 'block', filter: 'grayscale(0.3) contrast(1.05)' }}
               />
+              <a
+                className="dn-map-link"
+                href={TRAINING_MAP_DIRECTIONS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Direcții ↗
+              </a>
             </div>
           </div>
         </div>
