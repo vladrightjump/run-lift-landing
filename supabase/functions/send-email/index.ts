@@ -259,6 +259,18 @@ Deno.serve(async (req: Request) => {
     const audienta = payload.audience === "asteptare" ? "asteptare" : "participanti";
     const editie = typeof payload.editie === "number" ? payload.editie : undefined;
 
+    // Zăvor pe difuzările manuale: aceeași primitivă atomică folosită de
+    // reminderul programat mai jos. Cheia o derivă clientul din ediție +
+    // audiență + subiect (`src/admin/sendLock.ts`); fără cheie, comportamentul
+    // rămâne cel dinainte, ca apelurile vechi să nu se rupă.
+    const onceKeyAdmin = typeof payload.once_key === "string" ? payload.once_key : "";
+    if (onceKeyAdmin) {
+      const first = await rpc<boolean>("broadcast_once", { p_key: onceKeyAdmin });
+      if (first !== true) {
+        return json(200, { sent: 0, failed: 0, skipped: true, note: "already_sent" });
+      }
+    }
+
     const badge = await loadBadge();
     let sent = 0;
     const errors: { to: string; status: number }[] = [];

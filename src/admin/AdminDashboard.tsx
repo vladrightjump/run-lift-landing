@@ -553,6 +553,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             rows={all}
             waitlist={waitAll}
             editie={editie ?? CURRENT_EDITION}
+            emailLog={emailLog ?? []}
             readOnly={arhiva}
             formatDate={formatDate}
             showToast={showToast}

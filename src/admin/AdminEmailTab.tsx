@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   sendBulkEmail,
   listLaunchNotifications,
@@ -10,7 +10,9 @@ import type {
   AdminLaunchSignup,
   AdminWaitlistEntry,
   AdminEmailTemplate,
+  AdminEmailLogEntry,
 } from '../lib/adminApi';
+import { cheieDifuzare, ultimaDifuzare } from './sendLock';
 import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
 import type { Audience, Recipient } from './emailAudience';
 
@@ -21,6 +23,8 @@ type Props = {
   waitlist: AdminWaitlistEntry[];
   /** Ediția deschisă în backoffice — ajunge în jurnalul de livrare. */
   editie: number;
+  /** Jurnalul ediției — ca să știm dacă aceeași difuzare a plecat deja. */
+  emailLog: AdminEmailLogEntry[];
   /** Ediție de arhivă: nu mai trimitem emailuri în numele ei. */
   readOnly: boolean;
   formatDate: (iso: string) => string;
@@ -47,11 +51,20 @@ const FREE_TEMPLATE: Template = { nume: 'Mesaj liber', subiect: '', corp: '' };
 
 const VARIABLES = ['{nume}', '{prenume}', '{telefon}', '{email}', '{data_inscrierii}'] as const;
 
+const timpDifuzare = new Intl.DateTimeFormat('ro-RO', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Chisinau',
+});
+
 export const AdminEmailTab = ({
   token,
   rows,
   waitlist,
   editie,
+  emailLog,
   readOnly,
   formatDate,
   showToast,
@@ -66,6 +79,12 @@ export const AdminEmailTab = ({
   const [body, setBody] = useState<string | null>(null);
   const [previewIdx, setPreviewIdx] = useState(0);
   const [sending, setSending] = useState(false);
+  // Jetonul de suprascriere, emis când operatorul confirmă „trimite oricum".
+  // Îl ținem legat de difuzarea PENTRU CARE a fost emis: șabloanele se încarcă
+  // asincron, deci subiectul se schimbă și după montare, iar un jeton „liber" ar
+  // fi fost fie aruncat tăcut la încărcarea șabloanelor, fie reportat peste
+  // trimiterea următoare. Legarea de cheie rezolvă ambele fără niciun efect.
+  const [suprascriere, setSuprascriere] = useState<{ cheie: string; jeton: string } | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Lista de așteptare o încărcăm o dată — o folosim doar la nevoie.
@@ -111,6 +130,21 @@ export const AdminEmailTab = ({
 
   const subjectCur = subject ?? templates[0].subiect;
   const bodyCur = body ?? templates[0].corp;
+
+  // A plecat deja aceeași difuzare? Întrebarea se pune ÎNAINTE de trimitere, nu
+  // după — jurnalul e deja încărcat, deci nu costă o cerere în plus.
+  const anterioara = useMemo(
+    () =>
+      subjectCur.trim()
+        ? ultimaDifuzare(emailLog, editie, audientaLog(audience), subjectCur)
+        : null,
+    [emailLog, editie, audience, subjectCur]
+  );
+
+  /** Cheia difuzării compuse acum, fără suprascriere. */
+  const cheieCurenta = cheieDifuzare(editie, audientaLog(audience), subjectCur);
+  /** Jetonul e valabil doar pentru difuzarea pentru care a fost emis. */
+  const jetonValid = suprascriere?.cheie === cheieCurenta ? suprascriere.jeton : null;
 
   // Dezabonații rămân vizibili în listă (adminul trebuie să știe de ce lipsesc),
   // dar nu pot fi bifați și nu intră niciodată în trimitere.
@@ -204,7 +238,17 @@ export const AdminEmailTab = ({
       const res = await sendBulkEmail(token, messages, {
         audience: audientaLog(audience),
         editie,
+        onceKey: cheieDifuzare(editie, audientaLog(audience), subjectCur, jetonValid ?? undefined),
       });
+      // Serverul a refuzat: aceeași ediție + audiență + subiect a plecat deja.
+      if (res.skipped) {
+        showToast({
+          kind: 'error',
+          msg: 'Difuzarea asta a plecat deja. Folosește „Trimite oricum" dacă chiar vrei s-o repeți.',
+        });
+        return;
+      }
+      setSuprascriere(null);
       if (res.failed > 0) {
         showToast({
           kind: res.sent > 0 ? 'success' : 'error',
@@ -413,12 +457,37 @@ export const AdminEmailTab = ({
           )}
         </div>
 
+        {anterioara && !readOnly && (
+          <div className="admin-banner warn" role="status">
+            <strong>
+              Aceeași difuzare a plecat deja pe {timpDifuzare.format(new Date(anterioara.cand))},
+              către {anterioara.catreCati}{' '}
+              {anterioara.catreCati === 1 ? 'destinatar' : 'destinatari'}.
+            </strong>{' '}
+            Butonul de trimitere e blocat pe server pentru această combinație de ediție, audiență
+            și subiect. Dacă retrimiterea e intenționată — ai corectat audiența sau reformulezi —
+            deblocheaz-o explicit.
+            <div className="admin-confirm-actions">
+              <button
+                type="button"
+                className="admin-btn-outline"
+                onClick={() =>
+                  setSuprascriere({ cheie: cheieCurenta, jeton: `${Date.now()}` })
+                }
+                disabled={jetonValid !== null}
+              >
+                {jetonValid ? 'Deblocat — poți trimite' : 'Trimite oricum'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="admin-email-actions">
           <button
             type="button"
             className="admin-btn-accent"
             onClick={send}
-            disabled={sending || readOnly}
+            disabled={sending || readOnly || (anterioara !== null && jetonValid === null)}
           >
             {sending ? 'Se trimite…' : `Trimite email (${recipients.length})`}
           </button>

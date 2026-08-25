@@ -284,7 +284,14 @@ export const adminLogout = (token: string): Promise<void> =>
 /* ---- Email (funcția Edge `send-email` → Resend) ---- */
 
 export type EmailMessage = { to: string; subject: string; text: string };
-export type SendEmailResult = { sent: number; failed: number; errors?: { to: string; status: number }[] };
+export type SendEmailResult = {
+  sent: number;
+  failed: number;
+  errors?: { to: string; status: number }[];
+  /** `true` când zăvorul a oprit o difuzare deja trimisă pe aceeași cheie. */
+  skipped?: boolean;
+  note?: string;
+};
 
 const FUNCTIONS_URL = `${SUPABASE.url}/functions/v1`;
 
@@ -296,7 +303,16 @@ const FUNCTIONS_URL = `${SUPABASE.url}/functions/v1`;
 export const sendBulkEmail = async (
   token: string,
   messages: EmailMessage[],
-  meta?: { audience?: 'participanti' | 'asteptare'; editie?: number },
+  meta?: {
+    audience?: 'participanti' | 'asteptare';
+    editie?: number;
+    /**
+     * Cheie de idempotență (`src/admin/sendLock.ts`). Serverul trimite o singură
+     * dată per cheie; a doua oară întoarce `skipped: true`. Lipsa ei păstrează
+     * comportamentul de dinainte de zăvor.
+     */
+    onceKey?: string;
+  },
   signal?: AbortSignal
 ): Promise<SendEmailResult> => {
   const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
@@ -308,6 +324,7 @@ export const sendBulkEmail = async (
       messages,
       audience: meta?.audience,
       editie: meta?.editie,
+      once_key: meta?.onceKey,
     }),
     signal,
   });
