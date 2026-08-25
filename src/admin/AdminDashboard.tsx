@@ -26,7 +26,8 @@ import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
-import { emailuriNelivrate } from './deliveryLog';
+import { emailuriNelivrate, acoperire, COMUNICARI_EDITIE } from './deliveryLog';
+import type { StareCelula } from './deliveryLog';
 import { useAdminPolling } from './useAdminPolling';
 import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
@@ -67,6 +68,42 @@ const eventFmt = new Intl.DateTimeFormat('ro-RO', {
   timeZone: 'Europe/Chisinau',
 });
 const formatEventTime = (iso: string): string => eventFmt.format(new Date(iso));
+
+/**
+ * Insigna din tabelul de participanți — cea mai PROASTĂ stare dintre comunicările
+ * datorate, nu cea mai recentă trimitere. Un eșec rămâne vizibil chiar dacă altă
+ * comunicare a plecat cu bine după el.
+ */
+const rezumaAcoperire = (
+  celule: Record<string, StareCelula>
+): { clasa: string; eticheta: string; detaliu: string } => {
+  const stari = COMUNICARI_EDITIE.map((c) => ({ com: c, stare: celule[c.cheie] ?? 'lipsa' }));
+  const detaliu = stari.map(({ com, stare }) => `${com.eticheta}: ${STARE_TEXT[stare]}`).join(' · ');
+  const esuate = stari.filter((s) => s.stare === 'esuat');
+  if (esuate.length) {
+    return {
+      clasa: 'esuat',
+      eticheta: `✕ ${esuate.map((s) => s.com.eticheta.toLowerCase()).join(', ')}`,
+      detaliu,
+    };
+  }
+  const lipsa = stari.filter((s) => s.stare === 'lipsa');
+  if (lipsa.length === stari.length) return { clasa: 'niciunul', eticheta: '— niciunul', detaliu };
+  if (lipsa.length) {
+    return {
+      clasa: 'partial',
+      eticheta: `${stari.length - lipsa.length}/${stari.length}`,
+      detaliu,
+    };
+  }
+  return { clasa: 'trimis', eticheta: '✓ complet', detaliu };
+};
+
+const STARE_TEXT: Record<StareCelula, string> = {
+  trimis: 'trimis',
+  esuat: 'eșuat',
+  lipsa: 'lipsă',
+};
 
 export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [rows, setRows] = useState<AdminRegistration[] | null>(null);
@@ -230,16 +267,17 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const percent = Math.round((all.length / TOTAL_SLOTS) * 100);
   const waitAll = waitlist ?? [];
 
-  // Ultimul email încercat pentru fiecare adresă — pentru indicatorul din tabel.
-  // `emailLog` vine cu cele mai noi primele, deci prima apariție e cea recentă.
-  const ultimulEmail = useMemo(() => {
-    const m = new Map<string, AdminEmailLogEntry>();
-    for (const e of emailLog ?? []) {
-      const k = e.email.toLowerCase();
-      if (!m.has(k)) m.set(k, e);
-    }
+  // Acoperirea per participant — pentru indicatorul din tabel.
+  //
+  // Înainte aici stătea „ultimul email", o hartă cheiată DOAR pe adresă: orice
+  // trimitere reușită ulterioară acoperea un eșec anterior, așa că o bifă verde
+  // putea coexista cu un reminder care n-a ajuns niciodată. Acum indicatorul
+  // citește aceeași fișă ca tabul „Livrare", pe comunicare, nu pe adresă.
+  const acoperirePerId = useMemo(() => {
+    const m = new Map<string, Record<string, StareCelula>>();
+    for (const r of acoperire(all, emailLog ?? [])) m.set(r.participant.id, r.celule);
     return m;
-  }, [emailLog]);
+  }, [all, emailLog]);
 
   // Câte emailuri au rămas nelivrate (ultima încercare per adresă+subiect e eșec)
   // — badge-ul roșu de pe tabul „Livrare". Aceeași logică pe care o consumă și
@@ -690,7 +728,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 {!arhiva && <span className="right">Acțiuni</span>}
               </div>
               {filtered.map((r, i) => {
-                const mail = ultimulEmail.get(r.email.toLowerCase());
+                const celule = acoperirePerId.get(r.id) ?? {};
+                const rezumat = rezumaAcoperire(celule);
                 return (
                 <div key={r.id} className="admin-row">
                   <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
@@ -705,17 +744,11 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   <span>
                     <button
                       type="button"
-                      className={`admin-mail-badge ${mail ? mail.status : 'niciunul'}`}
-                      title={
-                        mail
-                          ? `${mail.subiect} · ${formatEventTime(mail.created_at)}${
-                              mail.status === 'esuat' ? ` · ${mail.eroare ?? 'eșuat'}` : ''
-                            } — click pentru detalii`
-                          : 'Nu i s-a trimis niciun email pe ediția asta'
-                      }
+                      className={`admin-mail-badge ${rezumat.clasa}`}
+                      title={`${rezumat.detaliu} — click pentru fișa de acoperire`}
                       onClick={() => setTab('livrare')}
                     >
-                      {mail ? (mail.status === 'trimis' ? '✓ trimis' : '✕ nelivrat') : '— niciunul'}
+                      {rezumat.eticheta}
                     </button>
                   </span>
                   {!arhiva && (

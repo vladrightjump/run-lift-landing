@@ -8,7 +8,10 @@ import {
   ultimaIncercarePerCheie,
   emailuriRetrimisibile,
   participantiFaraEmail,
+  acoperire,
+  COMUNICARI_EDITIE,
 } from './deliveryLog';
+import type { StareCelula } from './deliveryLog';
 
 type Props = {
   token: string;
@@ -23,6 +26,13 @@ type Props = {
 };
 
 type Filtru = 'toate' | 'esuate' | 'trimise' | 'fara-email';
+
+/** Cum se citește o celulă din fișă. `lipsa` e o stare, nu o absență. */
+const CELULA: Record<StareCelula, { semn: string; titlu: string }> = {
+  trimis: { semn: '✓', titlu: 'trimis' },
+  esuat: { semn: '✕', titlu: 'eșuat' },
+  lipsa: { semn: '–', titlu: 'nu s-a încercat niciodată' },
+};
 
 const MOD_LABELS: Record<string, string> = {
   admin: 'Trimis manual',
@@ -100,6 +110,14 @@ export const AdminDeliveryTab = ({
   // Participanți care nu apar deloc în jurnal — n-au primit niciun email.
   const fataDeEmail = useMemo(
     () => participantiFaraEmail(participanti, intrari),
+    [participanti, intrari]
+  );
+
+  // Fișa de acoperire — participanții ediției × comunicările datorate.
+  // Rămâne alături de „fără niciun email": aceea e cazul tot-sau-nimic, pe care
+  // matricea nu-l scoate în evidență.
+  const randuriAcoperire = useMemo(
+    () => acoperire(participanti, intrari),
     [participanti, intrari]
   );
 
@@ -262,6 +280,47 @@ export const AdminDeliveryTab = ({
           </span>
         </div>
       </div>
+
+      <section className="admin-acoperire">
+        <div className="admin-table-head">
+          <h3>Fișa de acoperire</h3>
+          <p className="admin-hint">
+            Cine n-a primit ce. Rândurile sunt participanții ediției, coloanele sunt comunicările
+            pe care ediția le datorează. Un email reușit de un tip nu mai poate ascunde un eșec de
+            alt tip.
+          </p>
+        </div>
+        <div className="admin-table-wrap">
+          <div className="admin-table admin-acoperire-table">
+            <div className="admin-row admin-row-head">
+              <span>Persoană</span>
+              {COMUNICARI_EDITIE.map((c) => (
+                <span key={c.cheie}>{c.eticheta}</span>
+              ))}
+            </div>
+            {randuriAcoperire.length === 0 && (
+              <div className="admin-empty">Nu sunt participanți pe ediția asta.</div>
+            )}
+            {randuriAcoperire.map(({ participant, celule }) => (
+              <div key={participant.id} className="admin-row">
+                <span className="admin-cell-name">{participant.nume}</span>
+                {COMUNICARI_EDITIE.map((c) => {
+                  const stare = celule[c.cheie] ?? 'lipsa';
+                  return (
+                    <span
+                      key={c.cheie}
+                      className={`admin-celula ${stare}`}
+                      title={`${c.eticheta}: ${CELULA[stare].titlu}`}
+                    >
+                      {CELULA[stare].semn}
+                    </span>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <div className="admin-sursa-tabs">
         {(

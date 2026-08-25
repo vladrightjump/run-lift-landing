@@ -20,9 +20,11 @@ vi.mock('../../src/lib/adminApi', async () => {
       p({ id: 'r1', nume: 'Ana Popescu', email: 'ana@exemplu.ro' }),
       p({ id: 'r2', nume: 'Mihai Ionescu', email: 'mihai@exemplu.ro' }),
     ],
+    // Ana are confirmarea trimisă, dar niciun reminder — cazul pe care insigna
+    // veche (cheiată doar pe adresă) îl raporta drept „✓ trimis".
     emailLog: [
-      l({ id: 'e1', email: 'ana@exemplu.ro', subiect: 'Confirmare', status: 'trimis' }),
-      l({ id: 'e2', email: 'mihai@exemplu.ro', subiect: 'Reminder', status: 'esuat' }),
+      l({ id: 'e1', email: 'ana@exemplu.ro', subiect: 'Confirmare', mod: 'confirm', status: 'trimis' }),
+      l({ id: 'e2', email: 'mihai@exemplu.ro', subiect: 'Reminder', mod: 'admin', status: 'esuat' }),
     ],
   });
   return api.current;
@@ -66,5 +68,20 @@ describe('AdminDashboard', () => {
     expect(await screen.findByText('Ana Popescu')).toBeDefined();
     const alerta = document.querySelector('.admin-tab-alert');
     expect(alerta?.textContent).toBe('1');
+  });
+
+  it('insigna NU raportează „complet" cât timp o comunicare datorată lipsește', async () => {
+    // Regresia pe care o ascundea harta cheiată doar pe adresă: Ana are o
+    // confirmare reușită, dar niciun reminder. Insigna veche arăta „✓ trimis".
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+
+    await screen.findByText('Ana Popescu');
+    const insigne = [...document.querySelectorAll('.admin-mail-badge')];
+    const aleiAna = insigne[0];
+
+    expect(aleiAna.className).toContain('partial');
+    expect(aleiAna.textContent).toBe('1/2');
+    expect(aleiAna.getAttribute('title')).toContain('Confirmare: trimis');
+    expect(aleiAna.getAttribute('title')).toContain('Reminder: lipsă');
   });
 });

@@ -6,6 +6,8 @@ import {
   emailuriNelivrate,
   emailuriRetrimisibile,
   participantiFaraEmail,
+  COMUNICARI_EDITIE,
+  acoperire,
 } from '../../src/admin/deliveryLog';
 import type { AdminEmailLogEntry, AdminRegistration } from '../../src/lib/adminApi';
 
@@ -85,5 +87,75 @@ describe('deliveryLog', () => {
     const participanti = [reg({ id: 'r1', email: 'ion@ex.ro' }), reg({ id: 'r2', email: 'Ana@Ex.ro' })];
     const intrari = [log({ email: 'ION@ex.ro' })];
     expect(participantiFaraEmail(participanti, intrari).map((p) => p.id)).toEqual(['r2']);
+  });
+});
+
+describe('acoperire', () => {
+  const ana = reg({ id: 'r1', nume: 'Ana Popescu', email: 'ana@ex.ro' });
+  const mihai = reg({ id: 'r2', nume: 'Mihai Ionescu', email: 'mihai@ex.ro' });
+
+  /** `email_log` vine cele mai noi primele — fixture-urile respectă ordinea. */
+  const celule = (participanti: AdminRegistration[], intrari: AdminEmailLogEntry[]) =>
+    Object.fromEntries(
+      acoperire(participanti, intrari).map((r) => [r.participant.id, r.celule])
+    );
+
+  it('confirmarea reușită NU acoperă reminderul eșuat', () => {
+    // Exact defectul pe care îl ascundea insigna veche: cheiată doar pe adresă,
+    // arăta „✓ trimis" pentru cea mai recentă trimitere, de orice fel.
+    const c = celule(
+      [ana],
+      [
+        log({ id: 'e2', email: 'ana@ex.ro', mod: 'confirm', subiect: 'Confirmare', status: 'trimis' }),
+        log({ id: 'e1', email: 'ana@ex.ro', mod: 'broadcast', subiect: 'Reminder', status: 'esuat' }),
+      ]
+    );
+    expect(c.r1.confirmare).toBe('trimis');
+    expect(c.r1.reminder).toBe('esuat');
+  });
+
+  it('cine n-are nicio intrare în jurnal e „lipsă" pe toate coloanele', () => {
+    const c = celule([mihai], []);
+    for (const com of COMUNICARI_EDITIE) expect(c.r2[com.cheie]).toBe('lipsa');
+  });
+
+  it('o retrimitere reușită a ACELEIAȘI comunicări repară eșecul', () => {
+    const c = celule(
+      [ana],
+      [
+        log({ id: 'e2', email: 'ana@ex.ro', mod: 'broadcast', subiect: 'Reminder v2', status: 'trimis' }),
+        log({ id: 'e1', email: 'ana@ex.ro', mod: 'broadcast', subiect: 'Reminder', status: 'esuat' }),
+      ]
+    );
+    expect(c.r1.reminder).toBe('trimis');
+  });
+
+  it('confirmarea prin promovare din așteptare contează tot ca „confirmare"', () => {
+    const c = celule(
+      [ana],
+      [log({ id: 'e1', email: 'ana@ex.ro', mod: 'promoted', subiect: 'Ai intrat', status: 'trimis' })]
+    );
+    expect(c.r1.confirmare).toBe('trimis');
+  });
+
+  it('o difuzare ad-hoc din backoffice nu umple nicio coloană datorată', () => {
+    const c = celule(
+      [ana],
+      [log({ id: 'e1', email: 'ana@ex.ro', mod: 'admin', subiect: 'Ceva', status: 'trimis' })]
+    );
+    for (const com of COMUNICARI_EDITIE) expect(c.r1[com.cheie]).toBe('lipsa');
+  });
+
+  it('potrivirea adresei e insensibilă la majuscule', () => {
+    const c = celule(
+      [reg({ id: 'r1', email: 'Ana@Ex.ro' })],
+      [log({ id: 'e1', email: 'ana@ex.ro', mod: 'confirm', status: 'trimis' })]
+    );
+    expect(c.r1.confirmare).toBe('trimis');
+  });
+
+  it('o comunicare fără nicio intrare rămâne coloană, nu dispare', () => {
+    const rezultat = acoperire([ana], []);
+    expect(Object.keys(rezultat[0].celule)).toEqual(COMUNICARI_EDITIE.map((c) => c.cheie));
   });
 });
