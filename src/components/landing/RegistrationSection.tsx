@@ -40,10 +40,15 @@ const inputStyle: CSSProperties = {
 };
 const fieldErr: CSSProperties = { fontSize: 13, color: 'var(--e3-danger)' };
 
-type Props = { reg: ReturnType<typeof useRegistration>; stats: PublicStats | null };
+type Props = {
+  reg: ReturnType<typeof useRegistration>;
+  stats: PublicStats | null;
+  /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
+  num?: string;
+};
 
 /** Secțiunea „Înscriere": rezumat + formular / listă de așteptare / închis / loading / succes / eroare. */
-export const RegistrationSection = ({ reg, stats }: Props) => {
+export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
   const config = useEventConfig();
   const TOTAL_SLOTS = config.slots.total;
   const { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } = useEditionStrings();
@@ -80,7 +85,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-              <span className="e3-title-num" style={sectionNum}>03</span>
+              <span className="e3-title-num" style={sectionNum}>{num}</span>
               <h2 className="e3-title" style={sectionTitle}>Înscriere</h2>
             </div>
             <p style={{ margin: '0 0 28px', fontSize: 17, lineHeight: 1.55, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
