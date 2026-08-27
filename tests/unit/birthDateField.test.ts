@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { formatMask, toISO, fromISO } from '../../src/components/landing/BirthDateField';
 import { dataNasteriiError } from '../../src/lib/validation';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+
+/** Startul ediției — validarea de vârstă îl primește ca argument. */
+const START = SNAPSHOT_CONFIG.start;
 
 /**
  * Câmpul unic de dată (`zz.ll.aaaa`) înlocuiește cele 3 select-uri. Contractul cu
@@ -44,7 +48,7 @@ describe('toISO — ce ajunge efectiv în formular', () => {
     for (const partial of ['', '1', '12', '12.0', '12.08', '12.08.19']) {
       expect(toISO(partial)).toBe('');
     }
-    expect(dataNasteriiError(toISO('12.08'))).toBe('Introdu data nașterii.');
+    expect(dataNasteriiError(toISO('12.08'), START)).toBe('Introdu data nașterii.');
   });
 
   it('completează cu zero zilele și lunile de o cifră', () => {
@@ -55,7 +59,7 @@ describe('toISO — ce ajunge efectiv în formular', () => {
   // Garda de calendar stă în `ageAtEvent` — câmpul nu trebuie să o ocolească.
   it('o dată imposibilă produce ISO pe care validarea îl respinge', () => {
     expect(toISO('30.02.2000')).toBe('2000-02-30');
-    expect(dataNasteriiError('2000-02-30')).toBe('Data nașterii nu e validă.');
+    expect(dataNasteriiError('2000-02-30', START)).toBe('Data nașterii nu e validă.');
   });
 });
 

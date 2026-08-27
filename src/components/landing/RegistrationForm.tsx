@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
-import { TOTAL_SLOTS, INSTAGRAM_URL } from '../../lib/config';
+import { INSTAGRAM_URL } from '../../lib/config';
 import { downloadEventIcs, shareSignup } from '../../lib/calendar';
-import { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } from '../../content/format';
+import { useEventConfig, useEditionStrings } from '../../hooks/useEventConfig';
 import type { FieldName } from '../../lib/validation';
 import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
@@ -72,6 +72,9 @@ type Props = {
 };
 
 export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, autoFocus = false }: Props) => {
+  const config = useEventConfig();
+  const TOTAL_SLOTS = config.slots.total;
+  const { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } = useEditionStrings();
   const {
     waitlistMode, waitlistLeft, slots, isSoldOut, isWaitlistFull, showForm, closedReason,
     phase, errors, birthISO, dateErrMsg, confirmName, submittedAsWaitlist,
@@ -334,12 +337,12 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
           </p>
           {!submittedAsWaitlist && (
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button type="button" onClick={downloadEventIcs} style={ctaSmall}>
+              <button type="button" onClick={() => downloadEventIcs(config)} style={ctaSmall}>
                 Adaugă în calendar
               </button>
               <button
                 type="button"
-                onClick={() => void shareSignup()}
+                onClick={() => void shareSignup(config)}
                 style={{ ...ctaSmall, background: 'transparent', border: '1px solid var(--e3-accent)', color: 'var(--e3-accent)' }}
               >
                 Distribuie

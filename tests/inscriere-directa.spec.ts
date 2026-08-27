@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
-import { EDITION } from '../src/content/edition';
 
 /**
  * Linkul direct `/inscriere` + overlay-ul de pe landing.
@@ -79,7 +78,10 @@ test.describe('/inscriere — pagina cu link direct', () => {
     await expect(page.getByText(/te-ai înscris/i)).toBeVisible();
     // Data scrisă „15.05.1994" ajunge ISO la backend.
     expect(body.data_nasterii).toBe('1994-05-15');
-    expect(body.editie).toBe(EDITION.number);
+    // Ediția NU mai pleacă din client: o pune serverul din DEFAULT
+    // (`current_event_edition()`), iar RLS respinge orice valoare trimisă de
+    // client. Altfel un tab vechi ar scrie în ediția greșită după o publicare.
+    expect(body).not.toHaveProperty('editie');
     expect(body.telefon).toBe('069509949');
     expect(headers['content-profile']).toBe('runlift');
   });

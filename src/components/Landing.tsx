@@ -1,6 +1,6 @@
 import '../edition3.css';
 import { useEffect, useRef, useState } from 'react';
-import { EVENT_DATE } from '../lib/config';
+import { useEditionDates } from '../hooks/useEventConfig';
 import { useCountdown } from '../hooks/useCountdown';
 import { useStats } from '../hooks/useStats';
 import { useNow } from '../hooks/useNow';
@@ -34,6 +34,7 @@ type Props = {
  */
 export const Landing = ({ mode = 'full' }: Props) => {
   const lista = mode === 'leaderboard';
+  const { EVENT_DATE } = useEditionDates();
   const cd = useCountdown(EVENT_DATE);
   const { stats, refresh } = useStats();
   const now = useNow(30_000);

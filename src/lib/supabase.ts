@@ -1,4 +1,4 @@
-import { SUPABASE, CURRENT_EDITION } from './config';
+import { SUPABASE } from './config';
 import { parseEventConfig, type EventConfig } from '../content/eventConfig';
 import { logClientError } from './monitoring';
 import { normalizePhone } from './validation';
@@ -68,7 +68,9 @@ export const submitRegistration = async (
         email: data.email.trim(),
         data_nasterii: data.dataNasterii || null,
         acord: data.acord,
-        editie: CURRENT_EDITION,
+        // `editie` NU se trimite: o pune serverul din DEFAULT
+        // (`current_event_edition()`), iar politica RLS respinge orice valoare
+        // venită din client. Altfel un tab vechi ar scrie în ediția greșită.
       }),
       signal,
     });
@@ -197,7 +199,7 @@ export const submitWaitlist = async (
         email: data.email.trim(),
         data_nasterii: data.dataNasterii || null,
         acord: data.acord,
-        editie: CURRENT_EDITION,
+        // idem: ediția o pune serverul, nu bundle-ul.
       }),
       signal,
     });

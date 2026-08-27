@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import {
-  EVENT_END_DATE,
-  REGISTRATION_DEADLINE,
-  OCCUPIED_SLOTS,
-  TOTAL_SLOTS,
-  WAITLIST_SLOTS,
-  isBackendConfigured,
-} from '../lib/config';
+import { isBackendConfigured } from '../lib/config';
+import { useEventConfig, useEditionDates } from './useEventConfig';
 import {
   submitRegistration,
   submitWaitlist,
@@ -48,6 +42,8 @@ type Params = {
  * (înscriere sau listă de așteptare). Prezentarea stă în `RegistrationSection`.
  */
 export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
+  const config = useEventConfig();
+  const { EVENT_END_DATE, REGISTRATION_DEADLINE } = useEditionDates();
   const [phase, setPhase] = useState<Phase>('form');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [dateErrMsg, setDateErrMsg] = useState('Introdu data nașterii.');
@@ -83,18 +79,18 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
   };
 
   const slots = useMemo(() => {
-    const base = stats?.count ?? OCCUPIED_SLOTS;
-    const occupied = Math.min(TOTAL_SLOTS, base + sessionSignups);
-    return { occupied, remaining: TOTAL_SLOTS - occupied };
+    const base = stats?.count ?? config.slots.occupiedFallback;
+    const occupied = Math.min(config.slots.total, base + sessionSignups);
+    return { occupied, remaining: config.slots.total - occupied };
   }, [stats, sessionSignups]);
 
   const isEventEnded = now > EVENT_END_DATE.getTime();
   const isRegClosed = now > REGISTRATION_DEADLINE.getTime();
   const isSoldOut = slots.remaining <= 0;
   const waitlistCount = stats?.waitlist ?? 0;
-  const isWaitlistFull = wlFull || waitlistCount >= WAITLIST_SLOTS;
+  const isWaitlistFull = wlFull || waitlistCount >= config.slots.waitlist;
   const waitlistMode = isSoldOut && !isWaitlistFull;
-  const waitlistLeft = Math.max(0, WAITLIST_SLOTS - waitlistCount);
+  const waitlistLeft = Math.max(0, config.slots.waitlist - waitlistCount);
   const showForm =
     phase === 'form' && !isEventEnded && !isRegClosed && !(isSoldOut && isWaitlistFull);
   const closedReason: 'ended' | 'reg' | 'full' | null =
@@ -130,11 +126,13 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
       acord: !!fd.get('acord'),
     };
 
-    const errs = validate(data);
+    const errs = validate(data, config.start);
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       if (errs.dataNasterii) {
-        setDateErrMsg(dataNasteriiError(data.dataNasterii) ?? 'Data nașterii nu e validă.');
+        setDateErrMsg(
+          dataNasteriiError(data.dataNasterii, config.start) ?? 'Data nașterii nu e validă.'
+        );
       }
       showToast('error', errorMessage(errs));
       const bad = firstErrorField(errs);

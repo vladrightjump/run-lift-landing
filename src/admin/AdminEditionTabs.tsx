@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { AdminEdition } from '../lib/adminApi';
-import { CURRENT_EDITION } from '../lib/config';
 
 type Props = {
   editions: AdminEdition[] | null;
@@ -16,9 +15,10 @@ type Props = {
  * încheiate rămân accesibile ca arhivă. „+ Ediție nouă" mută ediția curentă
  * din `app_config` pe următorul număr: tabul nou pornește gol.
  *
- * Atenție la desincronizare: ediția din backend (`app_config`) și cea din cod
- * (`src/content/edition.ts`) sunt două lucruri separate. Butonul o mută doar pe
- * prima; banner-ul de mai jos apare până aliniezi codul și redeployezi.
+ * Aici stătea un banner de desincronizare între ediția din backend și cea din
+ * cod. A dispărut odată cu a doua copie: configul publicat E ediția, iar
+ * publicarea scrie scalarele în aceeași tranzacție. Nu mai există stare în care
+ * cele două să difere, deci nici ce raporta banner-ul.
  */
 export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creating }: Props) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -26,7 +26,6 @@ export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creat
   const lista = editions ?? [];
   const curenta = lista.find((e) => e.este_curenta)?.editie ?? null;
   const urmatoarea = lista.length ? Math.max(...lista.map((e) => e.editie)) + 1 : null;
-  const desincronizat = curenta !== null && curenta !== CURRENT_EDITION;
 
   return (
     <>
@@ -65,15 +64,6 @@ export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creat
           {creating ? 'Se deschide…' : '+ Ediție nouă'}
         </button>
       </nav>
-
-      {desincronizat && (
-        <div className="admin-banner warn" role="status">
-          <strong>Backendul e pe ediția {curenta}, codul pe ediția {CURRENT_EDITION}.</strong>{' '}
-          Înscrierile noi intră deja pe ediția {curenta}, dar site-ul public încă arată datele
-          ediției {CURRENT_EDITION}. Actualizează <code>src/content/edition.ts</code>, rulează{' '}
-          <code>npm run sync-edition</code> și redeployează.
-        </div>
-      )}
 
       {confirmOpen && (
         <div

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TOTAL_SLOTS } from '../../lib/config';
+import { useEventConfig } from '../../hooks/useEventConfig';
 import { consumeJustSignedUp } from '../../lib/justSignedUp';
 import type { JustSignedUp } from '../../lib/justSignedUp';
 
@@ -9,6 +9,7 @@ import type { JustSignedUp } from '../../lib/justSignedUp';
  * (sau la click pe ✕). Sursa e `sessionStorage`, nu backendul.
  */
 export const SignupBanner = () => {
+  const TOTAL_SLOTS = useEventConfig().slots.total;
   const [data, setData] = useState<JustSignedUp | null>(null);
   const [hidden, setHidden] = useState(false);
 

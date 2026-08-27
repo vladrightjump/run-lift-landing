@@ -1,11 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { LAUNCH_DATE } from '../src/lib/config';
+import { deriveEditionDates } from '../src/lib/config';
 import {
-  EVENT_WHERE,
+  deriveEventStrings,
   TRAINING_WHERE,
   TRAINING_MAP_EMBED_SRC,
   TRAINING_MAP_DIRECTIONS_URL,
 } from '../src/content/format';
+import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
+
+const { LAUNCH_DATE } = deriveEditionDates(SNAPSHOT_CONFIG);
+const { EVENT_WHERE } = deriveEventStrings(SNAPSHOT_CONFIG);
 
 /**
  * Pagina /despre-noi — prezentare + formular „Vreau info".

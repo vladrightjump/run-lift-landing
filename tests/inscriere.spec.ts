@@ -104,7 +104,10 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await submitBtn(page).click();
 
     await expect(page.getByText(/te-ai înregistrat/i)).toBeVisible();
-    expect(body.editie).toBe(EDITION.number);
+    // Ediția NU mai pleacă din client: o pune serverul din DEFAULT
+    // (`current_event_edition()`), iar RLS respinge orice valoare trimisă de
+    // client. Altfel un tab vechi ar scrie în ediția greșită după o publicare.
+    expect(body).not.toHaveProperty('editie');
     expect(body.data_nasterii).toBe('1994-05-15');
     expect(body.telefon).toBe('069509949');
     // Regresia din 4 aug: fără Content-Profile: runlift, PostgREST caută în

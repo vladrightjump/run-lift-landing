@@ -14,8 +14,6 @@ import {
   SubmitHttpError,
   SUBMIT_TIMEOUT_MS,
 } from '../../src/lib/supabase';
-import { CURRENT_EDITION } from '../../src/lib/config';
-import { EDITION } from '../../src/content/edition';
 
 const draft = {
   nume: '  Popescu  ',
@@ -113,12 +111,13 @@ describe('submitRegistration (înscriere la eveniment)', () => {
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/registrations$/);
   });
 
-  it('salvează ediția curentă a evenimentului (acum 4)', async () => {
-    // Regresie: dacă editie iese din sincron cu current_event_edition din DB,
-    // înscrierile ediției 4 s-ar amesteca cu edițiile trecute.
+  it('NU trimite niciodată ediția — o pune serverul', async () => {
+    // Înainte, clientul trimitea `editie` din constanta compilată. De când
+    // configul se publică fără deploy, un tab vechi ar scrie în ediția greșită.
+    // Acum coloana vine din DEFAULT (`current_event_edition()`), iar politica
+    // RLS respinge orice valoare venită din client.
     await submitRegistration(regData);
-    expect(ultimulBody().editie).toBe(CURRENT_EDITION);
-    expect(CURRENT_EDITION).toBe(EDITION.number);
+    expect(ultimulBody()).not.toHaveProperty('editie');
   });
 
   it('curăță spațiile, normalizează telefonul și păstrează data nașterii', async () => {
@@ -153,10 +152,11 @@ describe('submitRegistration (înscriere la eveniment)', () => {
 });
 
 describe('submitWaitlist (lista de așteptare)', () => {
-  it('trimite către event_waitlist cu ediția curentă', async () => {
+  it('trimite către event_waitlist, fără ediție', async () => {
     await submitWaitlist(regData);
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/rest\/v1\/event_waitlist$/);
-    expect(ultimulBody().editie).toBe(CURRENT_EDITION);
+    // Ca la registrations: ediția o pune serverul, nu bundle-ul.
+    expect(ultimulBody()).not.toHaveProperty('editie');
   });
 
   it('curăță datele la fel ca înscrierea normală', async () => {

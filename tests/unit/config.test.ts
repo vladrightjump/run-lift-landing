@@ -1,21 +1,28 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SHOW_COMING_SOON,
-  LAUNCH_DATE,
-  EVENT_DATE,
-  EVENT_END_DATE,
-  LEADERBOARD_DATE,
-  NEXT_EDITION_DATE,
-  CURRENT_EDITION,
-  CURRENT_LAUNCH_EDITION,
-  TOTAL_SLOTS,
-  WAITLIST_SLOTS,
+  deriveEditionDates,
   INSTAGRAM_URL,
   INSTAGRAM_HANDLE,
   SUPABASE,
   isBackendConfigured,
 } from '../../src/lib/config';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 import { EDITION } from '../../src/content/edition';
+
+// Derivările se verifică pe INSTANTANEUL de build — acelaşi rol pe care îl avea
+// `EDITION` înainte de mutarea configului în DB.
+const {
+  LAUNCH_DATE,
+  EVENT_DATE,
+  EVENT_END_DATE,
+  LEADERBOARD_DATE,
+  NEXT_EDITION_DATE,
+} = deriveEditionDates(SNAPSHOT_CONFIG);
+const SHOW_COMING_SOON = SNAPSHOT_CONFIG.showComingSoon;
+const CURRENT_EDITION = SNAPSHOT_CONFIG.number;
+const CURRENT_LAUNCH_EDITION = SNAPSHOT_CONFIG.launchNumber;
+const TOTAL_SLOTS = SNAPSHOT_CONFIG.slots.total;
+const WAITLIST_SLOTS = SNAPSHOT_CONFIG.slots.waitlist;
 
 describe('date și ore', () => {
   it('toate datele sunt valide', () => {

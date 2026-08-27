@@ -1,4 +1,4 @@
-import { EVENT_META } from '../../content/format';
+import { useEditionStrings } from '../../hooks/useEventConfig';
 import { useCountdown } from '../../hooks/useCountdown';
 
 type Props = {
@@ -11,6 +11,8 @@ type Props = {
 
 /** Antetul sticky: brand, countdown „start în" și acțiuni. */
 export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
+  const { EVENT_META } = useEditionStrings();
+
   return (
       <header
         style={{

@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
-import { LEADERBOARD_DATE, EVENT_DATE, EVENT_END_DATE, NEXT_EDITION_DATE } from '../src/lib/config';
+import { deriveEditionDates } from '../src/lib/config';
+import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
+
+const { LEADERBOARD_DATE, EVENT_DATE, EVENT_END_DATE, NEXT_EDITION_DATE } =
+  deriveEditionDates(SNAPSHOT_CONFIG);
 
 /**
  * Cele trei faze ale zilei de eveniment, pe rutele „/" și „/inscriere".

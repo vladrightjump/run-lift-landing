@@ -7,9 +7,27 @@
  * `installGlobalMonitoring` — prinde ce scapă: violări CSP, erori globale,
  * promisiuni respinse. Se instalează o singură dată, în `main.tsx`.
  */
-import { CURRENT_EDITION } from './config';
+import { SNAPSHOT_CONFIG } from '../content/eventConfig';
 
 type Meta = Record<string, unknown>;
+
+/**
+ * Ediția pusă pe rapoartele de eroare.
+ *
+ * E singura valoare din proiect ținută într-o variabilă de modul în loc să vină
+ * din context, și e deliberat: `logClientError` e apelat din `catch`-uri care nu
+ * sunt componente (inclusiv din `supabase.ts`, care e importat de provider —
+ * a-l face să citească contextul ar închide un ciclu de importuri).
+ *
+ * Nu influențează NIMIC din ce se randează: e metadată de telemetrie. Pornește
+ * de la instantaneul de build și e actualizată de provider când ajunge configul
+ * publicat, ca un raport de eroare să nu numească ediția greșită.
+ */
+let editiaCurenta: number = SNAPSHOT_CONFIG.number;
+
+export const setMonitoringEdition = (editie: number): void => {
+  editiaCurenta = editie;
+};
 
 /** Log structurat al unei erori de client, cu context și metadate utile la debug. */
 export const logClientError = (context: string, err: unknown, meta: Meta = {}): void => {
@@ -26,7 +44,7 @@ export const logClientError = (context: string, err: unknown, meta: Meta = {}): 
   console.error(`[runlift:${context}]`, {
     ...info,
     ...meta,
-    editie: CURRENT_EDITION,
+    editie: editiaCurenta,
     url: typeof location !== 'undefined' ? location.href : undefined,
     at: new Date().toISOString(),
   });

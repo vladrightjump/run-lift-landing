@@ -38,8 +38,7 @@ import {
 } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
-import { CURRENT_EDITION, LAUNCH_DATE, TOTAL_SLOTS, WAITLIST_SLOTS } from '../lib/config';
-import { LAUNCH_EDITION_ORDINAL } from '../content/format';
+import { useEventConfig, useEditionStrings, useEditionDates } from '../hooks/useEventConfig';
 import { AdminSkeleton, AdminFeedSkeleton } from './AdminSkeleton';
 
 const launchFmt = new Intl.DateTimeFormat('ro-RO', {
@@ -50,7 +49,6 @@ const launchFmt = new Intl.DateTimeFormat('ro-RO', {
   minute: '2-digit',
   timeZone: 'Europe/Chisinau',
 });
-const LAUNCH_LABEL = launchFmt.format(LAUNCH_DATE);
 
 type Props = {
   token: string;
@@ -152,6 +150,16 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane'
   >('participanti');
   const toastTimerRef = useRef<number | null>(null);
+  // Ediția și capacitatea vin din configul PUBLICAT, nu din bundle: după ce
+  // publicarea nu mai cere deploy, un backoffice deschis dintr-un build vechi ar
+  // filtra ediția greșită — și nu mai există banner care să explice de ce.
+  const config = useEventConfig();
+  const CURRENT_EDITION = config.number;
+  const TOTAL_SLOTS = config.slots.total;
+  const WAITLIST_SLOTS = config.slots.waitlist;
+  const { LAUNCH_EDITION_ORDINAL } = useEditionStrings();
+  const { LAUNCH_DATE } = useEditionDates();
+  const LAUNCH_LABEL = launchFmt.format(LAUNCH_DATE);
   const cd = useCountdown(LAUNCH_DATE);
 
   // Ediția pe care backendul o consideră curentă. Doar ea acceptă modificări:

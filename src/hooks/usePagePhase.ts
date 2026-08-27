@@ -1,5 +1,5 @@
-import { LEADERBOARD_DATE, EVENT_END_DATE } from '../lib/config';
 import { useCountdown } from './useCountdown';
+import { useEditionDates } from './useEventConfig';
 
 /**
  * Faza în care se află homepage-ul în ziua cursei:
@@ -19,6 +19,7 @@ export const previewParam = (): string | null =>
   new URLSearchParams(window.location.search).get('preview');
 
 export const usePagePhase = (): PagePhase => {
+  const { LEADERBOARD_DATE, EVENT_END_DATE } = useEditionDates();
   const lista = useCountdown(LEADERBOARD_DATE);
   const final = useCountdown(EVENT_END_DATE);
 
