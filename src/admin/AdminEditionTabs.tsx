@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { AdminEdition } from '../lib/adminApi';
 
 type Props = {
@@ -11,49 +11,63 @@ type Props = {
 };
 
 /**
- * Taburile de ediție — fiecare ediție are propriul spațiu, iar edițiile
- * încheiate rămân accesibile ca arhivă. „+ Ediție nouă" mută ediția curentă
- * din `app_config` pe următorul număr: tabul nou pornește gol.
+ * Selectorul de ediție.
  *
- * Aici stătea un banner de desincronizare între ediția din backend și cea din
- * cod. A dispărut odată cu a doua copie: configul publicat E ediția, iar
- * publicarea scrie scalarele în aceeași tranzacție. Nu mai există stare în care
- * cele două să difere, deci nici ce raporta banner-ul.
+ * A fost o bandă de butoane, câte unul per ediție. Mergea la trei; la a opta
+ * ediție banda se rupe pe două rânduri și mănâncă un sfert din ecran înainte ca
+ * organizatorul să fi văzut vreun participant. O listă are o înălțime fixă,
+ * oricâte ediții s-ar aduna.
+ *
+ * Eticheta poartă tot ce purtau butoanele (numărul, câți s-au înscris, care e
+ * cea curentă), ca alegerea să nu ceară deschiderea listei ca să compari.
+ *
+ * „+ Ediție nouă" mută ediția curentă din `app_config` pe următorul număr:
+ * ediția nouă pornește goală.
  */
 export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creating }: Props) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const id = useId();
 
   const lista = editions ?? [];
   const curenta = lista.find((e) => e.este_curenta)?.editie ?? null;
   const urmatoarea = lista.length ? Math.max(...lista.map((e) => e.editie)) + 1 : null;
+  const aleasa = lista.find((e) => e.editie === selected) ?? null;
+
+  const eticheta = (e: AdminEdition): string => {
+    const parti = [`Ediția ${e.editie}`, `${e.participanti} înscriși`];
+    if (e.asteptare > 0) parti.push(`${e.asteptare} în așteptare`);
+    parti.push(e.este_curenta ? 'curentă' : 'arhivă');
+    return parti.join(' · ');
+  };
 
   return (
     <>
-      <nav className="admin-editions" aria-label="Ediții">
-        <span className="admin-editions-label">Ediția</span>
-        <div className="admin-editions-list">
-          {lista.map((e) => (
-            <button
-              key={e.editie}
-              type="button"
-              className={`admin-edition${e.editie === selected ? ' active' : ''}${
-                e.este_curenta ? ' curenta' : ''
-              }`}
-              onClick={() => onSelect(e.editie)}
-              title={
-                e.este_curenta
-                  ? 'Ediția curentă — aici intră înscrierile noi'
-                  : 'Ediție încheiată — arhivă, doar citire'
-              }
-            >
-              <span className="admin-edition-nr">{e.editie}</span>
-              <span className="admin-edition-meta">
-                {e.participanti} înscriși
-                {e.asteptare > 0 && ` · ${e.asteptare} în așteptare`}
-              </span>
-            </button>
-          ))}
-          {editions === null && <span className="admin-editions-loading">Se încarcă edițiile…</span>}
+      <div className="admin-editions">
+        <label className="admin-editions-label" htmlFor={id}>
+          Ediția
+        </label>
+        <div className="admin-editions-control">
+          <select
+            id={id}
+            className="admin-editions-select"
+            value={selected ?? ''}
+            disabled={editions === null || lista.length === 0}
+            onChange={(e) => onSelect(Number(e.target.value))}
+          >
+            {editions === null && <option value="">Se încarcă edițiile…</option>}
+            {lista.map((e) => (
+              <option key={e.editie} value={e.editie}>
+                {eticheta(e)}
+              </option>
+            ))}
+          </select>
+          {/* Pastila apare DOAR pentru arhivă. „Curentă" e starea normală și e
+              deja scrisă în eticheta din listă; repetată alături, ar fi zgomot
+              permanent. Se semnalează excepția — cea care chiar schimbă
+              comportamentul, pentru că blochează scrierile. */}
+          {aleasa && !aleasa.este_curenta && (
+            <span className="admin-edition-stare">Arhivă · doar citire</span>
+          )}
         </div>
         <button
           type="button"
@@ -63,7 +77,7 @@ export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creat
         >
           {creating ? 'Se deschide…' : '+ Ediție nouă'}
         </button>
-      </nav>
+      </div>
 
       {confirmOpen && (
         <div
@@ -76,13 +90,13 @@ export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creat
             <h3>Deschizi ediția {urmatoarea ?? 'următoare'}?</h3>
             <p>
               Ediția {curenta} se închide și rămâne în arhivă — nimic nu se șterge. Înscrierile
-              noi vor intra pe ediția {urmatoarea ?? 'următoare'}, iar tabul ei pornește gol.
+              noi vor intra pe ediția {urmatoarea ?? 'următoare'}, iar ediția nouă pornește goală.
             </p>
             <p className="admin-confirm-note">
               Se șterg și reperele de timp ale ediției încheiate (deadline de înscriere + data
               startului), ca să nu blocheze înscrierile și să nu declanșeze reminderul vechi.
               Butonul ăsta mută doar unde intră înscrierile noi — datele ediției (dată, loc,
-              locuri, secțiuni) le pui din tabul <strong>Eveniment</strong> și le publici de
+              locuri, secțiuni) le pui din <strong>Setup → Evenimentul</strong> și le publici de
               acolo. Fără editări în cod, fără deploy.
             </p>
             <div className="admin-confirm-actions">

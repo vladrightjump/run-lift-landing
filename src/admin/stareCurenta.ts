@@ -47,6 +47,22 @@ export type StareCurenta = {
   atentie: Atentie[];
 };
 
+/**
+ * Aceeași fază, în două-trei cuvinte — pentru antetul lipit, unde propoziția
+ * întreagă n-ar încăpea.
+ *
+ * De ce în antet: „ce vede vizitatorul acum" era scris o singură dată, în
+ * panoul din capul paginii, care dispare la primul scroll. Întrebarea asta nu
+ * se pune o dată la deschidere; se pune de fiecare dată când te pregătești să
+ * schimbi ceva.
+ */
+export const ETICHETA_FAZA: Record<FazaSite, string> = {
+  'coming-soon': 'Coming Soon',
+  landing: 'Landing cu înscrieri',
+  'cine-vine': 'Cine vine',
+  'dupa-cursa': 'Countdown după cursă',
+};
+
 const CE_VEDE: Record<FazaSite, string> = {
   'coming-soon': 'Coming Soon — numărătoare inversă spre anunț, fără formular',
   landing: 'Landing-ul complet, cu înscrieri deschise',
