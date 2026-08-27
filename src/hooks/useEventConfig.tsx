@@ -40,16 +40,7 @@ const REFRESH_MS = 15_000;
 export const configParam = (): string | null =>
   new URLSearchParams(window.location.search).get('config');
 
-export type EventConfigContextValue = {
-  config: EventConfig;
-  /** `true` cât timp încă randăm instantaneul (configul publicat n-a ajuns). */
-  isSnapshot: boolean;
-};
-
-const EventConfigContext = createContext<EventConfigContextValue>({
-  config: SNAPSHOT_CONFIG,
-  isSnapshot: true,
-});
+const EventConfigContext = createContext<EventConfig>(SNAPSHOT_CONFIG);
 
 type Props = {
   children: ReactNode;
@@ -82,13 +73,11 @@ const sursaConfig = async (signal: AbortSignal): Promise<EventConfig | null> => 
 
 export const EventConfigProvider = ({ children, override = null }: Props) => {
   const [config, setConfig] = useState<EventConfig>(override ?? SNAPSHOT_CONFIG);
-  const [isSnapshot, setIsSnapshot] = useState(override === null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (override) {
       setConfig(override);
-      setIsSnapshot(false);
       return;
     }
 
@@ -102,7 +91,6 @@ export const EventConfigProvider = ({ children, override = null }: Props) => {
           // e mai rea decât o ediție cu o publicare întârziere.
           if (!live) return;
           setConfig(live);
-          setIsSnapshot(false);
         })
         .catch((err) => {
           // Abort la refresh/unmount e normal. Restul lasă o urmă, dar pagina
@@ -124,16 +112,11 @@ export const EventConfigProvider = ({ children, override = null }: Props) => {
     };
   }, [override]);
 
-  const value = useMemo(() => ({ config, isSnapshot }), [config, isSnapshot]);
-
-  return <EventConfigContext.Provider value={value}>{children}</EventConfigContext.Provider>;
+  return <EventConfigContext.Provider value={config}>{children}</EventConfigContext.Provider>;
 };
 
 /** Configul activ. */
-export const useEventConfig = (): EventConfig => useContext(EventConfigContext).config;
-
-/** Configul activ plus dacă e încă instantaneul de build. */
-export const useEventConfigState = (): EventConfigContextValue => useContext(EventConfigContext);
+export const useEventConfig = (): EventConfig => useContext(EventConfigContext);
 
 /** String-urile dependente de ediție, derivate din configul activ. */
 export const useEditionStrings = (): EventStrings => {
