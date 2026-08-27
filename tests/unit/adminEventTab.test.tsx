@@ -64,6 +64,21 @@ const deschideCiorna = async () => {
 const camp = (eticheta: string | RegExp): HTMLInputElement =>
   screen.getByLabelText(eticheta) as HTMLInputElement;
 
+/**
+ * Textul erorii afișate SUB un câmp, ajuns la prin `aria-describedby`.
+ *
+ * Trecem prin legătura de accesibilitate, nu prin clasa CSS: dacă mesajul e
+ * pus lângă câmp dar nu e legat de el, un cititor de ecran n-o să-l anunțe
+ * niciodată — iar testul trebuie să prindă exact asta.
+ */
+const eroareaCampului = (eticheta: string | RegExp): string => {
+  const descris = camp(eticheta).getAttribute('aria-describedby') ?? '';
+  return descris
+    .split(' ')
+    .map((id) => document.getElementById(id)?.textContent ?? '')
+    .join(' ');
+};
+
 describe('starea inițială', () => {
   it('arată ediția publicată fără să deschidă o ciornă', async () => {
     randeaza();
@@ -102,7 +117,7 @@ describe('ciorna pentru ediția următoare', () => {
     randeaza();
     // Formularul se deschide singur pe ciorna existentă, fără să apeși nimic.
     await waitFor(() =>
-      expect(camp('Ediția evenimentului').value).toBe(String(SNAPSHOT_CONFIG.number + 1))
+      expect(camp('Numărul ediției').value).toBe(String(SNAPSHOT_CONFIG.number + 1))
     );
   });
 
@@ -113,9 +128,9 @@ describe('ciorna pentru ediția următoare', () => {
         name: new RegExp(`Ciornă pentru ediția ${SNAPSHOT_CONFIG.number + 1}`),
       })
     );
-    expect(camp('Ediția evenimentului').value).toBe(String(SNAPSHOT_CONFIG.number + 1));
+    expect(camp('Numărul ediției').value).toBe(String(SNAPSHOT_CONFIG.number + 1));
     // Locul se păstrează ca punct de plecare, nu se golește.
-    expect(camp('Locul — nume').value).toBe(SNAPSHOT_CONFIG.venue.name);
+    expect(camp('Numele locului').value).toBe(SNAPSHOT_CONFIG.venue.name);
   });
 });
 
@@ -144,9 +159,15 @@ describe('editarea nu atinge site-ul', () => {
 describe('validarea blochează publicarea', () => {
   it('un deadline după start dezactivează „Publică" și spune de ce', async () => {
     await deschideCiorna();
-    fireEvent.change(camp('Deadline înscriere'), { target: { value: '2026-08-22T09:00:00' } });
+    fireEvent.change(camp('Se închid înscrierile'), { target: { value: '2026-08-22T09:00' } });
 
-    expect(screen.getByText(/nu poate fi după startul cursei/i)).toBeTruthy();
+    // Mesajul apare în DOUĂ locuri, deliberat: bannerul de sus (îl vezi și când
+    // câmpul vinovat e sub fold) și sub câmpul însuși (nu trebuie să ghicești
+    // care dintre cele optsprezece e cel reclamat).
+    const banner = document.querySelector('.admin-banner.warn') as HTMLElement;
+    expect(within(banner).getByText(/nu poate fi după startul cursei/i)).toBeTruthy();
+    expect(eroareaCampului('Se închid înscrierile')).toMatch(/nu poate fi după startul cursei/i);
+
     expect(screen.getByRole('button', { name: 'Publică' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('button', { name: 'Salvează ciorna' }).hasAttribute('disabled')).toBe(
       true
@@ -155,7 +176,7 @@ describe('validarea blochează publicarea', () => {
 
   it('coordonate scrise ca text sunt respinse', async () => {
     await deschideCiorna();
-    fireEvent.change(camp(/coordonate/), { target: { value: 'Valea Morilor' } });
+    fireEvent.change(camp('Coordonatele'), { target: { value: 'Valea Morilor' } });
     // Doar în bannerul de erori — „lat,lng" apare și în eticheta câmpului.
     const banner = document.querySelector('.admin-banner.warn') as HTMLElement;
     expect(within(banner).getByText(/lat,lng/)).toBeTruthy();
@@ -164,10 +185,10 @@ describe('validarea blochează publicarea', () => {
 
   it('corectarea reactivează publicarea', async () => {
     await deschideCiorna();
-    fireEvent.change(camp('Deadline înscriere'), { target: { value: '2026-08-22T09:00:00' } });
+    fireEvent.change(camp('Se închid înscrierile'), { target: { value: '2026-08-22T09:00' } });
     expect(screen.getByRole('button', { name: 'Publică' }).hasAttribute('disabled')).toBe(true);
 
-    fireEvent.change(camp('Deadline înscriere'), { target: { value: '2026-08-22T07:00:00' } });
+    fireEvent.change(camp('Se închid înscrierile'), { target: { value: '2026-08-22T07:00' } });
     expect(screen.getByRole('button', { name: 'Publică' }).hasAttribute('disabled')).toBe(false);
   });
 });
@@ -178,7 +199,10 @@ describe('avertismentele nu blochează', () => {
     fireEvent.change(camp('Ediția de lansare'), {
       target: { value: String(SNAPSHOT_CONFIG.number + 1) },
     });
-    expect(screen.getByText(/confirmare/)).toBeTruthy();
+    // Doar în bannerul de avertisment: „/confirmare" apare și în explicația de
+    // sub câmp, care e text permanent, nu reacție la ce tocmai s-a tastat.
+    const banner = document.querySelector('.admin-banner:not(.warn)') as HTMLElement;
+    expect(within(banner).getByText(/confirmare/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Publică' }).hasAttribute('disabled')).toBe(false);
   });
 });
@@ -257,7 +281,7 @@ describe('aranjarea secțiunilor', () => {
     const randuri = screen.getAllByRole('listitem');
     expect(randuri[0].textContent).toContain('Formatul');
 
-    fireEvent.click(screen.getByRole('button', { name: /Mută „Locația" mai sus/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Mută „Locația” mai sus/ }));
     expect(screen.getAllByRole('listitem')[0].textContent).toContain('Locația');
   });
 

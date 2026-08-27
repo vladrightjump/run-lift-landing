@@ -7,9 +7,12 @@ import { useNow } from '../hooks/useNow';
 import { useRegistration } from '../hooks/useRegistration';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useSpotlight } from '../hooks/useSpotlight';
+import { useMagnetic } from '../hooks/useMagnetic';
+import { formatRoDate } from '../content/format';
 import type { ToastKind } from '../hooks/useToast';
 import { TopBar } from './landing/TopBar';
 import { Hero } from './landing/Hero';
+import { Marquee } from './landing/Marquee';
 import { FormatSection } from './landing/FormatSection';
 import { VenueSection } from './landing/VenueSection';
 import { RegistrationSection } from './landing/RegistrationSection';
@@ -34,8 +37,20 @@ type Props = {
  */
 export const Landing = ({ mode = 'full' }: Props) => {
   const lista = mode === 'leaderboard';
-  const { layout } = useEventConfig();
+  const config = useEventConfig();
+  const { layout } = config;
   const { EVENT_DATE } = useEditionDates();
+  // Banda de sub hero: pasul cursei plus datele care contează. Toate vin din
+  // configul publicat, deci se schimbă odată cu ediția, fără atingeri în cod.
+  // Pe ziua cursei scoatem numărul de locuri — nu mai e nimic de rezervat.
+  const marquee = [
+    'Run',
+    'Lift',
+    'Repeat',
+    formatRoDate(config.start),
+    config.venue.name,
+    ...(lista ? [] : [`${config.slots.total} de locuri`]),
+  ];
   // Cheile necunoscute au căzut deja la parsare; aici rămâne doar filtrarea pe
   // vizibilitate, ca poziția din listă să dea numerotarea.
   const sectiuniVizibile = layout.filter((s) => s.visible);
@@ -46,6 +61,8 @@ export const Landing = ({ mode = 'full' }: Props) => {
   useScrollReveal();
   // Haloul care urmărește cursorul peste carduri.
   useSpotlight();
+  // CTA-urile mari se lasă atrase de cursor.
+  useMagnetic();
 
   // Toast propriu (vizual specific landing-ului). showToast e dat înscrierii.
   // Formularul ca overlay: CTA-urile îl deschid pe loc, fără să piardă pagina.
@@ -98,6 +115,7 @@ export const Landing = ({ mode = 'full' }: Props) => {
       <SignupBanner />
       <TopBar cd={cd} onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
       <Hero onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
+      <Marquee items={marquee} />
       {lista ? (
         // În fereastra de dinaintea startului singurul lucru care contează e
         // cine vine — formatul și locația rămân dedesubt, pentru cine tocmai

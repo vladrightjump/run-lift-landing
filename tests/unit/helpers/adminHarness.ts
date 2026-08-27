@@ -17,6 +17,7 @@ import type {
   AdminEdition,
   AdminLaunchSignup,
   AdminEmailTemplate,
+  AdminEventConfigRow,
 } from '../../../src/lib/adminApi';
 
 export const participant = (
@@ -64,6 +65,7 @@ export type AdminApiSeed = {
   editions?: AdminEdition[];
   launch?: AdminLaunchSignup[];
   templates?: AdminEmailTemplate[];
+  eventConfig?: AdminEventConfigRow[];
 };
 
 /**
@@ -87,6 +89,7 @@ export const adminApiMock = (
     editions: seed.editions ?? [editie()],
     launch: seed.launch ?? [],
     templates: seed.templates ?? [],
+    eventConfig: seed.eventConfig ?? [],
   };
 
   class InvalidTokenError extends Error {
@@ -122,6 +125,11 @@ export const adminApiMock = (
       async (_token: string, _limit?: number, _signal?: AbortSignal) => s.events
     ),
     listEditions: vi.fn(async (_token: string, _signal?: AbortSignal) => s.editions),
+    // Dashboardul îl citește pentru semnalul „ai o ciornă nepublicată" din
+    // panoul „Acum"; tabul „Eveniment" pentru documentul propriu-zis.
+    listEventConfig: vi.fn(
+      async (_token: string, _editie?: number, _signal?: AbortSignal) => s.eventConfig
+    ),
     listLaunchNotifications: vi.fn(async (_token: string, _signal?: AbortSignal) => s.launch),
     listEmailTemplates: vi.fn(async (_token: string, _signal?: AbortSignal) => s.templates),
 
