@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { StrictMode } from 'react';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import { EventConfigProvider, useEventConfig } from '../../src/hooks/useEventConfig';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
@@ -82,5 +83,23 @@ describe('reconcilierea cu configul publicat', () => {
     fetchPublicConfig.mockResolvedValue({ ...SNAPSHOT_CONFIG, number: 42 });
     randeaza();
     await waitFor(() => expect(setMonitoringEdition).toHaveBeenCalledWith(42));
+  });
+});
+
+describe('StrictMode nu strica reconcilierea', () => {
+  it('dublul montaj din dev nu lasa pagina pe instantaneu si nu raporteaza eroare', async () => {
+    // React 18+ monteaza de doua ori in dev: primul efect e curatat imediat, deci
+    // primul fetch e abortat. Un abort NU trebuie sa fie tratat ca eroare, iar al
+    // doilea fetch trebuie sa reconcilieze normal.
+    fetchPublicConfig.mockResolvedValue({ ...SNAPSHOT_CONFIG, number: 42 });
+    render(
+      <StrictMode>
+        <EventConfigProvider>
+          <Sonda />
+        </EventConfigProvider>
+      </StrictMode>
+    );
+    await waitFor(() => expect(screen.getByTestId('ed').textContent).toBe('42'));
+    expect(logClientError).not.toHaveBeenCalled();
   });
 });

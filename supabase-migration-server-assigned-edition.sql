@@ -68,6 +68,10 @@ create trigger waitlist_forteaza_editia
   before insert on runlift.event_waitlist
   for each row execute function runlift.forteaza_editia_curenta();
 
+-- Trigger-ul nu trebuie apelabil din client (vezi nota din
+-- supabase-migration-event-config.sql despre grantul implicit către PUBLIC).
+revoke all on function runlift.forteaza_editia_curenta() from public, anon, authenticated;
+
 commit;
 
 -- ---------------------------------------------------------------------------

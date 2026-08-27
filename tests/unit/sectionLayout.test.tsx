@@ -139,3 +139,19 @@ describe('ziua cursei nu e configurabilă', () => {
     expect(screen.queryByText('Înscriere')).toBeNull();
   });
 });
+
+describe('cazul limita: nicio sectiune vizibila', () => {
+  it('pagina ramane intreaga (hero + footer), fara sectiuni si fara sa crape', () => {
+    // Config valid: R19 blocheaza doar ascunderea inscrierii cat timp inscrierile
+    // sunt DESCHISE. Dupa deadline, a ascunde tot e alegerea organizatorului.
+    randeaza([
+      { key: 'format', visible: false },
+      { key: 'venue', visible: false },
+      { key: 'registration', visible: false },
+      { key: 'participants', visible: false },
+    ]);
+    expect(sectiuniDinPagina()).toEqual([]);
+    // Hero-ul si antetul raman — pagina nu e goala, doar fara sectiuni numerotate.
+    expect(screen.getAllByRole('heading', { level: 1 }).length).toBeGreaterThan(0);
+  });
+});

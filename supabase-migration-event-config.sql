@@ -343,6 +343,21 @@ $function$;
 -- 5. Grants — aceleași roluri ca restul RPC-urilor. Protecția vine din
 --    `admin_check_token`, nu din grant.
 -- ---------------------------------------------------------------------------
+-- ATENȚIE la ce NU se acordă. Postgres dă implicit EXECUTE către PUBLIC la
+-- crearea unei funcții. Pentru RPC-urile de admin asta e intenționat (clientul
+-- folosește cheia publicabilă, protecția vine din `admin_check_token`), dar
+-- `scrie_scalarele_editiei` e un helper SECURITY DEFINER FĂRĂ verificare de
+-- token: scrie direct cele cinci scalare pe care le citesc guard-urile.
+--
+-- Lăsat pe grantul implicit, oricine avea cheia publicabilă putea apela
+-- /rest/v1/rpc/scrie_scalarele_editiei și rescrie capacitatea, deadline-ul și
+-- ediția curentă. Verificat pe rolul `anon`: trecea.
+--
+-- Regula: o funcție SECURITY DEFINER fără `admin_check_token` nu are ce căuta în
+-- suprafața publică. Revocarea NU e opțională la o aplicare curată.
+revoke all on function runlift.scrie_scalarele_editiei(jsonb) from public, anon, authenticated;
+grant execute on function runlift.scrie_scalarele_editiei(jsonb) to service_role;
+
 grant execute on function runlift.public_config() to anon, authenticated, service_role;
 grant execute on function runlift.admin_get_event_config(uuid, integer) to anon, authenticated, service_role;
 grant execute on function runlift.admin_save_event_config_draft(uuid, integer, jsonb) to anon, authenticated, service_role;
