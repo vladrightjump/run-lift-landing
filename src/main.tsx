@@ -8,7 +8,19 @@ import { Inscriere } from './components/Inscriere';
 import { Unsubscribe } from './components/Unsubscribe';
 import { installGlobalMonitoring } from './lib/monitoring';
 import { EventConfigProvider } from './hooks/useEventConfig';
+import { redirectCanonic } from './lib/canonicalHost';
 import './index.css';
+
+// Vizitatorii ajunși pe URL-ul de `*.vercel.app` al producției sunt mutați pe
+// domeniul evenimentului, cu tot cu cale și parametri. Preview-urile de PR și
+// dev-ul local rămân pe loc — vezi `lib/canonicalHost.ts`.
+//
+// PRIMUL lucru din fișier, înaintea oricărei randări: `replace`, nu `assign`,
+// ca URL-ul greșit să nu rămână în istoric și butonul „înapoi" să nu-l aducă
+// îndărăt. Un `<script>` inline în index.html ar fi mutat mai devreme, dar CSP-ul
+// e `script-src 'self'`, deci n-ar rula.
+const canonic = redirectCanonic({ env: __VERCEL_ENV__, href: window.location.href });
+if (canonic) window.location.replace(canonic);
 
 // Prinde violările CSP, erorile globale și promisiunile respinse — indiferent de
 // pagina randată mai jos. Fără asta, un blocaj CSP (ca cel din 4 august) e mut.

@@ -19,6 +19,14 @@ const injectEditionMeta = (): Plugin => ({
 
 export default defineConfig({
   plugins: [react(), injectEditionMeta()],
+  define: {
+    // Ștampilează mediul Vercel în bundle, ca pagina să știe dacă e producție.
+    // O folosește `lib/canonicalHost.ts`: doar producția mută vizitatorii de pe
+    // `*.vercel.app` pe domeniul evenimentului; preview-urile de PR rămân unde
+    // sunt, altfel n-ar mai exista cum să verifici o schimbare înainte de merge.
+    // Local și în teste variabila lipsește → 'development' → nu se redirectează.
+    __VERCEL_ENV__: JSON.stringify(process.env.VERCEL_ENV ?? 'development'),
+  },
   build: {
     target: 'es2022',
   },
