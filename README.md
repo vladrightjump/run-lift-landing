@@ -23,6 +23,7 @@ run-lift-landing/
 │   │   ├── format.ts     #   derivate: ordinal, dată RO, EVENT_META, HERO_KICKER…
 │   │   └── meta.ts       #   title/description/OG derivate din EDITION
 │   ├── components/       # Edition3Landing, ComingSoon, Confirmare, DespreNoi, Toast
+│   │                     #   landing/ReelsSection — banda Instagram (façade + iframe la click)
 │   ├── admin/            # backoffice /admin (login, dashboard, email, șabloane)
 │   ├── hooks/            # useCountdown, usePagePhase, useScrollReveal, useToast, useOnlineStatus, useNow, useStats
 │   └── lib/
@@ -101,6 +102,27 @@ Dashboard de organizator: statistici live, listă înscrieri, căutare, adăugar
 cu undo, export CSV, trimitere emailuri în masă, editare șabloane. Auth: cont unic în
 `admin_users` (bcrypt) + token de sesiune în `admin_sessions`; operațiile trec prin RPC-uri
 `SECURITY DEFINER`. Cod: `src/admin/` + `src/lib/adminApi.ts`.
+
+Tabul **„Coming Soon"** e singurul cu efect **imediat** pe site: comută ecranul de dinainte de
+lansare și mută țintele numărătorilor fără să treacă prin ciornă → publică. Scurtătura e de pași,
+nu de verificări — serverul revalidează documentul peticit prin aceeași poartă ca publicarea și
+scrie un rând nou, deci orice apăsare se poate întoarce din „Versiuni anterioare".
+
+## Banda „Instagram"
+
+Secțiune configurabilă ca oricare alta (ordonabilă și ascunsă din tabul „Eveniment"). Clipurile se
+adaugă lipind linkul din Instagram — codul se extrage singur.
+
+Cardurile sunt **façade**: până când vizitatorul nu apasă pe unul, pagina nu cere nimic de la
+`instagram.com` (nici script, nici imagine, nici cookie — util și pentru punctul GDPR din
+`BACKLOG.md`). Clicul montează iframe-ul oficial în locul cardului, unul singur odată. Sub fiecare
+card rămâne linkul canonic, ca un iframe blocat să nu însemne conținut inaccesibil.
+
+Fără niciun clip, secțiunea nu se randează **și** nu consumă un număr de secțiune. Posterele sunt
+assets locale (`public/reels/`), deci un poster nou cere deploy; un clip nou, nu.
+
+CSP-ul trebuie să păstreze `https://www.instagram.com` în `frame-src`, iar `Permissions-Policy`
+delegarea de fullscreen. Există teste care păzesc ambele.
 
 ## Documente
 

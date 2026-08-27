@@ -59,6 +59,42 @@ email"**. NU se ating din cod.
 
 ---
 
+## Banda „Instagram"
+
+Din **`/admin` → „Eveniment" → „Clipurile din bandă"**, în ciornă ca orice altceva.
+
+1. Pe telefon: **Copiază linkul** la clipul dorit.
+2. „+ Adaugă clip" → lipești linkul în „Linkul clipului". Sub câmp apare ecoul
+   („cod: ABC12345 · reel") — dacă apare, l-am înțeles.
+3. Textul de sub card e opțional, dar e singurul lucru care spune ce se vede în clip.
+4. Posterul e opțional. Fără el, cardul se randează cu cifra lui mare — arată intenționat, nu
+   stricat. **Cu** poster: pui fișierul în `public/reels/` și scrii calea (`/reels/marti.jpg`).
+   Asta cere deploy; clipul în sine, nu.
+
+**Prima dată când adaugi un clip**, secțiunea apare **jos de tot**: layout-ul completează
+secțiunile noi la final. Mut-o unde vrei cu ↑ din „Secțiunile paginii".
+
+Cât timp n-are niciun clip, secțiunea nu apare pe pagină, oricât ar fi de „vizibilă" în listă.
+Nu e un bug și nu strică numerotarea celorlalte.
+
+---
+
+## Comutarea pe Coming Soon (fără ciornă)
+
+**`/admin` → tabul „Coming Soon"**. Singurul loc din admin cu efect **imediat**.
+
+Îți spune într-o linie ce vede vizitatorul ACUM, apoi: comutatorul Coming Soon / Landing, ținta
+anunțului (cu presetări), și ținta numărătorii de după cursă. „Aplică acum" cere o confirmare,
+apoi site-ul e schimbat.
+
+Se poate întoarce: peticul scrie o versiune nouă, deci apare în „Versiuni anterioare" din tabul
+„Eveniment", cu „Revino la asta".
+
+**Atenție la combinație:** dacă ai o ciornă deschisă care poartă alte valori pentru aceleași
+câmpuri, publicarea ei ulterioară le suprascrie. Panoul te avertizează când e cazul.
+
+---
+
 ## Ce mai cere deploy
 
 **Doar share preview-ul** (cardul de WhatsApp/Facebook) și imaginea lui.
@@ -127,6 +163,10 @@ avertizează dacă o faci, dar nu te oprește — sunt situații în care e inte
 3. **NU atinge schema `public`** — e a gym-app + botul de Telegram. Vezi `MIGRATIONS.md`.
 4. **`og.png` necache-bust** → incrementează `ogImageVersion` când regenerezi imaginea.
 5. **Ediția de lansare bumpată prea devreme** → vezi „După ce se termină cursa".
+6. **CSP** (`vercel.json` `frame-src`) fără `https://www.instagram.com` → clipurile se deschid
+   într-un iframe gol. Nu se vede în dev (antetele se aplică doar în producție); există test.
+7. **Comutatorul „Coming Soon" pornit, dar ora anunțului deja trecută** → site-ul arată landing-ul,
+   nu Coming Soon. Panoul ți-o spune; mută ținta în viitor, nu apăsa comutatorul.
 
 ---
 
