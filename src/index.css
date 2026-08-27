@@ -1201,6 +1201,11 @@
   /* Eticheta a doua și a treia au nevoie de aer față de câmpul de deasupra. */
   .admin-reels-campuri .admin-config-eticheta:not(:first-child) { margin-top: 8px; }
   .admin-reels-actiuni { display: grid; gap: 6px; }
+
+  /* Panoul Coming Soon. Comutatorul e două butoane, nu un <select>: comutarea
+     e o manetă, iar o manetă se trage dintr-un gest, nu din trei. */
+  .admin-cs-comutator { display: flex; flex-wrap: wrap; gap: 8px; }
+  .admin-cs-presetari { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .admin-layout-list button { flex: none; padding: 6px 12px; font-size: 13px; }
   .admin-layout-list button:disabled { opacity: 0.35; cursor: not-allowed; }
   .admin-banner ul { margin: 8px 0 0; padding-left: 20px; }

@@ -27,6 +27,7 @@ import type {
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminEventTab } from './AdminEventTab';
+import { AdminComingSoonTab } from './AdminComingSoonTab';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
@@ -100,6 +101,11 @@ const TABURI: { cheie: TabAdmin; eticheta: string; descriere: string }[] = [
     cheie: 'eveniment',
     eticheta: 'Eveniment',
     descriere: 'Data, locul, locurile și ce arată pagina — se publică fără deploy',
+  },
+  {
+    cheie: 'coming-soon',
+    eticheta: 'Coming Soon',
+    descriere: 'Comutatorul ecranului de dinainte de lansare și țintele numărătorilor',
   },
   {
     cheie: 'sabloane',
@@ -413,6 +419,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     livrare: null,
     lansare: null,
     eveniment: null,
+    'coming-soon': null,
     sabloane: null,
   };
 
@@ -714,6 +721,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
         {tab === 'eveniment' && (
           <AdminEventTab
+            token={token}
+            onAuthError={handleAuthError}
+            showToast={showToast}
+          />
+        )}
+
+        {tab === 'coming-soon' && (
+          <AdminComingSoonTab
             token={token}
             onAuthError={handleAuthError}
             showToast={showToast}

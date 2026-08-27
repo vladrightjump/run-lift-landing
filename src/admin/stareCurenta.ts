@@ -14,7 +14,14 @@ import type { EditionDates } from '../lib/config';
 export type FazaSite = 'coming-soon' | 'landing' | 'cine-vine' | 'dupa-cursa';
 
 /** Tabul spre care duce un semnal de atenție. Ține de UI, nu de logică. */
-export type TabAdmin = 'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane' | 'eveniment';
+export type TabAdmin =
+  | 'participanti'
+  | 'email'
+  | 'livrare'
+  | 'lansare'
+  | 'sabloane'
+  | 'eveniment'
+  | 'coming-soon';
 
 export type Reper = {
   eticheta: string;
