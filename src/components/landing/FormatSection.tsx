@@ -31,7 +31,9 @@ export const FormatSection = ({ num = '01' }: Props) => {
                 key={c.t}
                 className="e3-card e3-step e3-spot"
                 data-reveal
-                style={{ background: 'var(--e3-surface)', border: '1px solid var(--e3-border)', padding: '28px 24px', display: 'grid', gap: 10 }}
+                // Fundalul și bordura vin din `.e3-card` (edition3.css): inline
+                // ar bate `:hover` și tenta lime n-ar mai apărea niciodată.
+                style={{ padding: '28px 24px', display: 'grid', gap: 10 }}
               >
                 <span className="e3-step-idx" aria-hidden="true">
                   {String(i + 1).padStart(2, '0')}

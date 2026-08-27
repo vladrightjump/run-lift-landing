@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { toCsv } from '../lib/csv';
 import {
   addRegistration,
@@ -13,6 +14,7 @@ import {
   listEditions,
   createEdition,
   listEmailLog,
+  listEventConfig,
   InvalidTokenError,
 } from '../lib/adminApi';
 import type {
@@ -41,6 +43,10 @@ import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
 import { useEventConfig, useEditionStrings, useEditionDates } from '../hooks/useEventConfig';
 import { AdminSkeleton, AdminFeedSkeleton } from './AdminSkeleton';
+import { AdminAcum } from './AdminAcum';
+import type { TabAdmin } from './stareCurenta';
+import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
+import { parseEventConfig } from '../content/eventConfig';
 
 const launchFmt = new Intl.DateTimeFormat('ro-RO', {
   day: 'numeric',
@@ -61,6 +67,46 @@ type AdminToast = {
   msg: string;
   undo?: () => void;
 };
+
+/**
+ * Tab-urile, cu etichete scrise ca sarcini, nu ca nume de tabel.
+ *
+ * „Anunță-mă la lansare" era numele butonului de pe pagina publică, nu al
+ * lucrului din spatele tabului: lista celor care au cerut să fie anunțați.
+ * `descriere` ajunge în `title` — răspunsul la „ce e aici?" fără să dai click.
+ */
+const TABURI: { cheie: TabAdmin; eticheta: string; descriere: string }[] = [
+  {
+    cheie: 'participanti',
+    eticheta: 'Participanți',
+    descriere: 'Cine s-a înscris, lista de așteptare și activitatea recentă',
+  },
+  {
+    cheie: 'email',
+    eticheta: 'Trimite emailuri',
+    descriere: 'Trimitere în masă către participanți sau lista de așteptare',
+  },
+  {
+    cheie: 'livrare',
+    eticheta: 'Livrare',
+    descriere: 'Ce email a ajuns la cine și ce n-a ajuns',
+  },
+  {
+    cheie: 'lansare',
+    eticheta: 'Abonați la anunț',
+    descriere: 'Adresele lăsate prin „Anunță-mă la lansare” pe pagina publică',
+  },
+  {
+    cheie: 'eveniment',
+    eticheta: 'Eveniment',
+    descriere: 'Data, locul, locurile și ce arată pagina — se publică fără deploy',
+  },
+  {
+    cheie: 'sabloane',
+    eticheta: 'Șabloane',
+    descriere: 'Textul emailurilor de confirmare, reminder, anunț și badge',
+  },
+];
 
 const dateFmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short' });
 const formatDate = (iso: string): string => dateFmt.format(new Date(iso)).replace('.', '');
@@ -147,9 +193,12 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
-  const [tab, setTab] = useState<
-    'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane' | 'eveniment'
-  >('participanti');
+  const [tab, setTab] = useState<TabAdmin>('participanti');
+  // Semnalele pentru panoul „Acum". Ciorna și amprenta de build trăiesc în
+  // tabul „Eveniment"; aici le citim doar ca să putem spune, din prima pagină,
+  // că a rămas ceva nepublicat.
+  const [ciornaNepublicata, setCiornaNepublicata] = useState(false);
+  const [metaInUrma, setMetaInUrma] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
   // Ediția și capacitatea vin din configul PUBLICAT, nu din bundle: după ce
   // publicarea nu mai cere deploy, un backoffice deschis dintr-un build vechi ar
@@ -208,6 +257,38 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   }, [token, handleAuthError]);
 
   useEffect(refreshEditions, [refreshEditions]);
+
+  /**
+   * Semnalele pentru panoul „Acum" care nu vin din ciclul de participanți:
+   * există o ciornă nepublicată, și a rămas share preview-ul în urmă.
+   *
+   * O dată la montare, nu la fiecare poll: amândouă se schimbă doar când
+   * organizatorul acționează în tabul „Eveniment", iar acolo se reîncarcă
+   * oricum. Un poll pe ele ar fi două cereri în plus la fiecare ciclu, pentru
+   * o informație care stă pe loc ore întregi.
+   */
+  useEffect(() => {
+    const c = new AbortController();
+    Promise.all([
+      listEventConfig(token, undefined, c.signal),
+      fetchBuildInfo(c.signal) as Promise<BuildInfo | null>,
+    ])
+      .then(([randuri, build]) => {
+        setCiornaNepublicata(randuri.some((r) => r.status === 'draft'));
+        const publicat = randuri.find((r) => r.status === 'published');
+        // `parseEventConfig` întoarce `null` pe un document pe care nu-l
+        // recunoaște; fără config publicat valid n-avem cu ce compara build-ul,
+        // deci nu semnalăm nimic.
+        const config = publicat ? parseEventConfig(publicat.config) : null;
+        setMetaInUrma(
+          build !== null && config !== null && campuriVechiInBuild(build, config).length > 0
+        );
+      })
+      // Semnalele sunt un plus, nu o precondiție: dacă nu vin, panoul arată
+      // restul stării în loc să blocheze pagina.
+      .catch(() => {});
+    return () => c.abort();
+  }, [token]);
 
   const fetchAll = useCallback(
     (signal: AbortSignal) => {
@@ -318,6 +399,22 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // — badge-ul roșu de pe tabul „Livrare". Aceeași logică pe care o consumă și
   // tabul, din `deliveryLog.ts` — înainte era rescrisă aici, în paralel.
   const nelivrate = useMemo(() => emailuriNelivrate(emailLog ?? []).length, [emailLog]);
+
+  /**
+   * Contorul de pe fiecare tab. `null` = nu-l arătăm.
+   *
+   * Doar acolo unde numărul chiar spune ceva și îl avem deja încărcat. Un „0"
+   * afișat cât timp datele se încarcă e o minciună scurtă — dar exact aia o
+   * citește organizatorul în clipa în care intră.
+   */
+  const contorTab: Record<TabAdmin, number | null> = {
+    participanti: rows === null ? null : all.length,
+    email: null,
+    livrare: null,
+    lansare: null,
+    eveniment: null,
+    sabloane: null,
+  };
 
   const handleCreateEdition = () => {
     if (creatingEdition) return;
@@ -549,50 +646,41 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </div>
         )}
 
-        <nav className="admin-tabs">
-          <button
-            type="button"
-            className={tab === 'participanti' ? 'active' : ''}
-            onClick={() => setTab('participanti')}
-          >
-            Participanți
-          </button>
-          <button
-            type="button"
-            className={tab === 'email' ? 'active' : ''}
-            onClick={() => setTab('email')}
-          >
-            Emailuri
-          </button>
-          <button
-            type="button"
-            className={tab === 'livrare' ? 'active' : ''}
-            onClick={() => setTab('livrare')}
-          >
-            Livrare
-            {nelivrate > 0 && <span className="admin-tab-alert">{nelivrate}</span>}
-          </button>
-          <button
-            type="button"
-            className={tab === 'lansare' ? 'active' : ''}
-            onClick={() => setTab('lansare')}
-          >
-            Anunță-mă la lansare
-          </button>
-          <button
-            type="button"
-            className={tab === 'eveniment' ? 'active' : ''}
-            onClick={() => setTab('eveniment')}
-          >
-            Eveniment
-          </button>
-          <button
-            type="button"
-            className={tab === 'sabloane' ? 'active' : ''}
-            onClick={() => setTab('sabloane')}
-          >
-            Șabloane
-          </button>
+        {/* Panoul de orientare stă ÎNAINTEA tabelelor și a tab-urilor: prima
+            întrebare cu care se deschide backoffice-ul e „unde suntem?", nu
+            „cine s-a înscris". */}
+        <AdminAcum
+          semnale={{ nelivrate, asteptare: waitAll.length, ciornaNepublicata, metaInUrma, arhiva }}
+          onTab={setTab}
+        />
+
+        {/* Tab-urile poartă un contor, ca să știi ce e în spatele lor fără să
+            le deschizi. Contorul lipsește cât timp datele nu au sosit — un „0"
+            afișat în timpul încărcării ar fi o minciună scurtă, dar tocmai pe
+            aia o citește organizatorul când intră. */}
+        <nav className="admin-tabs" aria-label="Secțiunile backoffice-ului">
+          {TABURI.map(({ cheie, eticheta, descriere }) => {
+            const contor = contorTab[cheie];
+            const alerta = cheie === 'livrare' && nelivrate > 0;
+            return (
+              <button
+                key={cheie}
+                type="button"
+                className={tab === cheie ? 'active' : ''}
+                // `true`, nu `page`: taburile schimbă panoul, nu adresa.
+                aria-current={tab === cheie ? true : undefined}
+                title={descriere}
+                onClick={() => setTab(cheie)}
+              >
+                {eticheta}
+                {alerta ? (
+                  <span className="admin-tab-alert">{nelivrate}</span>
+                ) : (
+                  contor !== null && <span className="admin-tab-contor">{contor}</span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
         {tab === 'sabloane' && (
@@ -698,16 +786,29 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         )}
 
         <section className="admin-table-section">
-          <div className="admin-table-head">
+          <div className="admin-table-head admin-participanti-head">
             <h2>Participanți · ediția {editie ?? CURRENT_EDITION}</h2>
             <div className="admin-table-actions">
               <input
-                type="text"
+                // `search`, nu `text`: aduce butonul nativ de golire și
+                // tastatura potrivită pe mobil. Nici corectorul, nici
+                // autocompletarea n-au ce căuta pe nume proprii și adrese.
+                type="search"
                 className="admin-search"
                 placeholder="Caută nume, telefon, email…"
+                aria-label="Caută în lista de participanți"
+                autoComplete="off"
+                spellCheck={false}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
+              {/* Doar cât filtrul e activ: pe lista întreagă, numărul e deja în
+                  cartonașul „Înscriși" de deasupra. */}
+              {q && (
+                <span className="admin-table-rezultate" role="status">
+                  {filtered.length} din {all.length}
+                </span>
+              )}
               {!arhiva && (
                 <button
                   type="button"
@@ -792,7 +893,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 const celule = acoperirePerId.get(r.id) ?? {};
                 const rezumat = rezumaAcoperire(celule);
                 return (
-                <div key={r.id} className="admin-row">
+                <div key={r.id} className="admin-row" style={{ '--i': i } as CSSProperties}>
                   <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
                   <span className="admin-cell-name">{r.nume}</span>
                   <a className="admin-cell-link" href={`tel:${r.telefon}`}>
@@ -866,7 +967,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 {!arhiva && <span className="right">Acțiuni</span>}
               </div>
               {waitAll.map((w, i) => (
-                <div key={w.id} className="admin-row">
+                <div key={w.id} className="admin-row" style={{ '--i': i } as CSSProperties}>
                   <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
                   <span className="admin-cell-name">{w.nume}</span>
                   <a className="admin-cell-link" href={`tel:${w.telefon}`}>

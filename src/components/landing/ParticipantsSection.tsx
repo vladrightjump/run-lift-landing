@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useEventConfig } from '../../hooks/useEventConfig';
 import { getMySignups } from '../../lib/mySignups';
 import type { PublicStats } from '../../lib/supabase';
@@ -50,12 +51,15 @@ export const ParticipantsSection = ({ stats, canSignUp = true, num = '04' }: Pro
               {countShown ?? '–'} / {TOTAL_SLOTS}
             </span>
           </div>
-          <div data-reveal style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)' }}>
+          {/* Fără `data-reveal` pe cutie: lista se construiește singură, rând
+              cu rând (`.e3-row-in`), iar un fade pe tot blocul peste asta ar
+              însemna două intrări suprapuse pentru același conținut. */}
+          <div style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)' }}>
             {participants.map((p, i) => (
               <div
                 key={`${p.nume}-${i}`}
-                className="e3-row"
-                style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '15px 22px', borderBottom: '1px solid var(--e3-hairline)' }}
+                className="e3-row e3-row-in"
+                style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '15px 22px', borderBottom: '1px solid var(--e3-hairline)', '--i': i } as CSSProperties}
               >
                 <span
                   style={{

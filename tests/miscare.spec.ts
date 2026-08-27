@@ -9,16 +9,16 @@ import type { Page } from '@playwright/test';
  * deloc, sau un bloc rămas la `opacity: 0`, trece nedetectat prin toate
  * celelalte 100 de teste. Aici verificăm stiluri calculate, nu prezență.
  *
- * Două teste sunt marcate `test.fail()` — bug-uri confirmate, încă nereparate.
- * Când le repari, Playwright raportează „expected to fail, but passed" și îți
- * cere să scoți adnotarea; nu poți repara și uita testul în urmă.
+ * Testele de hover și de parallax au fost cândva `test.fail()` — două bug-uri
+ * în care animația exista în CSS dar nu pornea niciodată în pagină. Sunt acum
+ * teste de regresie normale; comentariul de deasupra fiecăruia spune ce anume
+ * păzesc, ca reparația să nu fie desfăcută din greșeală.
  */
 
 const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
 const EMPTY = { count: 0, participants: [], waitlist: 0 };
 
 /** Tokenii de brand, în forma în care îi raportează `getComputedStyle`. */
-const ACCENT = 'rgb(201, 242, 75)'; // --e3-accent  #C9F24B
 const SURFACE = 'rgb(26, 29, 23)'; //  --e3-surface #1A1D17
 const BORDER = 'rgb(42, 46, 37)'; //   --e3-border  #2A2E25
 
@@ -46,6 +46,28 @@ const translateY = (page: Page, selector: string) =>
     if (!t || t === 'none') return 0;
     return new DOMMatrixReadOnly(t).f;
   }, selector);
+
+/** `translateX` din matricea de transform (0 dacă n-are transform). */
+const translateX = (page: Page, selector: string) =>
+  page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return NaN;
+    const t = getComputedStyle(el).transform;
+    if (!t || t === 'none') return 0;
+    return new DOMMatrixReadOnly(t).e;
+  }, selector);
+
+/** Canalele r/g/b ale unei proprietăți de culoare, ca numere. */
+const rgbOf = (page: Page, selector: string, prop: 'borderTopColor' | 'backgroundColor') =>
+  page.evaluate(
+    ([sel, p]) => {
+      const el = document.querySelector(sel as string);
+      if (!el) return [-1, -1, -1];
+      const raw = getComputedStyle(el)[p as 'borderTopColor'];
+      return (raw.match(/\d+/g) ?? []).slice(0, 3).map(Number);
+    },
+    [selector, prop] as const
+  );
 
 /**
  * Așteaptă ca layoutul să se stabilizeze înainte de măsurători geometrice.
@@ -191,6 +213,105 @@ test.describe('Mișcare — reduced motion', () => {
     // de mai sus, care chiar discriminează.
     await expect(page.getByText('7 / 40')).toBeVisible({ timeout: 2000 });
   });
+
+  test('fără mișcare: banda rulantă stă pe loc, dar textul rămâne', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    const track = page.locator('.e3-marquee-track');
+    // Mesajul e text, nu mișcare — banda rămâne vizibilă, doar înghețată.
+    await expect(track).toBeVisible();
+    await expect(track).toHaveCSS('transform', 'none');
+  });
+});
+
+test.describe('Mișcare — banda rulantă', () => {
+  test('pista chiar se mișcă', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    const track = page.locator('.e3-marquee-track');
+    await expect(track).toBeVisible();
+
+    const first = await translateX(page, '.e3-marquee-track');
+    await expect
+      .poll(() => translateX(page, '.e3-marquee-track'), {
+        message: 'pista nu s-a deplasat — animația buclei nu rulează',
+      })
+      .not.toBe(first);
+  });
+
+  test('conținutul e duplicat, dar citit o singură dată', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    // Bucla continuă cere două copii identice; a doua e aria-hidden, altfel
+    // cititoarele de ecran ar citi lista de două ori.
+    await expect(page.locator('.e3-marquee-group')).toHaveCount(2);
+    await expect(page.locator('.e3-marquee-group[aria-hidden="true"]')).toHaveCount(1);
+    // Copiile trebuie să fie identice — dacă s-ar desincroniza, bucla ar sări
+    // vizibil la reluare.
+    const [vizibil, ascuns] = await Promise.all([
+      page.locator('.e3-marquee-group:not([aria-hidden])').innerText(),
+      page.locator('.e3-marquee-group[aria-hidden="true"]').innerText(),
+    ]);
+    expect(ascuns).toBe(vizibil);
+  });
+
+  test('se oprește la hover, ca textul să se poată citi', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    const marquee = page.locator('.e3-marquee');
+    await marquee.hover();
+    await expect(page.locator('.e3-marquee-track')).toHaveCSS(
+      'animation-play-state',
+      /paused/
+    );
+  });
+
+  // O mișcare care nu se oprește singură trebuie să poată fi oprită (WCAG 2.2.2).
+  // Hover-ul nu se pune: nu există pe touch și nu se ajunge la el cu tastatura.
+  test('are un buton de pauză, care chiar oprește', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    const track = page.locator('.e3-marquee-track');
+    const pauza = page.getByRole('button', { name: 'Oprește banda' });
+
+    await pauza.click();
+    await expect(track).toHaveCSS('animation-play-state', /paused/);
+    await expect(pauza).toHaveCount(0);
+
+    // Repornirea readuce mișcarea — starea e comutator, nu drum fără întoarcere.
+    const pornire = page.getByRole('button', { name: 'Pornește banda' });
+    await pornire.click();
+    // Mouse-ul e încă deasupra benzii după click, iar hover-ul o ține pe pauză;
+    // îl mutăm ca să măsurăm starea butonului, nu a cursorului.
+    await page.mouse.move(0, 0);
+    await expect(track).toHaveCSS('animation-play-state', /running/);
+  });
+
+  test('pauza se ajunge cu tastatura', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    await page.getByRole('button', { name: 'Oprește banda' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.e3-marquee-track')).toHaveCSS(
+      'animation-play-state',
+      /paused/
+    );
+  });
+});
+
+test.describe('Mișcare — titlul din hero', () => {
+  test('cuvintele se dezvăluie complet, nu rămân tăiate de mască', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    // Aceeași capcană ca la titlurile de secțiune: o mască prost calculată
+    // lasă textul retezat, iar `toBeVisible()` nu vede nimic în neregulă.
+    const words = page.locator('.e3-word');
+    await expect(words).toHaveCount(2);
+    for (let i = 0; i < 2; i++) {
+      await expect(words.nth(i)).not.toHaveCSS('clip-path', 'inset(105% -8% -35% -8%)');
+      await expect(words.nth(i)).toHaveCSS('opacity', '1');
+    }
+  });
 });
 
 test.describe('Mișcare — hover pe carduri', () => {
@@ -219,11 +340,10 @@ test.describe('Mișcare — hover pe carduri', () => {
       .toBeLessThan(-2); // translateY(-4px)
   });
 
-  // BUG CONFIRMAT (review #1) — `style={{ background, border }}` inline bate
-  // `.e3-card:hover`, deci tenta și bordura lime nu se aplică niciodată.
-  // Scoate `test.fail()` odată ce declarațiile de bază urcă în clasa `.e3-card`.
+  // Regresie: declarațiile de bază (fundal + bordură) trebuie să rămână în
+  // clasa `.e3-card`. Mutate inline pe componentă, ar bate `:hover` la
+  // specificitate și tenta lime ar dispărea fără ca nimic să pară stricat.
   test('cardul primește tentă și bordură lime la hover', async ({ page }) => {
-    test.fail(true, 'review #1: declarațiile inline bat regula de hover din CSS');
     await page.goto('/?preview=landing');
     await settle(page);
     const card = page.locator('.e3-card.e3-step').first();
@@ -232,18 +352,33 @@ test.describe('Mișcare — hover pe carduri', () => {
     await expect(card).toHaveCSS('border-top-color', BORDER);
     await expect(card).toHaveCSS('background-color', SURFACE);
 
-    await card.hover();
-    await expect(card).toHaveCSS('border-top-color', ACCENT);
+    // Aceeași grijă ca la testul de mai sus: reveal-ul mai mișcă rândul de
+    // carduri, deci re-facem hover-ul la fiecare încercare.
+    await expect.poll(() => translateY(page, '.e3-card.e3-step')).toBe(0);
+    await expect
+      .poll(
+        async () => {
+          await card.hover();
+          // Nu comparăm exact cu lime-ul (#C9F24B): tranziția cardului merge pe arc
+          // (`--e3-spring`), deci culoarea DEPĂȘEȘTE lime-ul înainte să se așeze
+          // pe el, iar o egalitate strictă ar prinde din când în când cadrul de
+          // depășire. Cerem doar să fie lime — verde dominant și luminos — nu
+          // gri-ul de bordură (42, 46, 37).
+          const [r, g, b] = await rgbOf(page, '.e3-card.e3-step', 'borderTopColor');
+          return g > 200 && r > 150 && b < 130;
+        },
+        { message: 'bordura nu a devenit lime la hover', timeout: 10_000 }
+      )
+      .toBe(true);
   });
 });
 
 test.describe('Mișcare — parallax în hero', () => {
-  // BUG CONFIRMAT (review #4) — `view(block)` se leagă de secțiunea hero, care
-  // are `overflow: hidden` și e deci container de scroll fără overflow scrollabil,
-  // așa că timeline-ul nu avansează niciodată.
-  // Scoate `test.fail()` după trecerea la `view(root block)`.
+  // Regresie: secțiunea hero trebuie să rămână pe `overflow: clip`. Pe
+  // `overflow: hidden` devenea ea însăși container de scroll — unul fără
+  // overflow scrollabil — iar `view(block)` se lega de ea, deci progresul nu
+  // avansa niciodată și parallaxul era mort fără ca nimic să pară stricat.
   test('textul din hero se retrage la scroll', async ({ page }) => {
-    test.fail(true, 'review #4: view(block) se leagă de secțiunea cu overflow:hidden');
     await page.goto('/?preview=landing');
     await settle(page);
 

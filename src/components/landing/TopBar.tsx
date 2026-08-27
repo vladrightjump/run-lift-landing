@@ -13,8 +13,13 @@ type Props = {
 export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
   const { EVENT_META } = useEditionStrings();
 
+  // Padding-ul barei, mărimea mărcii și cea a butonului stau în `.e3-topbar*`
+  // din edition3.css, NU aici: inline ar bate media query-ul de mobil la
+  // specificitate, iar antetul ar rămâne la fel pe telefon fără ca nimic să
+  // pară stricat.
   return (
       <header
+        className="e3-topbar"
         style={{
           position: 'sticky',
           top: 0,
@@ -23,8 +28,6 @@ export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '12px 24px',
-          padding: '14px clamp(16px, 4vw, 40px)',
           background: 'rgba(18,20,16,0.92)',
           backdropFilter: 'blur(8px)',
           borderBottom: '1px solid var(--e3-border)',
@@ -32,15 +35,13 @@ export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
+            className="e3-topbar-mark"
             style={{
-              width: 30,
-              height: 30,
               background: 'var(--e3-accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontFamily: 'Anton, sans-serif',
-              fontSize: 15,
               color: 'var(--e3-bg)',
               letterSpacing: 0.5,
             }}
@@ -82,26 +83,26 @@ export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
           </span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }} role="timer" aria-label="Timp rămas până la start">
             {[
-              { v: cd.zile, l: 'z', lime: true, tick: false },
-              { v: cd.ore, l: 'h', lime: false, tick: false },
-              { v: cd.minute, l: 'm', lime: false, tick: false },
-              { v: cd.secunde, l: 's', lime: false, tick: true },
+              { v: cd.zile, l: 'z', lime: true },
+              { v: cd.ore, l: 'h', lime: false },
+              { v: cd.minute, l: 'm', lime: false },
+              { v: cd.secunde, l: 's', lime: false },
             ].map((u) => (
               <span key={u.l} style={{ display: 'inline-flex', alignItems: 'baseline' }}>
-                {/* Cheia care include valoarea remontează secundele la fiecare
-                    tick, ca animația să repornească. Restul unităților stau. */}
+                {/* Cifra se rostogolește la fiecare schimbare: cheia include
+                    valoarea, deci React remontează, iar animația de montare
+                    din `.e3-digit` pornește din nou. Unitățile care nu s-au
+                    schimbat păstrează aceeași cheie și stau pe loc. */}
                 <span
-                  key={u.tick ? u.v : u.l}
-                  className={u.tick ? 'e3-tick' : undefined}
+                  className="e3-digit"
                   style={{
                     fontFamily: 'Anton, sans-serif',
                     fontSize: 24,
-                    lineHeight: 1,
                     color: u.lime ? 'var(--e3-accent)' : 'var(--e3-text-bright)',
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >
-                  {u.v}
+                  <span key={u.v}>{u.v}</span>
                 </span>
                 <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
                   {u.l}
@@ -139,16 +140,14 @@ export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
                   onInscrie();
                 }
               }}
-              className="e3-cta e3-shine"
+              className="e3-cta e3-shine e3-topbar-cta"
               style={{
                 display: 'inline-block',
                 background: 'var(--e3-accent)',
                 color: 'var(--e3-bg)',
                 fontWeight: 700,
-                fontSize: 13,
                 letterSpacing: 1.5,
                 textTransform: 'uppercase',
-                padding: '11px 22px',
                 textDecoration: 'none',
               }}
             >

@@ -105,7 +105,8 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                 </>
               )}
             </p>
-            <div data-reveal className="e3-card e3-spot" style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)', padding: 26 }}>
+            {/* Fundalul și bordura vin din `.e3-card` — vezi nota de acolo. */}
+            <div data-reveal className="e3-card e3-spot" style={{ padding: 26 }}>
               <div
                 style={{
                   fontFamily: 'Anton, sans-serif',
@@ -145,8 +146,15 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                 <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
                   Locuri rămase
                 </span>
+                {/* Contorul respiră doar cât chiar mai sunt locuri puține.
+                    Pe zero n-ar mai fi urgență, ci doar zgomot lângă mesajul
+                    de „epuizat" de dedesubt. */}
                 <span
+                  className={
+                    stats && slots.remaining > 0 && slots.remaining <= 5 ? 'e3-urgent' : undefined
+                  }
                   style={{
+                    display: 'inline-block',
                     fontFamily: 'Anton, sans-serif',
                     fontSize: 22,
                     letterSpacing: 1,
@@ -280,7 +288,7 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                 {errors.acord && <span style={fieldErr}>Trebuie să accepți regulamentul ca să te poți înscrie.</span>}
                 <button
                   type="submit"
-                  className="e3-submit"
+                  className="e3-submit e3-shine"
                   style={{
                     background: 'var(--e3-accent)',
                     color: 'var(--e3-bg)',

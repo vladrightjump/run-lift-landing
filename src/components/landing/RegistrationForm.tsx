@@ -240,7 +240,7 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
 
           <button
             type="submit"
-            className="e3-submit"
+            className="e3-submit e3-shine"
             style={{
               background: 'var(--e3-accent)',
               color: 'var(--e3-bg)',

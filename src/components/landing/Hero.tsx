@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useEditionStrings } from '../../hooks/useEventConfig';
 import { HERO_POSTER, heroVideoSrc } from '../../lib/media';
 
@@ -18,7 +19,11 @@ export const Hero = ({ onInscrie, showCta = true }: Props) => {
           padding: 'clamp(48px, 9vw, 88px) clamp(20px, 5vw, 40px) clamp(48px, 7vw, 72px)',
           borderBottom: '1px solid var(--e3-border)',
           position: 'relative',
-          overflow: 'hidden',
+          // `clip`, nu `hidden`: taie la fel clipul video, dar NU creează un
+          // container de scroll. Cu `hidden`, `view(block)` din `.e3-hero-copy`
+          // se lega de secțiune — un scroller fără overflow — și parallaxul nu
+          // pornea niciodată.
+          overflow: 'clip',
           background: 'var(--e3-bg)',
         }}
       >
@@ -81,9 +86,17 @@ export const Hero = ({ onInscrie, showCta = true }: Props) => {
               textWrap: 'balance',
             }}
           >
-            <span style={{ display: 'inline-block', animation: 'e3-fade-up 0.6s ease-out 0.1s both' }}>Hyrox</span>
+            {/* Cuvintele cresc din linia de bază prin mască (`.e3-word`), nu se
+                estompează — același gest cu titlurile de secțiune, care intră
+                la fel pe scroll. `--d` e decalajul dintre ele. */}
+            <span className="e3-word" style={{ '--d': '0.12s' } as CSSProperties}>Hyrox</span>
             <br />
-            <span style={{ display: 'inline-block', color: 'var(--e3-accent)', animation: 'e3-fade-up 0.6s ease-out 0.4s both' }}>Trial.</span>
+            <span
+              className="e3-word"
+              style={{ color: 'var(--e3-accent)', '--d': '0.28s' } as CSSProperties}
+            >
+              Trial.
+            </span>
           </h1>
           <div
             style={{
@@ -118,7 +131,7 @@ export const Hero = ({ onInscrie, showCta = true }: Props) => {
                     onInscrie();
                   }
                 }}
-                className="e3-cta-lg e3-shine"
+                className="e3-cta-lg e3-shine e3-mag"
                 style={{
                   display: 'inline-block',
                   background: 'var(--e3-accent)',
