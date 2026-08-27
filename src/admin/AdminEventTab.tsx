@@ -38,6 +38,7 @@ const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
   venue: 'Locația',
   registration: 'Înscriere',
   participants: 'Cine vine',
+  reels: 'Instagram',
 };
 
 /** Traduce refuzurile serverului în ceva citibil, fără să le reformuleze regula. */

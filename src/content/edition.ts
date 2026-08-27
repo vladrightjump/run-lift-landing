@@ -132,6 +132,19 @@ export const EDITION = {
     occupiedFallback: 0,
   },
 
+  /**
+   * Secțiunea „Instagram" de pe landing. `items` gol e starea normală a
+   * instantaneului: clipurile se adaugă din `/admin`, nu de aici. Cât timp lista
+   * e goală, secțiunea nu se randează și nu consumă un număr de secțiune.
+   */
+  reels: {
+    headline: 'Instagram',
+    body:
+      'Antrenamentele, cursele și oamenii, filmate pe teren. Dacă vrei să vezi ' +
+      'cum arată un Run + Lift înainte să vii, aici e.',
+    items: [] as { code: string; kind: 'reel' | 'p'; poster: string; caption: string }[],
+  },
+
   urls: {
     site: 'https://parktraining.fit',
     instagramHandle: '@we_run_and_lift',

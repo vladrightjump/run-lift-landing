@@ -157,9 +157,69 @@ describe('parseEventConfig respinge ce nu se poate randa', () => {
   });
 });
 
+describe('reels — tolerant, ca layout', () => {
+  const cuReels = (reels: unknown) => {
+    const doc = valid();
+    doc.reels = reels;
+    return parseEventConfig(doc);
+  };
+  const unClip = (patch: Record<string, unknown> = {}) => ({
+    code: 'ABC12345',
+    kind: 'reel',
+    poster: '/reels/a.jpg',
+    caption: 'Antrenament de marți',
+    ...patch,
+  });
+
+  it('un document fără `reels` primește implicitul, nu `null`', () => {
+    const doc = valid();
+    delete doc.reels;
+    const c = parseEventConfig(doc);
+    expect(c).not.toBeNull();
+    expect(c!.reels.items).toEqual([]);
+    expect(c!.reels.headline).toBe('Instagram');
+  });
+
+  it('un clip stricat cade, restul secțiunii rămâne', () => {
+    const c = cuReels({
+      headline: 'Instagram',
+      body: 'text',
+      items: [unClip(), { code: '', kind: 'reel', poster: '', caption: '' }],
+    });
+    expect(c!.reels.items).toHaveLength(1);
+    expect(c!.reels.items[0].code).toBe('ABC12345');
+  });
+
+  it('un `kind` necunoscut cade — Instagram n-are ruta aia', () => {
+    expect(cuReels({ items: [unClip({ kind: 'video' })] })!.reels.items).toHaveLength(0);
+  });
+
+  it('un cod cu caractere de URL cade, ca să nu schimbe adresa iframe-ului', () => {
+    for (const code of ['ABC/../x', 'ABC?a=1', 'AB', 'ABC 12345']) {
+      expect(cuReels({ items: [unClip({ code })] })!.reels.items).toHaveLength(0);
+    }
+  });
+
+  it('lista se plafonează — o bandă, nu un feed', () => {
+    const multe = Array.from({ length: 20 }, (_, i) => unClip({ code: `COD${i}0000` }));
+    expect(cuReels({ items: multe })!.reels.items).toHaveLength(12);
+  });
+
+  it('un `reels` care nu e obiect nu invalidează documentul', () => {
+    expect(cuReels('nu-i obiect')!.reels.items).toEqual([]);
+    expect(cuReels(null)!.reels.items).toEqual([]);
+  });
+});
+
 describe('cheile de secțiune', () => {
-  it('sunt exact cele patru secțiuni numerotate din landing', () => {
-    expect([...SECTION_KEYS]).toEqual(['format', 'venue', 'registration', 'participants']);
+  it('sunt exact secțiunile numerotate din landing', () => {
+    expect([...SECTION_KEYS]).toEqual([
+      'format',
+      'venue',
+      'registration',
+      'participants',
+      'reels',
+    ]);
   });
 
   it('ordinea implicită le arată pe toate', () => {

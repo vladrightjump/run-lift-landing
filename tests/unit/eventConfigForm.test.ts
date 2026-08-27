@@ -7,7 +7,7 @@ import {
   layoutComplet,
   cioarnaPentruEditiaUrmatoare,
 } from '../../src/admin/eventConfigForm';
-import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG, SECTION_KEYS, type EventConfig } from '../../src/content/eventConfig';
 
 /**
  * Regulile formularului trebuie să spună același lucru ca
@@ -99,23 +99,35 @@ describe('layout', () => {
 
   it('mutarea schimbă ordinea', () => {
     const dupa = mutaSectiune(SNAPSHOT_CONFIG.layout, 'venue', -1);
-    expect(dupa.map((s) => s.key)).toEqual(['venue', 'format', 'registration', 'participants']);
+    expect(dupa.map((s) => s.key)).toEqual([
+      'venue',
+      'format',
+      'registration',
+      'participants',
+      'reels',
+    ]);
   });
 
   it('mutarea peste capăt nu face nimic', () => {
     expect(mutaSectiune(SNAPSHOT_CONFIG.layout, 'format', -1)).toEqual(SNAPSHOT_CONFIG.layout);
-    expect(mutaSectiune(SNAPSHOT_CONFIG.layout, 'participants', 1)).toEqual(SNAPSHOT_CONFIG.layout);
+    expect(mutaSectiune(SNAPSHOT_CONFIG.layout, 'reels', 1)).toEqual(SNAPSHOT_CONFIG.layout);
   });
 
   it('comutarea schimbă doar secțiunea cerută', () => {
     const dupa = comutaVizibilitatea(SNAPSHOT_CONFIG.layout, 'venue');
     expect(dupa.find((s) => s.key === 'venue')?.visible).toBe(false);
-    expect(dupa.filter((s) => s.visible)).toHaveLength(3);
+    expect(dupa.filter((s) => s.visible)).toHaveLength(SECTION_KEYS.length - 1);
   });
 
   it('completează secțiunile lipsă dintr-un document mai vechi', () => {
     const vechi = layoutComplet([{ key: 'format', visible: false }]);
-    expect(vechi.map((s) => s.key)).toEqual(['format', 'venue', 'registration', 'participants']);
+    expect(vechi.map((s) => s.key)).toEqual([
+      'format',
+      'venue',
+      'registration',
+      'participants',
+      'reels',
+    ]);
     // Ce era deja acolo își păstrează starea; ce s-a adăugat e vizibil.
     expect(vechi[0].visible).toBe(false);
     expect(vechi.slice(1).every((s) => s.visible)).toBe(true);
