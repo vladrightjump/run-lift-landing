@@ -1,7 +1,13 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { HERO_KICKER, EVENT_WHEN, EVENT_WHERE, EVENT_START_TIME } from '../src/content/format';
-import { LAUNCH_DATE, TOTAL_SLOTS } from '../src/lib/config';
+import { deriveEventStrings } from '../src/content/format';
+import { deriveEditionDates } from '../src/lib/config';
+import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
+
+const { HERO_KICKER, EVENT_WHEN, EVENT_WHERE, EVENT_START_TIME } =
+  deriveEventStrings(SNAPSHOT_CONFIG);
+const { LAUNCH_DATE } = deriveEditionDates(SNAPSHOT_CONFIG);
+const TOTAL_SLOTS = SNAPSHOT_CONFIG.slots.total;
 
 /**
  * Landing-ul ediției curente („Hyrox Trial") — conținut + logica de reveal.

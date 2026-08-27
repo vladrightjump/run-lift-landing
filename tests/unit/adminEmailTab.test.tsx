@@ -113,10 +113,15 @@ describe('AdminEmailTab — zăvor pe trimitere', () => {
       },
     ]);
 
+    // `findByRole` întoarce butonul de îndată ce EXISTĂ, dar zăvorul se închide
+    // abia după ce ajung șabloanele: subiectul curent vine din `listEmailTemplates`,
+    // asincron (vezi nota din AdminEmailTab.tsx:84), iar până atunci e gol, deci
+    // cheia de difuzare nu se potrivește cu cea din jurnal. Fără `waitFor` testul
+    // e o cursă — trecea local și pica în CI, unde runner-ul e mai încărcat.
     const buton = (await screen.findByRole('button', {
       name: /Trimite email/,
     })) as HTMLButtonElement;
-    expect(buton.disabled).toBe(true);
+    await waitFor(() => expect(buton.disabled).toBe(true));
     expect(container.textContent).toContain('a plecat deja');
 
     const deblocare = screen.getByRole('button', { name: 'Trimite oricum' });

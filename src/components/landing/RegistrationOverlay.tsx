@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
-import { EVENT_META } from '../../content/format';
+import { useEditionStrings } from '../../hooks/useEventConfig';
 import { RegistrationForm } from './RegistrationForm';
 
 /**
@@ -28,6 +28,7 @@ type Props = {
 const CLOSE_AFTER_SUCCESS_MS = 3000;
 
 export const RegistrationOverlay = ({ reg, stats, onClose }: Props) => {
+  const { EVENT_META } = useEditionStrings();
   const boxRef = useRef<HTMLDivElement>(null);
 
   // URL + istoric: /inscriere cât timp e deschis, back îl închide.

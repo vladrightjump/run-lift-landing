@@ -1,12 +1,23 @@
 /**
- * ⭐ SSOT (single source of truth) pentru ediția curentă.
+ * INSTANTANEUL DE BUILD al ediției. NU mai e sursa de adevăr.
  *
- * TOT ce se schimbă de la o ediție la alta trăiește aici. Restul aplicației,
- * testele și meta din `index.html` derivă din acest obiect — nu mai există
- * string-uri de ediție împrăștiate prin fișiere.
+ * Sursa de adevăr e rândul `published` din `runlift.event_config`, editabil din
+ * `/admin` → tabul „Eveniment" și citit la runtime prin `public_config()`.
+ * Vezi `GHID-EDITIE-NOUA.md`.
  *
- * La ediție nouă: editezi câmpurile de aici, rulezi `npm run sync-edition`
- * (SQL pentru `app_config`) și `npm run verify`. Vezi `GHID-EDITIE-NOUA.md`.
+ * Fișierul ăsta are exact DOUĂ roluri rămase:
+ *
+ *  1. randează primul cadru și acoperă cazul „backendul nu răspunde"
+ *     (`SNAPSHOT_CONFIG` din `content/eventConfig.ts`);
+ *  2. hrănește meta de share, injectată în `index.html` la BUILD, pentru că
+ *     scraper-ele de WhatsApp/Facebook nu rulează JS (`content/meta.ts`).
+ *
+ * NU-l edita ca să schimbi ediția — publică din admin. Îl aliniezi doar când
+ * vrei ca primul cadru și share preview-ul să prindă din urmă ediția publicată,
+ * iar atunci e nevoie de deploy oricum. Backoffice-ul îți spune când e cazul.
+ *
+ * Câmpurile care NU trăiesc în config (rămân doar aici, pentru că nu țin de
+ * ediție): `brand`, `urls`, `training` și `ogImageVersion`.
  *
  * NOTĂ: configul de backend (Supabase url/key/schema) NU stă aici — e configurare
  * de MEDIU, nu de ediție. Trăiește în `src/lib/backend.ts`.

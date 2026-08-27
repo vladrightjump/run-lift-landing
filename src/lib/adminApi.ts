@@ -116,6 +116,60 @@ export const listEditions = (token: string, signal?: AbortSignal): Promise<Admin
 export const createEdition = (token: string): Promise<number> =>
   rpc<number>('admin_create_edition', { p_token: token });
 
+/* ---- Configurarea ediției (`event_config`) ---- */
+
+export type AdminEventConfigRow = {
+  id: string;
+  editie: number;
+  config: unknown;
+  status: 'draft' | 'published' | 'superseded';
+  created_at: string;
+  /** Momentul publicării; null cât timp rândul e ciornă. */
+  published_at: string | null;
+};
+
+/**
+ * Ciorna + publicatul ediției cerute (lipsă = ediția curentă din `app_config`),
+ * plus versiunile păstrate, pentru revenire.
+ */
+export const listEventConfig = (
+  token: string,
+  editie?: number,
+  signal?: AbortSignal
+): Promise<AdminEventConfigRow[]> =>
+  rpc<AdminEventConfigRow[]>(
+    'admin_get_event_config',
+    { p_token: token, p_editie: editie ?? null },
+    signal
+  );
+
+/** Salvează ciorna. Nu schimbă nimic din ce vede vizitatorul. */
+export const saveEventConfigDraft = (
+  token: string,
+  editie: number,
+  config: unknown
+): Promise<string> =>
+  rpc<string>('admin_save_event_config_draft', {
+    p_token: token,
+    p_editie: editie,
+    p_config: config,
+  });
+
+/**
+ * Publică ciorna. Aceeași tranzacție scrie și cele cinci scalare din
+ * `app_config` pe care le citesc guard-urile — de asta nu mai există
+ * desincronizare de aliniat manual.
+ *
+ * Refuzuri așteptate: `no_draft`, `config_invalid: …`,
+ * `registration_hidden_while_open: …`.
+ */
+export const publishEventConfig = (token: string, editie: number): Promise<string> =>
+  rpc<string>('admin_publish_event_config', { p_token: token, p_editie: editie });
+
+/** Revenire la o versiune păstrată — republicare, deci rescrie și scalarele. */
+export const restoreEventConfig = (token: string, id: string): Promise<string> =>
+  rpc<string>('admin_restore_event_config', { p_token: token, p_id: id });
+
 export type AdminLaunchSignup = {
   id: string;
   created_at: string;

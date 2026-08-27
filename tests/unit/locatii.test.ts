@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { EDITION } from '../../src/content/edition';
 import {
-  EVENT_WHERE,
-  EVENT_META,
-  HERO_KICKER,
-  MAP_EMBED_SRC,
-  MAP_DIRECTIONS_URL,
+  deriveEventStrings,
   TRAINING_WHERE,
   TRAINING_MAP_EMBED_SRC,
   TRAINING_MAP_DIRECTIONS_URL,
 } from '../../src/content/format';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+
+const { EVENT_WHERE, EVENT_META, HERO_KICKER, MAP_EMBED_SRC, MAP_DIRECTIONS_URL } =
+  deriveEventStrings(SNAPSHOT_CONFIG);
 import { META } from '../../src/content/meta';
 import { buildEventIcs } from '../../src/lib/calendar';
 
@@ -78,12 +78,12 @@ describe('locația cursei și locația antrenamentelor sunt izolate', () => {
     expect(META.description).toContain(EVENT_WHERE);
     expect(META.ogImageAlt).toContain(EVENT_WHERE);
     // iCalendar (RFC 5545) escapează virgula, deci „a, b" devine „a\, b".
-    expect(buildEventIcs()).toContain(`LOCATION:${EVENT_WHERE.replace(/,/g, '\\,')}`);
+    expect(buildEventIcs(SNAPSHOT_CONFIG)).toContain(`LOCATION:${EVENT_WHERE.replace(/,/g, '\\,')}`);
   });
 
   it('meta de share și .ics nu pomenesc locul antrenamentelor', () => {
     expect(META.description).not.toContain(EDITION.training.place.name);
-    expect(buildEventIcs()).not.toContain(EDITION.training.place.name);
+    expect(buildEventIcs(SNAPSHOT_CONFIG)).not.toContain(EDITION.training.place.name);
   });
 
   it('ambele hărți respectă originile permise de CSP (frame-src)', () => {

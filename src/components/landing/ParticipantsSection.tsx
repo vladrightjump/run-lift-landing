@@ -1,4 +1,4 @@
-import { TOTAL_SLOTS } from '../../lib/config';
+import { useEventConfig } from '../../hooks/useEventConfig';
 import { getMySignups } from '../../lib/mySignups';
 import type { PublicStats } from '../../lib/supabase';
 import { useCountUp } from '../../hooks/useCountUp';
@@ -17,6 +17,7 @@ type Props = {
 
 /** Secțiunea „Cine vine": lista publică de participanți + contorul listei de așteptare. */
 export const ParticipantsSection = ({ stats, canSignUp = true, num = '04' }: Props) => {
+  const TOTAL_SLOTS = useEventConfig().slots.total;
   const participants = stats?.participants ?? [];
   const mine = new Set(getMySignups());
   const waitlistCount = stats?.waitlist ?? 0;

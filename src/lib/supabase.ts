@@ -1,4 +1,5 @@
-import { SUPABASE, CURRENT_EDITION } from './config';
+import { SUPABASE } from './config';
+import { parseEventConfig, type EventConfig } from '../content/eventConfig';
 import { logClientError } from './monitoring';
 import { normalizePhone } from './validation';
 import type { FormData } from './validation';
@@ -67,7 +68,9 @@ export const submitRegistration = async (
         email: data.email.trim(),
         data_nasterii: data.dataNasterii || null,
         acord: data.acord,
-        editie: CURRENT_EDITION,
+        // `editie` NU se trimite: o pune serverul din DEFAULT
+        // (`current_event_edition()`), iar politica RLS respinge orice valoare
+        // venită din client. Altfel un tab vechi ar scrie în ediția greșită.
       }),
       signal,
     });
@@ -196,7 +199,7 @@ export const submitWaitlist = async (
         email: data.email.trim(),
         data_nasterii: data.dataNasterii || null,
         acord: data.acord,
-        editie: CURRENT_EDITION,
+        // idem: ediția o pune serverul, nu bundle-ul.
       }),
       signal,
     });
@@ -233,6 +236,30 @@ export const fetchStats = async (signal?: AbortSignal): Promise<PublicStats> => 
     throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
   }
   return (await res.json()) as PublicStats;
+};
+
+/**
+ * Configurarea ediției publicate. Date publice, ne-personale — aceeași formă ca
+ * `fetchStats`: RPC stabil peste un tabel închis de RLS, cu cheia publicabilă.
+ *
+ * Întoarce `null` când documentul nu se poate randa, ca apelantul să rămână pe
+ * instantaneul de build în loc să afișeze o pagină ciuntită.
+ */
+export const fetchPublicConfig = async (signal?: AbortSignal): Promise<EventConfig | null> => {
+  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/public_config`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE.publishableKey,
+      'Content-Type': 'application/json',
+      'Content-Profile': SUPABASE.schema,
+    },
+    body: '{}',
+    signal,
+  });
+  if (!res.ok) {
+    throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
+  }
+  return parseEventConfig(await res.json());
 };
 
 export type ConfirmResult = 'confirmat' | 'deja_confirmat' | 'invalid';

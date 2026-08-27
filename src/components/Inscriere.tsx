@@ -1,13 +1,13 @@
 import '../edition3.css';
 import { useEffect, useRef, useState } from 'react';
-import { EVENT_DATE, LAUNCH_DATE, SHOW_COMING_SOON } from '../lib/config';
+import { useEventConfig, useEditionStrings, useEditionDates } from '../hooks/useEventConfig';
 import { useCountdown } from '../hooks/useCountdown';
 import { usePagePhase } from '../hooks/usePagePhase';
 import { useStats } from '../hooks/useStats';
 import { useNow } from '../hooks/useNow';
 import { useRegistration } from '../hooks/useRegistration';
 import type { ToastKind } from '../hooks/useToast';
-import { EVENT_META, EVENT_START_TIME } from '../content/format';
+
 import { RegistrationForm } from './landing/RegistrationForm';
 
 /**
@@ -28,6 +28,9 @@ const SUMMARY_ITEMS = [
 ];
 
 export const Inscriere = () => {
+  const { showComingSoon: SHOW_COMING_SOON } = useEventConfig();
+  const { EVENT_META, EVENT_START_TIME } = useEditionStrings();
+  const { EVENT_DATE, LAUNCH_DATE } = useEditionDates();
   const cd = useCountdown(EVENT_DATE);
   const launch = useCountdown(LAUNCH_DATE);
   const phase = usePagePhase();

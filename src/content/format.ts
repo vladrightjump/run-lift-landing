@@ -11,6 +11,7 @@
  * să fie deterministe indiferent de fusul pe care rulează build-ul/testul.
  */
 import { EDITION, type Place } from './edition';
+import type { EventConfig } from './eventConfig';
 
 /**
  * Derivatele unui loc — rândul „Unde", embed-ul de hartă și linkul de direcții —
@@ -28,8 +29,10 @@ const placeStrings = (p: Place) => ({
   directionsUrl: `https://www.google.com/maps/search/?api=1&query=${p.mapQuery}`,
 });
 
-/** Cele două locuri ale proiectului. Singurele două apeluri; restul derivă din ele. */
-const EVENT_PLACE = placeStrings(EDITION.venue);
+/**
+ * Locul ANTRENAMENTELOR — fix, deci rămâne constantă de modul. Locul CURSEI nu
+ * mai are pereche aici: se derivă din configul activ, în `deriveEventStrings`.
+ */
 const TRAINING_PLACE = placeStrings(EDITION.training.place);
 
 const MONTHS_RO = [
@@ -56,9 +59,9 @@ const parts = (localIso: string) => {
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** Ordinalul feminin RO al ediției („a patra"), cu override opțional din EDITION. */
-export const ordinal = (n: number): string =>
-  EDITION.ordinalOverride ?? ORDINALS_RO[n] ?? `a ${n}-a`;
+/** Ordinalul feminin RO al ediției („a patra"), cu override opțional din config. */
+export const ordinal = (n: number, override?: string | null): string =>
+  override ?? ORDINALS_RO[n] ?? `a ${n}-a`;
 
 /** „8 august 2026". */
 export const formatRoDate = (localIso: string): string => {
@@ -83,40 +86,72 @@ export const weekdayRo = (localIso: string, caps = false): string => {
 };
 
 // --- String-uri derivate, gata de folosit în UI -----------------------------
+//
+// FUNCȚIE, nu constante de modul. Până la mutarea configului în DB, valorile de
+// mai jos se calculau o dată, la import, din `EDITION` înghețat — exact motivul
+// pentru care ediția nu putea fi schimbată fără redeploy.
+//
+// Componentele NU apelează funcția asta direct: iau valorile din `useEditionStrings()`,
+// care le derivă din configul activ. Apelul direct rămâne pentru locurile care
+// TREBUIE să folosească instantaneul de build: meta de share (`content/meta.ts`,
+// injectată în HTML la build, pentru că scraper-ele nu rulează JS) și teste.
 
-/** „a patra" pentru ediția curentă (ex. „Ediția a patra"). */
-export const EDITION_ORDINAL = ordinal(EDITION.number);
-export const LAUNCH_EDITION_ORDINAL = ordinal(EDITION.launchNumber);
+export type EventStrings = {
+  EDITION_ORDINAL: string;
+  LAUNCH_EDITION_ORDINAL: string;
+  EVENT_META: string;
+  HERO_KICKER: string;
+  EVENT_WHEN: string;
+  EVENT_WHERE: string;
+  EVENT_START_TIME: string;
+  EVENT_SUMMARY_LINE: string;
+  SUCCESS_SEE_YOU: string;
+  EVENT_BADGE: string;
+  MAP_EMBED_SRC: string;
+  MAP_DIRECTIONS_URL: string;
+};
 
-/** „22 august 2026 · Scările de Granit". */
-export const EVENT_META = `${formatRoDate(EDITION.start)} · ${EDITION.venue.name}`;
+/** Toate string-urile dependente de ediție, derivate dintr-un singur config. */
+export const deriveEventStrings = (config: EventConfig): EventStrings => {
+  const place = placeStrings(config.venue);
+  const when = `${weekdayRo(config.start, true)}, ${formatRoDate(config.start)}`;
+  const startTime = timeOf(config.start);
 
-/** „Sâmbătă, 22 august 2026 · Scările de Granit, Valea Morilor · Outdoor Adaptive". */
-export const HERO_KICKER = `${weekdayRo(EDITION.start, true)}, ${formatRoDate(EDITION.start)} · ${EVENT_PLACE.where} · ${EDITION.concept}`;
+  return {
+    /** „a patra" pentru ediția curentă (ex. „Ediția a patra"). */
+    EDITION_ORDINAL: ordinal(config.number, config.ordinalOverride),
+    LAUNCH_EDITION_ORDINAL: ordinal(config.launchNumber, config.ordinalOverride),
 
-/** „Sâmbătă, 8 august 2026" (rândul „Când" din Locație). */
-export const EVENT_WHEN = `${weekdayRo(EDITION.start, true)}, ${formatRoDate(EDITION.start)}`;
+    /** „22 august 2026 · Scările de Granit". */
+    EVENT_META: `${formatRoDate(config.start)} · ${config.venue.name}`,
 
-/** „Scările de Granit, Valea Morilor" (rândul „Unde"). Sursa unică a locului cursei
- *  — `meta.ts` și `lib/calendar.ts` importă de aici, nu recalculează. */
-export const EVENT_WHERE = EVENT_PLACE.where;
+    /** „Sâmbătă, 22 august 2026 · Scările de Granit, Valea Morilor · Outdoor Adaptive". */
+    HERO_KICKER: `${when} · ${place.where} · ${config.concept}`,
 
-/** „06:30" (rândul „Start" + ora din copy). */
-export const EVENT_START_TIME = timeOf(EDITION.start);
+    /** „Sâmbătă, 22 august 2026" (rândul „Când" din Locație). */
+    EVENT_WHEN: when,
 
-/** Prima linie din „Pe scurt": „Sâmbătă, 8 august 2026, ora 06:30 — Parcul Râșcani, Chișinău". */
-export const EVENT_SUMMARY_LINE = `${EVENT_WHEN}, ora ${EVENT_START_TIME} — ${EVENT_WHERE}`;
+    /** „Scările de Granit, Valea Morilor" (rândul „Unde"). Sursa unică a locului cursei. */
+    EVENT_WHERE: place.where,
 
-/** Mesajul de succes: „Ne vedem pe 8 august la start, ora 06:30." */
-export const SUCCESS_SEE_YOU = `Ne vedem pe ${dayMonth(EDITION.start)} la start, ora ${EVENT_START_TIME}.`;
+    /** „07:00" (rândul „Start" + ora din copy). */
+    EVENT_START_TIME: startTime,
 
-/** Badge-ul emailurilor („Hyrox Trial · 8 august"). Sursa la runtime e DB (event_badge);
- *  aici e doar valoarea derivată, pt. seed/sync și teste. */
-export const EVENT_BADGE = `${EDITION.eventName} · ${dayMonth(EDITION.start)}`;
+    /** Prima linie din „Pe scurt". */
+    EVENT_SUMMARY_LINE: `${when}, ora ${startTime} — ${place.where}`,
 
-/** Google Maps pentru locul CURSEI: embed + link de direcții. */
-export const MAP_EMBED_SRC = EVENT_PLACE.embedSrc;
-export const MAP_DIRECTIONS_URL = EVENT_PLACE.directionsUrl;
+    /** Mesajul de succes: „Ne vedem pe 22 august la start, ora 07:00." */
+    SUCCESS_SEE_YOU: `Ne vedem pe ${dayMonth(config.start)} la start, ora ${startTime}.`,
+
+    /** Badge-ul emailurilor („Hyrox Trial · 22 august"). Sursa la runtime e DB
+     *  (`event_badge`); aici e doar valoarea derivată, pt. seed și teste. */
+    EVENT_BADGE: `${config.eventName} · ${dayMonth(config.start)}`,
+
+    /** Google Maps pentru locul CURSEI: embed + link de direcții. */
+    MAP_EMBED_SRC: place.embedSrc,
+    MAP_DIRECTIONS_URL: place.directionsUrl,
+  };
+};
 
 // --- Antrenamentele săptămânale --------------------------------------------
 // Separate de cursă: antrenamentele sunt mereu în același parc, evenimentele se

@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { toCsv } from '../lib/csv';
 import { listLaunchNotifications } from '../lib/adminApi';
 import type { AdminLaunchSignup } from '../lib/adminApi';
-import { CURRENT_LAUNCH_EDITION } from '../lib/config';
+import { useEventConfig } from '../hooks/useEventConfig';
 import { useAdminPolling } from './useAdminPolling';
 
 type Props = {
@@ -12,6 +12,8 @@ type Props = {
 };
 
 export const AdminLaunchTab = ({ token, formatDate, onAuthError }: Props) => {
+  // Din configul publicat, nu din bundle — vezi nota din AdminDashboard.
+  const CURRENT_LAUNCH_EDITION = useEventConfig().launchNumber;
   const [rows, setRows] = useState<AdminLaunchSignup[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [query, setQuery] = useState('');

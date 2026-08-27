@@ -1,6 +1,6 @@
 import '../edition3.css';
 import { useEffect, useRef, useState } from 'react';
-import { EVENT_DATE } from '../lib/config';
+import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
 import { useCountdown } from '../hooks/useCountdown';
 import { useStats } from '../hooks/useStats';
 import { useNow } from '../hooks/useNow';
@@ -34,6 +34,11 @@ type Props = {
  */
 export const Landing = ({ mode = 'full' }: Props) => {
   const lista = mode === 'leaderboard';
+  const { layout } = useEventConfig();
+  const { EVENT_DATE } = useEditionDates();
+  // Cheile necunoscute au căzut deja la parsare; aici rămâne doar filtrarea pe
+  // vizibilitate, ca poziția din listă să dea numerotarea.
+  const sectiuniVizibile = layout.filter((s) => s.visible);
   const cd = useCountdown(EVENT_DATE);
   const { stats, refresh } = useStats();
   const now = useNow(30_000);
@@ -97,6 +102,10 @@ export const Landing = ({ mode = 'full' }: Props) => {
         // În fereastra de dinaintea startului singurul lucru care contează e
         // cine vine — formatul și locația rămân dedesubt, pentru cine tocmai
         // deschide harta în drum spre Valea Morilor.
+        //
+        // Aranjarea de aici NU e configurabilă, deliberat: în dimineața cursei
+        // pagina răspunde la o singură întrebare, iar asta nu e a organizatorului
+        // de rearanjat în acel moment.
         <>
           {/* Numerele urmează ordinea de pe ecran, nu ordinea din modul complet. */}
           <ParticipantsSection stats={stats} canSignUp={false} num="01" />
@@ -104,12 +113,24 @@ export const Landing = ({ mode = 'full' }: Props) => {
           <VenueSection num="03" />
         </>
       ) : (
-        <>
-          <FormatSection />
-          <VenueSection />
-          <RegistrationSection reg={reg} stats={stats} />
-          <ParticipantsSection stats={stats} />
-        </>
+        // Ordinea și vizibilitatea vin din configul publicat. Numărul se derivă
+        // din POZIȚIA în lista filtrată, nu se stochează — altfel ascunderea unei
+        // secțiuni ar lăsa o gaură în numerotare.
+        sectiuniVizibile.map(({ key }, i) => {
+          const num = String(i + 1).padStart(2, '0');
+          switch (key) {
+            case 'format':
+              return <FormatSection key={key} num={num} />;
+            case 'venue':
+              return <VenueSection key={key} num={num} />;
+            case 'registration':
+              return <RegistrationSection key={key} reg={reg} stats={stats} num={num} />;
+            case 'participants':
+              return <ParticipantsSection key={key} stats={stats} num={num} />;
+            default:
+              return null;
+          }
+        })
       )}
       <Footer />
       {!lista && overlay && (

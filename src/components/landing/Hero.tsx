@@ -1,4 +1,4 @@
-import { HERO_KICKER } from '../../content/format';
+import { useEditionStrings } from '../../hooks/useEventConfig';
 import { HERO_POSTER, heroVideoSrc } from '../../lib/media';
 
 type Props = {
@@ -10,6 +10,8 @@ type Props = {
 
 /** Hero: kicker + titlul „Hyrox / Trial." + rezumat + CTA. */
 export const Hero = ({ onInscrie, showCta = true }: Props) => {
+  const { HERO_KICKER } = useEditionStrings();
+
   return (
       <section
         style={{

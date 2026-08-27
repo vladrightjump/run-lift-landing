@@ -4,9 +4,11 @@ import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 import { useCountdown } from './hooks/useCountdown';
 import { usePagePhase, previewParam } from './hooks/usePagePhase';
-import { SHOW_COMING_SOON, LAUNCH_DATE, NEXT_EDITION_DATE } from './lib/config';
+import { useEventConfig, useEditionDates } from './hooks/useEventConfig';
 
 export const App = () => {
+  const { showComingSoon: SHOW_COMING_SOON } = useEventConfig();
+  const { LAUNCH_DATE, NEXT_EDITION_DATE } = useEditionDates();
   const { toast, hiding, showToast } = useToast();
   // La expirarea timerului de lansare (LAUNCH_DATE) ecranul comută singur de la
   // Coming Soon la landing-ul ediției curente — fără redeploy manual.

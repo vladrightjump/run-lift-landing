@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
-import { TOTAL_SLOTS, INSTAGRAM_URL } from '../../lib/config';
+import { INSTAGRAM_URL } from '../../lib/config';
 import { downloadEventIcs, shareSignup } from '../../lib/calendar';
-import { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } from '../../content/format';
+import { useEventConfig, useEditionStrings } from '../../hooks/useEventConfig';
 import type { FieldName } from '../../lib/validation';
 import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
@@ -9,8 +9,9 @@ import { useCountUp } from '../../hooks/useCountUp';
 import { BirthDateField } from './BirthDateField';
 import { sectionNum, sectionTitle } from './shared';
 
-const SUMMARY_ITEMS = [
-  EVENT_SUMMARY_LINE,
+/** Prima linie depinde de ediție, restul e proză statică. */
+const summaryItems = (eventSummaryLine: string): string[] => [
+  eventSummaryLine,
   'Cursă în stil HYROX: alergare + stații funcționale',
   'Stațiile și greutățile se adaptează nivelului tău',
   'Deschis oricui, indiferent de nivel',
@@ -39,10 +40,18 @@ const inputStyle: CSSProperties = {
 };
 const fieldErr: CSSProperties = { fontSize: 13, color: 'var(--e3-danger)' };
 
-type Props = { reg: ReturnType<typeof useRegistration>; stats: PublicStats | null };
+type Props = {
+  reg: ReturnType<typeof useRegistration>;
+  stats: PublicStats | null;
+  /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
+  num?: string;
+};
 
 /** Secțiunea „Înscriere": rezumat + formular / listă de așteptare / închis / loading / succes / eroare. */
-export const RegistrationSection = ({ reg, stats }: Props) => {
+export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
+  const config = useEventConfig();
+  const TOTAL_SLOTS = config.slots.total;
+  const { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } = useEditionStrings();
   const {
     waitlistMode, waitlistLeft, slots, isSoldOut, isWaitlistFull, showForm, closedReason,
     phase, errors, birthISO, dateErrMsg, confirmName, submittedAsWaitlist,
@@ -76,7 +85,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-              <span className="e3-title-num" style={sectionNum}>03</span>
+              <span className="e3-title-num" style={sectionNum}>{num}</span>
               <h2 className="e3-title" style={sectionTitle}>Înscriere</h2>
             </div>
             <p style={{ margin: '0 0 28px', fontSize: 17, lineHeight: 1.55, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
@@ -110,7 +119,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                 Pe scurt
               </div>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 14 }}>
-                {SUMMARY_ITEMS.map((item) => (
+                {summaryItems(EVENT_SUMMARY_LINE).map((item) => (
                   <li key={item} style={{ display: 'flex', gap: 12, fontSize: 15, lineHeight: 1.5, color: 'var(--e3-muted-strong)' }}>
                     <span style={{ color: 'var(--e3-accent)', fontWeight: 700 }}>→</span>
                     {item}
@@ -449,7 +458,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                     <button
                       type="button"
-                      onClick={downloadEventIcs}
+                      onClick={() => downloadEventIcs(config)}
                       style={{
                         background: 'var(--e3-accent)',
                         color: 'var(--e3-bg)',
@@ -466,7 +475,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void shareSignup()}
+                      onClick={() => void shareSignup(config)}
                       style={{
                         background: 'transparent',
                         border: '1px solid var(--e3-accent)',

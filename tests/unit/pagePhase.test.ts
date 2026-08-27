@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { usePagePhase } from '../../src/hooks/usePagePhase';
-import { LEADERBOARD_DATE, EVENT_END_DATE } from '../../src/lib/config';
+import { deriveEditionDates } from '../../src/lib/config';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+
+// Fără provider, contextul întoarce instantaneul de build — exact valorile pe
+// care le folosea testul înainte, deci fazele se verifică pe aceleași momente.
+const { LEADERBOARD_DATE, EVENT_END_DATE } = deriveEditionDates(SNAPSHOT_CONFIG);
 
 /**
  * Cele trei faze ale zilei de eveniment. Ceasul e mockuit prin `Date.now`

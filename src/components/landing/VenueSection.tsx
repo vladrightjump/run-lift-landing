@@ -1,14 +1,5 @@
-import {
-  EVENT_WHERE,
-  EVENT_WHEN,
-  EVENT_START_TIME,
-  MAP_EMBED_SRC,
-  MAP_DIRECTIONS_URL,
-} from '../../content/format';
+import { useEditionStrings } from '../../hooks/useEventConfig';
 import { sectionNum, sectionTitle } from './shared';
-
-const MAP_SRC = MAP_EMBED_SRC;
-const DIRECTIONS_URL = MAP_DIRECTIONS_URL;
 
 type Props = {
   /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
@@ -17,6 +8,14 @@ type Props = {
 
 /** Secțiunea „Locația": detalii (unde/când/start) + hartă + link Google Maps. */
 export const VenueSection = ({ num = '02' }: Props) => {
+  const {
+    EVENT_WHERE,
+    EVENT_WHEN,
+    EVENT_START_TIME,
+    MAP_EMBED_SRC: MAP_SRC,
+    MAP_DIRECTIONS_URL: DIRECTIONS_URL,
+  } = useEditionStrings();
+
   // Ton mai adânc decât secțiunile vecine — alternanța dă pagina în trepte,
   // fără să introducă vreo culoare nouă (`bg-deep` e deja în paletă).
   return (

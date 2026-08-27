@@ -2,13 +2,14 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { adminLogin } from '../lib/adminApi';
 import { useCountdown } from '../hooks/useCountdown';
-import { LAUNCH_DATE } from '../lib/config';
+import { useEditionDates } from '../hooks/useEventConfig';
 
 type Props = {
   onLogin: (token: string) => void;
 };
 
 export const AdminLogin = ({ onLogin }: Props) => {
+  const { LAUNCH_DATE } = useEditionDates();
   const [error, setError] = useState('');
   const [shake, setShake] = useState(0);
   const [showPassword, setShowPassword] = useState(false);

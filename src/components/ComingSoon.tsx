@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { LAUNCH_DATE, INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
-import { LAUNCH_EDITION_ORDINAL } from '../content/format';
+import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
+import { useEditionStrings, useEditionDates } from '../hooks/useEventConfig';
 import { useCountdown } from '../hooks/useCountdown';
 import { useLaunchForm } from '../hooks/useLaunchForm';
 import type { ToastKind } from '../hooks/useToast';
@@ -38,10 +38,14 @@ const formatZi = (d: Date) =>
     timeZone: 'Europe/Chisinau',
   }).format(d);
 
-export const ComingSoon = ({ showToast, target = LAUNCH_DATE, variant = 'launch' }: Props) => {
-  const cd = useCountdown(target);
+export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => {
+  const { LAUNCH_EDITION_ORDINAL } = useEditionStrings();
+  const { LAUNCH_DATE } = useEditionDates();
+  // Implicitul nu poate sta în semnătură: vine din config, care e un hook.
+  const tinta = target ?? LAUNCH_DATE;
+  const cd = useCountdown(tinta);
   const urmatorul = variant === 'next-session';
-  const momentLabel = formatMoment(target);
+  const momentLabel = formatMoment(tinta);
   const { draft, setField, errors, state, submit, reset } = useLaunchForm();
   const [open, setOpen] = useState(false);
   const [duplicate, setDuplicate] = useState(false);
@@ -105,7 +109,7 @@ export const ComingSoon = ({ showToast, target = LAUNCH_DATE, variant = 'launch'
         <span className="cs-badge">
           <span className="cs-badge-dot" />
           {urmatorul
-            ? `Următorul antrenament · ${formatZi(target)}`
+            ? `Următorul antrenament · ${formatZi(tinta)}`
             : `Antrenament nou · Ediția ${LAUNCH_EDITION_ORDINAL}`}
         </span>
 

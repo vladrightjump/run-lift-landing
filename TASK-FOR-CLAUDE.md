@@ -32,8 +32,9 @@ string-uri prin componente.**
   plugin Vite `transformIndexHtml` (vezi `vite.config.ts`). OG rămâne static pt. scrapere.
 - **`src/lib/backend.ts`** — configul Supabase (url/key/schema). E MEDIU, nu ediție.
 - **`src/lib/config.ts`** — doar re-exportă derivatele (compat). NU edita valori aici.
-- **`scripts/sync-edition.ts`** (`npm run sync-edition`) — emite SQL pt. `app_config` din
-  `EDITION` (nu-l aplică; îl revezi și-l rulezi tu).
+- **`scripts/write-version.ts`** — ștampilează `dist/version.json` cu commit-ul și amprenta
+  câmpurilor de ediție care hrănesc meta de share, ca admin-ul să vadă când preview-ul e vechi.
+  (`scripts/sync-edition.ts` a fost șters: publicarea din admin scrie ea scalarele, atomic.)
 - Componentele ediției 2 (Hero/TopBar/RegistrationSection/Footer/Format/Venue/Participants) au
   fost **șterse** (nu mai erau randate).
 
@@ -135,8 +136,8 @@ Ratațional pe scurt pentru refactor-ul SSOT (4 aug 2026), ca să nu se re-desch
   `EDITION` DOAR string-urile dependente de ediție/dată (`content/format.ts`); proza statică
   rămâne în componente.
 - **Emailuri DB-only, fără generator cod→DB.** Le-am de-hardcodat ca să fie editabile din
-  `/admin`; un generator din cod ar crea „două stăpâne" și ar suprascrie editările. `sync-edition`
-  atinge DOAR `app_config` (numerele de ediție).
+  `/admin`; un generator din cod ar crea „două stăpâne" și ar suprascrie editările. Aceeași
+  logică a dus, mai târziu, la mutarea întregii configurări de ediție în DB.
 - **Meta injectată la build** (plugin Vite `transformIndexHtml`), nu din React — scraper-ele de
   share citesc HTML static.
 - **Fără reorganizare de migrări.** Repo-ul nu deține ciclul DB-ului partajat; doar documentăm
