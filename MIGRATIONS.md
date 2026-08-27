@@ -88,6 +88,12 @@ ediție); restul sunt păstrate ca referință.
 
 ## Legătura cu ediția
 
-Numerele de ediție trăiesc în `app_config` (`current_event_edition`, `current_launch_edition`)
-și trebuie să urmeze `src/content/edition.ts`. Rulează `npm run sync-edition` ca să obții
-SQL-ul de aliniere. Un test opt-in (`npm run test:integration`) pică dacă apare drift.
+Sursa de adevăr a ediției e rândul `published` din `runlift.event_config`, editabil din
+`/admin` → tabul „Eveniment". Publicarea (`admin_publish_event_config`) scrie în ACEEAȘI
+tranzacție cele cinci valori din `app_config` pe care le citesc guard-urile
+(`current_event_edition`, `current_launch_edition`, `event_capacity`, `registration_deadline`,
+`event_start`) — deci nu mai există drift de aliniat manual, iar `sync-edition` a fost șters.
+
+`src/content/edition.ts` a rămas instantaneul de build (primul cadru + meta de share). Un test
+opt-in (`npm run test:integration`) verifică relația care poate încă să se rupă: scalarele din
+`app_config` trebuie să urmeze documentul publicat.

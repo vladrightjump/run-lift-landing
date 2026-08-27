@@ -81,8 +81,9 @@ export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creat
             <p className="admin-confirm-note">
               Se șterg și reperele de timp ale ediției încheiate (deadline de înscriere + data
               startului), ca să nu blocheze înscrierile și să nu declanșeze reminderul vechi.
-              După asta actualizează <code>src/content/edition.ts</code> cu datele noii ediții,
-              rulează <code>npm run sync-edition</code> și redeployează.
+              Butonul ăsta mută doar unde intră înscrierile noi — datele ediției (dată, loc,
+              locuri, secțiuni) le pui din tabul <strong>Eveniment</strong> și le publici de
+              acolo. Fără editări în cod, fără deploy.
             </p>
             <div className="admin-confirm-actions">
               <button

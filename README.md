@@ -15,10 +15,11 @@ run-lift-landing/
 ├── vercel.json           # headere de securitate (CSP: connect-src → Supabase)
 ├── public/               # favicon, og.png, apple-touch-icon
 ├── scripts/
-│   └── sync-edition.ts   # emite SQL pt. app_config din EDITION (npm run sync-edition)
+│   └── write-version.ts  # ștampilează dist/version.json (commit + amprenta meta)
 ├── src/
-│   ├── content/          # ⭐ SSOT
-│   │   ├── edition.ts    #   datele ediției (dată, locație, branding, sloturi) — AICI editezi
+│   ├── content/          # instantaneul de build (sursa de adevăr e în DB)
+│   │   ├── edition.ts    #   instantaneu: primul cadru + meta de share. NU-l edita per ediție
+│   │   ├── eventConfig.ts#   forma documentului de config + parsarea lui
 │   │   ├── format.ts     #   derivate: ordinal, dată RO, EVENT_META, HERO_KICKER…
 │   │   └── meta.ts       #   title/description/OG derivate din EDITION
 │   ├── components/       # Edition3Landing, ComingSoon, Confirmare, DespreNoi, Toast
@@ -59,10 +60,15 @@ botul de Telegram. Run + Lift trăiește în schema **`runlift`** (rutată prin 
 
 ## Ediție nouă (pe scurt)
 
-1. Editezi **`src/content/edition.ts`** (număr, date, locație, branding, sloturi).
-2. `npm run sync-edition` → SQL pt. `app_config`; îl revezi și-l rulezi în Supabase.
-3. Textul emailurilor (dacă vrei să-l schimbi) → din `/admin` → „Șabloane de email".
-4. `npm run verify` → `git push` (Vercel publică automat).
+Din **`/admin` → tabul „Eveniment"**. Fără editări în cod, fără deploy.
+
+1. „+ Ciornă pentru ediția N+1" → completezi datele, locul, locurile, secțiunile.
+2. „Previzualizează" (`/?config=draft`) → vezi pagina reală, randată din ciornă.
+3. „Publică" → site-ul public trece pe configul nou imediat.
+4. Textul emailurilor (dacă vrei să-l schimbi) → `/admin` → „Șabloane de email".
+
+Singurul lucru care mai cere deploy e **share preview-ul** (meta se injectează la build, pentru că
+scraper-ele nu rulează JS). Tabul „Eveniment" îți spune când a rămas în urmă.
 
 Runbook complet: **`GHID-EDITIE-NOUA.md`**. Decizii de arhitectură: **`TASK-FOR-CLAUDE.md`**.
 

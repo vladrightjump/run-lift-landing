@@ -1,5 +1,4 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { EDITION } from '../../src/content/edition';
 
 /**
  * Teste de integrare LIVE — lovesc backendul Supabase REAL (proiectul ironworks-gym,
@@ -223,16 +222,66 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     expect(await res.json()).toBe('invalid');
   });
 
-  // Gardă anti-drift: DB-ul trebuie să reflecte EDITION (rulează `npm run sync-edition`
-  // dacă pică). Prinde exact desincronizarea config.ts ↔ app_config.
-  it('app_config.current_event_edition == EDITION.number (fără drift)', async () => {
-    const res = await fetch(
-      `${BASE}/rest/v1/app_config?key=eq.current_event_edition&select=value`,
+  /**
+   * Gardă anti-drift, cu direcția INVERSATĂ.
+   *
+   * Înainte, testul cerea ca `app_config` să urmeze `EDITION` din cod, pentru că
+   * `EDITION` era sursa de adevăr și cineva trebuia să ruleze `sync-edition`.
+   * Acum sursa e rândul `published` din `event_config`, iar publicarea scrie
+   * scalarele în ACEEAȘI tranzacție. Deci ce se verifică nu mai e „codul și baza
+   * sunt de acord", ci „scalarele derivate chiar urmează documentul publicat" —
+   * singura relație care mai poate să se rupă.
+   */
+  it('scalarele din app_config urmează documentul publicat', async () => {
+    const cfgRes = await fetch(`${BASE}/rest/v1/rpc/public_config`, {
+      method: 'POST',
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA }),
+      body: '{}',
+    });
+    expect(cfgRes.status).toBe(200);
+    const config = (await cfgRes.json()) as {
+      number: number;
+      launchNumber: number;
+      tz: string;
+      start: string;
+      registrationDeadline: string;
+      slots: { total: number };
+    };
+
+    const scalarRes = await fetch(
+      `${BASE}/rest/v1/app_config?select=key,value&key=in.(current_event_edition,current_launch_edition,event_capacity,event_start,registration_deadline)`,
       { headers: serviceHeaders({ 'Accept-Profile': SCHEMA }) }
     );
+    expect(scalarRes.status).toBe(200);
+    const scalare = Object.fromEntries(
+      ((await scalarRes.json()) as Array<{ key: string; value: string }>).map((r) => [
+        r.key,
+        r.value,
+      ])
+    );
+
+    expect(Number(scalare.current_event_edition)).toBe(config.number);
+    expect(Number(scalare.current_launch_edition)).toBe(config.launchNumber);
+    expect(Number(scalare.event_capacity)).toBe(config.slots.total);
+    expect(scalare.event_start).toBe(`${config.start}${config.tz}`);
+    expect(scalare.registration_deadline).toBe(`${config.registrationDeadline}${config.tz}`);
+  });
+
+  /**
+   * Instantaneul de build NU mai trebuie să fie egal cu ediția publicată — asta e
+   * chiar libertatea pe care o cumpără mutarea configului în DB. Ce rămâne
+   * obligatoriu e ca documentul publicat să existe și să fie randabil.
+   */
+  it('există exact un config publicat, randabil', async () => {
+    const res = await fetch(`${BASE}/rest/v1/rpc/public_config`, {
+      method: 'POST',
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA }),
+      body: '{}',
+    });
     expect(res.status).toBe(200);
-    const rows = (await res.json()) as Array<{ value: string }>;
-    expect(rows).toHaveLength(1);
-    expect(Number(rows[0].value)).toBe(EDITION.number);
+    const config = await res.json();
+    expect(config).not.toBeNull();
+    expect(typeof config.number).toBe('number');
+    expect(Array.isArray(config.layout)).toBe(true);
   });
 });

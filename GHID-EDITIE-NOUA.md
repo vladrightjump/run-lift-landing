@@ -1,122 +1,139 @@
 # Ghid: cum lansezi o ediție nouă
 
-De la refactor-ul SSOT (4 aug 2026), o ediție nouă = **editezi un singur fișier**, rulezi un
-script, dai push. Fără vânătoare de string-uri prin componente.
+O ediție nouă se face **din `/admin`**, din tabul **Eveniment**. Fără editări în cod, fără SQL
+generat, fără deploy.
 
-Sunt **două faze** (pot fi făcute separat sau împreună):
-- **Faza A — Anunț (Coming Soon):** strângi „Anunță-mă la lansare" pentru ediția care urmează.
-- **Faza B — Înscrieri deschise (landing):** oamenii se înscriu efectiv.
-
-> **Sursa de adevăr:** `src/content/edition.ts` (obiectul `EDITION`). Restul — `config.ts`,
-> landing, meta din `index.html`, testele — derivă din el. Backend-ul (`app_config`) se
-> aliniază cu `npm run sync-edition`. Textul emailurilor stă în DB (editabil din `/admin`).
+> **Sursa de adevăr:** rândul `published` din `runlift.event_config`. Pagina publică îl citește la
+> runtime (`public_config()`), iar publicarea scrie în ACEEAȘI tranzacție cele cinci valori din
+> `app_config` pe care le citesc guard-urile din DB. Nu mai există „desincronizare" de aliniat manual.
+>
+> `src/content/edition.ts` a rămas **instantaneul de build**: randează primul cadru și acoperă cazul
+> în care backendul nu răspunde. **Nu-l edita ca să schimbi ediția.**
 
 ---
 
-## Pași (majoritatea edițiilor: doar asta)
+## Pașii (majoritatea edițiilor: doar atât)
 
-### 1. Editezi `src/content/edition.ts`
-Câmpurile uzuale de schimbat:
-- `number` / `launchNumber` — numărul ediției (+ `ordinalOverride` doar dacă vrei altă formulare).
-- `eventName`, `concept` — branding (ex. „Hyrox Trial", „Outdoor Adaptive").
-- `start`, `checkinFrom`, `durationHours`, `registrationDeadline`, `launchAt` — **local, fără
-  offset** (se compun cu `tz`).
-- `showComingSoon` — `true` (Faza A) / `false` (Faza B).
-- `leaderboardLeadHours`, `nextEditionAt` — fazele zilei de eveniment (vezi mai jos).
-- `venue` — dacă se schimbă locația (nume, oraș, `mapQuery` din Google Maps).
-- `slots` — dacă se schimbă capacitatea.
-- `ogImageVersion` — **incrementează** (altfel share-preview-ul vine din cache).
+### 1. Deschide ciorna
+`/admin` → **Eveniment** → „**+ Ciornă pentru ediția N+1**".
 
-Din aceste câmpuri se derivă automat: „Ediția a patra", „8 august 2026", „06:30", kicker-ul,
-mesajul de succes, badge-ul, meta de share (title/description/OG). Nu le mai scrii de mână.
+Pornește de la ediția publicată, cu numărul incrementat. Editează ce se schimbă:
 
-### 2. Sincronizezi backend-ul
-```bash
-npm run sync-edition
-```
-Îți printează SQL-ul pentru `app_config`. **Îl revezi** și-l rulezi în Supabase (SQL Editor sau
-MCP). Doar `app_config` (numerele de ediție) — nimic altceva.
+- **Ediția evenimentului** — numărul ediției.
+- **Ediția de lansare** — de regulă egală; vezi capcana de mai jos.
+- **Numele evenimentului / Concept** — branding („Hyrox Trial", „Outdoor Adaptive").
+- **Start / Deadline înscriere / Momentul lansării / Următorul antrenament** — local, **fără fus**
+  (`2026-08-22T07:00:00`); se compun cu câmpul *Fus orar*.
+- **Check-in de la**, **Durata (ore)**, **„Cine vine" cu (ore) înainte**.
+- **Locul** — nume, oraș/zonă și **coordonate `lat,lng`** (punct exact, nu text căutat pe hartă).
+- **Locuri** și **Lista de așteptare** — capacitatea.
+- **Homepage-ul arată** — Landing (înscrieri) sau Coming Soon.
+- **Secțiunile paginii** — ordinea și ce se ascunde. Numerele (01, 02…) se recalculează singure.
 
-> **Scurtătură din `/admin`:** butonul „+ Ediție nouă" din bara de ediții face exact partea de
-> `app_config` (mută ediția curentă pe max+1 și șterge `registration_deadline` + `event_start`
-> ale ediției încheiate). Restul pașilor de aici rămân obligatorii — până actualizezi
-> `edition.ts` și redeployezi, backoffice-ul afișează un banner roșu de desincronizare.
+Formularul nu te lasă să publici un config imposibil (deadline după start, următorul antrenament
+înainte de finalul cursei, capacitate zero, coordonate scrise ca text). Aceleași reguli sunt
+aplicate și pe server — formularul doar ți le spune mai devreme.
 
-### 3. (Opțional) Textul emailurilor
-Emailurile (confirmare/reminder/anunț + badge) sunt în DB, editabile din **`/admin` → „Șabloane
-de email"**. Le ajustezi acolo dacă vrei alt text; NU se ating din cod.
+### 2. Previzualizează
+Butonul „**Previzualizează**" deschide `/?config=draft` — pagina reală, randată din ciornă. Doar tu
+o vezi: preview-ul folosește sesiunea ta de admin, iar un vizitator care ghicește parametrul vede
+tot configul publicat.
 
-### 4. Cover-ul de share `public/og.png`
-Regenerează imaginea (1200×630) cu noua ediție/dată (design: fundal `#121410`, accent lime
-`#C9F24B`, font Anton). Versiunea (`?v=`) o gestionează `ogImageVersion` din `EDITION` — doar
-înlocuiește fișierul `public/og.png`.
+Se compune cu fazele zilei: `/?config=draft&preview=leaderboard` și `?preview=next` îți arată cum
+arată ciorna în dimineața cursei și după. **Verifică-le seara dinainte** — sunt singurele ecrane
+care apar când nu ești la laptop.
 
-### 5. Verifici + deploy
-```bash
-npm run verify        # typecheck + teste + build + e2e
-git add -A && git commit -m "Ediția <N>" && git push
-```
-Vercel publică automat. Preview înainte: `parktraining.fit/?preview=soon` (Coming Soon) sau
-`?preview=landing` (landing).
+### 3. Publică
+Butonul „**Publică**", cu confirmare. Confirmarea îți spune ce va vedea vizitatorul: Coming Soon
+sau landing-ul cu înscrieri.
+
+Din acel moment site-ul public servește configul nou. Un tab deja deschis îl prinde la următorul
+poll, fără reload.
+
+Versiunea publicată anterior rămâne salvată: dacă ceva e greșit, „**Revino la asta**" din
+*Versiuni anterioare* o readuce, tot într-o singură tranzacție.
+
+### 4. (Opțional) Textul emailurilor
+Emailurile (confirmare/reminder/anunț + badge) sunt în DB, editabile din **`/admin` → „Șabloane de
+email"**. NU se ating din cod.
+
+---
+
+## Ce mai cere deploy
+
+**Doar share preview-ul** (cardul de WhatsApp/Facebook) și imaginea lui.
+
+Meta (title/description/Open Graph) se injectează în `index.html` la BUILD, pentru că scraper-ele de
+share citesc HTML-ul static, fără să ruleze JS. Deci după o publicare care schimbă data, numele
+evenimentului sau locul, cardul de share rămâne pe datele build-ului.
+
+Tabul **Eveniment** îți spune când se întâmplă asta, numind câmpurile rămase în urmă. Ca să-l aduci
+la zi:
+
+1. Aliniază `src/content/edition.ts` cu ediția publicată (asta e singura ocazie în care îl atingi).
+2. Regenerează `public/og.png` (1200×630) și **incrementează `ogImageVersion`** — altfel preview-ul
+   vine din cache.
+3. `npm run verify`, apoi commit + push.
+4. Vercel nu pornește mereu build la push — finalizează cu `vercel --prod`.
+
+Site-ul funcționează perfect și fără pasul ăsta; doar cardul de share e vechi.
 
 ---
 
 ## Ziua evenimentului (automat, fără redeploy)
 
-Homepage-ul își schimbă singur forma de două ori, pe ceas:
+Homepage-ul își schimbă singur forma de două ori, pe ceas, din reperele configului publicat:
 
 | Moment | Ce arată „/" | Ce arată `/inscriere` |
 |---|---|---|
-| până la `start` − `leaderboardLeadHours` | landing normal, înscrieri deschise | formularul |
-| de acolo până la `start` + `durationHours` | landing fără formular și fără CTA, „cine vine" sub hero | formularul, până la `registrationDeadline` |
-| după `start` + `durationHours` | countdown spre `nextEditionAt` | redirect spre „/" |
+| până la `start` − `„cine vine" cu (ore) înainte` | landing normal, înscrieri deschise | formularul |
+| de acolo până la `start` + `durata` | landing fără formular și fără CTA, „cine vine" sub hero | formularul, până la deadline |
+| după `start` + `durata` | countdown spre următorul antrenament | redirect spre „/" |
 
 Le vezi înainte de ora lor cu `?preview=leaderboard` și `?preview=next`.
-**Verifică-le seara dinainte** — sunt singurele ecrane care apar când nu ești la laptop.
 
-`durationHours` e durata reală a cursei: mută a doua graniță, deci nu-l lăsa pe o valoare
-aproximativă. `nextEditionAt` trebuie să fie mereu după finalul cursei — există un test care
-pică dacă rămâne în urmă.
+Aranjarea din fereastra „cine vine" **nu** e configurabilă, deliberat: atunci pagina răspunde la o
+singură întrebare.
 
 ### După ce se termină cursa
 
-1. Bumpează `launchNumber` la ediția următoare și rulează `npm run sync-edition`.
-   **NU face asta înainte de cursă:** `launchNumber` alimentează „Ediția a N-a" de pe
-   `/confirmare` și `/unsubscribe`, adică exact paginile pe care le deschid din email cei
-   înscriși la ediția în curs.
-2. Înainte să te bazezi pe sincronizare pentru atribuire, verifică ce `DEFAULT` are
-   `launch_notifications.editie`. Inserarea din client omite coloana intenționat
-   (`src/lib/supabase.ts`), deci dacă default-ul e o valoare fixă și nu o citire din
-   `app_config`, sincronizarea singură nu redirijează înscrierile noi.
+Bumpează **Ediția de lansare** la ediția următoare și publică.
+
+**NU o bumpa înainte de cursă:** alimentează „Ediția a N-a" de pe `/confirmare` și `/unsubscribe`,
+adică exact paginile deschise din email de cei înscriși la ediția în curs. Formularul te
+avertizează dacă o faci, dar nu te oprește — sunt situații în care e intenționat.
 
 ---
 
-## Ce prind testele (nu trebuie editate per ediție)
+## Ce prind testele
 
-- `edition-derivation.test.ts` — `config.ts` derivă corect din `EDITION`.
-- `meta.test.ts` — meta de share reflectă `EDITION` + `index.html` folosește placeholder-e.
-- `backend-contract.test.ts` — cererile merg spre schema `runlift`, cu `editie` corectă.
+- `eventConfig.test.ts` — instantaneul transcrie `EDITION`; documentele nerandabile sunt respinse.
+- `formatCharacterization.test.ts` — string-urile derivate nu s-au schimbat la mutarea pe config.
+- `eventConfigForm.test.ts` — regulile formularului (aceleași ca pe server).
+- `sectionLayout.test.tsx` — ordinea, vizibilitatea și renumerotarea secțiunilor.
+- `adminEventTab.test.tsx` — nimic nu ajunge pe site fără „Publică".
+- `buildFingerprint.test.ts` — când se anunță că share preview-ul e vechi.
+- `meta.test.ts` — meta de share reflectă instantaneul + `index.html` folosește placeholder-e.
 - `deploy-config.test.ts` — CSP-ul (`vercel.json`) permite originul Supabase.
-- e2e (landing/inscriere/coming-soon) — importă din `content/`, deci NU driftează.
-- `npm run test:integration` (opt-in) — `app_config` din DB == `EDITION.number` (anti-drift).
+- e2e (landing/inscriere/coming-soon/faze) — derivă din instantaneu, deci NU driftează.
+- `npm run test:integration` (opt-in) — scalarele din `app_config` urmează documentul publicat.
 
 ---
 
-## Capcane (verifică dacă ceva pică)
+## Capcane
 
 1. **Schema `runlift` neexpusă** în Supabase → API → Exposed schemas → toate cererile pică.
 2. **CSP** (`vercel.json` `connect-src`) rămas pe alt proiect Supabase → înscrieri blocate.
-3. **`app_config` desincronizat** de `EDITION` → rulează `npm run sync-edition`.
-4. **NU atinge schema `public`** — e a gym-app + botul de Telegram (altă aplicație). Vezi
-   `MIGRATIONS.md`.
-5. **`og.png` necache-bust** → incrementează `ogImageVersion` în `EDITION`.
+3. **NU atinge schema `public`** — e a gym-app + botul de Telegram. Vezi `MIGRATIONS.md`.
+4. **`og.png` necache-bust** → incrementează `ogImageVersion` când regenerezi imaginea.
+5. **Ediția de lansare bumpată prea devreme** → vezi „După ce se termină cursa".
 
 ---
 
 ## Ce NU mai faci (vs. fluxul vechi)
 
-- ~~Editezi `config.ts` manual~~ → derivă din `EDITION`.
-- ~~Cauți „a treia" prin ComingSoon/Confirmare/AdminDashboard~~ → derivat din `ordinal()`.
-- ~~Editezi meta în `index.html`~~ → injectată din `content/meta.ts` la build.
-- ~~Editezi textele din funcția edge `send-email`~~ → sunt în DB, din `/admin`.
-- ~~Actualizezi string-uri în teste~~ → testele importă din `content/`.
+- ~~Editezi `src/content/edition.ts` la fiecare ediție~~ → publici din admin.
+- ~~Rulezi `npm run sync-edition` și copiezi SQL în Supabase~~ → publicarea scrie ea scalarele,
+  atomic. Scriptul a fost șters.
+- ~~Aștepți un redeploy ca site-ul să arate ediția nouă~~ → e live la publicare.
+- ~~Urmărești bannerul roșu de desincronizare~~ → nu mai există stare în care să apară.
