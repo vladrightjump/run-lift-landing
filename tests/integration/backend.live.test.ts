@@ -268,6 +268,43 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
   });
 
   /**
+   * Ediția inserărilor publice o impune serverul.
+   *
+   * Un tab deschis înainte de o publicare trimite numărul vechi din bundle. Nu
+   * trebuie respins — trebuie corectat, altfel exact fereastra pe care planul o
+   * repară ar produce înscrieri eșuate.
+   */
+  it('un insert public cu ediție stale e corectat, nu respins', async () => {
+    const email = emailFor('editiestale');
+    const res = await fetch(`${BASE}/rest/v1/registrations`, {
+      method: 'POST',
+      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      // 30002 nu e o ediție reală — dacă ar ajunge în tabel, trigger-ul n-a rulat.
+      body: JSON.stringify({
+        nume: 'Live Stale',
+        telefon: '069000000',
+        email,
+        acord: true,
+        editie: 30002,
+      }),
+    });
+
+    // Poate fi respins de deadline-ul ediției curente; ăsta e alt guard, nu al nostru.
+    if (res.status !== 201 && res.status !== 204) {
+      expect([400, 403]).toContain(res.status);
+      return;
+    }
+
+    const check = await fetch(
+      `${BASE}/rest/v1/registrations?select=editie&email=eq.${encodeURIComponent(email)}`,
+      { headers: serviceHeaders({ 'Accept-Profile': SCHEMA }) }
+    );
+    const rows = (await check.json()) as Array<{ editie: number }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].editie).not.toBe(30002);
+  });
+
+  /**
    * Instantaneul de build NU mai trebuie să fie egal cu ediția publicată — asta e
    * chiar libertatea pe care o cumpără mutarea configului în DB. Ce rămâne
    * obligatoriu e ca documentul publicat să existe și să fie randabil.

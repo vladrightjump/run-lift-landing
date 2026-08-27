@@ -79,6 +79,7 @@ declare
   v_next timestamptz;
   v_tz text;
   v_sectiune jsonb;
+  v_chei text[] := array[]::text[];
   v_chei_permise text[] := array['format', 'venue', 'registration', 'participants'];
 begin
   -- Câmpuri obligatorii.
@@ -96,6 +97,10 @@ begin
   v_tz := p_config ->> 'tz';
   if v_tz !~ '^[+-][0-9]{2}:[0-9]{2}$' then
     raise exception 'config_invalid: tz trebuie să fie de forma +03:00';
+  end if;
+
+  if (p_config ->> 'checkinFrom') !~ '^[0-9]{2}:[0-9]{2}$' then
+    raise exception 'config_invalid: checkinFrom trebuie să fie de forma 06:30';
   end if;
 
   v_start := ((p_config ->> 'start') || v_tz)::timestamptz;
@@ -133,6 +138,11 @@ begin
     if pg_catalog.jsonb_typeof(v_sectiune -> 'visible') <> 'boolean' then
       raise exception 'config_invalid: secțiunea „%" nu are „visible" boolean', v_sectiune ->> 'key';
     end if;
+    -- Duplicatul ar randa aceeași secțiune de două ori, cu numere diferite.
+    if (v_sectiune ->> 'key') = any (v_chei) then
+      raise exception 'config_invalid: secțiunea „%" apare de două ori', v_sectiune ->> 'key';
+    end if;
+    v_chei := v_chei || (v_sectiune ->> 'key');
   end loop;
 end;
 $function$;
@@ -151,6 +161,34 @@ as $function$
   from runlift.event_config c
   where c.status = 'published'
   limit 1;
+$function$;
+
+-- Cele cinci scalare derivate, toate prin UPSERT.
+--
+-- De ce nu `update`: dacă rândul lipsește, un UPDATE nu afectează nimic și NU dă
+-- eroare — publicarea ar raporta succes, iar guard-urile ar citi în continuare
+-- valoarea veche. Exact clasa de drift tăcut pe care migrarea asta o elimină,
+-- reintrodusă pe o cale laterală.
+create or replace function runlift.scrie_scalarele_editiei(p_config jsonb)
+returns void
+language plpgsql
+security definer
+set search_path to 'runlift'
+as $function$
+declare v_tz text := p_config ->> 'tz';
+begin
+  insert into app_config (key, value) values ('current_event_edition', p_config ->> 'number')
+    on conflict (key) do update set value = excluded.value;
+  insert into app_config (key, value) values ('current_launch_edition', p_config ->> 'launchNumber')
+    on conflict (key) do update set value = excluded.value;
+  insert into app_config (key, value) values ('event_capacity', p_config -> 'slots' ->> 'total')
+    on conflict (key) do update set value = excluded.value;
+  insert into app_config (key, value)
+    values ('registration_deadline', (p_config ->> 'registrationDeadline') || v_tz)
+    on conflict (key) do update set value = excluded.value;
+  insert into app_config (key, value) values ('event_start', (p_config ->> 'start') || v_tz)
+    on conflict (key) do update set value = excluded.value;
+end;
 $function$;
 
 -- ---------------------------------------------------------------------------
@@ -258,19 +296,7 @@ begin
     where id = v_id;
 
   -- Scalarele derivate. Cheile rămân exact cele citite de guard-uri.
-  update app_config set value = (v_config ->> 'number')
-    where key = 'current_event_edition';
-  update app_config set value = (v_config ->> 'launchNumber')
-    where key = 'current_launch_edition';
-  insert into app_config (key, value)
-    values ('event_capacity', v_config -> 'slots' ->> 'total')
-    on conflict (key) do update set value = excluded.value;
-  insert into app_config (key, value)
-    values ('registration_deadline', (v_config ->> 'registrationDeadline') || v_tz)
-    on conflict (key) do update set value = excluded.value;
-  insert into app_config (key, value)
-    values ('event_start', (v_config ->> 'start') || v_tz)
-    on conflict (key) do update set value = excluded.value;
+  perform scrie_scalarele_editiei(v_config);
 
   insert into admin_events (tip, detaliu)
   values ('config_publish', jsonb_build_object(
@@ -288,7 +314,7 @@ language plpgsql
 security definer
 set search_path to 'runlift'
 as $function$
-declare v_config jsonb; v_editie smallint; v_tz text;
+declare v_config jsonb; v_editie smallint;
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
 
@@ -297,26 +323,13 @@ begin
   if v_config is null then raise exception 'not_found'; end if;
 
   perform event_config_validate(v_config);
-  v_tz := v_config ->> 'tz';
 
   update event_config set status = 'superseded'
     where status = 'published' and id <> p_id;
   update event_config set status = 'published', published_at = now()
     where id = p_id;
 
-  update app_config set value = (v_config ->> 'number')
-    where key = 'current_event_edition';
-  update app_config set value = (v_config ->> 'launchNumber')
-    where key = 'current_launch_edition';
-  insert into app_config (key, value)
-    values ('event_capacity', v_config -> 'slots' ->> 'total')
-    on conflict (key) do update set value = excluded.value;
-  insert into app_config (key, value)
-    values ('registration_deadline', (v_config ->> 'registrationDeadline') || v_tz)
-    on conflict (key) do update set value = excluded.value;
-  insert into app_config (key, value)
-    values ('event_start', (v_config ->> 'start') || v_tz)
-    on conflict (key) do update set value = excluded.value;
+  perform scrie_scalarele_editiei(v_config);
 
   insert into admin_events (tip, detaliu)
   values ('config_restore', jsonb_build_object(
@@ -335,6 +348,20 @@ grant execute on function runlift.admin_get_event_config(uuid, integer) to anon,
 grant execute on function runlift.admin_save_event_config_draft(uuid, integer, jsonb) to anon, authenticated, service_role;
 grant execute on function runlift.admin_publish_event_config(uuid, integer) to anon, authenticated, service_role;
 grant execute on function runlift.admin_restore_event_config(uuid, uuid) to anon, authenticated, service_role;
+
+commit;
+
+-- ===========================================================================
+-- Seed-ul, ca TRANZACȚIE SEPARATĂ.
+--
+-- Deliberat în afara celei de mai sus, și așa a fost aplicat și în producție
+-- (migrare proprie: `runlift_event_config_seed_editia5`). Dacă garda anti-drift
+-- de mai jos crapă, vrem să pice DOAR seed-ul — schema și funcțiile rămân
+-- aplicate, iar drift-ul se rezolvă separat. Într-o singură tranzacție, un
+-- `seed_drift` ar fi șters și tabelul, ceea ce face migrarea greu de reluat.
+-- ===========================================================================
+
+begin;
 
 -- ---------------------------------------------------------------------------
 -- 6. Seed-ul ediției 5, transcris din `src/content/edition.ts`.

@@ -12,7 +12,7 @@ import { deriveEventStrings, type EventStrings } from '../content/format';
 import { deriveEditionDates, type EditionDates } from '../lib/config';
 import { fetchPublicConfig, isAbortError } from '../lib/supabase';
 import { getStoredToken, listEventConfig } from '../lib/adminApi';
-import { logClientError } from '../lib/monitoring';
+import { logClientError, setMonitoringEdition } from '../lib/monitoring';
 
 /**
  * Configurația ediției, la runtime.
@@ -78,6 +78,7 @@ export const EventConfigProvider = ({ children, override = null }: Props) => {
   useEffect(() => {
     if (override) {
       setConfig(override);
+      setMonitoringEdition(override.number);
       return;
     }
 
@@ -91,6 +92,10 @@ export const EventConfigProvider = ({ children, override = null }: Props) => {
           // e mai rea decât o ediție cu o publicare întârziere.
           if (!live) return;
           setConfig(live);
+          // Rapoartele de eroare trebuie să numească ediția SERVITĂ, nu pe cea
+          // din bundle — altfel, după o publicare, filtrarea logurilor pe ediția
+          // nouă nu găsește nimic, exact când e nevoie de ele.
+          setMonitoringEdition(live.number);
         })
         .catch((err) => {
           // Abort la refresh/unmount e normal. Restul lasă o urmă, dar pagina
