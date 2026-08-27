@@ -3,7 +3,7 @@
 Catalog al migrărilor care ating Run + Lift, cu granița clară față de aplicația vecină
 (gym-app + botul de Telegram) care împarte același proiect Supabase.
 
-Ultima actualizare: 4 august 2026.
+Ultima actualizare: 27 august 2026.
 
 ---
 
@@ -45,6 +45,9 @@ prefix `runlift_`:
 | 2026…      | `runlift_admin_events_and_edit` | runlift | Tabel `admin_events` (audit) + logare în auto-promovare; RPC `admin_list_events` (feed backoffice) + `admin_update_registration` (editare in-place, păstrează `created_at`). Vezi `supabase-migration-admin-events-edit.sql` |
 | 2026…      | `runlift_unsubscribe` | runlift | Dezabonare din emailurile în masă: `dezabonat_la` + `token_unsub` pe `registrations`/`launch_notifications`, RPC public `unsubscribe`, recipients (`edition2_recipients`/`waitlist_recipients`) exclud dezabonații + întorc `token_unsub`. Vezi `supabase-migration-unsubscribe.sql` |
 | 2026…      | `runlift_reminder_idempotent` | runlift | Reminder pre-eveniment idempotent: `broadcast_once` + `maybe_send_reminder` (fereastră de timp, server-only) + chei `event_start`/`reminder_offset_hours`. Armarea cron: `supabase-cron-reminder-ARM.sql` (manual). Vezi `supabase-migration-reminder-idempotent.sql` |
+| 20260827   | `runlift_event_config` | runlift | Configurarea ediției trece în DB: tabelul `event_config` (document `jsonb` per rând, stări `draft`/`published`/`superseded`, RLS fără politici), validarea `event_config_validate`, citirea publică `public_config()` și RPC-urile `admin_get_event_config` / `admin_save_event_config_draft` / `admin_publish_event_config` / `admin_restore_event_config`. Publicarea scrie în ACEEAȘI tranzacție cele cinci scalare din `app_config` citite de guard-uri — de aici încolo nu mai există desincronizare de aliniat manual. Vezi `supabase-migration-event-config.sql` |
+| 20260827   | `runlift_event_config_seed_editia5` | runlift | Seed-ul ediției 5 transcris din `src/content/edition.ts`, ca rând `published`. NU trece prin publicare: verifică întâi că scalarele din `app_config` sunt deja de acord cu documentul și crapă la nepotrivire (`seed_drift`). |
+| 20260827   | `runlift_event_config_validate_search_path` | runlift | `event_config_validate` primește `search_path` pinuit și apeluri `jsonb` calificate `pg_catalog`, ca restul funcțiilor din schemă. |
 | 20260825   | `runlift_soft_delete_registrations` | runlift | Ștergere logică pe `registrations` (`deleted_at`) + undo real (`admin_undelete_registration`, păstrează `id`/`created_at`) + gardă de capacitate pe `admin_add_registration` + jurnal de scrieri în `admin_events` (feed neplafonat). Indexul de unicitate devine PARȚIAL (`where deleted_at is null`), auto-promovarea trece de pe `AFTER DELETE` pe `AFTER UPDATE OF deleted_at`, iar `registrations_backup_sync` propagă `deleted_at` și pe ramura UPDATE. Vezi `supabase-migration-soft-delete-registrations.sql` |
 
 **Migrări ale altei aplicații** (schema `public`, gym-app + bot — **hands-off**):
