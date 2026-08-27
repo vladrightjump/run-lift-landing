@@ -463,8 +463,225 @@
   50%      { opacity: 0.72; transform: scale(1.06); }
 }
 
+/* ---- Secțiunea „Instagram" ----
+   Bandă full-bleed pe tonul adânc al paletei, cu o șină de carduri portret în
+   stânga și blocul de text în dreapta.
+
+   De ce șină cu scroll-snap și nu o grilă în trepte ca „Formatul": grila aia e
+   calibrată pe exact trei carduri, iar aici numărul de clipuri vine din admin.
+   Șina ține și unul, și șapte, fără recalibrare, iar pe mobil e chiar gestul
+   platformei de unde vin clipurile. Ca bonus, cele două secțiuni nu mai citesc
+   ca aceeași secțiune de două ori.
+
+   Banda NU e roșie ca referința: roșul e brandul de acolo. Pagina asta are un
+   accent (lime) și o temă (întunecată); o bandă roșie la mijlocul scroll-ului
+   ar citi ca alt site. Referința contribuie compoziția, nu paleta. */
+.e3-reels {
+  position: relative;
+  /* `hidden`, altfel cuvântul-fantomă (lat cât toată banda) împinge scroll
+     orizontal pe `<body>`. */
+  overflow: hidden;
+  padding: clamp(72px, 10vw, 120px) clamp(20px, 5vw, 40px);
+  border-bottom: 1px solid var(--e3-border);
+  background: var(--e3-bg-deep);
+}
+
+/* Cuvântul-fantomă. Același limbaj ca `.e3-step-idx`, la scara benzii: prezent
+   ca textură, nu ca text de citit. Unul singur — referința are trei suprapuse,
+   ceea ce devine zgomot. */
+.e3-reels-ghost {
+  position: absolute;
+  top: 4%;
+  left: -2%;
+  z-index: 0;
+  font-family: Anton, sans-serif;
+  font-size: clamp(56px, 13vw, 168px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--e3-accent);
+  /* Textură, nu text. Sub coloana din dreapta trece pe sub un paragraf care
+     trebuie citit, deci pragul e „se simte", nu „se citește". */
+  opacity: 0.045;
+  pointer-events: none;
+  user-select: none;
+}
+
+.e3-reels-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  gap: clamp(32px, 6vw, 88px);
+}
+
+/* Șina. `overflow-x` fără bară vizibilă: pe desktop cu 3 clipuri nu are ce
+   derula, iar bara ar desena o linie sub carduri degeaba. */
+.e3-reels-rail {
+  display: flex;
+  gap: clamp(14px, 2vw, 22px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* Spațiu pentru `translateY(-4px)` din `.e3-card:hover`, altfel hover-ul e
+     tăiat de marginea containerului care derulează. */
+  padding: 6px 0;
+  margin: -6px 0;
+  /* Marginea din dreapta se stinge, ca un card tăiat de capătul șinei să
+     citească drept „mai sunt”, nu drept card rupt. CSS-ul nu poate ști dacă
+     lista chiar depășește lățimea; o stingere permanentă pe ultimii 6% nu
+     strică nimic când nu depășește, pentru că acolo nu e niciun card. */
+  -webkit-mask-image: linear-gradient(to right, #000 94%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 94%, transparent 100%);
+}
+.e3-reels-rail::-webkit-scrollbar { display: none; }
+
+.e3-reels-item {
+  flex: 0 0 72vw;
+  margin: 0;
+  scroll-snap-align: start;
+}
+
+/* Cardul. Colțuri drepte ca tot restul paginii; `.e3-card` aduce suprafața,
+   bordura și hover-ul. */
+.e3-reel {
+  display: block;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  /* Resetul de `<button>`: fără el, UA-ul adaugă padding și bordură proprie. */
+  padding: 0;
+  border-radius: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.e3-reel-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* Fotografiile vin de pe Instagram, deci nu-s calibrate pentru paleta asta.
+     Le temperăm ca să stea în bandă; la hover își recapătă culoarea. */
+  filter: saturate(0.9) brightness(0.82);
+  transition: filter 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.e3-reel:hover .e3-reel-poster { filter: none; transform: scale(1.03); }
+
+/* Fără poster, cardul rămâne desenat, nu gol. */
+.e3-reel-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: Anton, sans-serif;
+  font-size: clamp(64px, 12vw, 104px);
+  line-height: 1;
+  color: var(--e3-text);
+  opacity: 0.07;
+  font-variant-numeric: tabular-nums;
+}
+
+.e3-reel-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding-left: 3px; /* triunghiul optic nu e centrat geometric */
+  background: var(--e3-accent);
+  color: var(--e3-bg);
+  font-size: 15px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease;
+}
+.e3-reel:hover .e3-reel-play {
+  background: var(--e3-accent-hover);
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+/* Cardul după click: iframe-ul Instagram, în locul façade-ului. Fundalul alb e
+   al lor și nu se poate stiliza — e cross-origin. */
+.e3-reel--live { background: #fff; border: 1px solid var(--e3-accent); }
+.e3-reel-frame { width: 100%; height: 100%; border: 0; display: block; }
+
+.e3-reel-caption {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--e3-muted-strong);
+  text-wrap: pretty;
+}
+/* Plasa de siguranță se repetă sub FIECARE card, deci nu poate fi strigată:
+   patru linkuri lime cu majuscule ar face din ea patru CTA-uri care concurează
+   cu înscrierea. Rămâne o linie de subsol — mereu prezentă, mereu focusabilă,
+   dar citită abia când o cauți. */
+.e3-reel-out {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--e3-muted-dim);
+  transition: color 0.2s ease;
+}
+.e3-reel-out:hover, .e3-reel-out:focus-visible { color: var(--e3-accent); }
+
+.e3-reels-body {
+  margin: 0 0 24px;
+  max-width: 46ch;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--e3-muted-strong);
+  text-wrap: pretty;
+}
+
+.e3-reels-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--e3-accent);
+}
+
+/* Peste 900px banda se așază ca în referință: media în stânga, text în dreapta,
+   cardurile decalate pe doi timpi. Sub prag rămâne o coloană cu TEXTUL PRIMUL —
+   o secțiune care începe cu imagini fără titlu nu se citește. */
+@media (min-width: 900px) {
+  .e3-reels-inner {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    align-items: center;
+  }
+  /* Calibrat ca trei carduri să încapă întregi în coloana de media, iar al
+     patrulea să se vadă pe jumătate: exact cât să spună că șina continuă. */
+  .e3-reels-item { flex-basis: clamp(164px, 16vw, 200px); }
+  /* Decalajul pe doi timpi, nu rampa în trei trepte a „Formatului”. */
+  .e3-reels-item:nth-child(2n) { margin-top: clamp(20px, 4vw, 52px); }
+  .e3-reels-text { position: sticky; top: 96px; }
+}
+
+/* Pe ecran mic un card și jumătate încap în lățime, iar o treaptă acolo arată
+   ca un bug de layout, nu ca ritm. */
+@media (max-width: 899px) {
+  .e3-reels-text { order: -1; }
+  .e3-reels-item { margin-top: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .e3-root *, .e3-cta-lg { animation: none !important; }
+  /* Cardurile rămân clicabile; dispar doar zoomul și virajul de culoare.
+     Butonul de play NU primește `transform: none` — centrarea lui ESTE un
+     transform, iar anularea l-ar muta în colț. Se anulează doar creșterea. */
+  .e3-reel-poster, .e3-reel-play { transition: none !important; }
+  .e3-reel:hover .e3-reel-poster { transform: none; filter: saturate(0.9) brightness(0.82); }
+  .e3-reel:hover .e3-reel-play { transform: translate(-50%, -50%); }
   /* Fără mișcare: ascundem clipul, rămâne fundalul întunecat + overlay. */
   .e3-hero-video { display: none; }
   /* Animațiile de scroll lasă elementele la starea finală, nu la cea inițială. */

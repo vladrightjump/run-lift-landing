@@ -19,6 +19,7 @@ import { RegistrationSection } from './landing/RegistrationSection';
 import { RegistrationOverlay } from './landing/RegistrationOverlay';
 import { SignupBanner } from './landing/SignupBanner';
 import { ParticipantsSection } from './landing/ParticipantsSection';
+import { ReelsSection } from './landing/ReelsSection';
 import { Footer } from './landing/Footer';
 
 type Props = {
@@ -53,7 +54,14 @@ export const Landing = ({ mode = 'full' }: Props) => {
   ];
   // Cheile necunoscute au căzut deja la parsare; aici rămâne doar filtrarea pe
   // vizibilitate, ca poziția din listă să dea numerotarea.
-  const sectiuniVizibile = layout.filter((s) => s.visible);
+  //
+  // „Instagram" cade și pe lipsa clipurilor, iar filtrarea trebuie făcută AICI,
+  // nu prin `return null` în componentă: numerotarea se derivă din poziția în
+  // lista asta, deci o secțiune care se randează gol ar lăsa un număr sărit
+  // (01, 03, 04) — exact ce evită filtrarea pe vizibilitate.
+  const sectiuniVizibile = layout.filter(
+    (s) => s.visible && (s.key !== 'reels' || config.reels.items.length > 0)
+  );
   const cd = useCountdown(EVENT_DATE);
   const { stats, refresh } = useStats();
   const now = useNow(30_000);
@@ -145,6 +153,8 @@ export const Landing = ({ mode = 'full' }: Props) => {
               return <RegistrationSection key={key} reg={reg} stats={stats} num={num} />;
             case 'participants':
               return <ParticipantsSection key={key} stats={stats} num={num} />;
+            case 'reels':
+              return <ReelsSection key={key} num={num} />;
             default:
               return null;
           }
