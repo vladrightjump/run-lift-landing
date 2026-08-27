@@ -1012,9 +1012,27 @@
   }
   .admin-mail-badge.trimis { border-color: #3A4A22; color: var(--e3-accent); }
   .admin-mail-badge.esuat { border-color: #3A2A2A; color: var(--e3-danger); }
+  /* Ceva e trimis, ceva încă lipsește — nici verde, nici roșu. */
+  .admin-mail-badge.partial { border-color: #4A3F22; color: var(--e3-warn, #f2b84b); }
   .admin-mail-badge.niciunul { cursor: default; }
   button.admin-mail-badge:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
   button.admin-mail-badge.niciunul:hover { border-color: var(--e3-border); color: var(--e3-muted-dim); }
+
+  /* ---- Fișa de acoperire (tab „Livrare") ---- */
+  .admin-acoperire { margin-bottom: 28px; }
+  .admin-acoperire .admin-hint {
+    font-size: 12px; color: var(--e3-muted-dim); margin: 4px 0 0; max-width: 68ch;
+  }
+  .admin-acoperire-table .admin-row {
+    display: grid; grid-template-columns: minmax(0, 2fr) repeat(auto-fit, minmax(90px, 1fr));
+    align-items: center; gap: 8px;
+  }
+  .admin-celula {
+    text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .admin-celula.trimis { color: var(--e3-accent); }
+  .admin-celula.esuat { color: var(--e3-danger); }
+  .admin-celula.lipsa { color: var(--e3-muted-dim); }
 
   /* ---- Tab Emailuri ---- */
   .admin-email {

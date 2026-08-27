@@ -4,6 +4,7 @@ import {
   addRegistration,
   updateRegistration,
   deleteRegistration,
+  undeleteRegistration,
   listRegistrations,
   listWaitlist,
   deleteWaitlist,
@@ -26,7 +27,15 @@ import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
-import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
+import { emailuriNelivrate, acoperire, COMUNICARI_EDITIE } from './deliveryLog';
+import type { StareCelula } from './deliveryLog';
+import { useAdminPolling } from './useAdminPolling';
+import {
+  isDuplicateError,
+  isTimeoutError,
+  isNetworkOrCspError,
+  sendConfirmationEmail,
+} from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
 import { CURRENT_EDITION, LAUNCH_DATE, TOTAL_SLOTS, WAITLIST_SLOTS } from '../lib/config';
@@ -54,8 +63,6 @@ type AdminToast = {
   undo?: () => void;
 };
 
-const REFRESH_MS = 15_000;
-
 const dateFmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short' });
 const formatDate = (iso: string): string => dateFmt.format(new Date(iso)).replace('.', '');
 
@@ -67,6 +74,62 @@ const eventFmt = new Intl.DateTimeFormat('ro-RO', {
   timeZone: 'Europe/Chisinau',
 });
 const formatEventTime = (iso: string): string => eventFmt.format(new Date(iso));
+
+/**
+ * Insigna din tabelul de participanți — cea mai PROASTĂ stare dintre comunicările
+ * datorate, nu cea mai recentă trimitere. Un eșec rămâne vizibil chiar dacă altă
+ * comunicare a plecat cu bine după el.
+ */
+const rezumaAcoperire = (
+  celule: Record<string, StareCelula>
+): { clasa: string; eticheta: string; detaliu: string } => {
+  const stari = COMUNICARI_EDITIE.map((c) => ({ com: c, stare: celule[c.cheie] ?? 'lipsa' }));
+  const detaliu = stari.map(({ com, stare }) => `${com.eticheta}: ${STARE_TEXT[stare]}`).join(' · ');
+  const esuate = stari.filter((s) => s.stare === 'esuat');
+  if (esuate.length) {
+    return {
+      clasa: 'esuat',
+      eticheta: `✕ ${esuate.map((s) => s.com.eticheta.toLowerCase()).join(', ')}`,
+      detaliu,
+    };
+  }
+  const lipsa = stari.filter((s) => s.stare === 'lipsa');
+  if (lipsa.length === stari.length) return { clasa: 'niciunul', eticheta: '— niciunul', detaliu };
+  if (lipsa.length) {
+    return {
+      clasa: 'partial',
+      eticheta: `${stari.length - lipsa.length}/${stari.length}`,
+      detaliu,
+    };
+  }
+  return { clasa: 'trimis', eticheta: '✓ complet', detaliu };
+};
+
+/**
+ * De ce n-a mers reversarea. Ambele cauze sunt reale și au apărut exact în
+ * fereastra dintre ștergere și undo: locul poate fi luat de auto-promovare, iar
+ * adresa poate fi re-înscrisă. Înainte, undo-ul trecea peste amândouă în tăcere.
+ */
+const motivUndoEsuat = (err: unknown, nume: string): string => {
+  // `SubmitHttpError.message` poartă corpul răspunsului, deci și numele excepției
+  // ridicate de RPC (`event_full`, `duplicate_email`).
+  const text = err instanceof Error ? err.message : String(err);
+  if (text.includes('event_full')) {
+    return `Locul lui ${nume} a fost ocupat între timp — ediția e plină. Șterge pe altcineva sau adaugă-l manual peste capacitate.`;
+  }
+  if (text.includes('duplicate_email')) {
+    return `Adresa lui ${nume} a fost re-înscrisă între timp, deci nu se mai poate readuce rândul vechi.`;
+  }
+  if (isTimeoutError(err)) return 'Serverul răspunde greu. Verifică lista și încearcă din nou.';
+  if (isNetworkOrCspError(err)) return 'Conexiune blocată sau indisponibilă. Reîncearcă.';
+  return 'Nu am putut anula ștergerea.';
+};
+
+const STARE_TEXT: Record<StareCelula, string> = {
+  trimis: 'trimis',
+  esuat: 'eșuat',
+  lipsa: 'lipsă',
+};
 
 export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [rows, setRows] = useState<AdminRegistration[] | null>(null);
@@ -89,7 +152,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane'
   >('participanti');
   const toastTimerRef = useRef<number | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const cd = useCountdown(LAUNCH_DATE);
 
   // Ediția pe care backendul o consideră curentă. Doar ea acceptă modificări:
@@ -138,37 +200,35 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
   useEffect(refreshEditions, [refreshEditions]);
 
-  const refresh = useCallback(() => {
+  const fetchAll = useCallback(
+    (signal: AbortSignal) => {
     // Fără ediție știută n-avem ce cere — așteptăm inventarul.
     if (editie === null) return;
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    listRegistrations(token, editie, controller.signal)
+    listRegistrations(token, editie, signal)
       .then((data) => {
         setRows(data);
         setLoadError(false);
       })
       .catch((err) => {
-        if (controller.signal.aborted || handleAuthError(err)) return;
+        if (signal.aborted || handleAuthError(err)) return;
         // Păstrăm ultima listă cunoscută; eroarea contează doar la primul load.
         setLoadError((prev) => prev || rowsRef.current === null);
       });
-    listWaitlist(token, editie, controller.signal)
+    listWaitlist(token, editie, signal)
       .then(setWaitlist)
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         handleAuthError(err);
       });
     // Corpul emailurilor doar când e chiar folosit (tab-ul „Livrare"); în rest
     // avem nevoie doar de status, pentru badge + coloana din tabelul de participanți.
-    listEmailLog(token, editie, tab === 'livrare', controller.signal)
+    listEmailLog(token, editie, tab === 'livrare', signal)
       .then(setEmailLog)
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         handleAuthError(err);
       });
-    listAdminEvents(token, controller.signal)
+    listAdminEvents(token, 200, signal)
       .then((data) => {
         // Primul load: marcăm tot ca „văzut" fără toast. Apoi anunțăm doar noutățile.
         if (seenEventsRef.current === null) {
@@ -188,10 +248,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         setEvents(data);
       })
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         handleAuthError(err);
       });
-  }, [token, editie, tab, handleAuthError, showToast]);
+    },
+    [token, editie, tab, handleAuthError, showToast]
+  );
+
+  const refresh = useAdminPolling(fetchAll);
 
   // Schimbarea ediției înseamnă alt set de date — golim ca să nu se vadă o clipă
   // lista ediției anterioare sub numărul nou.
@@ -211,20 +275,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     editiePrecedentaRef.current = editie;
   }, [editie]);
 
-  useEffect(() => {
-    refresh();
-    const id = window.setInterval(refresh, REFRESH_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener('visibilitychange', onVisible);
-      abortRef.current?.abort();
+  // Poll-ul stă în `useAdminPolling`; aici rămâne doar cronometrul toast-ului,
+  // care nu ține de ciclul de date.
+  useEffect(
+    () => () => {
       if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-    };
-  }, [refresh]);
+    },
+    []
+  );
 
   const all = rows ?? [];
   const q = query.trim().toLowerCase();
@@ -235,30 +293,22 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const percent = Math.round((all.length / TOTAL_SLOTS) * 100);
   const waitAll = waitlist ?? [];
 
-  // Ultimul email încercat pentru fiecare adresă — pentru indicatorul din tabel.
-  // `emailLog` vine cu cele mai noi primele, deci prima apariție e cea recentă.
-  const ultimulEmail = useMemo(() => {
-    const m = new Map<string, AdminEmailLogEntry>();
-    for (const e of emailLog ?? []) {
-      const k = e.email.toLowerCase();
-      if (!m.has(k)) m.set(k, e);
-    }
+  // Acoperirea per participant — pentru indicatorul din tabel.
+  //
+  // Înainte aici stătea „ultimul email", o hartă cheiată DOAR pe adresă: orice
+  // trimitere reușită ulterioară acoperea un eșec anterior, așa că o bifă verde
+  // putea coexista cu un reminder care n-a ajuns niciodată. Acum indicatorul
+  // citește aceeași fișă ca tabul „Livrare", pe comunicare, nu pe adresă.
+  const acoperirePerId = useMemo(() => {
+    const m = new Map<string, Record<string, StareCelula>>();
+    for (const r of acoperire(all, emailLog ?? [])) m.set(r.participant.id, r.celule);
     return m;
-  }, [emailLog]);
+  }, [all, emailLog]);
 
   // Câte emailuri au rămas nelivrate (ultima încercare per adresă+subiect e eșec)
-  // — badge-ul roșu de pe tabul „Livrare".
-  const nelivrate = useMemo(() => {
-    const vazute = new Set<string>();
-    let n = 0;
-    for (const e of emailLog ?? []) {
-      const k = `${e.email.toLowerCase()}|${e.subiect}`;
-      if (vazute.has(k)) continue;
-      vazute.add(k);
-      if (e.status === 'esuat') n++;
-    }
-    return n;
-  }, [emailLog]);
+  // — badge-ul roșu de pe tabul „Livrare". Aceeași logică pe care o consumă și
+  // tabul, din `deliveryLog.ts` — înainte era rescrisă aici, în paralel.
+  const nelivrate = useMemo(() => emailuriNelivrate(emailLog ?? []).length, [emailLog]);
 
   const handleCreateEdition = () => {
     if (creatingEdition) return;
@@ -317,15 +367,20 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         showToast({
           kind: 'error',
           msg: `${row.nume} a fost șters.`,
+          // Reversare, nu reinserare: același rând, deci același `created_at` și
+          // aceeași poziție în ordinea de promovare. Înainte, undo apela
+          // `addRegistration`, care sărea peste garda de capacitate și dădea
+          // rândului recreat un `created_at` nou.
           undo: () => {
-            addRegistration(token, { nume: row.nume, telefon: row.telefon, email: row.email })
+            undeleteRegistration(token, row.id)
               .then(() => {
                 refresh();
-                showToast({ kind: 'success', msg: `${row.nume} a fost readăugat.` });
+                showToast({ kind: 'success', msg: `${row.nume} a fost readus în listă.` });
               })
               .catch((err) => {
                 if (handleAuthError(err)) return;
-                showToast({ kind: 'error', msg: 'Nu am putut anula ștergerea.' });
+                refresh();
+                showToast({ kind: 'error', msg: motivUndoEsuat(err, row.nume) });
               });
           },
         });
@@ -368,10 +423,15 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       })
       .catch((err) => {
         if (handleAuthError(err)) return;
+        // Garda de capacitate stă acum pe server, nu doar în verificarea de mai
+        // sus: numărătoarea din client e mereu cu până la 15 secunde în urmă.
+        const text = err instanceof Error ? err.message : String(err);
         showToast({
           kind: 'error',
           msg: isDuplicateError(err)
             ? 'Există deja o înscriere cu acest email.'
+            : text.includes('event_full')
+            ? 'Ediția e plină — s-a ocupat ultimul loc între timp.'
             : 'Nu am putut salva. Încearcă din nou.',
         });
       })
@@ -529,6 +589,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             rows={all}
             waitlist={waitAll}
             editie={editie ?? CURRENT_EDITION}
+            emailLog={emailLog ?? []}
             readOnly={arhiva}
             formatDate={formatDate}
             showToast={showToast}
@@ -704,7 +765,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 {!arhiva && <span className="right">Acțiuni</span>}
               </div>
               {filtered.map((r, i) => {
-                const mail = ultimulEmail.get(r.email.toLowerCase());
+                const celule = acoperirePerId.get(r.id) ?? {};
+                const rezumat = rezumaAcoperire(celule);
                 return (
                 <div key={r.id} className="admin-row">
                   <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
@@ -719,17 +781,11 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   <span>
                     <button
                       type="button"
-                      className={`admin-mail-badge ${mail ? mail.status : 'niciunul'}`}
-                      title={
-                        mail
-                          ? `${mail.subiect} · ${formatEventTime(mail.created_at)}${
-                              mail.status === 'esuat' ? ` · ${mail.eroare ?? 'eșuat'}` : ''
-                            } — click pentru detalii`
-                          : 'Nu i s-a trimis niciun email pe ediția asta'
-                      }
+                      className={`admin-mail-badge ${rezumat.clasa}`}
+                      title={`${rezumat.detaliu} — click pentru fișa de acoperire`}
                       onClick={() => setTab('livrare')}
                     >
-                      {mail ? (mail.status === 'trimis' ? '✓ trimis' : '✕ nelivrat') : '— niciunul'}
+                      {rezumat.eticheta}
                     </button>
                   </span>
                   {!arhiva && (
