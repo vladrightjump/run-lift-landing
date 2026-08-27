@@ -313,3 +313,55 @@ describe('versiuni anterioare', () => {
     expect(screen.queryByText('Versiuni anterioare')).toBeNull();
   });
 });
+
+describe('clipurile din bandă', () => {
+  const adauga = async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
+  };
+
+  it('lipirea unui link umple codul și îl arată în ecou', async () => {
+    await adauga();
+    fireEvent.change(camp('Linkul clipului'), {
+      target: { value: 'https://www.instagram.com/reel/ABC12345/?igsh=xyz' },
+    });
+    expect(screen.getByText(/cod: ABC12345/)).toBeTruthy();
+  });
+
+  it('TASTAREA nu se autodistruge', async () => {
+    // Regresia păzită: câmpul era controlat de URL-ul RECOMPUS din codul
+    // parsat, iar la tastare fiecare caracter în parte e un URL invalid — deci
+    // câmpul se golea singur la prima literă și nu se putea scrie nimic în el.
+    await adauga();
+    const input = camp('Linkul clipului');
+
+    let text = '';
+    for (const ch of 'https://www.instagram.com/reel/ABC12345/') {
+      text += ch;
+      fireEvent.change(input, { target: { value: text } });
+      expect(camp('Linkul clipului').value).toBe(text);
+    }
+    expect(screen.getByText(/cod: ABC12345/)).toBeTruthy();
+  });
+
+  it('la ieșirea din câmp rămâne forma canonică, fără query-ul de tracking', async () => {
+    await adauga();
+    const input = camp('Linkul clipului');
+    fireEvent.change(input, {
+      target: { value: 'https://www.instagram.com/reels/ABC12345/?igsh=xyz' },
+    });
+    fireEvent.blur(input);
+    // `/reels/` s-a normalizat la `/reel/`, iar query-ul a dispărut.
+    expect(camp('Linkul clipului').value).toBe('https://www.instagram.com/reel/ABC12345/');
+  });
+
+  it('un link fără cod lasă rândul semnalat, nu publicabil', async () => {
+    await adauga();
+    fireEvent.change(camp('Linkul clipului'), {
+      target: { value: 'https://tiktok.com/@x/video/1' },
+    });
+    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
+  });
+});

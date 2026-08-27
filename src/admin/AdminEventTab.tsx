@@ -135,6 +135,27 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
     setCiorna((c) => (c ? { ...c, [cheie]: valoare } : c));
   };
 
+  /**
+   * Textul brut din câmpurile de link ale clipurilor, pe index.
+   *
+   * De ce nu se poate randa direct din `code`: câmpul ar fi controlat de o
+   * valoare RECOMPUSĂ din ce s-a parsat, iar la tastare (nu lipire) fiecare
+   * caracter în parte e un URL invalid — deci câmpul s-ar goli singur la prima
+   * literă. Ciorna primește codul; câmpul păstrează ce a scris omul.
+   *
+   * Se golește la orice schimbare de structură (adăugare, ștergere, mutare):
+   * rândurile sunt identificate prin index, iar altfel textul ar rămâne agățat
+   * de poziție, nu de clip.
+   */
+  const [linkBrut, setLinkBrut] = useState<Record<number, string>>({});
+  const seteazaReels = (items: EventConfig['reels']['items'], structural = false) => {
+    if (structural) setLinkBrut({});
+    setCiorna((c) => {
+      atinsa.current = true;
+      return c ? { ...c, reels: { ...c.reels, items } } : c;
+    });
+  };
+
   const porneste = () => {
     const baza = publicat;
     if (!baza) return;
@@ -682,21 +703,33 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                         autoComplete="off"
                         aria-invalid={eroareCod ? true : undefined}
                         placeholder="https://www.instagram.com/reel/ABC12345/"
-                        // Ce vede organizatorul e ce a lipit; ce stocăm e codul.
-                        // Cât timp câmpul are un cod valid, îl arătăm ca URL
-                        // canonic — așa se vede că l-am înțeles corect.
-                        value={r.code ? `https://www.instagram.com/${r.kind}/${r.code}/` : ''}
+                        // Textul brut cât timp se scrie; URL-ul canonic recompus
+                        // din cod după ce câmpul e părăsit. Așa tastarea nu se
+                        // autodistruge, iar la final se vede ce am înțeles.
+                        value={
+                          linkBrut[i] ??
+                          (r.code ? `https://www.instagram.com/${r.kind}/${r.code}/` : '')
+                        }
                         onChange={(e) => {
-                          const parsat = parseInstagramUrl(e.target.value);
-                          seteaza('reels', {
-                            ...ciorna.reels,
-                            items: parsat
+                          const text = e.target.value;
+                          setLinkBrut((m) => ({ ...m, [i]: text }));
+                          const parsat = parseInstagramUrl(text);
+                          seteazaReels(
+                            parsat
                               ? ciorna.reels.items.map((x, j) =>
                                   j === i ? { ...x, code: parsat.code, kind: parsat.kind } : x
                                 )
-                              : seteazaReel(ciorna.reels.items, i, 'code', ''),
-                          });
+                              : seteazaReel(ciorna.reels.items, i, 'code', '')
+                          );
                         }}
+                        onBlur={() =>
+                          // Ce a rămas în câmp după ce s-a extras codul nu mai
+                          // interesează: la ieșire arătăm forma canonică.
+                          setLinkBrut((m) => {
+                            const { [i]: _, ...rest } = m;
+                            return rest;
+                          })
+                        }
                       />
                       {eroareCod ? (
                         <span className="admin-config-eroare" role="alert">
@@ -719,10 +752,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                         placeholder="/reels/marti.jpg"
                         value={r.poster}
                         onChange={(e) =>
-                          seteaza('reels', {
-                            ...ciorna.reels,
-                            items: seteazaReel(ciorna.reels.items, i, 'poster', e.target.value),
-                          })
+                          seteazaReels(seteazaReel(ciorna.reels.items, i, 'poster', e.target.value))
                         }
                       />
 
@@ -735,10 +765,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                         placeholder="Marți dimineața, Râșcani"
                         value={r.caption}
                         onChange={(e) =>
-                          seteaza('reels', {
-                            ...ciorna.reels,
-                            items: seteazaReel(ciorna.reels.items, i, 'caption', e.target.value),
-                          })
+                          seteazaReels(seteazaReel(ciorna.reels.items, i, 'caption', e.target.value))
                         }
                       />
                     </div>
@@ -748,12 +775,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                         className="admin-btn-ghost"
                         disabled={i === 0}
                         aria-label={`Mută clipul ${i + 1} mai devreme`}
-                        onClick={() =>
-                          seteaza('reels', {
-                            ...ciorna.reels,
-                            items: mutaReel(ciorna.reels.items, i, -1),
-                          })
-                        }
+                        onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, -1), true)}
                       >
                         ↑
                       </button>
@@ -762,12 +784,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                         className="admin-btn-ghost"
                         disabled={i === ciorna.reels.items.length - 1}
                         aria-label={`Mută clipul ${i + 1} mai târziu`}
-                        onClick={() =>
-                          seteaza('reels', {
-                            ...ciorna.reels,
-                            items: mutaReel(ciorna.reels.items, i, 1),
-                          })
-                        }
+                        onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, 1), true)}
                       >
                         ↓
                       </button>
@@ -775,12 +792,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                         type="button"
                         className="admin-btn-ghost"
                         aria-label={`Șterge clipul ${i + 1}`}
-                        onClick={() =>
-                          seteaza('reels', {
-                            ...ciorna.reels,
-                            items: stergeReel(ciorna.reels.items, i),
-                          })
-                        }
+                        onClick={() => seteazaReels(stergeReel(ciorna.reels.items, i), true)}
                       >
                         Șterge
                       </button>
@@ -794,9 +806,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             type="button"
             className="admin-btn-ghost"
             disabled={ciorna.reels.items.length >= MAX_REELS}
-            onClick={() =>
-              seteaza('reels', { ...ciorna.reels, items: adaugaReel(ciorna.reels.items) })
-            }
+            onClick={() => seteazaReels(adaugaReel(ciorna.reels.items), true)}
           >
             + Adaugă clip
           </button>

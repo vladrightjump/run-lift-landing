@@ -99,8 +99,7 @@ export const AdminComingSoonTab = ({ token, onAuthError, showToast }: Props) => 
     // Cheia, nu obiectul: `useEventConfig` întoarce un obiect nou la fiecare
     // refresh de 15s, iar o dependență pe el ar rescrie câmpurile din care
     // tocmai edita cineva.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publicatKey]);
+  }, [publicatKey, publicat.showComingSoon, publicat.launchAt, publicat.nextEditionAt]);
 
   // Ciorna deschisă, dacă există: publicarea ei ulterioară ar suprascrie exact
   // cheile pe care le petice panoul ăsta. Vezi bannerul de mai jos.
