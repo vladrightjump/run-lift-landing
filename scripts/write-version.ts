@@ -45,6 +45,11 @@ const payload = {
   commit,
   builtAt: new Date().toISOString(),
   editie: EDITION.number,
+  // Mediul cu care s-a compilat bundle-ul. Îl ștampilăm ca să se poată VERIFICA
+  // de afară că mutarea de pe `*.vercel.app` pe domeniul evenimentului e activă:
+  // ea pornește doar pe 'production', iar fiind un redirect din JS, un `curl` pe
+  // pagină nu l-ar arăta. Aici se vede dintr-o cerere.
+  vercelEnv: process.env.VERCEL_ENV ?? 'development',
   meta: metaFields,
 };
 
