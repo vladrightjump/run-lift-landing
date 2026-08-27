@@ -24,6 +24,7 @@ import type {
 } from '../lib/adminApi';
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
+import { AdminEventTab } from './AdminEventTab';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
@@ -147,7 +148,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
   const [tab, setTab] = useState<
-    'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane'
+    'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane' | 'eveniment'
   >('participanti');
   const toastTimerRef = useRef<number | null>(null);
   // Ediția și capacitatea vin din configul PUBLICAT, nu din bundle: după ce
@@ -580,6 +581,13 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </button>
           <button
             type="button"
+            className={tab === 'eveniment' ? 'active' : ''}
+            onClick={() => setTab('eveniment')}
+          >
+            Eveniment
+          </button>
+          <button
+            type="button"
             className={tab === 'sabloane' ? 'active' : ''}
             onClick={() => setTab('sabloane')}
           >
@@ -612,6 +620,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             participanti={all}
             readOnly={arhiva}
             onRefresh={refresh}
+            showToast={showToast}
+          />
+        )}
+
+        {tab === 'eveniment' && (
+          <AdminEventTab
+            token={token}
+            onAuthError={handleAuthError}
             showToast={showToast}
           />
         )}

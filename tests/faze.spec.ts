@@ -200,3 +200,44 @@ test.describe('?preview bate ceasul', () => {
     await expect(page.locator('.cs-root')).toHaveCount(0);
   });
 });
+
+/**
+ * `?config=` și `?preview=` sunt DOUĂ axe, nu una.
+ *
+ * `?preview=` alege faza paginii; `?config=` alege documentul randat. Dacă ar fi
+ * fost aceeași cheie, cele două ar fi devenit exclusive și n-ai fi putut vedea
+ * cum arată o ciornă în dimineața cursei — exact repetiția pe care runbook-ul o
+ * cere („verifică-le seara dinainte"). Testele de aici păzesc compunerea.
+ */
+test.describe('previzualizarea ciornei se compune cu fazele zilei', () => {
+  const CONFIG_ROUTE = '**/rest/v1/rpc/public_config';
+
+  test('fără token, ?config=draft e inert — se vede tot configul publicat', async ({ page }) => {
+    let cerutPublic = false;
+    await page.route(CONFIG_ROUTE, (route: Route) => {
+      cerutPublic = true;
+      route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+    });
+
+    await fixClock(page, INAINTE);
+    await page.goto('/?config=draft&preview=landing');
+
+    // Pagina randează normal (pe instantaneu), iar ciorna nu e cerută nicăieri.
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    expect(cerutPublic).toBe(true);
+  });
+
+  test('?config=draft nu schimbă faza cerută de ?preview=', async ({ page }) => {
+    await page.route(CONFIG_ROUTE, (route: Route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: 'null' })
+    );
+
+    // Ceasul e înainte de fereastră, dar `?preview=leaderboard` bate ceasul —
+    // iar prezența lui `?config=draft` nu trebuie să anuleze asta.
+    await fixClock(page, INAINTE);
+    await page.goto('/?config=draft&preview=leaderboard');
+
+    await expect(page.getByText('Cine vine')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Rezervă-ți locul/i })).toHaveCount(0);
+  });
+});
