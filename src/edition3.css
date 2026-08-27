@@ -14,8 +14,13 @@
 
 /* ---- Grain ----
    Un strat fix de zgomot peste tot. Rupe plateul digital al fundalului fără să
-   adauge nicio culoare — e alb la 100% transparență, doar luminanță. */
-.e3-root::after {
+   adauge nicio culoare — e alb la 100% transparență, doar luminanță.
+
+   `.e3-grain` e aceeași textură ca utilitar de sine stătător, pentru paginile
+   care nu stau sub `.e3-root` (`/despre-noi` are propria rădăcină, `.dn-root`,
+   iar `.e3-root` i-ar impune și culoarea linkurilor). */
+.e3-root::after,
+.e3-grain::after {
   content: '';
   position: fixed; inset: 0; z-index: 1;
   pointer-events: none; opacity: 0.035;

@@ -1814,7 +1814,11 @@
 
   .dn-hero {
     position: relative; min-height: 82vh; display: flex; align-items: flex-end;
-    overflow: hidden; border-bottom: 1px solid var(--e3-border);
+    /* `clip`, nu `hidden`: taie la fel, dar nu creează container de scroll.
+       Cu `hidden`, `view(block)` din `.e3-hero-copy` s-ar lega de secțiune — un
+       scroller fără overflow — și parallaxul n-ar porni niciodată. Aceeași
+       capcană ca la hero-ul landing-ului. */
+    overflow: clip; border-bottom: 1px solid var(--e3-border);
   }
   .dn-hero-stripes {
     position: absolute; inset: 0;
@@ -1877,11 +1881,48 @@
   }
   .dn-story-text { margin: 0; font-size: 17px; line-height: 1.6; color: var(--e3-muted-strong); text-wrap: pretty; }
   .dn-values { display: grid; gap: 16px; }
+  /* Cardurile se ridică pe arc, ca pe landing (`--e3-spring`), și primesc
+     aceeași tentă lime la hover. Erau doar o schimbare de bordură — pe pagina
+     principală același card se ridică, se colorează și capătă umbră, deci cele
+     două pagini se simțeau ca două site-uri. */
   .dn-value-card {
     background: var(--e3-surface); border: 1px solid var(--e3-border); padding: 24px;
-    transition: border-color 0.25s ease, transform 0.25s ease;
   }
-  .dn-value-card:hover { border-color: var(--e3-accent); transform: translateY(-2px); }
+  /* Cardurile „cum arată un antrenament": aceleași declarații care erau inline
+     pe componentă. Mutate aici ca `:hover` să le poată bate — inline ar câștiga
+     la specificitate și tenta lime n-ar apărea niciodată (aceeași lecție ca la
+     `.e3-card`). Rămân fără fundal, ca înainte: pe pagina asta cartonașele cu
+     bordură simplă sunt convenția locală. */
+  .dn-step {
+    border: 1px solid var(--e3-border); padding: 28px 24px; display: grid; gap: 10px;
+  }
+  .dn-step-nr { font-family: Anton, sans-serif; font-size: 34px; color: var(--e3-accent); }
+  .dn-step-titlu {
+    font-family: Anton, sans-serif; font-size: 15px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .dn-step p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong); }
+
+  /* Ridicarea pe arc și tenta lime la hover — ca pe landing. Erau doar o
+     schimbare de bordură, deci aceleași carduri se simțeau ca alt site. */
+  .dn-value-card, .dn-step {
+    transition: background 0.25s var(--e3-spring), border-color 0.25s var(--e3-spring),
+                transform 0.25s var(--e3-spring), box-shadow 0.25s var(--e3-spring);
+  }
+  .dn-value-card:hover, .dn-step:hover {
+    background: var(--e3-surface-tint); border-color: var(--e3-accent);
+    transform: translateY(-4px); box-shadow: 0 14px 32px rgba(10,14,8,0.55);
+  }
+
+  /* Cartonașele de comunitate intră în cascadă, nu toate odată. `--i` vine
+     inline de la randare. */
+  .dn-stat {
+    animation: fade-up 0.5s ease-out both;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+  /* Rândurile de orar — accent la trecerea cursorului, ca `.e3-row` pe landing. */
+  .dn-orar-row { transition: background 0.2s ease, box-shadow 0.2s ease; }
+  .dn-orar-row:hover { background: var(--e3-surface-hover); box-shadow: inset 3px 0 0 var(--e3-accent); }
   .dn-value-title {
     font-family: Anton, sans-serif; font-size: 13px; color: var(--e3-accent);
     letter-spacing: 2px; margin-bottom: 8px;

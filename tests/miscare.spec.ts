@@ -373,6 +373,86 @@ test.describe('Mișcare — hover pe carduri', () => {
   });
 });
 
+/**
+ * `/despre-noi` are propria rădăcină (`.dn-root`) și propriul set de clase, deci
+ * nu moștenește nimic din stratul de mișcare al landing-ului doar pentru că
+ * trăiesc în același bundle. A rămas o dată în urmă exact așa: hero animat și
+ * nimic sub el. Testele de aici păzesc că cele două pagini se mișcă la fel.
+ */
+test.describe('Mișcare — pagina „Despre noi"', () => {
+  test('are aceleași efecte de scroll ca landing-ul', async ({ page }) => {
+    await page.goto('/despre-noi');
+    await settle(page);
+
+    await expect(page.locator('.e3-marquee-track')).toBeVisible();
+    // Titlurile de secțiune se dezvăluie prin mască, nu apar pur și simplu.
+    expect(await page.locator('.e3-title').count()).toBeGreaterThan(0);
+
+    // Bara de progres: `toBeVisible()` n-o vede la scroll 0, fiindcă e la
+    // `scaleX(0)`. Ce contează e că se umple pe măsură ce cobori.
+    await scrollTo(page, 900);
+    await expect
+      .poll(() => scaleX(page, '.e3-progress'), {
+        message: 'bara de progres nu s-a umplut',
+      })
+      .toBeGreaterThan(0.05);
+  });
+
+  test('titlurile de secțiune nu rămân tăiate de mască', async ({ page }) => {
+    await page.goto('/despre-noi');
+    await settle(page);
+    const titlu = page.locator('.e3-title').first();
+    await titlu.scrollIntoViewIfNeeded();
+    // Aceeași capcană ca pe landing: o mască prost calculată lasă textul
+    // retezat, iar `toBeVisible()` nu vede nimic în neregulă.
+    await expect(titlu).not.toHaveCSS('clip-path', 'inset(100% 0px 0px 0px)');
+  });
+
+  test('blocurile de sub fold ajung la opacity 1', async ({ page }) => {
+    await page.goto('/despre-noi');
+    await settle(page);
+    const blocuri = page.locator('[data-reveal]');
+    const n = await blocuri.count();
+    expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i++) {
+      await blocuri.nth(i).scrollIntoViewIfNeeded();
+      await expect(blocuri.nth(i)).toHaveCSS('opacity', '1', { timeout: 3000 });
+    }
+  });
+
+  test('cardurile primesc tentă lime la hover', async ({ page }) => {
+    await page.goto('/despre-noi');
+    await settle(page);
+    const card = page.locator('.dn-step').first();
+    await card.scrollIntoViewIfNeeded();
+    await expect.poll(() => translateY(page, '.dn-step')).toBe(0);
+    await expect
+      .poll(
+        async () => {
+          await card.hover();
+          const [r, g, b] = await rgbOf(page, '.dn-step', 'borderTopColor');
+          return g > 200 && r > 150 && b < 130;
+        },
+        { message: 'bordura nu a devenit lime la hover', timeout: 10_000 }
+      )
+      .toBe(true);
+  });
+
+  test('parallaxul din hero pornește', async ({ page }) => {
+    await page.goto('/despre-noi');
+    await settle(page);
+    // Regresie: `.dn-hero` trebuie să rămână pe `overflow: clip`. Pe `hidden`
+    // devine container de scroll fără overflow, iar `view(block)` nu avansează.
+    expect(await translateY(page, '.e3-hero-copy')).toBe(0);
+    await scrollTo(page, 500);
+    await expect
+      .poll(() => translateY(page, '.e3-hero-copy'), {
+        message: 'hero-ul nu s-a mișcat — timeline-ul de view nu e activ',
+      })
+      .toBeLessThan(-5);
+  });
+});
+
 test.describe('Mișcare — parallax în hero', () => {
   // Regresie: secțiunea hero trebuie să rămână pe `overflow: clip`. Pe
   // `overflow: hidden` devenea ea însăși container de scroll — unul fără
