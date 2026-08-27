@@ -6,6 +6,11 @@ import {
   comutaVizibilitatea,
   layoutComplet,
   cioarnaPentruEditiaUrmatoare,
+  parseInstagramUrl,
+  adaugaReel,
+  stergeReel,
+  mutaReel,
+  seteazaReel,
 } from '../../src/admin/eventConfigForm';
 import { SNAPSHOT_CONFIG, SECTION_KEYS, type EventConfig } from '../../src/content/eventConfig';
 
@@ -173,5 +178,108 @@ describe('ciorna ediției următoare', () => {
   it('păstrează locul și capacitatea, ca punct de plecare', () => {
     expect(ciorna.venue).toEqual(SNAPSHOT_CONFIG.venue);
     expect(ciorna.slots).toEqual(SNAPSHOT_CONFIG.slots);
+  });
+});
+
+describe('clipuri de Instagram — linkul lipit, nu codul scris de mână', () => {
+  it('extrage codul dintr-un link de reel, cu tot cu query-ul de share', () => {
+    expect(
+      parseInstagramUrl('https://www.instagram.com/reel/ABC12345/?igsh=MXY123abc')
+    ).toEqual({ code: 'ABC12345', kind: 'reel' });
+  });
+
+  it('„/reels/" (pluralul din share-ul de browser) se normalizează la „reel"', () => {
+    // Ruta de embed e la singular; pluralul ar da un iframe gol.
+    expect(parseInstagramUrl('https://instagram.com/reels/XYZ98765/')).toEqual({
+      code: 'XYZ98765',
+      kind: 'reel',
+    });
+  });
+
+  it('o postare rămâne postare — Instagram n-o servește pe ruta de reel', () => {
+    expect(parseInstagramUrl('https://www.instagram.com/p/QWE45678/')).toEqual({
+      code: 'QWE45678',
+      kind: 'p',
+    });
+  });
+
+  it('acceptă și un cod lipit direct', () => {
+    expect(parseInstagramUrl('  ABC12345  ')).toEqual({ code: 'ABC12345', kind: 'reel' });
+  });
+
+  it('respinge ce nu conține un cod', () => {
+    for (const gunoi of ['', '   ', 'https://tiktok.com/@x/video/123', 'abc', 'https://www.instagram.com/we_run_and_lift/']) {
+      expect(parseInstagramUrl(gunoi)).toBeNull();
+    }
+  });
+
+  it('ordinea din listă e ordinea din bandă, iar mutarea peste capăt nu face nimic', () => {
+    const items = [
+      { code: 'AAAAA1', kind: 'reel' as const, poster: '', caption: '' },
+      { code: 'BBBBB2', kind: 'reel' as const, poster: '', caption: '' },
+    ];
+    expect(mutaReel(items, 1, -1).map((r) => r.code)).toEqual(['BBBBB2', 'AAAAA1']);
+    expect(mutaReel(items, 0, -1)).toEqual(items);
+    expect(mutaReel(items, 1, 1)).toEqual(items);
+  });
+
+  it('adăugarea se oprește la plafon', () => {
+    let items = adaugaReel([]);
+    expect(items).toHaveLength(1);
+    for (let i = 0; i < 30; i++) items = adaugaReel(items);
+    expect(items).toHaveLength(12);
+  });
+
+  it('ștergerea și setarea ating doar rândul cerut', () => {
+    const items = [
+      { code: 'AAAAA1', kind: 'reel' as const, poster: '', caption: 'unu' },
+      { code: 'BBBBB2', kind: 'reel' as const, poster: '', caption: 'doi' },
+    ];
+    expect(stergeReel(items, 0).map((r) => r.code)).toEqual(['BBBBB2']);
+    const dupa = seteazaReel(items, 1, 'caption', 'schimbat');
+    expect(dupa[1].caption).toBe('schimbat');
+    expect(dupa[0]).toEqual(items[0]);
+  });
+});
+
+describe('validarea clipurilor oglindește serverul', () => {
+  const cuClipuri = (items: { code: string; kind: 'reel' | 'p'; poster: string; caption: string }[]) =>
+    campuri(cu({ reels: { ...SNAPSHOT_CONFIG.reels, items } }));
+
+  it('un cod gol e semnalat pe rândul lui', () => {
+    expect(cuClipuri([{ code: '', kind: 'reel', poster: '', caption: '' }])).toContain(
+      'reels.0.code'
+    );
+  });
+
+  it('același clip de două ori e semnalat', () => {
+    const dublu = { code: 'ABC12345', kind: 'reel' as const, poster: '', caption: '' };
+    expect(cuClipuri([dublu, { ...dublu }])).toContain('reels');
+  });
+
+  it('clipuri valide și distincte trec', () => {
+    expect(
+      cuClipuri([
+        { code: 'ABC12345', kind: 'reel', poster: '/reels/a.jpg', caption: 'a' },
+        { code: 'XYZ98765', kind: 'p', poster: '', caption: '' },
+      ])
+    ).toEqual([]);
+  });
+
+  it('un clip fără poster e doar avertisment, nu blocaj', () => {
+    const config = cu({
+      reels: {
+        ...SNAPSHOT_CONFIG.reels,
+        items: [{ code: 'ABC12345', kind: 'reel' as const, poster: '', caption: '' }],
+      },
+    });
+    expect(validateEventConfig(config)).toEqual([]);
+    expect(avertismenteEventConfig(config).some((a) => a.mesaj.includes('poster'))).toBe(true);
+  });
+
+  it('„Instagram" vizibilă fără clipuri NU avertizează — e starea implicită', () => {
+    // Un avertisment care pornește aprins e un avertisment pe care nimeni nu-l
+    // mai citește. Pagina ascunde secțiunea singură.
+    expect(avertismenteEventConfig(SNAPSHOT_CONFIG)).toEqual([]);
   });
 });

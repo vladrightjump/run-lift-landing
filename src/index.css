@@ -1187,6 +1187,20 @@
   }
   .admin-layout-list li.ascunsa .admin-layout-nr { color: var(--e3-muted-dim); }
   .admin-layout-nume { flex: 1; font-size: 14px; }
+
+  /* Clipurile din bandă. Trei câmpuri per rând, deci nu încap pe o linie ca
+     secțiunile: fiecare clip e un bloc, cu acțiunile în coloana din dreapta. */
+  .admin-reels-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+  .admin-reels-list li {
+    background: var(--e3-bg); border: 1px solid var(--e3-border); padding: 12px 14px;
+  }
+  .admin-reels-list li.invalid { border-color: var(--e3-danger); }
+  .admin-reels-rand { display: flex; align-items: flex-start; gap: 12px; }
+  .admin-reels-campuri { flex: 1; display: grid; gap: 4px; min-width: 0; }
+  .admin-reels-campuri input { width: 100%; }
+  /* Eticheta a doua și a treia au nevoie de aer față de câmpul de deasupra. */
+  .admin-reels-campuri .admin-config-eticheta:not(:first-child) { margin-top: 8px; }
+  .admin-reels-actiuni { display: grid; gap: 6px; }
   .admin-layout-list button { flex: none; padding: 6px 12px; font-size: 13px; }
   .admin-layout-list button:disabled { opacity: 0.35; cursor: not-allowed; }
   .admin-banner ul { margin: 8px 0 0; padding-left: 20px; }

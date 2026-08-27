@@ -7,7 +7,12 @@ import {
   restoreEventConfig,
   type AdminEventConfigRow,
 } from '../lib/adminApi';
-import { parseEventConfig, type EventConfig, type SectionKey } from '../content/eventConfig';
+import {
+  parseEventConfig,
+  MAX_REELS,
+  type EventConfig,
+  type SectionKey,
+} from '../content/eventConfig';
 import {
   validateEventConfig,
   avertismenteEventConfig,
@@ -15,6 +20,11 @@ import {
   comutaVizibilitatea,
   layoutComplet,
   cioarnaPentruEditiaUrmatoare,
+  parseInstagramUrl,
+  adaugaReel,
+  stergeReel,
+  mutaReel,
+  seteazaReel,
   type CampInvalid,
 } from './eventConfigForm';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
@@ -612,6 +622,184 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               )}
             </Camp>
           </Grup>
+
+          <Grup
+            titlu="Instagram"
+            ajutor="Clipurile din bandă. Lipești linkul din Instagram — codul se extrage singur."
+          >
+            <Camp
+              eticheta="Titlul secțiunii"
+              eroare={erori.get('reels.headline')}
+            >
+              {(p) => (
+                <input
+                  {...p}
+                  value={ciorna.reels.headline}
+                  onChange={(e) =>
+                    seteaza('reels', { ...ciorna.reels, headline: e.target.value })
+                  }
+                />
+              )}
+            </Camp>
+            <Camp
+              eticheta="Textul de lângă bandă"
+              ajutor="Două rânduri. Ce vede cineva care nu ne-a văzut niciodată alergând."
+            >
+              {(p) => (
+                <textarea
+                  {...p}
+                  rows={3}
+                  value={ciorna.reels.body}
+                  onChange={(e) => seteaza('reels', { ...ciorna.reels, body: e.target.value })}
+                />
+              )}
+            </Camp>
+          </Grup>
+
+          <h3>Clipurile din bandă</h3>
+          <p className="admin-config-hint">
+            Ordinea de aici e ordinea din bandă. Fără niciun clip, secțiunea nu apare pe pagină,
+            oricât ar fi de vizibilă în lista de mai jos.
+          </p>
+          {erori.get('reels') && (
+            <div className="admin-banner warn" role="status">
+              {erori.get('reels')}
+            </div>
+          )}
+          <ol className="admin-reels-list">
+            {ciorna.reels.items.map((r, i) => {
+              const eroareCod = erori.get(`reels.${i}.code`);
+              return (
+                <li key={i} className={eroareCod ? 'invalid' : ''}>
+                  <div className="admin-reels-rand">
+                    <span className="admin-layout-nr">{String(i + 1).padStart(2, '0')}</span>
+                    <div className="admin-reels-campuri">
+                      <label className="admin-config-eticheta" htmlFor={`reel-link-${i}`}>
+                        Linkul clipului
+                      </label>
+                      <input
+                        id={`reel-link-${i}`}
+                        autoComplete="off"
+                        aria-invalid={eroareCod ? true : undefined}
+                        placeholder="https://www.instagram.com/reel/ABC12345/"
+                        // Ce vede organizatorul e ce a lipit; ce stocăm e codul.
+                        // Cât timp câmpul are un cod valid, îl arătăm ca URL
+                        // canonic — așa se vede că l-am înțeles corect.
+                        value={r.code ? `https://www.instagram.com/${r.kind}/${r.code}/` : ''}
+                        onChange={(e) => {
+                          const parsat = parseInstagramUrl(e.target.value);
+                          seteaza('reels', {
+                            ...ciorna.reels,
+                            items: parsat
+                              ? ciorna.reels.items.map((x, j) =>
+                                  j === i ? { ...x, code: parsat.code, kind: parsat.kind } : x
+                                )
+                              : seteazaReel(ciorna.reels.items, i, 'code', ''),
+                          });
+                        }}
+                      />
+                      {eroareCod ? (
+                        <span className="admin-config-eroare" role="alert">
+                          {eroareCod}
+                        </span>
+                      ) : (
+                        r.code && (
+                          <span className="admin-config-ecou">
+                            cod: {r.code} · {r.kind === 'p' ? 'postare' : 'reel'}
+                          </span>
+                        )
+                      )}
+
+                      <label className="admin-config-eticheta" htmlFor={`reel-poster-${i}`}>
+                        Poster (opțional)
+                      </label>
+                      <input
+                        id={`reel-poster-${i}`}
+                        autoComplete="off"
+                        placeholder="/reels/marti.jpg"
+                        value={r.poster}
+                        onChange={(e) =>
+                          seteaza('reels', {
+                            ...ciorna.reels,
+                            items: seteazaReel(ciorna.reels.items, i, 'poster', e.target.value),
+                          })
+                        }
+                      />
+
+                      <label className="admin-config-eticheta" htmlFor={`reel-caption-${i}`}>
+                        Textul de sub card
+                      </label>
+                      <input
+                        id={`reel-caption-${i}`}
+                        autoComplete="off"
+                        placeholder="Marți dimineața, Râșcani"
+                        value={r.caption}
+                        onChange={(e) =>
+                          seteaza('reels', {
+                            ...ciorna.reels,
+                            items: seteazaReel(ciorna.reels.items, i, 'caption', e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="admin-reels-actiuni">
+                      <button
+                        type="button"
+                        className="admin-btn-ghost"
+                        disabled={i === 0}
+                        aria-label={`Mută clipul ${i + 1} mai devreme`}
+                        onClick={() =>
+                          seteaza('reels', {
+                            ...ciorna.reels,
+                            items: mutaReel(ciorna.reels.items, i, -1),
+                          })
+                        }
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-btn-ghost"
+                        disabled={i === ciorna.reels.items.length - 1}
+                        aria-label={`Mută clipul ${i + 1} mai târziu`}
+                        onClick={() =>
+                          seteaza('reels', {
+                            ...ciorna.reels,
+                            items: mutaReel(ciorna.reels.items, i, 1),
+                          })
+                        }
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-btn-ghost"
+                        aria-label={`Șterge clipul ${i + 1}`}
+                        onClick={() =>
+                          seteaza('reels', {
+                            ...ciorna.reels,
+                            items: stergeReel(ciorna.reels.items, i),
+                          })
+                        }
+                      >
+                        Șterge
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+          <button
+            type="button"
+            className="admin-btn-ghost"
+            disabled={ciorna.reels.items.length >= MAX_REELS}
+            onClick={() =>
+              seteaza('reels', { ...ciorna.reels, items: adaugaReel(ciorna.reels.items) })
+            }
+          >
+            + Adaugă clip
+          </button>
 
           <h3>Secțiunile paginii</h3>
           <p className="admin-config-hint">
