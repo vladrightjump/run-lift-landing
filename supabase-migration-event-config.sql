@@ -157,22 +157,31 @@ $function$;
 -- 4. RPC-urile de backoffice. Toate validează token-ul, ca restul admin-ului.
 -- ---------------------------------------------------------------------------
 
--- Ciorna + publicatul ediției cerute (implicit: ediția curentă).
+-- Tot ce-i trebuie backoffice-ului: ciorna, publicatul, istoricul.
+--
+-- ATENȚIE la ce NU face: nu filtrează pe ediție. Prima variantă filtra pe
+-- `editie = current_event_edition()` și astfel nu vedea ciorna ediției URMĂTOARE
+-- — care are, prin construcție, alt număr. Ciorna salvată dispărea din UI la
+-- reîncărcare, iar `?config=draft` cădea înapoi pe publicat, deci butonul
+-- „Previzualizează" nu arăta niciodată ciorna pentru care exista.
+--
+-- Tabelul crește cu un rând per publicare, deci nu e nimic de filtrat.
+-- `p_editie` rămâne în semnătură pentru compatibilitate, dar e ignorat.
 create or replace function runlift.admin_get_event_config(p_token uuid, p_editie integer default null)
 returns table(id uuid, editie smallint, config jsonb, status text, created_at timestamptz, published_at timestamptz)
 language plpgsql
 security definer
 set search_path to 'runlift'
 as $function$
-declare v_ed smallint;
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-  v_ed := coalesce(p_editie::smallint, current_event_edition());
   return query
     select c.id, c.editie, c.config, c.status, c.created_at, c.published_at
     from event_config c
-    where c.editie = v_ed or c.status = 'published'
-    order by c.status, c.published_at desc nulls last;
+    order by
+      case c.status when 'draft' then 0 when 'published' then 1 else 2 end,
+      c.published_at desc nulls last,
+      c.created_at desc;
 end;
 $function$;
 

@@ -85,6 +85,27 @@ describe('starea inițială', () => {
 });
 
 describe('ciorna pentru ediția următoare', () => {
+  it('o ciornă cu ALT număr decât ediția publicată e găsită și încărcată', async () => {
+    // Regresie: `admin_get_event_config` filtra pe ediția curentă, deci ciorna
+    // ediției următoare — care are prin construcție alt număr — era invizibilă.
+    // Ciorna salvată „dispărea" la reîncărcare și preview-ul cădea pe publicat.
+    listEventConfig.mockResolvedValue([
+      rand({
+        id: 'ciorna-6',
+        editie: SNAPSHOT_CONFIG.number + 1,
+        status: 'draft',
+        published_at: null,
+        config: { ...SNAPSHOT_CONFIG, number: SNAPSHOT_CONFIG.number + 1 },
+      }),
+      rand(),
+    ]);
+    randeaza();
+    // Formularul se deschide singur pe ciorna existentă, fără să apeși nimic.
+    await waitFor(() =>
+      expect(camp('Ediția evenimentului').value).toBe(String(SNAPSHOT_CONFIG.number + 1))
+    );
+  });
+
   it('pornește de la cea publicată, cu ediția incrementată', async () => {
     randeaza();
     fireEvent.click(
