@@ -8,12 +8,23 @@
 -- folosește cheia de service DOAR după ce a verificat token-ul Turnstile la
 -- Cloudflare (vezi supabase/functions/submit-form/index.ts).
 --
--- ATENȚIE — ordinea deploy-ului contează. Rulează migrarea DOAR DUPĂ ce:
---   1. funcția `submit-form` e deployată  (supabase functions deploy submit-form --no-verify-jwt)
---   2. secretul e pus                     (supabase secrets set TURNSTILE_SECRET_KEY=...)
---   3. frontendul nou e în producție      (altfel clienții vechi primesc 401 la înscriere)
--- Între pasul 3 și migrarea asta poate exista o fereastră în care ambele căi merg
--- — e intenționat, ca vizitatorii cu pagina veche deschisă în tab să nu pice.
+-- CUM SE APLICĂ: prin MCP `apply_migration`, cu numele `runlift_turnstile_lockdown`
+-- (convenția din `MIGRATIONS.md`, scrisă după ce PR-ul ăsta a fost deschis — de
+-- aceea runbook-ul vechi spunea „SQL Editor"). După DDL: adaugă rândul în tabelul
+-- din `MIGRATIONS.md` și rulează `get_advisors` (security), ca la orice migrare
+-- care atinge RLS.
+--
+-- ATENȚIE — ordinea deploy-ului contează. Rulează migrarea ULTIMA, DOAR DUPĂ ce:
+--   1. secretele sunt puse       (TURNSTILE_SECRET_KEY *și* RUNLIFT_SERVICE_KEY)
+--   2. funcția `submit-form` e deployată (--no-verify-jwt)
+--   3. cheia publică e în Vercel (Production) — înainte de merge, altfel garda
+--      din `scripts/check-deploy-config.ts` pică build-ul de producție
+--   4. PR-ul e merge-uit ȘI CI-ul a publicat frontendul. Merge-ul în `main` ESTE
+--      deploy-ul: `.github/workflows/ci-deploy.yml` apasă deploy hook-ul Vercel.
+--   5. o înscriere reală, cap-coadă, a trecut pe calea nouă
+-- Între pasul 4 și migrarea asta există o fereastră în care ambele căi merg — e
+-- intenționat, ca noul frontend să fie confirmat live înainte ca `submit-form` să
+-- rămână singura cale de scriere.
 --
 -- ROLLBACK: la finalul fișierului, comentat.
 --
@@ -36,7 +47,10 @@ revoke insert on runlift.launch_notifications from anon;
 
 commit;
 
--- Verificare (rulează separat, după commit) — ambele trebuie să dea 0 rânduri:
+-- Verificare (rulează separat, după commit) — ambele trebuie să dea 0 rânduri.
+-- Interogările NU numesc cele trei tabele: întreabă „mai poate `anon` insera
+-- ORIUNDE în runlift?". Dacă o migrare viitoare adaugă un tabel public cu
+-- politică de insert, vrem să apară aici, nu să treacă pe lângă listă.
 --
 --   select tablename, policyname from pg_policies
 --    where schemaname = 'runlift' and cmd = 'INSERT' and roles::text like '%anon%';
@@ -61,7 +75,23 @@ commit;
 --   • `public_stats`, `confirm_signup`, `unsubscribe` rămân apelabile din `anon`.
 --
 -- ---------------------------------------------------------------------------
--- ROLLBACK (dacă `submit-form` are probleme și vrei înapoi calea directă):
+-- ROLLBACK — DOI PAȘI, ÎN ORDINE. Blocul SQL singur NU repară nimic.
+--
+-- Pasul 1: întoarce frontendul. Bundle-ul livrat scrie DOAR prin `submit-form`
+-- (zero `fetch` spre /rest/v1/* din `src/`), deci re-acordarea insert-ului către
+-- `anon` redeschide gaura fără să repună niciun formular în funcțiune. Promovează
+-- în Vercel deployment-ul de producție dinaintea merge-ului — auto-deploy-ul git
+-- e dezactivat (`vercel.json`: git.deploymentEnabled.main = false), deci e o
+-- promovare manuală din dashboard, nu un push.
+--
+-- Pasul 2: abia apoi, SQL-ul de mai jos.
+--
+-- Politicile de mai jos sunt copiate din starea LIVE de la 28 aug 2026, nu din
+-- forma lor originală. Versiunea veche a acestui bloc recrea `with check (acord)`
+-- — adică forma de dinainte de `supabase-migration-server-assigned-edition.sql`,
+-- fără garda de ediție. Un rollback rulat așa ar fi reintrodus tăcut bug-ul „un
+-- tab vechi scrie în ediția greșită", și nimeni n-ar fi observat până la ediția
+-- următoare.
 --
 -- begin;
 -- grant insert on runlift.registrations        to anon;
@@ -69,10 +99,10 @@ commit;
 -- grant insert on runlift.launch_notifications to anon;
 --
 -- create policy "anon can register" on runlift.registrations
---   for insert to anon with check (acord);
+--   for insert to anon with check (acord and editie = runlift.current_event_edition());
 --
 -- create policy "anon insert waitlist" on runlift.event_waitlist
---   for insert to anon with check (acord = true);
+--   for insert to anon with check (acord = true and editie = runlift.current_event_edition());
 --
 -- create policy "anon can subscribe" on runlift.launch_notifications
 --   for insert to anon with check (
@@ -85,3 +115,11 @@ commit;
 --     and sursa = any (array['lansare', 'despre-noi'])
 --   );
 -- commit;
+--
+-- Verificare după rollback — trebuie să dea exact trei rânduri, cu `with_check`
+-- identic cu cel de mai sus:
+--
+--   select tablename, policyname, pg_get_expr(polwithcheck, polrelid)
+--     from pg_policy join pg_class c on c.oid = polrelid
+--     join pg_policies pp on pp.policyname = polname
+--    where pp.schemaname = 'runlift' and pp.cmd = 'INSERT';
