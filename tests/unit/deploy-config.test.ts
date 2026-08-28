@@ -3,7 +3,14 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { SUPABASE } from '../../src/lib/config';
-import { checkDeployConfig, currentSupabaseRef } from '../../src/lib/deployConfig';
+import {
+  checkDeployConfig,
+  checkTurnstileCsp,
+  currentSupabaseRef,
+  extractDirective,
+  TURNSTILE_ORIGIN,
+} from '../../src/lib/deployConfig';
+import type { VercelJson } from '../../src/lib/deployConfig';
 
 /**
  * Consistența configului de deploy — păzește regresia care a blocat înscrierile
@@ -119,6 +126,59 @@ describe('checkDeployConfig — detectează drift-ul', () => {
 
   it('currentSupabaseRef corespunde cu SUPABASE.url', () => {
     expect(SUPABASE.url).toContain(currentSupabaseRef());
+  });
+});
+
+describe('CSP pentru Turnstile', () => {
+  // Turnstile are nevoie de trei directive. Dacă lipsește vreuna, captcha pică
+  // TĂCUT în producție și nimeni nu se mai poate înscrie — exact tiparul
+  // regresiei din 4 august, de aceea îl prindem tot la build.
+  const cspCu = (value: string) =>
+    JSON.parse(
+      JSON.stringify({ headers: [{ headers: [{ key: 'Content-Security-Policy', value }] }] })
+    ) as VercelJson;
+
+  it('fișierele reale permit challenges.cloudflare.com în toate cele trei directive', () => {
+    const vercel = JSON.parse(realFiles().vercelJson) as VercelJson;
+    expect(checkTurnstileCsp(vercel)).toEqual([]);
+    for (const directive of ['script-src', 'frame-src', 'connect-src']) {
+      expect(extractDirective(vercel, directive)).toContain(TURNSTILE_ORIGIN);
+    }
+  });
+
+  it('raportează fiecare directivă care nu permite originul Turnstile', () => {
+    const problems = checkTurnstileCsp(
+      cspCu(`script-src 'self'; frame-src 'self'; connect-src 'self'`)
+    );
+    expect(problems).toHaveLength(3);
+    expect(problems.join('\n')).toContain(TURNSTILE_ORIGIN);
+  });
+
+  it('raportează și când o singură directivă a rămas în urmă', () => {
+    const problems = checkTurnstileCsp(
+      cspCu(
+        `script-src 'self' ${TURNSTILE_ORIGIN}; frame-src 'self'; connect-src 'self' ${TURNSTILE_ORIGIN}`
+      )
+    );
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('frame-src');
+  });
+
+  it('checkDeployConfig include verificarea Turnstile', () => {
+    const fara = JSON.stringify({
+      headers: [
+        {
+          headers: [
+            {
+              key: 'Content-Security-Policy',
+              value: `default-src 'self'; script-src 'self'; frame-src 'self'; connect-src 'self' ${SUPABASE.url}`,
+            },
+          ],
+        },
+      ],
+    });
+    const problems = checkDeployConfig({ vercelJson: fara, indexHtml: '<!doctype html>' });
+    expect(problems.join('\n')).toContain(TURNSTILE_ORIGIN);
   });
 });
 

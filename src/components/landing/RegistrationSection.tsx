@@ -55,7 +55,7 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
   const {
     waitlistMode, waitlistLeft, slots, isSoldOut, isWaitlistFull, showForm, closedReason,
     phase, errors, birthISO, dateErrMsg, confirmName, submittedAsWaitlist,
-    formRef, handleSubmit, clearErrorFor, setBirth, resetForm, setErrors, setPhase,
+    formRef, handleSubmit, clearErrorFor, setBirth, resetForm, setErrors, setPhase, hpProps,
   } = reg;
 
   // Contorul urcă spre valoarea reală în loc să sară de la „–". `null` cât
@@ -210,6 +210,9 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                   gap: 22,
                 }}
               >
+                {/* Capcană anti-bot: invizibilă pentru oameni, tentantă pentru
+                    scripturile care completează orice câmp. Verificată pe server. */}
+                <input type="text" {...hpProps} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 18 }}>
                   <label style={{ display: 'grid', gap: 8 }}>
                     <span style={label}>Nume complet *</span>

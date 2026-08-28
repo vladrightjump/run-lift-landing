@@ -5,7 +5,6 @@ import { useEventConfig, useEditionDates } from './useEventConfig';
 import {
   submitRegistration,
   submitWaitlist,
-  sendConfirmationEmail,
   isTimeoutError,
   isAbortError,
   isDuplicateError,
@@ -13,10 +12,13 @@ import {
   isEventFullError,
   isRegistrationClosedError,
   isNetworkOrCspError,
+  isBotRejectedError,
   SubmitHttpError,
 } from '../lib/supabase';
-import type { PublicStats } from '../lib/supabase';
+import type { AntiBot, PublicStats } from '../lib/supabase';
 import { logClientError } from '../lib/monitoring';
+import { useAntiBot, antiBotErrorMessage, ANTIBOT_MESSAGES } from '../lib/antiBot';
+import { isTurnstileError } from '../lib/turnstile';
 import { validate, errorMessage, firstErrorField, dataNasteriiError } from '../lib/validation';
 import type { FieldName, FieldErrors, FormData } from '../lib/validation';
 import { rememberMySignup } from '../lib/mySignups';
@@ -28,6 +30,26 @@ const MIN_LOADING_MS = 700;
 const SIM_LOADING_MS = 1800;
 const delay = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 const pad2 = (n: number | string) => String(n).padStart(2, '0');
+
+/**
+ * Mesajul pentru un submit eșuat. Stă aici, nu inline în `catch`, fiindcă sunt
+ * DOUĂ căi care pot pica din aceleași motive — înscrierea normală și comutarea
+ * automată pe lista de așteptare — iar când clasificarea era duplicată, a doua a
+ * rămas în urmă și dădea „Înscrierea nu a putut fi trimisă" pentru un captcha
+ * blocat.
+ */
+const mesajPentru = (err: unknown): string =>
+  isTimeoutError(err)
+    ? 'Serverul răspunde greu. Încearcă din nou.'
+    : isDuplicateError(err)
+    ? 'Există deja o înscriere cu acest email.'
+    : isTurnstileError(err)
+    ? antiBotErrorMessage(err)
+    : isBotRejectedError(err)
+    ? ANTIBOT_MESSAGES.captcha
+    : isNetworkOrCspError(err)
+    ? 'Conexiune blocată sau indisponibilă. Reîncearcă.'
+    : 'Înscrierea nu a putut fi trimisă.';
 
 type Params = {
   stats: PublicStats | null;
@@ -56,6 +78,7 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
 
   const formRef = useRef<HTMLFormElement>(null);
   const submittingRef = useRef(false);
+  const antiBot = useAntiBot();
   const timersRef = useRef<number[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -187,12 +210,26 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
 
     const controller = new AbortController();
     abortRef.current = controller;
+
+    // Token-ul Turnstile se cere ACUM, nu la montarea formularului: e de unică
+    // folosință și expiră în ~5 minute, deci unul luat mai devreme ar fi mort
+    // pentru cineva care completează pe îndelete.
+    let proofs: AntiBot;
+    try {
+      proofs = await antiBot.collect();
+    } catch (err) {
+      await enforceMin();
+      logClientError('antibot:registration', err);
+      finishError(antiBotErrorMessage(err));
+      return;
+    }
+
     try {
       if (asWaitlist) {
-        await submitWaitlist(data, controller.signal);
+        await submitWaitlist(data, proofs, controller.signal);
       } else {
-        const newId = await submitRegistration(data, controller.signal);
-        void sendConfirmationEmail(newId);
+        // Emailul de confirmare îl trimite funcția Edge, imediat după insert.
+        await submitRegistration(data, proofs, controller.signal);
       }
       await enforceMin();
       finishSuccess();
@@ -217,7 +254,8 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
       // a respins înscrierea. Comutăm automat pe lista de așteptare, dacă mai e loc.
       if (!asWaitlist && isEventFullError(err)) {
         try {
-          await submitWaitlist(data, controller.signal);
+          // Token nou: cel folosit la înscriere s-a consumat la prima cerere.
+          await submitWaitlist(data, await antiBot.collect(), controller.signal);
           finishSuccess(true);
           return;
         } catch (wlErr) {
@@ -233,21 +271,18 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
           logClientError('waitlist', wlErr, {
             status: wlErr instanceof SubmitHttpError ? wlErr.status : undefined,
           });
-          finishError('Înscrierea nu a putut fi trimisă.');
+          // Aceeași clasificare ca pe calea principală. Ramura asta își cere un
+          // token NOU (cel dintâi s-a consumat), deci poate pica din exact
+          // aceleași motive anti-bot — iar un mesaj generic ar trimite omul să
+          // reîncerce la nesfârșit în loc să-i spună să oprească blocantul.
+          finishError(mesajPentru(wlErr));
           return;
         }
       }
       logClientError(asWaitlist ? 'waitlist' : 'registration', err, {
         status: err instanceof SubmitHttpError ? err.status : undefined,
       });
-      const msg = isTimeoutError(err)
-        ? 'Serverul răspunde greu. Încearcă din nou.'
-        : isDuplicateError(err)
-        ? 'Există deja o înscriere cu acest email.'
-        : isNetworkOrCspError(err)
-        ? 'Conexiune blocată sau indisponibilă. Reîncearcă.'
-        : 'Înscrierea nu a putut fi trimisă.';
-      finishError(msg);
+      finishError(mesajPentru(err));
     }
   };
 
@@ -256,6 +291,9 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
     setBirth({ d: '', m: '', y: '' });
     setErrors({});
     setPhase('form');
+    // Cronometrul „timp pe formular" repornește: a doua înscriere din aceeași
+    // sesiune nu trebuie să pară instantanee doar fiindcă prima a durat.
+    antiBot.restart();
   };
 
   return {
@@ -280,5 +318,6 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
     handleSubmit,
     clearErrorFor,
     resetForm,
+    hpProps: antiBot.hpProps,
   };
 };

@@ -88,14 +88,31 @@ clar. Testat: cu `connect-src` greșit → `exit 1`; corect → `exit 0`. Vezi �
      `SUPABASE.url`; probabil `vercel.json` connect-src e desincronizat.
    - `[runlift:registration]` cu `status` → e răspuns HTTP (RLS/constraint/backend).
      Fără `status`, cu „Failed to fetch" → rețea sau CSP.
-2. Reproduce apelul direct (fără browser) ca să separi frontend de backend:
-   `curl -X POST "$SUPABASE_URL/rest/v1/registrations" -H "apikey: …" -H "Content-Profile: runlift" …`
-   → 201 înseamnă backend OK, deci problema e în client/CSP/deploy.
+2. Reproduce apelul direct (fără browser) ca să separi frontend de backend. Scrierile
+   publice trec prin funcția Edge, **nu** prin PostgREST (vezi `ANTI-BOT.md`):
+
+   ```bash
+   curl -s -w '\n%{http_code}\n' -X POST "$SUPABASE_URL/functions/v1/submit-form" \
+     -H "apikey: $SUPABASE_ANON_KEY" -H 'Content-Type: application/json' \
+     -d '{"mode":"launch","token":"","hp":"","elapsed":30000,"data":{}}'
+   ```
+
+   - **403 `captcha_failed`** → funcția e sus și verifică. Backend OK; problema e în
+     client/CSP/deploy sau în token-ul din browser.
+   - **400 `invalid:…`** → a trecut de captcha, deci verificarea NU se face (secret lipsă
+     sau greșit).
+   - **404** → funcția nu e deployată.
+
+   Un `POST /rest/v1/registrations` cu cheia publică răspunde acum **401/403 și așa
+   trebuie** — ăsta e lockdown-ul, nu o defecțiune. Nu-l folosi ca test de sănătate.
 3. Verifică ce e **live**: `curl -sI https://parktraining.fit | grep -i content-security-policy`
-   și confirmă `connect-src` == `SUPABASE.url`.
+   și confirmă că `connect-src` conține `SUPABASE.url`, iar `script-src`/`frame-src` conțin
+   `https://challenges.cloudflare.com` (fără ele captcha pică tăcut și nimeni nu se înscrie).
 4. Verifică ce **commit** rulează producția (Vercel dashboard / `vercel inspect`).
-   Dacă e un build vechi → redeploy (`vercel --prod`). Push-ul pe GitHub **nu
-   declanșează mereu** build automat.
+   Dacă e un build vechi, **nu** da `vercel --prod`: auto-deploy-ul git e dezactivat, iar
+   calea sancționată e `.github/workflows/ci-deploy.yml` (push în `main` → verify → deploy
+   hook → `check-live-deploy.mjs`). Re-rulează workflow-ul din GitHub Actions
+   (`workflow_dispatch`) sau promovează deployment-ul dorit din dashboard.
 
 ## Fișiere
 

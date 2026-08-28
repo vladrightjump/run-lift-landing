@@ -4,7 +4,8 @@ import { describe, it, expect, afterAll } from 'vitest';
  * Teste de integrare LIVE — lovesc backendul Supabase REAL (proiectul ironworks-gym,
  * schema `runlift`). NU rulează în CI-ul obișnuit și NU sunt incluse în `npm test`.
  * Sunt opt-in și verifică lucrul pe care testele mock-uite nu-l pot verifica:
- * că schema e expusă, RLS-ul permite insert-ul public, iar RPC-urile răspund.
+ * că schema e expusă, că lockdown-ul anti-bot chiar blochează scrierea directă
+ * din browser, iar RPC-urile răspund.
  *
  * Rulează:
  *   RUNLIFT_LIVE=1 \
@@ -13,9 +14,27 @@ import { describe, it, expect, afterAll } from 'vitest';
  *   SUPABASE_SERVICE_ROLE_KEY=eyJ... \
  *   npm run test:integration
  *
- * Siguranță:
- *  - Toate inserările folosesc o EDIȚIE DE TEST (`TEST_EDITION`), invizibilă în
- *    `public_stats` (care filtrează ediția curentă) — nu se amestecă cu datele reale.
+ * ⚠️ IZOLAREA PE EDIȚIE NU MAI FUNCȚIONEAZĂ PE `registrations` / `event_waitlist`.
+ *
+ * `TEST_EDITION` a fost gândit ca sertar separat, invizibil în `public_stats`. De
+ * când există trigger-ul `forteaza_editia_curenta` (runlift_forteaza_editia_la_insert),
+ * premisa e falsă: trigger-ul NU are gardă de rol și suprascrie `new.editie` cu
+ * ediția curentă la ORICE insert care nu setează `runlift.guard_bypass` — inclusiv
+ * cele făcute aici cu service_role prin PostgREST, fiindcă PostgREST nu setează
+ * acel GUC. Deci rândurile de test aterizează în EDIȚIA CURENTĂ: apar în
+ * `public_stats` și consumă din plafonul real cât ține rularea.
+ *
+ * Consecințe practice, până când cineva decide cum se izolează suita (ar trebui
+ * inserat printr-un helper SECURITY DEFINER care setează `guard_bypass`, ca
+ * `admin_add_registration`):
+ *  - NU rula suita în fereastra de înscrieri a unei ediții deschise.
+ *  - Cu ediția închisă (`registration_deadline` trecut), `registrations_guard_trg`
+ *    respinge oricum inserările în `registrations` — testele care depind de ele
+ *    vor pica din motive de ediție, nu de schemă.
+ *  - `launch_notifications` n-are trigger de ediție și nici plafon, deci acolo
+ *    izolarea prin `TEST_EDITION` chiar ține.
+ *
+ * Restul plaselor de siguranță:
  *  - Fiecare rulare are un prefix de email unic; `afterAll` șterge tot ce a creat,
  *    cu service_role (bypass RLS).
  *  - Emailurile NU se trimit: nu apelăm funcția edge în modurile care trimit.
@@ -27,6 +46,20 @@ const ANON = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const SCHEMA = process.env.DB_SCHEMA ?? 'runlift';
 const ready = LIVE && !!BASE && !!ANON && !!SERVICE;
+
+/**
+ * Două porți pentru etapele deploy-ului anti-bot (vezi `ANTI-BOT.md`).
+ *
+ * Fără ele suita nu poate fi verde nici înainte, nici după: testele care lovesc
+ * `submit-form` dau 404 până când funcția e deployată (U7 pasul 2), iar testul de
+ * lockdown TREBUIE să pice până când migrarea e aplicată (U7 pasul 5) — altfel
+ * n-ar măsura nimic. Le pornești pe rând, pe măsură ce deploy-ul avansează:
+ *
+ *   RUNLIFT_SUBMIT_FORM_DEPLOYED=1   după `supabase functions deploy submit-form`
+ *   RUNLIFT_LOCKDOWN_APPLIED=1       după `runlift_turnstile_lockdown`
+ */
+const submitFormDeployed = ready && process.env.RUNLIFT_SUBMIT_FORM_DEPLOYED === '1';
+const lockdownApplied = ready && process.env.RUNLIFT_LOCKDOWN_APPLIED === '1';
 
 // Ediții de test — mari (dar sub limita `smallint` = 32767, tipul coloanei `editie`),
 // ca să nu coincidă niciodată cu o ediție reală. `PROMO_EDITION` e separată, ca testul
@@ -65,11 +98,51 @@ afterAll(async () => {
 });
 
 describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
-  it('înscriere: insert anon în registrations (Content-Profile: runlift), citit cu service_role', async () => {
+  // TESTUL CARE CONTEAZĂ pentru protecția anti-bot: cheia publishable e vizibilă
+  // în bundle-ul JS, deci oricine o poate lua. Dacă vreuna dintre cererile de mai
+  // jos reușește, un bot poate insera fără să treacă prin captcha, iar Turnstile
+  // devine decorativ. Vezi `supabase-migration-turnstile-lockdown.sql`.
+  it.skipIf(!lockdownApplied)('lockdown: cheia publishable NU mai poate insera direct în niciun tabel public', async () => {
+    const tabele: Array<[string, Record<string, unknown>]> = [
+      [
+        'registrations',
+        { nume: 'ZZ Bot Reg', telefon: '+37360000900', email: emailFor('botreg'), acord: true },
+      ],
+      [
+        'event_waitlist',
+        { nume: 'ZZ Bot Wait', telefon: '+37360000901', email: emailFor('botwait'), acord: true },
+      ],
+      [
+        'launch_notifications',
+        {
+          nume: 'ZZ',
+          prenume: 'Bot',
+          email: emailFor('botlaunch'),
+          telefon: '+37360000902',
+          sursa: 'lansare',
+        },
+      ],
+    ];
+
+    for (const [tabel, rand] of tabele) {
+      const res = await fetch(`${BASE}/rest/v1/${tabel}`, {
+        method: 'POST',
+        headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+        body: JSON.stringify(rand),
+      });
+      expect([401, 403], `${tabel} a acceptat un insert anon (status ${res.status})`).toContain(
+        res.status
+      );
+    }
+  });
+
+  it('înscriere: insert cu service_role în registrations (Content-Profile: runlift)', async () => {
+    // Calea reală de scriere e funcția Edge `submit-form`, care folosește cheia de
+    // service. Aici verificăm că schema/coloanele/trigger-ele răspund pe acea cale.
     const email = emailFor('reg');
     const res = await fetch(`${BASE}/rest/v1/registrations`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body: JSON.stringify({
         nume: 'ZZ Live Test',
         telefon: '+37360000000',
@@ -81,14 +154,63 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     });
     expect(res.status).toBe(201);
 
-    // RLS blochează citirea pentru anon → verificăm cu service_role.
     const check = await fetch(
       `${BASE}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}&select=email,editie`,
       { headers: serviceHeaders({ 'Accept-Profile': SCHEMA }) }
     );
     const rows = (await check.json()) as Array<{ email: string; editie: number }>;
     expect(rows).toHaveLength(1);
-    expect(rows[0].editie).toBe(TEST_EDITION);
+    // NU `TEST_EDITION`: `forteaza_editia_curenta` a suprascris valoarea trimisă
+    // (vezi avertismentul din capul fișierului). Ce se verifică aici e că insert-ul
+    // pe calea service_role funcționează și că ediția o pune serverul — adică exact
+    // proprietatea pe care se bazează `submit-form` după lockdown.
+    expect(rows[0].editie).not.toBe(TEST_EDITION);
+    expect(typeof rows[0].editie).toBe('number');
+  });
+
+  it.skipIf(!submitFormDeployed)('submit-form respinge capcana completată, fără să scrie nimic', async () => {
+    // Filtru ieftin, înaintea apelului la Cloudflare. Nu depinde de configurarea
+    // Turnstile, deci e sigur de rulat pe orice mediu.
+    const email = emailFor('honeypot');
+    const res = await fetch(`${BASE}/functions/v1/submit-form`, {
+      method: 'POST',
+      headers: anonHeaders(),
+      body: JSON.stringify({
+        mode: 'launch',
+        token: 'x',
+        hp: 'http://spam.example',
+        elapsed: 30_000,
+        data: { nume: 'ZZ', prenume: 'Bot', email, telefon: '+37360000903', sursa: 'lansare' },
+      }),
+    });
+    expect(res.status).toBe(400);
+
+    const check = await fetch(
+      `${BASE}/rest/v1/launch_notifications?email=eq.${encodeURIComponent(email)}&select=email`,
+      { headers: serviceHeaders({ 'Accept-Profile': SCHEMA }) }
+    );
+    expect(await check.json()).toHaveLength(0);
+  });
+
+  it.skipIf(!submitFormDeployed)('submit-form respinge submit-ul instantaneu (sub 3 secunde pe formular)', async () => {
+    const res = await fetch(`${BASE}/functions/v1/submit-form`, {
+      method: 'POST',
+      headers: anonHeaders(),
+      body: JSON.stringify({
+        mode: 'launch',
+        token: 'x',
+        hp: '',
+        elapsed: 120,
+        data: {
+          nume: 'ZZ',
+          prenume: 'Rapid',
+          email: emailFor('fast'),
+          telefon: '+37360000904',
+          sursa: 'lansare',
+        },
+      }),
+    });
+    expect(res.status).toBe(400);
   });
 
   it('duplicat: al doilea insert cu același email+ediție dă 409', async () => {
@@ -102,22 +224,24 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     });
     const first = await fetch(`${BASE}/rest/v1/registrations`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body,
     });
     expect(first.status).toBe(201);
     const second = await fetch(`${BASE}/rest/v1/registrations`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body,
     });
+    // 409 e statusul pe care `submit-form` îl propagă neschimbat spre client,
+    // ca `isDuplicateError` din UI să continue să funcționeze.
     expect(second.status).toBe(409);
   });
 
-  it('listă de așteptare: insert anon în event_waitlist', async () => {
+  it('listă de așteptare: insert cu service_role în event_waitlist', async () => {
     const res = await fetch(`${BASE}/rest/v1/event_waitlist`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body: JSON.stringify({
         nume: 'ZZ Live Waitlist',
         telefon: '+37360000002',
@@ -186,10 +310,10 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     expect(wlRows).toHaveLength(0);
   });
 
-  it('„Anunță-mă": insert anon în launch_notifications (ediția o pune serverul)', async () => {
+  it('„Anunță-mă": insert cu service_role în launch_notifications (ediția o pune serverul)', async () => {
     const res = await fetch(`${BASE}/rest/v1/launch_notifications`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       body: JSON.stringify({
         nume: 'ZZ Live',
         prenume: 'Test',
@@ -276,9 +400,15 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
    */
   it('un insert public cu ediție stale e corectat, nu respins', async () => {
     const email = emailFor('editiestale');
+    // Cu service_role, nu cu cheia anon: după lockdown calea anon nu mai există,
+    // iar PostgREST ar răspunde 401 — testul ar deveni fie roșu, fie vacuu prin
+    // ramura de scăpare de mai jos. Proprietatea se păstrează neatinsă, fiindcă
+    // `forteaza_editia_curenta` NU are gardă de rol: se aplică oricărei scrieri
+    // care nu setează `runlift.guard_bypass`, inclusiv celei făcute de
+    // `submit-form`. Exact ăsta e stratul pe care ne bazăm acum.
     const res = await fetch(`${BASE}/rest/v1/registrations`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       // 30002 nu e o ediție reală — dacă ar ajunge în tabel, trigger-ul n-a rulat.
       body: JSON.stringify({
         nume: 'Live Stale',

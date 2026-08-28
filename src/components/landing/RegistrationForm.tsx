@@ -78,7 +78,7 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
   const {
     waitlistMode, waitlistLeft, slots, isSoldOut, isWaitlistFull, showForm, closedReason,
     phase, errors, birthISO, dateErrMsg, confirmName, submittedAsWaitlist,
-    formRef, handleSubmit, clearErrorFor, setBirth, resetForm, setErrors, setPhase,
+    formRef, handleSubmit, clearErrorFor, setBirth, resetForm, setErrors, setPhase, hpProps,
   } = reg;
 
   const firstFieldRef = useRef<HTMLInputElement>(null);
@@ -163,6 +163,12 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
             gap: 18,
           }}
         >
+          {/* Capcană anti-bot: invizibilă pentru oameni, tentantă pentru
+              scripturile care completează orice câmp. Verificată pe server.
+              Formularul ăsta e montat de DOUĂ ori — pagina /inscriere și
+              overlay-ul de pe landing — deci fără linia asta două din cele
+              cinci suprafețe publice ar trimite fără capcană. */}
+          <input type="text" {...hpProps} />
           <label style={{ display: 'grid', gap: 8 }}>
             <span style={label}>Nume complet *</span>
             <input

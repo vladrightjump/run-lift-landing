@@ -21,14 +21,40 @@ export type VercelJson = {
 export const currentSupabaseRef = (): string =>
   new URL(SUPABASE.url).hostname.split('.')[0];
 
-/** Extrage conținutul directivei `connect-src` din headerul CSP al `vercel.json`. */
-export const extractConnectSrc = (vercel: VercelJson): string => {
+/** Extrage conținutul unei directive CSP (ex. `connect-src`) din `vercel.json`. */
+export const extractDirective = (vercel: VercelJson, name: string): string => {
   const all = (vercel.headers ?? []).flatMap((h) => h.headers ?? []);
   const csp = all.find((h) => h.key.toLowerCase() === 'content-security-policy');
   if (!csp) throw new Error('vercel.json: lipsește headerul Content-Security-Policy');
-  const match = /connect-src([^;]*)/i.exec(csp.value);
-  if (!match) throw new Error('CSP: lipsește directiva connect-src');
+  const match = new RegExp(`${name}([^;]*)`, 'i').exec(csp.value);
+  if (!match) throw new Error(`CSP: lipsește directiva ${name}`);
   return match[1];
+};
+
+export const extractConnectSrc = (vercel: VercelJson): string =>
+  extractDirective(vercel, 'connect-src');
+
+/** Originul de la care se încarcă widgetul Turnstile și se face challenge-ul. */
+export const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com';
+
+/**
+ * Turnstile are nevoie de trei directive CSP: `script-src` (api.js), `frame-src`
+ * (iframe-ul de challenge) și `connect-src` (telemetria widgetului). Dacă lipsește
+ * vreuna, captcha pică TĂCUT în producție și nimeni nu se mai poate înscrie — exact
+ * tiparul regresiei din 4 august, de aceea îl prindem tot la build.
+ */
+export const checkTurnstileCsp = (vercel: VercelJson): string[] => {
+  const problems: string[] = [];
+  for (const directive of ['script-src', 'frame-src', 'connect-src']) {
+    try {
+      if (!extractDirective(vercel, directive).includes(TURNSTILE_ORIGIN)) {
+        problems.push(`CSP ${directive} nu permite ${TURNSTILE_ORIGIN} (necesar pentru Turnstile)`);
+      }
+    } catch (e) {
+      problems.push((e as Error).message);
+    }
+  }
+  return problems;
 };
 
 const SUPABASE_REF_RE = /([a-z0-9]{20})\.supabase\.co/g;
@@ -70,6 +96,12 @@ export const checkDeployConfig = (files: { vercelJson: string; indexHtml: string
   };
   if (connectSrc) stale('CSP connect-src', connectSrc);
   stale('index.html', files.indexHtml);
+
+  try {
+    problems.push(...checkTurnstileCsp(JSON.parse(files.vercelJson) as VercelJson));
+  } catch {
+    // JSON invalid — deja raportat mai sus de extractConnectSrc.
+  }
 
   return problems;
 };

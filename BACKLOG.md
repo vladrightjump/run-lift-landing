@@ -8,8 +8,9 @@ Ultima actualizare: 4 august 2026.
 ## Securitate / legal (înainte de creștere)
 - [ ] **Politică de confidențialitate (GDPR)** — colectezi nume, telefon, dată naștere. Necesară legal.
 - [ ] **Pagină `/regulament`** — checkbox-ul de acord trimite la un regulament care nu există scris.
-- [ ] **Turnstile (captcha invizibil)** pe formularele de înscriere + „Anunță-mă" — oprește
-      insert-urile bot cu cheia publică. Gratuit, ~1h.
+- [x] **Turnstile (captcha invizibil)** pe formularele de înscriere + „Anunță-mă" — făcut.
+      Nu era suficient widgetul: insert-ul direct din browser a fost închis (RLS) și mutat în
+      funcția Edge `submit-form`, care verifică token-ul la Cloudflare. Vezi **`ANTI-BOT.md`**.
 - [ ] **`npm audit`** periodic — confirmă că vulnerabilitățile rămân doar în devDependencies.
 
 ## Conversie (înainte de eveniment)

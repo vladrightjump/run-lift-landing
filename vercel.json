@@ -6,11 +6,26 @@
     }
   },
   "rewrites": [
-    { "source": "/admin", "destination": "/index.html" },
-    { "source": "/despre-noi", "destination": "/index.html" },
-    { "source": "/confirmare", "destination": "/index.html" },
-    { "source": "/inscriere", "destination": "/index.html" },
-    { "source": "/unsubscribe", "destination": "/index.html" }
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/despre-noi",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/confirmare",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/inscriere",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/unsubscribe",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
@@ -18,7 +33,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-src https://maps.google.com https://www.google.com https://www.instagram.com; connect-src 'self' https://whyndrjcezmtajbykeil.supabase.co; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-src https://challenges.cloudflare.com https://maps.google.com https://www.google.com https://www.instagram.com; connect-src 'self' https://whyndrjcezmtajbykeil.supabase.co https://challenges.cloudflare.com; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
         },
         {
           "key": "X-Content-Type-Options",

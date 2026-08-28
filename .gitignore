@@ -21,3 +21,6 @@ maps_embed_check.png
 form-*.png
 cs-*.png
 prod-*.png
+
+# Supabase CLI (artefacte locale)
+supabase/.temp/
