@@ -29,6 +29,20 @@ const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const SCHEMA = process.env.DB_SCHEMA ?? 'runlift';
 const ready = LIVE && !!BASE && !!ANON && !!SERVICE;
 
+/**
+ * Două porți pentru etapele deploy-ului anti-bot (vezi `ANTI-BOT.md`).
+ *
+ * Fără ele suita nu poate fi verde nici înainte, nici după: testele care lovesc
+ * `submit-form` dau 404 până când funcția e deployată (U7 pasul 2), iar testul de
+ * lockdown TREBUIE să pice până când migrarea e aplicată (U7 pasul 5) — altfel
+ * n-ar măsura nimic. Le pornești pe rând, pe măsură ce deploy-ul avansează:
+ *
+ *   RUNLIFT_SUBMIT_FORM_DEPLOYED=1   după `supabase functions deploy submit-form`
+ *   RUNLIFT_LOCKDOWN_APPLIED=1       după `runlift_turnstile_lockdown`
+ */
+const submitFormDeployed = ready && process.env.RUNLIFT_SUBMIT_FORM_DEPLOYED === '1';
+const lockdownApplied = ready && process.env.RUNLIFT_LOCKDOWN_APPLIED === '1';
+
 // Ediții de test — mari (dar sub limita `smallint` = 32767, tipul coloanei `editie`),
 // ca să nu coincidă niciodată cu o ediție reală. `PROMO_EDITION` e separată, ca testul
 // de auto-promovare să nu fie perturbat de rândurile de waitlist din alte teste.
@@ -70,7 +84,7 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
   // în bundle-ul JS, deci oricine o poate lua. Dacă vreuna dintre cererile de mai
   // jos reușește, un bot poate insera fără să treacă prin captcha, iar Turnstile
   // devine decorativ. Vezi `supabase-migration-turnstile-lockdown.sql`.
-  it('lockdown: cheia publishable NU mai poate insera direct în niciun tabel public', async () => {
+  it.skipIf(!lockdownApplied)('lockdown: cheia publishable NU mai poate insera direct în niciun tabel public', async () => {
     const tabele: Array<[string, Record<string, unknown>]> = [
       [
         'registrations',
@@ -131,7 +145,7 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     expect(rows[0].editie).toBe(TEST_EDITION);
   });
 
-  it('submit-form respinge capcana completată, fără să scrie nimic', async () => {
+  it.skipIf(!submitFormDeployed)('submit-form respinge capcana completată, fără să scrie nimic', async () => {
     // Filtru ieftin, înaintea apelului la Cloudflare. Nu depinde de configurarea
     // Turnstile, deci e sigur de rulat pe orice mediu.
     const email = emailFor('honeypot');
@@ -155,7 +169,7 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     expect(await check.json()).toHaveLength(0);
   });
 
-  it('submit-form respinge submit-ul instantaneu (sub 3 secunde pe formular)', async () => {
+  it.skipIf(!submitFormDeployed)('submit-form respinge submit-ul instantaneu (sub 3 secunde pe formular)', async () => {
     const res = await fetch(`${BASE}/functions/v1/submit-form`, {
       method: 'POST',
       headers: anonHeaders(),
@@ -363,9 +377,15 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
    */
   it('un insert public cu ediție stale e corectat, nu respins', async () => {
     const email = emailFor('editiestale');
+    // Cu service_role, nu cu cheia anon: după lockdown calea anon nu mai există,
+    // iar PostgREST ar răspunde 401 — testul ar deveni fie roșu, fie vacuu prin
+    // ramura de scăpare de mai jos. Proprietatea se păstrează neatinsă, fiindcă
+    // `forteaza_editia_curenta` NU are gardă de rol: se aplică oricărei scrieri
+    // care nu setează `runlift.guard_bypass`, inclusiv celei făcute de
+    // `submit-form`. Exact ăsta e stratul pe care ne bazăm acum.
     const res = await fetch(`${BASE}/rest/v1/registrations`, {
       method: 'POST',
-      headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
       // 30002 nu e o ediție reală — dacă ar ajunge în tabel, trigger-ul n-a rulat.
       body: JSON.stringify({
         nume: 'Live Stale',

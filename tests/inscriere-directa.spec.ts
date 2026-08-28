@@ -11,8 +11,21 @@ import type { Page, Route } from '@playwright/test';
  */
 
 const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
-const REG_ROUTE = '**/rest/v1/registrations';
+// Browserul nu mai scrie direct în PostgREST: toate formularele publice trec
+// prin funcția Edge, care verifică Turnstile înainte de insert. Fișierul ăsta a
+// apărut pe `main` DUPĂ ce PR-ul anti-bot fusese scris, deci merge-ul l-a lăsat
+// în pace și mock-urile lui vizau un endpoint mort.
+const REG_ROUTE = '**/functions/v1/submit-form';
 const EMAIL_ROUTE = '**/functions/v1/send-email';
+
+/** Plicul trimis către `submit-form`: { mode, token, hp, elapsed, data }. */
+type Plic = {
+  mode: string;
+  token: string;
+  hp: string;
+  elapsed: number;
+  data: Record<string, unknown>;
+};
 
 const fixClock = (page: Page) =>
   page.addInitScript(() => {
@@ -63,12 +76,10 @@ test.describe('/inscriere — pagina cu link direct', () => {
     await mockStats(page, 0);
     await mockEmail(page);
 
-    let body: Record<string, unknown> = {};
-    let headers: Record<string, string> = {};
+    let plic: Plic | null = null;
     await page.route(REG_ROUTE, (route: Route) => {
-      body = route.request().postDataJSON();
-      headers = route.request().headers();
-      return route.fulfill({ status: 201, body: '' });
+      plic = route.request().postDataJSON() as Plic;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
     });
 
     await page.goto('/inscriere');
@@ -76,14 +87,19 @@ test.describe('/inscriere — pagina cu link direct', () => {
     await submitBtn(page).click();
 
     await expect(page.getByText(/te-ai înscris/i)).toBeVisible();
+    const trimis = plic as unknown as Plic;
+    expect(trimis.mode).toBe('registration');
     // Data scrisă „15.05.1994" ajunge ISO la backend.
-    expect(body.data_nasterii).toBe('1994-05-15');
-    // Ediția NU mai pleacă din client: o pune serverul din DEFAULT
-    // (`current_event_edition()`), iar RLS respinge orice valoare trimisă de
-    // client. Altfel un tab vechi ar scrie în ediția greșită după o publicare.
-    expect(body).not.toHaveProperty('editie');
-    expect(body.telefon).toBe('069509949');
-    expect(headers['content-profile']).toBe('runlift');
+    expect(trimis.data.dataNasterii).toBe('1994-05-15');
+    expect(trimis.data.telefon).toBe('069509949');
+    // Ediția NU pleacă din client: o pune serverul din DEFAULT
+    // (`current_event_edition()`). Altfel un tab vechi ar scrie în ediția
+    // greșită după o publicare.
+    expect(trimis.data).not.toHaveProperty('editie');
+    // Capcana anti-bot pleacă și de aici, nu doar de pe landing: `/inscriere`
+    // randează `RegistrationForm`, care e o suprafață publică în sine.
+    expect(trimis.hp).toBe('');
+    expect(typeof trimis.elapsed).toBe('number');
   });
 
   test('vârstă sub minim → eroare pe câmp, fără request', async ({ page }) => {
@@ -132,7 +148,7 @@ test.describe('/inscriere — pagina cu link direct', () => {
     await fixClock(page);
     await mockStats(page, 12);
     await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 201, body: '' }));
+    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
 
     await page.goto('/inscriere');
     await fillValid(page);
@@ -154,7 +170,7 @@ test.describe('/inscriere — pagina cu link direct', () => {
     await fixClock(page);
     await mockStats(page, 0);
     await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 201, body: '' }));
+    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
 
     await page.goto('/inscriere');
     await fillValid(page);
@@ -203,7 +219,7 @@ test.describe('overlay-ul de pe landing', () => {
     await fixClock(page);
     await mockStats(page, 0);
     await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 201, body: '' }));
+    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
 
     await page.goto('/?preview=landing');
     await page.getByRole('link', { name: /înscrie-te/i }).first().click();
@@ -228,7 +244,7 @@ test.describe('overlay-ul de pe landing', () => {
     await fixClock(page);
     await mockStats(page, 0);
     await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 201, body: '' }));
+    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
 
     await page.goto('/?preview=landing');
     await page.getByRole('link', { name: /înscrie-te/i }).first().click();
