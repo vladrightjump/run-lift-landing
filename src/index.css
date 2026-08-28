@@ -1059,6 +1059,9 @@
      Sapte taburi plate cereau sa stii dinainte in care sta ce cauti. Trei
      intrebari se aleg fara sa cunosti structura aplicatiei. */
   .admin-nav { display: grid; gap: 0; }
+  .admin-nav ul { list-style: none; margin: 0; padding: 0; }
+  .admin-nav-grupuri > li { display: grid; }
+  .admin-nav-grupuri > li > button { width: 100%; height: 100%; }
   .admin-nav-grupuri {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
     background: var(--e3-border); border: 1px solid var(--e3-border);
@@ -1153,6 +1156,9 @@
     min-width: 260px; max-width: 100%; cursor: pointer;
     transition: border-color 0.2s ease;
   }
+  /* Optiunile nu mostenesc culorile controlului: pe Windows in dark mode ar
+     iesi text inchis pe fundal inchis. */
+  .admin-editions-select option { background: var(--e3-bg); color: var(--e3-text); }
   .admin-editions-select:hover:not(:disabled) { border-color: var(--e3-accent-dim); }
   .admin-editions-select:disabled { opacity: 0.55; cursor: not-allowed; }
   /* Starea editiei alese, vizibila cu lista inchisa: de ea depinde daca

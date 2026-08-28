@@ -158,6 +158,14 @@ const parseReels = (raw: unknown): ReelsConfig => {
   if (!isRecord(raw)) return { ...DEFAULT_REELS, items: [] };
 
   const itemsRaw = Array.isArray(raw.items) ? raw.items : [];
+  // Codurile deja văzute: al doilea exemplar al aceluiași clip cade.
+  //
+  // Validarea (și în client, și în `event_config_validate`) respinge deja
+  // duplicatele, deci aici e apărare în adâncime — dar exact asta e treaba
+  // funcției. Un duplicat scurs printr-o scriere directă în DB ar da două
+  // carduri cu aceeași cheie React, iar `activ === r.code` ar porni clipul în
+  // amândouă odată, dintr-un singur click.
+  const vazute = new Set<string>();
   const items = itemsRaw
     .filter(
       (r): r is ReelEntry =>
@@ -168,6 +176,11 @@ const parseReels = (raw: unknown): ReelsConfig => {
         typeof r.poster === 'string' &&
         typeof r.caption === 'string'
     )
+    .filter((r) => {
+      if (vazute.has(r.code)) return false;
+      vazute.add(r.code);
+      return true;
+    })
     .slice(0, MAX_REELS)
     .map((r) => ({ code: r.code, kind: r.kind, poster: r.poster, caption: r.caption }));
 

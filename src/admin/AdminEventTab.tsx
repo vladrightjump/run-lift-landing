@@ -1097,6 +1097,7 @@ const Grup = ({
 }) => {
   const [deschisManual, setDeschisManual] = useState(deschisImplicit);
   const deschis = deschisManual || areEroare;
+  const idCorp = useId();
 
   return (
     <section className={`admin-config-grup${deschis ? ' deschis' : ''}${areEroare ? ' invalid' : ''}`}>
@@ -1104,6 +1105,8 @@ const Grup = ({
         type="button"
         className="admin-config-grup-cap"
         aria-expanded={deschis}
+        // `aria-expanded` singur spune „e deschis" fără să spună CE e deschis.
+        aria-controls={idCorp}
         onClick={() => setDeschisManual((v) => !v)}
       >
         <span className="admin-config-grup-sageata" aria-hidden="true">
@@ -1114,7 +1117,7 @@ const Grup = ({
         {areEroare && <span className="admin-tab-alert">!</span>}
       </button>
       {deschis && (
-        <div className="admin-config-grup-corp">
+        <div className="admin-config-grup-corp" id={idCorp}>
           {ajutor && <p className="admin-config-hint">{ajutor}</p>}
           <div className="admin-config-grup-campuri">{children}</div>
         </div>

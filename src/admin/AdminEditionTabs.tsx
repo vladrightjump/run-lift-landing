@@ -55,6 +55,20 @@ export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creat
             onChange={(e) => onSelect(Number(e.target.value))}
           >
             {editions === null && <option value="">Se încarcă edițiile…</option>}
+            {/* Lista a sosit, dar nicio ediție nu e aleasă — se întâmplă când
+                backendul nu marchează niciuna drept curentă. Fără opțiunea
+                asta, `value=""` n-ar avea corespondent, iar browserul ar afișa
+                prima ediție ca și cum ar fi selectată: controlul ar minți, iar
+                tabelele de dedesubt ar filtra pe nimic. Banda de butoane de
+                dinainte era onestă aici — niciunul nu era aprins. */}
+            {editions !== null && selected === null && (
+              <option value="" disabled>
+                Alege ediția…
+              </option>
+            )}
+            {editions !== null && lista.length === 0 && (
+              <option value="">Nicio ediție încă</option>
+            )}
             {lista.map((e) => (
               <option key={e.editie} value={e.editie}>
                 {eticheta(e)}

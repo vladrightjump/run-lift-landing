@@ -227,3 +227,29 @@ describe('cheile de secțiune', () => {
     expect(DEFAULT_LAYOUT).toHaveLength(SECTION_KEYS.length);
   });
 });
+
+describe('reels — apărare în adâncime la duplicate', () => {
+  it('al doilea exemplar al aceluiași clip cade', () => {
+    // Validarea respinge duplicatele în amândouă capetele, deci asta e plasa
+    // pentru o scriere directă în DB. Fără ea: două carduri cu aceeași cheie
+    // React, iar un singur click ar porni clipul în amândouă.
+    const clip = { code: 'ABC12345', kind: 'reel', poster: '', caption: 'unu' };
+    const doc = valid();
+    doc.reels = { items: [clip, { ...clip, caption: 'doi' }] };
+    const c = parseEventConfig(doc);
+    expect(c!.reels.items).toHaveLength(1);
+    // Rămâne PRIMUL, nu ultimul: ordinea din document e ordinea din bandă.
+    expect(c!.reels.items[0].caption).toBe('unu');
+  });
+
+  it('coduri diferite nu se calcă între ele', () => {
+    const doc = valid();
+    doc.reels = {
+      items: [
+        { code: 'AAAAA1111', kind: 'reel', poster: '', caption: '' },
+        { code: 'BBBBB2222', kind: 'p', poster: '', caption: '' },
+      ],
+    };
+    expect(parseEventConfig(doc)!.reels.items).toHaveLength(2);
+  });
+})
