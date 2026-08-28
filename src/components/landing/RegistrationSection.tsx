@@ -1,26 +1,22 @@
 import type { CSSProperties } from 'react';
-import { TOTAL_SLOTS, INSTAGRAM_URL } from '../../lib/config';
+import { INSTAGRAM_URL } from '../../lib/config';
 import { downloadEventIcs, shareSignup } from '../../lib/calendar';
-import { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } from '../../content/format';
+import { useEventConfig, useEditionStrings } from '../../hooks/useEventConfig';
 import type { FieldName } from '../../lib/validation';
 import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
+import { useCountUp } from '../../hooks/useCountUp';
+import { BirthDateField } from './BirthDateField';
 import { sectionNum, sectionTitle } from './shared';
 
-const SUMMARY_ITEMS = [
-  EVENT_SUMMARY_LINE,
+/** Prima linie depinde de ediție, restul e proză statică. */
+const summaryItems = (eventSummaryLine: string): string[] => [
+  eventSummaryLine,
   'Cursă în stil HYROX: alergare + stații funcționale',
   'Stațiile și greutățile se adaptează nivelului tău',
   'Deschis oricui, indiferent de nivel',
   'Adu cu tine: apă pentru hidratare și bună dispoziție',
 ];
-
-const MONTHS = [
-  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
-  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
-];
-// Ani permiși: de la 14 ani (2012) în urmă până la 100 (1926).
-const BIRTH_YEARS = Array.from({ length: 2012 - 1926 + 1 }, (_, i) => 2012 - i);
 
 const label: CSSProperties = {
   fontSize: 12,
@@ -34,41 +30,44 @@ const inputStyle: CSSProperties = {
   border: '1px solid var(--e3-border)',
   color: 'var(--e3-text)',
   fontFamily: 'Archivo, sans-serif',
-  fontSize: 15,
+  // 16px, nu 15: sub 16 Safari pe iOS face zoom la focus și aruncă layoutul
+  // în lateral la jumătatea formularului.
+  fontSize: 16,
   padding: '13px 14px',
   outline: 'none',
   width: '100%',
   boxSizing: 'border-box',
 };
-const selectStyle: CSSProperties = {
-  background: 'var(--e3-bg)',
-  border: '1px solid var(--e3-border)',
-  color: 'var(--e3-text)',
-  fontFamily: 'Archivo, sans-serif',
-  fontSize: 15,
-  padding: '13px 28px 13px 12px',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-  appearance: 'none',
-  cursor: 'pointer',
-  colorScheme: 'dark',
-  backgroundImage:
-    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239BA08F' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
-  backgroundRepeat: 'no-repeat',
-  backgroundPosition: 'right 10px center',
-};
 const fieldErr: CSSProperties = { fontSize: 13, color: 'var(--e3-danger)' };
 
-type Props = { reg: ReturnType<typeof useRegistration>; stats: PublicStats | null };
+type Props = {
+  reg: ReturnType<typeof useRegistration>;
+  stats: PublicStats | null;
+  /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
+  num?: string;
+};
 
 /** Secțiunea „Înscriere": rezumat + formular / listă de așteptare / închis / loading / succes / eroare. */
-export const RegistrationSection = ({ reg, stats }: Props) => {
+export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
+  const config = useEventConfig();
+  const TOTAL_SLOTS = config.slots.total;
+  const { EVENT_SUMMARY_LINE, SUCCESS_SEE_YOU } = useEditionStrings();
   const {
     waitlistMode, waitlistLeft, slots, isSoldOut, isWaitlistFull, showForm, closedReason,
-    phase, errors, birth, birthISO, dateErrMsg, confirmName, submittedAsWaitlist,
+    phase, errors, birthISO, dateErrMsg, confirmName, submittedAsWaitlist,
     formRef, handleSubmit, clearErrorFor, setBirth, resetForm, setErrors, setPhase, hpProps,
   } = reg;
+
+  // Contorul urcă spre valoarea reală în loc să sară de la „–". `null` cât
+  // timp statisticile n-au sosit, ca marcajul de gol să rămână.
+  const remainingShown = useCountUp(stats ? slots.remaining : null);
+
+  /** BirthDateField ne dă ISO; `useRegistration` ține {d,m,y}. */
+  const setBirthFromISO = (iso: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    setBirth(m ? { d: String(Number(m[3])), m: String(Number(m[2])), y: m[1] } : { d: '', m: '', y: '' });
+  };
+
   return (
       <section
         id="inscriere"
@@ -86,8 +85,8 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-              <span style={sectionNum}>03</span>
-              <h2 style={sectionTitle}>Înscriere</h2>
+              <span className="e3-title-num" style={sectionNum}>{num}</span>
+              <h2 className="e3-title" style={sectionTitle}>Înscriere</h2>
             </div>
             <p style={{ margin: '0 0 28px', fontSize: 17, lineHeight: 1.55, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
               {waitlistMode ? (
@@ -106,7 +105,8 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                 </>
               )}
             </p>
-            <div style={{ border: '1px solid var(--e3-border)', background: 'var(--e3-surface)', padding: 26 }}>
+            {/* Fundalul și bordura vin din `.e3-card` — vezi nota de acolo. */}
+            <div data-reveal className="e3-card e3-spot" style={{ padding: 26 }}>
               <div
                 style={{
                   fontFamily: 'Anton, sans-serif',
@@ -120,7 +120,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                 Pe scurt
               </div>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 14 }}>
-                {SUMMARY_ITEMS.map((item) => (
+                {summaryItems(EVENT_SUMMARY_LINE).map((item) => (
                   <li key={item} style={{ display: 'flex', gap: 12, fontSize: 15, lineHeight: 1.5, color: 'var(--e3-muted-strong)' }}>
                     <span style={{ color: 'var(--e3-accent)', fontWeight: 700 }}>→</span>
                     {item}
@@ -146,21 +146,42 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                 <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
                   Locuri rămase
                 </span>
+                {/* Contorul respiră doar cât chiar mai sunt locuri puține.
+                    Pe zero n-ar mai fi urgență, ci doar zgomot lângă mesajul
+                    de „epuizat" de dedesubt. */}
                 <span
+                  className={
+                    stats && slots.remaining > 0 && slots.remaining <= 5 ? 'e3-urgent' : undefined
+                  }
                   style={{
+                    display: 'inline-block',
                     fontFamily: 'Anton, sans-serif',
                     fontSize: 22,
                     letterSpacing: 1,
                     color: slots.remaining <= 3 ? 'var(--e3-danger)' : 'var(--e3-accent)',
                   }}
                 >
-                  {stats ? slots.remaining : '–'} / {TOTAL_SLOTS}
+                  {remainingShown ?? '–'} / {TOTAL_SLOTS}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 4 }} aria-hidden="true">
-                {Array.from({ length: TOTAL_SLOTS }, (_, i) => (
-                  <div key={i} style={{ height: 8, flex: 1, background: i < slots.occupied ? 'var(--e3-accent)' : 'var(--e3-border)' }} />
-                ))}
+                {Array.from({ length: TOTAL_SLOTS }, (_, i) => {
+                  const filled = i < slots.occupied;
+                  return (
+                    <div
+                      key={i}
+                      // Doar segmentele ocupate se umplu în lanț; cele goale sunt
+                      // fundal, n-au ce anunța. `--i` dă decalajul din CSS.
+                      className={filled ? 'e3-slot-fill' : undefined}
+                      style={{
+                        height: 8,
+                        flex: 1,
+                        background: filled ? 'var(--e3-accent)' : 'var(--e3-border)',
+                        ...(filled ? ({ '--i': i } as CSSProperties) : null),
+                      }}
+                    />
+                  );
+                })}
               </div>
               {isSoldOut && !isWaitlistFull && (
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-accent)', fontWeight: 600, textWrap: 'pretty' }}>
@@ -231,64 +252,15 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                     />
                     {errors.email && <span style={fieldErr}>Adresa de email nu e validă.</span>}
                   </label>
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    <span style={label}>Data nașterii *</span>
-                    <input type="hidden" name="dataNasterii" value={birthISO} readOnly />
-                    <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.6fr 1.1fr', gap: 10 }}>
-                      <select
-                        aria-label="Ziua nașterii"
-                        className="e3-input"
-                        value={birth.d}
-                        onChange={(e) => {
-                          setBirth((b) => ({ ...b, d: e.target.value }));
-                          clearErrorFor('dataNasterii');
-                        }}
-                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                      >
-                        <option value="">Zi</option>
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                          <option key={d} value={String(d)}>
-                            {d}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        aria-label="Luna nașterii"
-                        className="e3-input"
-                        value={birth.m}
-                        onChange={(e) => {
-                          setBirth((b) => ({ ...b, m: e.target.value }));
-                          clearErrorFor('dataNasterii');
-                        }}
-                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                      >
-                        <option value="">Luna</option>
-                        {MONTHS.map((name, i) => (
-                          <option key={name} value={String(i + 1)}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        aria-label="Anul nașterii"
-                        className="e3-input"
-                        value={birth.y}
-                        onChange={(e) => {
-                          setBirth((b) => ({ ...b, y: e.target.value }));
-                          clearErrorFor('dataNasterii');
-                        }}
-                        style={{ ...selectStyle, borderColor: errors.dataNasterii ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                      >
-                        <option value="">An</option>
-                        {BIRTH_YEARS.map((y) => (
-                          <option key={y} value={String(y)}>
-                            {y}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {errors.dataNasterii && <span style={fieldErr}>{dateErrMsg}</span>}
-                  </div>
+                  <BirthDateField
+                    value={birthISO}
+                    onChange={(iso) => {
+                      setBirthFromISO(iso);
+                      clearErrorFor('dataNasterii');
+                    }}
+                    error={!!errors.dataNasterii}
+                    errMsg={dateErrMsg}
+                  />
                 </div>
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-muted)', textWrap: 'pretty' }}>
                   Participanții trebuie să aibă minim 14 ani în ziua evenimentului. Stațiile și greutățile sunt
@@ -319,7 +291,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                 {errors.acord && <span style={fieldErr}>Trebuie să accepți regulamentul ca să te poți înscrie.</span>}
                 <button
                   type="submit"
-                  className="e3-submit"
+                  className="e3-submit e3-shine"
                   style={{
                     background: 'var(--e3-accent)',
                     color: 'var(--e3-bg)',
@@ -497,7 +469,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                     <button
                       type="button"
-                      onClick={downloadEventIcs}
+                      onClick={() => downloadEventIcs(config)}
                       style={{
                         background: 'var(--e3-accent)',
                         color: 'var(--e3-bg)',
@@ -514,7 +486,7 @@ export const RegistrationSection = ({ reg, stats }: Props) => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void shareSignup()}
+                      onClick={() => void shareSignup(config)}
                       style={{
                         background: 'transparent',
                         border: '1px solid var(--e3-accent)',

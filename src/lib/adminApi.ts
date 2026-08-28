@@ -116,6 +116,89 @@ export const listEditions = (token: string, signal?: AbortSignal): Promise<Admin
 export const createEdition = (token: string): Promise<number> =>
   rpc<number>('admin_create_edition', { p_token: token });
 
+/* ---- Configurarea ediției (`event_config`) ---- */
+
+export type AdminEventConfigRow = {
+  id: string;
+  editie: number;
+  config: unknown;
+  status: 'draft' | 'published' | 'superseded';
+  created_at: string;
+  /** Momentul publicării; null cât timp rândul e ciornă. */
+  published_at: string | null;
+};
+
+/**
+ * Ciorna + publicatul ediției cerute (lipsă = ediția curentă din `app_config`),
+ * plus versiunile păstrate, pentru revenire.
+ */
+export const listEventConfig = (
+  token: string,
+  editie?: number,
+  signal?: AbortSignal
+): Promise<AdminEventConfigRow[]> =>
+  rpc<AdminEventConfigRow[]>(
+    'admin_get_event_config',
+    { p_token: token, p_editie: editie ?? null },
+    signal
+  );
+
+/** Salvează ciorna. Nu schimbă nimic din ce vede vizitatorul. */
+export const saveEventConfigDraft = (
+  token: string,
+  editie: number,
+  config: unknown
+): Promise<string> =>
+  rpc<string>('admin_save_event_config_draft', {
+    p_token: token,
+    p_editie: editie,
+    p_config: config,
+  });
+
+/**
+ * Publică ciorna. Aceeași tranzacție scrie și cele cinci scalare din
+ * `app_config` pe care le citesc guard-urile — de asta nu mai există
+ * desincronizare de aliniat manual.
+ *
+ * Refuzuri așteptate: `no_draft`, `config_invalid: …`,
+ * `registration_hidden_while_open: …`.
+ */
+export const publishEventConfig = (token: string, editie: number): Promise<string> =>
+  rpc<string>('admin_publish_event_config', { p_token: token, p_editie: editie });
+
+/**
+ * Comută ecranul de dinainte de lansare și mută țintele numărătorilor, cu efect
+ * IMEDIAT pe site — fără ciornă și fără „Publică".
+ *
+ * De ce ocolește fluxul ciornă → publică: comutarea e o operație de un singur
+ * gest, făcută de regulă sub presiune („anunțul iese acum"). Ciorna e potrivită
+ * pentru o ediție întreagă, unde verificarea înainte merită pașii; aici e o
+ * manetă. Serverul petice exact trei chei pe documentul publicat și îl
+ * revalidează prin aceeași poartă ca publicarea, deci scurtătura e de pași, nu
+ * de verificări.
+ *
+ * Rezultatul rămâne reversibil: peticul scrie un rând nou, deci apare în
+ * „Versiuni anterioare".
+ *
+ * Refuzuri așteptate: `no_published`, `config_invalid: …`.
+ */
+export const setComingSoon = (
+  token: string,
+  show: boolean,
+  launchAt: string,
+  nextEditionAt: string
+): Promise<string> =>
+  rpc<string>('admin_set_coming_soon', {
+    p_token: token,
+    p_show: show,
+    p_launch_at: launchAt,
+    p_next_edition_at: nextEditionAt,
+  });
+
+/** Revenire la o versiune păstrată — republicare, deci rescrie și scalarele. */
+export const restoreEventConfig = (token: string, id: string): Promise<string> =>
+  rpc<string>('admin_restore_event_config', { p_token: token, p_id: id });
+
 export type AdminLaunchSignup = {
   id: string;
   created_at: string;
@@ -167,20 +250,40 @@ export const listLaunchNotifications = (
 ): Promise<AdminLaunchSignup[]> =>
   rpc<AdminLaunchSignup[]>('admin_list_launch_notifications', { p_token: token }, signal);
 
-/** Adaugă o înscriere (acord = true implicit). Email duplicat => HTTP 409. */
+/**
+ * Adaugă o înscriere (acord = true implicit). Email duplicat => HTTP 409.
+ * Serverul refuză peste `event_capacity` cu `event_full`; `force` e derogarea
+ * explicită a operatorului, nu un implicit.
+ */
 export const addRegistration = (
   token: string,
-  data: { nume: string; telefon: string; email: string }
+  data: { nume: string; telefon: string; email: string },
+  force = false
 ): Promise<string> =>
   rpc<string>('admin_add_registration', {
     p_token: token,
     p_nume: data.nume,
     p_telefon: data.telefon,
     p_email: data.email,
+    p_force: force,
   });
 
+/** Ștergere LOGICĂ — rândul rămâne, cu `deleted_at` setat. */
 export const deleteRegistration = (token: string, id: string): Promise<void> =>
   rpc<void>('admin_delete_registration', { p_token: token, p_id: id });
+
+/**
+ * Reversarea ștergerii: același rând, deci același `created_at` și aceeași
+ * poziție în ordinea de promovare. Refuză cu `event_full` dacă locul a fost
+ * ocupat între timp (auto-promovare) și cu `duplicate_email` dacă adresa a fost
+ * re-înscrisă — ambele erau, înainte, supraîncărcări tăcute.
+ */
+export const undeleteRegistration = (
+  token: string,
+  id: string,
+  force = false
+): Promise<void> =>
+  rpc<void>('admin_undelete_registration', { p_token: token, p_id: id, p_force: force });
 
 /** Editare in-place a unei înscrieri (păstrează `created_at`). Duplicat => HTTP 409. */
 export const updateRegistration = (
@@ -205,8 +308,16 @@ export type AdminEvent = {
   detaliu: Record<string, unknown>;
 };
 
-export const listAdminEvents = (token: string, signal?: AbortSignal): Promise<AdminEvent[]> =>
-  rpc<AdminEvent[]>('admin_list_events', { p_token: token }, signal);
+/**
+ * Feedul de audit. Plafonul nu mai e fix la 50: de când fiecare scriere din
+ * admin lasă urmă, feedul e răspunsul la „ce s-a întâmplat cu Ana?".
+ */
+export const listAdminEvents = (
+  token: string,
+  limit = 200,
+  signal?: AbortSignal
+): Promise<AdminEvent[]> =>
+  rpc<AdminEvent[]>('admin_list_events', { p_token: token, p_limit: limit }, signal);
 
 /* ---- Lista de așteptare (event_waitlist) ---- */
 
@@ -284,7 +395,14 @@ export const adminLogout = (token: string): Promise<void> =>
 /* ---- Email (funcția Edge `send-email` → Resend) ---- */
 
 export type EmailMessage = { to: string; subject: string; text: string };
-export type SendEmailResult = { sent: number; failed: number; errors?: { to: string; status: number }[] };
+export type SendEmailResult = {
+  sent: number;
+  failed: number;
+  errors?: { to: string; status: number }[];
+  /** `true` când zăvorul a oprit o difuzare deja trimisă pe aceeași cheie. */
+  skipped?: boolean;
+  note?: string;
+};
 
 const FUNCTIONS_URL = `${SUPABASE.url}/functions/v1`;
 
@@ -296,7 +414,16 @@ const FUNCTIONS_URL = `${SUPABASE.url}/functions/v1`;
 export const sendBulkEmail = async (
   token: string,
   messages: EmailMessage[],
-  meta?: { audience?: 'participanti' | 'asteptare'; editie?: number },
+  meta?: {
+    audience?: 'participanti' | 'asteptare';
+    editie?: number;
+    /**
+     * Cheie de idempotență (`src/admin/sendLock.ts`). Serverul trimite o singură
+     * dată per cheie; a doua oară întoarce `skipped: true`. Lipsa ei păstrează
+     * comportamentul de dinainte de zăvor.
+     */
+    onceKey?: string;
+  },
   signal?: AbortSignal
 ): Promise<SendEmailResult> => {
   const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
@@ -308,6 +435,7 @@ export const sendBulkEmail = async (
       messages,
       audience: meta?.audience,
       editie: meta?.editie,
+      once_key: meta?.onceKey,
     }),
     signal,
   });

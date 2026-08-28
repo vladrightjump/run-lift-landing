@@ -1,0 +1,255 @@
+import { describe, it, expect } from 'vitest';
+import { EDITION } from '../../src/content/edition';
+import {
+  parseEventConfig,
+  SNAPSHOT_CONFIG,
+  DEFAULT_LAYOUT,
+  SECTION_KEYS,
+} from '../../src/content/eventConfig';
+
+/**
+ * `parseEventConfig` e poarta dintre rețea și pagină. Ce trece pe aici ajunge
+ * direct în ce vede vizitatorul, deci testele de mai jos țin două lucruri:
+ * instantaneul de build rămâne fidel lui `EDITION`, iar un document stricat
+ * întoarce `null` (apelantul cade pe instantaneu) în loc să randeze pe jumătate.
+ */
+
+/** Document valid minim — pornim de la instantaneu ca să nu-l rescriem de fiecare dată. */
+const valid = () => JSON.parse(JSON.stringify(SNAPSHOT_CONFIG)) as Record<string, unknown>;
+
+describe('SNAPSHOT_CONFIG derivă din EDITION', () => {
+  it('câmpurile de ediție', () => {
+    expect(SNAPSHOT_CONFIG.number).toBe(EDITION.number);
+    expect(SNAPSHOT_CONFIG.launchNumber).toBe(EDITION.launchNumber);
+    expect(SNAPSHOT_CONFIG.eventName).toBe(EDITION.eventName);
+    expect(SNAPSHOT_CONFIG.concept).toBe(EDITION.concept);
+  });
+
+  it('reperele de timp, fără offset', () => {
+    expect(SNAPSHOT_CONFIG.tz).toBe(EDITION.tz);
+    expect(SNAPSHOT_CONFIG.start).toBe(EDITION.start);
+    expect(SNAPSHOT_CONFIG.registrationDeadline).toBe(EDITION.registrationDeadline);
+    expect(SNAPSHOT_CONFIG.launchAt).toBe(EDITION.launchAt);
+    expect(SNAPSHOT_CONFIG.nextEditionAt).toBe(EDITION.nextEditionAt);
+    expect(SNAPSHOT_CONFIG.durationHours).toBe(EDITION.durationHours);
+    expect(SNAPSHOT_CONFIG.leaderboardLeadHours).toBe(EDITION.leaderboardLeadHours);
+  });
+
+  it('locul cursei — inclusiv diacriticele', () => {
+    expect(SNAPSHOT_CONFIG.venue.name).toBe(EDITION.venue.name);
+    expect(SNAPSHOT_CONFIG.venue.mapQuery).toBe(EDITION.venue.mapQuery);
+    expect(SNAPSHOT_CONFIG.venue.zoom).toBe(EDITION.venue.zoom);
+  });
+
+  it('locurile', () => {
+    expect(SNAPSHOT_CONFIG.slots.total).toBe(EDITION.slots.total);
+    expect(SNAPSHOT_CONFIG.slots.waitlist).toBe(EDITION.slots.waitlist);
+  });
+
+  it('NU cară ce rămâne în cod (antrenamente, URL-uri, brand)', () => {
+    expect(SNAPSHOT_CONFIG).not.toHaveProperty('training');
+    expect(SNAPSHOT_CONFIG).not.toHaveProperty('urls');
+    expect(SNAPSHOT_CONFIG).not.toHaveProperty('brand');
+    expect(SNAPSHOT_CONFIG).not.toHaveProperty('ogImageVersion');
+  });
+});
+
+describe('parseEventConfig acceptă documentele randabile', () => {
+  it('duce instantaneul dus-întors fără pierderi', () => {
+    expect(parseEventConfig(valid())).toEqual(SNAPSHOT_CONFIG);
+  });
+
+  it('păstrează ordinea și vizibilitatea din layout', () => {
+    const doc = valid();
+    doc.layout = [
+      { key: 'venue', visible: true },
+      { key: 'format', visible: false },
+    ];
+    expect(parseEventConfig(doc)?.layout).toEqual([
+      { key: 'venue', visible: true },
+      { key: 'format', visible: false },
+    ]);
+  });
+
+  it('ignoră cheile necunoscute — o secțiune scoasă din cod nu strică un document publicat', () => {
+    const doc = valid();
+    doc.layout = [
+      { key: 'format', visible: true },
+      { key: 'sectiune-disparuta', visible: true },
+      { key: 'venue', visible: true },
+    ];
+    expect(parseEventConfig(doc)?.layout).toEqual([
+      { key: 'format', visible: true },
+      { key: 'venue', visible: true },
+    ]);
+  });
+
+  it('cade pe ordinea implicită când layout lipsește sau e gol', () => {
+    const fara = valid();
+    delete fara.layout;
+    expect(parseEventConfig(fara)?.layout).toEqual(DEFAULT_LAYOUT);
+
+    const gol = valid();
+    gol.layout = [];
+    expect(parseEventConfig(gol)?.layout).toEqual(DEFAULT_LAYOUT);
+  });
+
+  it('acceptă ordinalOverride absent, tratându-l ca null', () => {
+    const doc = valid();
+    delete doc.ordinalOverride;
+    expect(parseEventConfig(doc)?.ordinalOverride).toBeNull();
+  });
+});
+
+describe('parseEventConfig respinge ce nu se poate randa', () => {
+  it.each([
+    ['null', null],
+    ['un string', 'nu sunt un obiect'],
+    ['o listă', []],
+  ])('%s', (_eticheta, intrare) => {
+    expect(parseEventConfig(intrare)).toBeNull();
+  });
+
+  it.each([
+    'eventName',
+    'concept',
+    'tz',
+    'start',
+    'checkinFrom',
+    'registrationDeadline',
+    'launchAt',
+    'nextEditionAt',
+    'number',
+    'launchNumber',
+    'durationHours',
+    'leaderboardLeadHours',
+    'showComingSoon',
+    'venue',
+    'slots',
+  ])('câmpul obligatoriu %s lipsește', (camp) => {
+    const doc = valid();
+    delete doc[camp];
+    expect(parseEventConfig(doc)).toBeNull();
+  });
+
+  it('un câmp numeric venit ca text', () => {
+    const doc = valid();
+    doc.number = '5';
+    expect(parseEventConfig(doc)).toBeNull();
+  });
+
+  it('showComingSoon venit ca text — „false" ar fi fost adevărat', () => {
+    const doc = valid();
+    doc.showComingSoon = 'false';
+    expect(parseEventConfig(doc)).toBeNull();
+  });
+
+  it('venue fără mapQuery', () => {
+    const doc = valid();
+    doc.venue = { name: 'X', city: 'Y', zoom: 16 };
+    expect(parseEventConfig(doc)).toBeNull();
+  });
+
+  it('slots incomplet', () => {
+    const doc = valid();
+    doc.slots = { total: 40 };
+    expect(parseEventConfig(doc)).toBeNull();
+  });
+});
+
+describe('reels — tolerant, ca layout', () => {
+  const cuReels = (reels: unknown) => {
+    const doc = valid();
+    doc.reels = reels;
+    return parseEventConfig(doc);
+  };
+  const unClip = (patch: Record<string, unknown> = {}) => ({
+    code: 'ABC12345',
+    kind: 'reel',
+    poster: '/reels/a.jpg',
+    caption: 'Antrenament de marți',
+    ...patch,
+  });
+
+  it('un document fără `reels` primește implicitul, nu `null`', () => {
+    const doc = valid();
+    delete doc.reels;
+    const c = parseEventConfig(doc);
+    expect(c).not.toBeNull();
+    expect(c!.reels.items).toEqual([]);
+    expect(c!.reels.headline).toBe('Instagram');
+  });
+
+  it('un clip stricat cade, restul secțiunii rămâne', () => {
+    const c = cuReels({
+      headline: 'Instagram',
+      body: 'text',
+      items: [unClip(), { code: '', kind: 'reel', poster: '', caption: '' }],
+    });
+    expect(c!.reels.items).toHaveLength(1);
+    expect(c!.reels.items[0].code).toBe('ABC12345');
+  });
+
+  it('un `kind` necunoscut cade — Instagram n-are ruta aia', () => {
+    expect(cuReels({ items: [unClip({ kind: 'video' })] })!.reels.items).toHaveLength(0);
+  });
+
+  it('un cod cu caractere de URL cade, ca să nu schimbe adresa iframe-ului', () => {
+    for (const code of ['ABC/../x', 'ABC?a=1', 'AB', 'ABC 12345']) {
+      expect(cuReels({ items: [unClip({ code })] })!.reels.items).toHaveLength(0);
+    }
+  });
+
+  it('lista se plafonează — o bandă, nu un feed', () => {
+    const multe = Array.from({ length: 20 }, (_, i) => unClip({ code: `COD${i}0000` }));
+    expect(cuReels({ items: multe })!.reels.items).toHaveLength(12);
+  });
+
+  it('un `reels` care nu e obiect nu invalidează documentul', () => {
+    expect(cuReels('nu-i obiect')!.reels.items).toEqual([]);
+    expect(cuReels(null)!.reels.items).toEqual([]);
+  });
+});
+
+describe('cheile de secțiune', () => {
+  it('sunt exact secțiunile numerotate din landing', () => {
+    expect([...SECTION_KEYS]).toEqual([
+      'format',
+      'venue',
+      'registration',
+      'participants',
+      'reels',
+    ]);
+  });
+
+  it('ordinea implicită le arată pe toate', () => {
+    expect(DEFAULT_LAYOUT.every((s) => s.visible)).toBe(true);
+    expect(DEFAULT_LAYOUT).toHaveLength(SECTION_KEYS.length);
+  });
+});
+
+describe('reels — apărare în adâncime la duplicate', () => {
+  it('al doilea exemplar al aceluiași clip cade', () => {
+    // Validarea respinge duplicatele în amândouă capetele, deci asta e plasa
+    // pentru o scriere directă în DB. Fără ea: două carduri cu aceeași cheie
+    // React, iar un singur click ar porni clipul în amândouă.
+    const clip = { code: 'ABC12345', kind: 'reel', poster: '', caption: 'unu' };
+    const doc = valid();
+    doc.reels = { items: [clip, { ...clip, caption: 'doi' }] };
+    const c = parseEventConfig(doc);
+    expect(c!.reels.items).toHaveLength(1);
+    // Rămâne PRIMUL, nu ultimul: ordinea din document e ordinea din bandă.
+    expect(c!.reels.items[0].caption).toBe('unu');
+  });
+
+  it('coduri diferite nu se calcă între ele', () => {
+    const doc = valid();
+    doc.reels = {
+      items: [
+        { code: 'AAAAA1111', kind: 'reel', poster: '', caption: '' },
+        { code: 'BBBBB2222', kind: 'p', poster: '', caption: '' },
+      ],
+    };
+    expect(parseEventConfig(doc)!.reels.items).toHaveLength(2);
+  });
+})

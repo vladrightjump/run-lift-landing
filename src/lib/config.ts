@@ -1,40 +1,64 @@
 /**
- * Config derivat — NU mai edita valori aici. Sursa de adevăr pentru ediție e
- * `src/content/edition.ts` (obiectul `EDITION`); configul de backend e în
- * `src/lib/backend.ts`. Fișierul ăsta doar EXPUNE derivatele sub numele pe care
- * le folosește deja restul aplicației (compatibilitate, zero churn la consumatori).
+ * Derivatele de TIMP ale ediției.
  *
- * La ediție nouă: editezi `content/edition.ts`, nu fișierul ăsta.
+ * Sursa de adevăr e rândul `published` din `runlift.event_config`, citit la
+ * runtime (vezi `hooks/useEventConfig`). Fișierul ăsta nu mai ține valori: ține
+ * REGULA prin care un config devine momente absolute.
+ *
+ * Componentele iau reperele din `useEditionDates()`. Funcțiile pure (validare,
+ * calendar) primesc configul ca argument — un hook nu le poate servi.
+ *
+ * Configul de backend (Supabase url/key/schema) e configurare de MEDIU, nu de
+ * ediție: trăiește în `src/lib/backend.ts` și se re-exportă de aici.
  */
 import { EDITION } from '../content/edition';
+import { SNAPSHOT_CONFIG, type EventConfig } from '../content/eventConfig';
 
 // Re-export backend (Supabase) — configurare de mediu, nu de ediție.
 export { SUPABASE, isBackendConfigured } from './backend';
 
-/** Compune un moment local (fără offset) cu fusul ediției → Date absolut. */
-const at = (local: string): Date => new Date(`${local}${EDITION.tz}`);
-
-// --- Ediții -----------------------------------------------------------------
-export const CURRENT_EDITION = EDITION.number;
-export const CURRENT_LAUNCH_EDITION = EDITION.launchNumber;
-
-// --- Locuri -----------------------------------------------------------------
-/** Fallback static — folosit doar dacă `public_stats` nu răspunde (live via useStats). */
-export const OCCUPIED_SLOTS = EDITION.slots.occupiedFallback;
-export const TOTAL_SLOTS = EDITION.slots.total;
-export const WAITLIST_SLOTS = EDITION.slots.waitlist;
-
-// --- Date/ore (fus Chișinău, moment absolut identic în orice fus) -----------
-export const EVENT_DATE = at(EDITION.start);
-export const EVENT_END_DATE = new Date(
-  EVENT_DATE.getTime() + EDITION.durationHours * 60 * 60 * 1000
-);
-export const REGISTRATION_DEADLINE = at(EDITION.registrationDeadline);
-
-// --- Coming Soon / lansare --------------------------------------------------
-export const SHOW_COMING_SOON = EDITION.showComingSoon;
-export const LAUNCH_DATE = at(EDITION.launchAt);
-
-// --- Social -----------------------------------------------------------------
+// --- Social — NU ține de ediție, deci rămâne în cod (vezi `EDITION.urls`) ----
 export const INSTAGRAM_HANDLE = EDITION.urls.instagramHandle;
 export const INSTAGRAM_URL = EDITION.urls.instagram;
+
+/** Compune un moment local (fără offset) cu fusul ediției → Date absolut. */
+const at = (local: string, tz: string): Date => new Date(`${local}${tz}`);
+
+export type EditionDates = {
+  /** Startul cursei. */
+  EVENT_DATE: Date;
+  /** Finalul cursei (start + durată). */
+  EVENT_END_DATE: Date;
+  /** Până când se poate înscrie cineva. */
+  REGISTRATION_DEADLINE: Date;
+  /** Momentul în care homepage-ul trece pe „cine vine" (start − avansul din ediție). */
+  LEADERBOARD_DATE: Date;
+  /** Ținta countdown-ului de după cursă — următorul antrenament. */
+  NEXT_EDITION_DATE: Date;
+  /** Comutarea Coming Soon → landing. */
+  LAUNCH_DATE: Date;
+};
+
+/** Toate reperele de timp ale unei ediții, dintr-un singur config. */
+export const deriveEditionDates = (config: EventConfig): EditionDates => {
+  const EVENT_DATE = at(config.start, config.tz);
+  return {
+    EVENT_DATE,
+    EVENT_END_DATE: new Date(EVENT_DATE.getTime() + config.durationHours * 60 * 60 * 1000),
+    REGISTRATION_DEADLINE: at(config.registrationDeadline, config.tz),
+    LEADERBOARD_DATE: new Date(
+      EVENT_DATE.getTime() - config.leaderboardLeadHours * 60 * 60 * 1000
+    ),
+    NEXT_EDITION_DATE: at(config.nextEditionAt, config.tz),
+    LAUNCH_DATE: at(config.launchAt, config.tz),
+  };
+};
+
+/**
+ * Valorile instantaneului de build.
+ *
+ * DOAR pentru locurile care nu pot citi configul la runtime: meta de share
+ * (injectată în HTML la build) și testele. O componentă care ajunge aici în loc
+ * de `useEditionDates()` va îngheța pe ediția deployată — folosește hook-ul.
+ */
+export const SNAPSHOT_DATES = deriveEditionDates(SNAPSHOT_CONFIG);

@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { LAUNCH_DATE } from '../src/lib/config';
+import { deriveEditionDates } from '../src/lib/config';
+import {
+  deriveEventStrings,
+  TRAINING_WHERE,
+  TRAINING_MAP_EMBED_SRC,
+  TRAINING_MAP_DIRECTIONS_URL,
+} from '../src/content/format';
+import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
+
+const { LAUNCH_DATE } = deriveEditionDates(SNAPSHOT_CONFIG);
+const { EVENT_WHERE } = deriveEventStrings(SNAPSHOT_CONFIG);
 
 /**
  * Pagina /despre-noi — prezentare + formular „Vreau info".
@@ -43,6 +53,43 @@ test.describe('Despre noi — conținut', () => {
     }
     await expect(page.locator('.dn-value-card')).toHaveCount(3);
     await expect(page.locator('.dn-stat')).toHaveCount(4);
+  });
+
+  /**
+   * Regresie: „Unde ne antrenăm" trăgea locul CURSEI (`EVENT_WHERE`), care se
+   * mută de la o ediție la alta. Pe ediția 5 pagina a trimis oameni la Scările
+   * de Granit pentru un antrenament de marți din Parcul Râșcani.
+   */
+  test('„Unde ne antrenăm" arată locul antrenamentelor, nu al cursei', async ({ page }) => {
+    await page.goto('/despre-noi');
+    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+
+    await expect(orar).toContainText(TRAINING_WHERE);
+    await expect(orar).not.toContainText(EVENT_WHERE);
+
+    // Harta și direcțiile trebuie să ducă tot pe teren, nu la locul cursei.
+    await expect(orar.locator('iframe')).toHaveAttribute('src', TRAINING_MAP_EMBED_SRC);
+    await expect(orar.locator('a', { hasText: /google maps/i })).toHaveAttribute(
+      'href',
+      TRAINING_MAP_DIRECTIONS_URL,
+    );
+  });
+
+  test('secțiunea are două căi spre hartă: sub orar și peste hartă', async ({ page }) => {
+    await page.goto('/despre-noi');
+    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+
+    const sub = orar.locator('a', { hasText: /google maps/i });
+    const peste = orar.locator('a.dn-map-link');
+    await expect(sub).toBeVisible();
+    await expect(peste).toBeVisible();
+
+    // Amândouă duc în același loc — și în locul antrenamentului, nu al cursei.
+    for (const link of [sub, peste]) {
+      await expect(link).toHaveAttribute('href', TRAINING_MAP_DIRECTIONS_URL);
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', /noopener/);
+    }
   });
 
   test('linkul de Instagram e corect și se deschide în tab nou', async ({ page }) => {

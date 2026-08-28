@@ -15,15 +15,17 @@ run-lift-landing/
 ├── vercel.json           # headere de securitate (CSP: connect-src → Supabase)
 ├── public/               # favicon, og.png, apple-touch-icon
 ├── scripts/
-│   └── sync-edition.ts   # emite SQL pt. app_config din EDITION (npm run sync-edition)
+│   └── write-version.ts  # ștampilează dist/version.json (commit + amprenta meta)
 ├── src/
-│   ├── content/          # ⭐ SSOT
-│   │   ├── edition.ts    #   datele ediției (dată, locație, branding, sloturi) — AICI editezi
+│   ├── content/          # instantaneul de build (sursa de adevăr e în DB)
+│   │   ├── edition.ts    #   instantaneu: primul cadru + meta de share. NU-l edita per ediție
+│   │   ├── eventConfig.ts#   forma documentului de config + parsarea lui
 │   │   ├── format.ts     #   derivate: ordinal, dată RO, EVENT_META, HERO_KICKER…
 │   │   └── meta.ts       #   title/description/OG derivate din EDITION
 │   ├── components/       # Edition3Landing, ComingSoon, Confirmare, DespreNoi, Toast
+│   │                     #   landing/ReelsSection — banda Instagram (façade + iframe la click)
 │   ├── admin/            # backoffice /admin (login, dashboard, email, șabloane)
-│   ├── hooks/            # useCountdown, useScrollReveal, useToast, useOnlineStatus, useNow, useStats
+│   ├── hooks/            # useCountdown, usePagePhase, useScrollReveal, useToast, useOnlineStatus, useNow, useStats
 │   └── lib/
 │       ├── config.ts     # derivă din content/edition.ts (NU edita valori aici)
 │       ├── backend.ts    # config Supabase (url/key/schema) — mediu, nu ediție
@@ -61,12 +63,25 @@ botul de Telegram. Run + Lift trăiește în schema **`runlift`** (rutată prin 
 
 ## Ediție nouă (pe scurt)
 
-1. Editezi **`src/content/edition.ts`** (număr, date, locație, branding, sloturi).
-2. `npm run sync-edition` → SQL pt. `app_config`; îl revezi și-l rulezi în Supabase.
-3. Textul emailurilor (dacă vrei să-l schimbi) → din `/admin` → „Șabloane de email".
-4. `npm run verify` → `git push` (Vercel publică automat).
+Din **`/admin` → tabul „Eveniment"**. Fără editări în cod, fără deploy.
+
+1. „+ Ciornă pentru ediția N+1" → completezi datele, locul, locurile, secțiunile.
+2. „Previzualizează" (`/?config=draft`) → vezi pagina reală, randată din ciornă.
+3. „Publică" → site-ul public trece pe configul nou imediat.
+4. Textul emailurilor (dacă vrei să-l schimbi) → `/admin` → „Șabloane de email".
+
+Singurul lucru care mai cere deploy e **share preview-ul** (meta se injectează la build, pentru că
+scraper-ele nu rulează JS). Tabul „Eveniment" îți spune când a rămas în urmă.
 
 Runbook complet: **`GHID-EDITIE-NOUA.md`**. Decizii de arhitectură: **`TASK-FOR-CLAUDE.md`**.
+
+## Ziua evenimentului
+
+Homepage-ul trece singur prin trei faze, pe ceas, fără redeploy: landing normal → landing fără
+înscriere cu „cine vine" sub hero (de la `start` − `leaderboardLeadHours`) → countdown spre
+`nextEditionAt` (de la finalul cursei). Logica: `src/hooks/usePagePhase.ts`. Le vezi înainte de
+ora lor cu `?preview=leaderboard` și `?preview=next`. Detalii + pașii de după cursă:
+**`GHID-EDITIE-NOUA.md`**.
 
 ## Deploy (Vercel)
 
@@ -90,6 +105,27 @@ Dashboard de organizator: statistici live, listă înscrieri, căutare, adăugar
 cu undo, export CSV, trimitere emailuri în masă, editare șabloane. Auth: cont unic în
 `admin_users` (bcrypt) + token de sesiune în `admin_sessions`; operațiile trec prin RPC-uri
 `SECURITY DEFINER`. Cod: `src/admin/` + `src/lib/adminApi.ts`.
+
+Tabul **„Coming Soon"** e singurul cu efect **imediat** pe site: comută ecranul de dinainte de
+lansare și mută țintele numărătorilor fără să treacă prin ciornă → publică. Scurtătura e de pași,
+nu de verificări — serverul revalidează documentul peticit prin aceeași poartă ca publicarea și
+scrie un rând nou, deci orice apăsare se poate întoarce din „Versiuni anterioare".
+
+## Banda „Instagram"
+
+Secțiune configurabilă ca oricare alta (ordonabilă și ascunsă din tabul „Eveniment"). Clipurile se
+adaugă lipind linkul din Instagram — codul se extrage singur.
+
+Cardurile sunt **façade**: până când vizitatorul nu apasă pe unul, pagina nu cere nimic de la
+`instagram.com` (nici script, nici imagine, nici cookie — util și pentru punctul GDPR din
+`BACKLOG.md`). Clicul montează iframe-ul oficial în locul cardului, unul singur odată. Sub fiecare
+card rămâne linkul canonic, ca un iframe blocat să nu însemne conținut inaccesibil.
+
+Fără niciun clip, secțiunea nu se randează **și** nu consumă un număr de secțiune. Posterele sunt
+assets locale (`public/reels/`), deci un poster nou cere deploy; un clip nou, nu.
+
+CSP-ul trebuie să păstreze `https://www.instagram.com` în `frame-src`, iar `Permissions-Policy`
+delegarea de fullscreen. Există teste care păzesc ambele.
 
 ## Documente
 

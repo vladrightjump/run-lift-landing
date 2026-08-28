@@ -63,9 +63,7 @@ const fillValid = async (page: Page) => {
   await page.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
   await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
   await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
-  await page.getByLabel('Ziua nașterii').selectOption('15');
-  await page.getByLabel('Luna nașterii').selectOption('5'); // Mai
-  await page.getByLabel('Anul nașterii').selectOption('1994');
+  await page.getByPlaceholder('zz.ll.aaaa').fill('15.05.1994');
   await page.locator('input[name="acord"]').check();
 };
 
@@ -126,6 +124,8 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await expect(page.getByText(/te-ai înregistrat/i)).toBeVisible();
     const trimis = plic as unknown as Plic;
     expect(trimis.mode).toBe('registration');
+    // Data nașterii vine acum dintr-un singur câmp scris (`BirthDateField`), nu
+    // din trei selectoare — dar ajunge în plic la fel, ca ISO.
     expect(trimis.data.dataNasterii).toBe('1994-05-15');
     expect(trimis.data.telefon).toBe('069509949');
     // Ediția o decide serverul (DEFAULT din DB): dacă ar veni din client, un bot
@@ -135,6 +135,27 @@ test.describe('Înscriere — formular ediția curentă', () => {
     // Dovezile anti-bot însoțesc fiecare submit: capcana goală + timp plauzibil.
     expect(trimis.hp).toBe('');
     expect(typeof trimis.elapsed).toBe('number');
+    // Regresia din 4 aug (`Content-Profile: runlift`) nu mai e a clientului:
+    // browserul nu mai vorbește cu PostgREST. Header-ul îl pune `insertRow` din
+    // `submit-form`, iar garda e în `tests/integration/backend.live.test.ts`.
+  });
+
+  // Pe telefon, cele 3 select-uri însemnau 3 deschideri de picker pentru o
+  // singură informație. Testul păzește să nu se întoarcă pe furiș.
+  test('data nașterii e un singur câmp scris, nu trei select-uri', async ({ page }) => {
+    await fixClock(page);
+    await mockStats(page, 0);
+    await page.goto('/?preview=landing');
+
+    const camp = page.getByPlaceholder('zz.ll.aaaa');
+    await expect(camp).toBeVisible();
+    await expect(camp).toHaveAttribute('inputmode', 'numeric');
+    await expect(page.locator('form select')).toHaveCount(0);
+
+    // Punctele apar singure, iar valoarea trimisă mai departe e ISO.
+    await camp.fill('15.05.1994');
+    await expect(camp).toHaveValue('15.05.1994');
+    await expect(page.locator('input[name="dataNasterii"]')).toHaveValue('1994-05-15');
   });
 
   test('validare: submit gol NU trimite request și afișează eroare', async ({ page }) => {
@@ -167,7 +188,7 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
     await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
     await page.locator('input[name="acord"]').check();
-    // fără Zi/Luna/An
+    // fără data nașterii
     await submitBtn(page).click();
 
     await expect(page.getByText(/introdu data nașterii/i)).toBeVisible();
@@ -210,9 +231,7 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await page.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
     await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
     await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
-    await page.getByLabel('Ziua nașterii').selectOption('15');
-    await page.getByLabel('Luna nașterii').selectOption('5');
-    await page.getByLabel('Anul nașterii').selectOption('1994');
+    await page.getByPlaceholder('zz.ll.aaaa').fill('15.05.1994');
     await page.locator('input[name="acord"]').check();
     await wlBtn.click();
 

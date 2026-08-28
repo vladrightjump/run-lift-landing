@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { toCsv } from '../lib/csv';
 import {
   addRegistration,
   updateRegistration,
   deleteRegistration,
+  undeleteRegistration,
   listRegistrations,
   listWaitlist,
   deleteWaitlist,
@@ -12,6 +14,7 @@ import {
   listEditions,
   createEdition,
   listEmailLog,
+  listEventConfig,
   InvalidTokenError,
 } from '../lib/adminApi';
 import type {
@@ -23,24 +26,30 @@ import type {
 } from '../lib/adminApi';
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
+import { AdminEventTab } from './AdminEventTab';
+import { AdminComingSoonTab } from './AdminComingSoonTab';
+import { AdminNav } from './AdminNav';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
-import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
+import { emailuriNelivrate, acoperire, COMUNICARI_EDITIE } from './deliveryLog';
+import type { StareCelula } from './deliveryLog';
+import { useAdminPolling } from './useAdminPolling';
+import {
+  isDuplicateError,
+  isTimeoutError,
+  isNetworkOrCspError,
+  sendConfirmationEmail,
+} from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
-import { CURRENT_EDITION, LAUNCH_DATE, TOTAL_SLOTS, WAITLIST_SLOTS } from '../lib/config';
-import { LAUNCH_EDITION_ORDINAL } from '../content/format';
-
-const launchFmt = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-});
-const LAUNCH_LABEL = launchFmt.format(LAUNCH_DATE);
+import { useNow } from '../hooks/useNow';
+import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
+import { AdminSkeleton, AdminFeedSkeleton } from './AdminSkeleton';
+import { AdminAcum } from './AdminAcum';
+import { fazaSite, ETICHETA_FAZA, type TabAdmin } from './stareCurenta';
+import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
+import { parseEventConfig } from '../content/eventConfig';
 
 type Props = {
   token: string;
@@ -53,7 +62,14 @@ type AdminToast = {
   undo?: () => void;
 };
 
-const REFRESH_MS = 15_000;
+/**
+ * Tab-urile, cu etichete scrise ca sarcini, nu ca nume de tabel.
+ *
+ * „Anunță-mă la lansare" era numele butonului de pe pagina publică, nu al
+ * lucrului din spatele tabului: lista celor care au cerut să fie anunțați.
+ * `descriere` ajunge în `title` — răspunsul la „ce e aici?" fără să dai click.
+ */
+// Gruparea taburilor stă în `adminNavigatie.ts`, ca modul pur.
 
 const dateFmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short' });
 const formatDate = (iso: string): string => dateFmt.format(new Date(iso)).replace('.', '');
@@ -66,6 +82,62 @@ const eventFmt = new Intl.DateTimeFormat('ro-RO', {
   timeZone: 'Europe/Chisinau',
 });
 const formatEventTime = (iso: string): string => eventFmt.format(new Date(iso));
+
+/**
+ * Insigna din tabelul de participanți — cea mai PROASTĂ stare dintre comunicările
+ * datorate, nu cea mai recentă trimitere. Un eșec rămâne vizibil chiar dacă altă
+ * comunicare a plecat cu bine după el.
+ */
+const rezumaAcoperire = (
+  celule: Record<string, StareCelula>
+): { clasa: string; eticheta: string; detaliu: string } => {
+  const stari = COMUNICARI_EDITIE.map((c) => ({ com: c, stare: celule[c.cheie] ?? 'lipsa' }));
+  const detaliu = stari.map(({ com, stare }) => `${com.eticheta}: ${STARE_TEXT[stare]}`).join(' · ');
+  const esuate = stari.filter((s) => s.stare === 'esuat');
+  if (esuate.length) {
+    return {
+      clasa: 'esuat',
+      eticheta: `✕ ${esuate.map((s) => s.com.eticheta.toLowerCase()).join(', ')}`,
+      detaliu,
+    };
+  }
+  const lipsa = stari.filter((s) => s.stare === 'lipsa');
+  if (lipsa.length === stari.length) return { clasa: 'niciunul', eticheta: '— niciunul', detaliu };
+  if (lipsa.length) {
+    return {
+      clasa: 'partial',
+      eticheta: `${stari.length - lipsa.length}/${stari.length}`,
+      detaliu,
+    };
+  }
+  return { clasa: 'trimis', eticheta: '✓ complet', detaliu };
+};
+
+/**
+ * De ce n-a mers reversarea. Ambele cauze sunt reale și au apărut exact în
+ * fereastra dintre ștergere și undo: locul poate fi luat de auto-promovare, iar
+ * adresa poate fi re-înscrisă. Înainte, undo-ul trecea peste amândouă în tăcere.
+ */
+const motivUndoEsuat = (err: unknown, nume: string): string => {
+  // `SubmitHttpError.message` poartă corpul răspunsului, deci și numele excepției
+  // ridicate de RPC (`event_full`, `duplicate_email`).
+  const text = err instanceof Error ? err.message : String(err);
+  if (text.includes('event_full')) {
+    return `Locul lui ${nume} a fost ocupat între timp — ediția e plină. Șterge pe altcineva sau adaugă-l manual peste capacitate.`;
+  }
+  if (text.includes('duplicate_email')) {
+    return `Adresa lui ${nume} a fost re-înscrisă între timp, deci nu se mai poate readuce rândul vechi.`;
+  }
+  if (isTimeoutError(err)) return 'Serverul răspunde greu. Verifică lista și încearcă din nou.';
+  if (isNetworkOrCspError(err)) return 'Conexiune blocată sau indisponibilă. Reîncearcă.';
+  return 'Nu am putut anula ștergerea.';
+};
+
+const STARE_TEXT: Record<StareCelula, string> = {
+  trimis: 'trimis',
+  esuat: 'eșuat',
+  lipsa: 'lipsă',
+};
 
 export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [rows, setRows] = useState<AdminRegistration[] | null>(null);
@@ -84,12 +156,27 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
-  const [tab, setTab] = useState<
-    'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane'
-  >('participanti');
+  const [tab, setTab] = useState<TabAdmin>('participanti');
+  // Semnalele pentru panoul „Acum". Ciorna și amprenta de build trăiesc în
+  // tabul „Eveniment"; aici le citim doar ca să putem spune, din prima pagină,
+  // că a rămas ceva nepublicat.
+  const [ciornaNepublicata, setCiornaNepublicata] = useState(false);
+  const [metaInUrma, setMetaInUrma] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  // Ediția și capacitatea vin din configul PUBLICAT, nu din bundle: după ce
+  // publicarea nu mai cere deploy, un backoffice deschis dintr-un build vechi ar
+  // filtra ediția greșită — și nu mai există banner care să explice de ce.
+  const config = useEventConfig();
+  const CURRENT_EDITION = config.number;
+  const TOTAL_SLOTS = config.slots.total;
+  const WAITLIST_SLOTS = config.slots.waitlist;
+  const dates = useEditionDates();
+  const { LAUNCH_DATE } = dates;
   const cd = useCountdown(LAUNCH_DATE);
+  // Faza pentru chip-ul din antet. Un minut e destul: fazele se masoara in ore
+  // si zile, iar countdown-ul la secunda exista deja langa el.
+  const acumMs = useNow(60_000);
+  const fazaAcum = fazaSite(config, dates, acumMs);
 
   // Ediția pe care backendul o consideră curentă. Doar ea acceptă modificări:
   // ascunderea butoanelor de aici e comoditate, refuzul real vine din RPC-urile
@@ -137,37 +224,67 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
   useEffect(refreshEditions, [refreshEditions]);
 
-  const refresh = useCallback(() => {
+  /**
+   * Semnalele pentru panoul „Acum" care nu vin din ciclul de participanți:
+   * există o ciornă nepublicată, și a rămas share preview-ul în urmă.
+   *
+   * O dată la montare, nu la fiecare poll: amândouă se schimbă doar când
+   * organizatorul acționează în tabul „Eveniment", iar acolo se reîncarcă
+   * oricum. Un poll pe ele ar fi două cereri în plus la fiecare ciclu, pentru
+   * o informație care stă pe loc ore întregi.
+   */
+  useEffect(() => {
+    const c = new AbortController();
+    Promise.all([
+      listEventConfig(token, undefined, c.signal),
+      fetchBuildInfo(c.signal) as Promise<BuildInfo | null>,
+    ])
+      .then(([randuri, build]) => {
+        setCiornaNepublicata(randuri.some((r) => r.status === 'draft'));
+        const publicat = randuri.find((r) => r.status === 'published');
+        // `parseEventConfig` întoarce `null` pe un document pe care nu-l
+        // recunoaște; fără config publicat valid n-avem cu ce compara build-ul,
+        // deci nu semnalăm nimic.
+        const config = publicat ? parseEventConfig(publicat.config) : null;
+        setMetaInUrma(
+          build !== null && config !== null && campuriVechiInBuild(build, config).length > 0
+        );
+      })
+      // Semnalele sunt un plus, nu o precondiție: dacă nu vin, panoul arată
+      // restul stării în loc să blocheze pagina.
+      .catch(() => {});
+    return () => c.abort();
+  }, [token]);
+
+  const fetchAll = useCallback(
+    (signal: AbortSignal) => {
     // Fără ediție știută n-avem ce cere — așteptăm inventarul.
     if (editie === null) return;
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    listRegistrations(token, editie, controller.signal)
+    listRegistrations(token, editie, signal)
       .then((data) => {
         setRows(data);
         setLoadError(false);
       })
       .catch((err) => {
-        if (controller.signal.aborted || handleAuthError(err)) return;
+        if (signal.aborted || handleAuthError(err)) return;
         // Păstrăm ultima listă cunoscută; eroarea contează doar la primul load.
         setLoadError((prev) => prev || rowsRef.current === null);
       });
-    listWaitlist(token, editie, controller.signal)
+    listWaitlist(token, editie, signal)
       .then(setWaitlist)
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         handleAuthError(err);
       });
     // Corpul emailurilor doar când e chiar folosit (tab-ul „Livrare"); în rest
     // avem nevoie doar de status, pentru badge + coloana din tabelul de participanți.
-    listEmailLog(token, editie, tab === 'livrare', controller.signal)
+    listEmailLog(token, editie, tab === 'livrare', signal)
       .then(setEmailLog)
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         handleAuthError(err);
       });
-    listAdminEvents(token, controller.signal)
+    listAdminEvents(token, 200, signal)
       .then((data) => {
         // Primul load: marcăm tot ca „văzut" fără toast. Apoi anunțăm doar noutățile.
         if (seenEventsRef.current === null) {
@@ -187,10 +304,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         setEvents(data);
       })
       .catch((err) => {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         handleAuthError(err);
       });
-  }, [token, editie, tab, handleAuthError, showToast]);
+    },
+    [token, editie, tab, handleAuthError, showToast]
+  );
+
+  const refresh = useAdminPolling(fetchAll);
 
   // Schimbarea ediției înseamnă alt set de date — golim ca să nu se vadă o clipă
   // lista ediției anterioare sub numărul nou.
@@ -210,20 +331,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     editiePrecedentaRef.current = editie;
   }, [editie]);
 
-  useEffect(() => {
-    refresh();
-    const id = window.setInterval(refresh, REFRESH_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener('visibilitychange', onVisible);
-      abortRef.current?.abort();
+  // Poll-ul stă în `useAdminPolling`; aici rămâne doar cronometrul toast-ului,
+  // care nu ține de ciclul de date.
+  useEffect(
+    () => () => {
       if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-    };
-  }, [refresh]);
+    },
+    []
+  );
 
   const all = rows ?? [];
   const q = query.trim().toLowerCase();
@@ -234,30 +349,39 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const percent = Math.round((all.length / TOTAL_SLOTS) * 100);
   const waitAll = waitlist ?? [];
 
-  // Ultimul email încercat pentru fiecare adresă — pentru indicatorul din tabel.
-  // `emailLog` vine cu cele mai noi primele, deci prima apariție e cea recentă.
-  const ultimulEmail = useMemo(() => {
-    const m = new Map<string, AdminEmailLogEntry>();
-    for (const e of emailLog ?? []) {
-      const k = e.email.toLowerCase();
-      if (!m.has(k)) m.set(k, e);
-    }
+  // Acoperirea per participant — pentru indicatorul din tabel.
+  //
+  // Înainte aici stătea „ultimul email", o hartă cheiată DOAR pe adresă: orice
+  // trimitere reușită ulterioară acoperea un eșec anterior, așa că o bifă verde
+  // putea coexista cu un reminder care n-a ajuns niciodată. Acum indicatorul
+  // citește aceeași fișă ca tabul „Livrare", pe comunicare, nu pe adresă.
+  const acoperirePerId = useMemo(() => {
+    const m = new Map<string, Record<string, StareCelula>>();
+    for (const r of acoperire(all, emailLog ?? [])) m.set(r.participant.id, r.celule);
     return m;
-  }, [emailLog]);
+  }, [all, emailLog]);
 
   // Câte emailuri au rămas nelivrate (ultima încercare per adresă+subiect e eșec)
-  // — badge-ul roșu de pe tabul „Livrare".
-  const nelivrate = useMemo(() => {
-    const vazute = new Set<string>();
-    let n = 0;
-    for (const e of emailLog ?? []) {
-      const k = `${e.email.toLowerCase()}|${e.subiect}`;
-      if (vazute.has(k)) continue;
-      vazute.add(k);
-      if (e.status === 'esuat') n++;
-    }
-    return n;
-  }, [emailLog]);
+  // — badge-ul roșu de pe tabul „Livrare". Aceeași logică pe care o consumă și
+  // tabul, din `deliveryLog.ts` — înainte era rescrisă aici, în paralel.
+  const nelivrate = useMemo(() => emailuriNelivrate(emailLog ?? []).length, [emailLog]);
+
+  /**
+   * Contorul de pe fiecare tab. `null` = nu-l arătăm.
+   *
+   * Doar acolo unde numărul chiar spune ceva și îl avem deja încărcat. Un „0"
+   * afișat cât timp datele se încarcă e o minciună scurtă — dar exact aia o
+   * citește organizatorul în clipa în care intră.
+   */
+  const contorTab: Record<TabAdmin, number | null> = {
+    participanti: rows === null ? null : all.length,
+    email: null,
+    livrare: null,
+    lansare: null,
+    eveniment: null,
+    'coming-soon': null,
+    sabloane: null,
+  };
 
   const handleCreateEdition = () => {
     if (creatingEdition) return;
@@ -316,15 +440,20 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         showToast({
           kind: 'error',
           msg: `${row.nume} a fost șters.`,
+          // Reversare, nu reinserare: același rând, deci același `created_at` și
+          // aceeași poziție în ordinea de promovare. Înainte, undo apela
+          // `addRegistration`, care sărea peste garda de capacitate și dădea
+          // rândului recreat un `created_at` nou.
           undo: () => {
-            addRegistration(token, { nume: row.nume, telefon: row.telefon, email: row.email })
+            undeleteRegistration(token, row.id)
               .then(() => {
                 refresh();
-                showToast({ kind: 'success', msg: `${row.nume} a fost readăugat.` });
+                showToast({ kind: 'success', msg: `${row.nume} a fost readus în listă.` });
               })
               .catch((err) => {
                 if (handleAuthError(err)) return;
-                showToast({ kind: 'error', msg: 'Nu am putut anula ștergerea.' });
+                refresh();
+                showToast({ kind: 'error', msg: motivUndoEsuat(err, row.nume) });
               });
           },
         });
@@ -367,10 +496,15 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       })
       .catch((err) => {
         if (handleAuthError(err)) return;
+        // Garda de capacitate stă acum pe server, nu doar în verificarea de mai
+        // sus: numărătoarea din client e mereu cu până la 15 secunde în urmă.
+        const text = err instanceof Error ? err.message : String(err);
         showToast({
           kind: 'error',
           msg: isDuplicateError(err)
             ? 'Există deja o înscriere cu acest email.'
+            : text.includes('event_full')
+            ? 'Ediția e plină — s-a ocupat ultimul loc între timp.'
             : 'Nu am putut salva. Încearcă din nou.',
         });
       })
@@ -449,13 +583,29 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           <span className="admin-badge">Backoffice</span>
         </div>
         <div className="admin-topbar-meta">
-          <span className="topbar-info">Ediția {LAUNCH_EDITION_ORDINAL} · anunț {LAUNCH_LABEL}</span>
-          <span className="admin-cd">
-            <span className="countdown-dot" />
-            {cd.done
-              ? 'Anunțul e live'
-              : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`}
-          </span>
+          {/* Ce vede un vizitator ACUM, in antetul lipit. Intrebarea nu se pune
+              o data la deschidere: se pune de fiecare data cand te pregatesti sa
+              schimbi ceva, iar panoul din capul paginii dispare la primul scroll. */}
+          <a
+            className={`admin-faza faza-${fazaAcum}`}
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Deschide site-ul public intr-un tab nou"
+          >
+            <span className="admin-faza-punct" aria-hidden="true" />
+            <span className="admin-faza-eticheta">Pe site</span>
+            <span className="admin-faza-valoare">{ETICHETA_FAZA[fazaAcum]}</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          {/* Numaratoarea spre anunt dispare dupa ce trece: un „Anuntul e live"
+              lipit permanent in antet e zgomot, nu informatie. */}
+          {!cd.done && (
+            <span className="admin-cd">
+              <span className="countdown-dot" />
+              {`Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`}
+            </span>
+          )}
           <button type="button" className="admin-logout" onClick={onLogout}>
             Ieși din cont
           </button>
@@ -479,44 +629,19 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </div>
         )}
 
-        <nav className="admin-tabs">
-          <button
-            type="button"
-            className={tab === 'participanti' ? 'active' : ''}
-            onClick={() => setTab('participanti')}
-          >
-            Participanți
-          </button>
-          <button
-            type="button"
-            className={tab === 'email' ? 'active' : ''}
-            onClick={() => setTab('email')}
-          >
-            Emailuri
-          </button>
-          <button
-            type="button"
-            className={tab === 'livrare' ? 'active' : ''}
-            onClick={() => setTab('livrare')}
-          >
-            Livrare
-            {nelivrate > 0 && <span className="admin-tab-alert">{nelivrate}</span>}
-          </button>
-          <button
-            type="button"
-            className={tab === 'lansare' ? 'active' : ''}
-            onClick={() => setTab('lansare')}
-          >
-            Anunță-mă la lansare
-          </button>
-          <button
-            type="button"
-            className={tab === 'sabloane' ? 'active' : ''}
-            onClick={() => setTab('sabloane')}
-          >
-            Șabloane
-          </button>
-        </nav>
+        {/* Panoul de orientare stă ÎNAINTEA tabelelor și a tab-urilor: prima
+            întrebare cu care se deschide backoffice-ul e „unde suntem?", nu
+            „cine s-a înscris". */}
+        <AdminAcum
+          semnale={{ nelivrate, asteptare: waitAll.length, ciornaNepublicata, metaInUrma, arhiva }}
+          onTab={setTab}
+        />
+
+        {/* Tab-urile poartă un contor, ca să știi ce e în spatele lor fără să
+            le deschizi. Contorul lipsește cât timp datele nu au sosit — un „0"
+            afișat în timpul încărcării ar fi o minciună scurtă, dar tocmai pe
+            aia o citește organizatorul când intră. */}
+        <AdminNav tab={tab} onTab={setTab} contorTab={contorTab} nelivrate={nelivrate} />
 
         {tab === 'sabloane' && (
           <AdminTemplatesTab token={token} onAuthError={handleAuthError} />
@@ -528,6 +653,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             rows={all}
             waitlist={waitAll}
             editie={editie ?? CURRENT_EDITION}
+            emailLog={emailLog ?? []}
             readOnly={arhiva}
             formatDate={formatDate}
             showToast={showToast}
@@ -542,6 +668,22 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             participanti={all}
             readOnly={arhiva}
             onRefresh={refresh}
+            showToast={showToast}
+          />
+        )}
+
+        {tab === 'eveniment' && (
+          <AdminEventTab
+            token={token}
+            onAuthError={handleAuthError}
+            showToast={showToast}
+          />
+        )}
+
+        {tab === 'coming-soon' && (
+          <AdminComingSoonTab
+            token={token}
+            onAuthError={handleAuthError}
             showToast={showToast}
           />
         )}
@@ -612,16 +754,29 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         )}
 
         <section className="admin-table-section">
-          <div className="admin-table-head">
+          <div className="admin-table-head admin-participanti-head">
             <h2>Participanți · ediția {editie ?? CURRENT_EDITION}</h2>
             <div className="admin-table-actions">
               <input
-                type="text"
+                // `search`, nu `text`: aduce butonul nativ de golire și
+                // tastatura potrivită pe mobil. Nici corectorul, nici
+                // autocompletarea n-au ce căuta pe nume proprii și adrese.
+                type="search"
                 className="admin-search"
                 placeholder="Caută nume, telefon, email…"
+                aria-label="Caută în lista de participanți"
+                autoComplete="off"
+                spellCheck={false}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
+              {/* Doar cât filtrul e activ: pe lista întreagă, numărul e deja în
+                  cartonașul „Înscriși" de deasupra. */}
+              {q && (
+                <span className="admin-table-rezultate" role="status">
+                  {filtered.length} din {all.length}
+                </span>
+              )}
               {!arhiva && (
                 <button
                   type="button"
@@ -703,9 +858,10 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 {!arhiva && <span className="right">Acțiuni</span>}
               </div>
               {filtered.map((r, i) => {
-                const mail = ultimulEmail.get(r.email.toLowerCase());
+                const celule = acoperirePerId.get(r.id) ?? {};
+                const rezumat = rezumaAcoperire(celule);
                 return (
-                <div key={r.id} className="admin-row">
+                <div key={r.id} className="admin-row" style={{ '--i': i } as CSSProperties}>
                   <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
                   <span className="admin-cell-name">{r.nume}</span>
                   <a className="admin-cell-link" href={`tel:${r.telefon}`}>
@@ -718,17 +874,11 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   <span>
                     <button
                       type="button"
-                      className={`admin-mail-badge ${mail ? mail.status : 'niciunul'}`}
-                      title={
-                        mail
-                          ? `${mail.subiect} · ${formatEventTime(mail.created_at)}${
-                              mail.status === 'esuat' ? ` · ${mail.eroare ?? 'eșuat'}` : ''
-                            } — click pentru detalii`
-                          : 'Nu i s-a trimis niciun email pe ediția asta'
-                      }
+                      className={`admin-mail-badge ${rezumat.clasa}`}
+                      title={`${rezumat.detaliu} — click pentru fișa de acoperire`}
                       onClick={() => setTab('livrare')}
                     >
-                      {mail ? (mail.status === 'trimis' ? '✓ trimis' : '✕ nelivrat') : '— niciunul'}
+                      {rezumat.eticheta}
                     </button>
                   </span>
                   {!arhiva && (
@@ -754,7 +904,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 </div>
                 );
               })}
-              {rows === null && !loadError && <div className="admin-empty">Se încarcă…</div>}
+              {rows === null && !loadError && <AdminSkeleton cols={arhiva ? 6 : 7} />}
               {rows === null && loadError && (
                 <div className="admin-empty">Nu am putut încărca lista. Reîncercăm automat.</div>
               )}
@@ -785,7 +935,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 {!arhiva && <span className="right">Acțiuni</span>}
               </div>
               {waitAll.map((w, i) => (
-                <div key={w.id} className="admin-row">
+                <div key={w.id} className="admin-row" style={{ '--i': i } as CSSProperties}>
                   <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
                   <span className="admin-cell-name">{w.nume}</span>
                   <a className="admin-cell-link" href={`tel:${w.telefon}`}>
@@ -817,7 +967,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   )}
                 </div>
               ))}
-              {waitlist === null && <div className="admin-empty">Se încarcă…</div>}
+              {waitlist === null && <AdminSkeleton cols={arhiva ? 5 : 6} rows={3} />}
               {waitlist !== null && waitAll.length === 0 && (
                 <div className="admin-empty">
                   Nicio persoană în așteptare. Lista se completează automat când toate cele{' '}
@@ -876,7 +1026,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   </div>
                 );
               })}
-            {events === null && <div className="admin-empty">Se încarcă…</div>}
+            {events === null && <AdminFeedSkeleton />}
             {events !== null &&
               (events ?? []).filter((e) => e.tip === 'auto_promote' || e.tip === 'editie_noua')
                 .length === 0 && <div className="admin-empty">Nicio activitate încă.</div>}

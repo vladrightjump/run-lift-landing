@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { confirmSignup } from '../lib/supabase';
 import type { ConfirmResult } from '../lib/supabase';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
-import { LAUNCH_EDITION_ORDINAL } from '../content/format';
+import { useEditionStrings } from '../hooks/useEventConfig';
 
 type Stare = 'loading' | ConfirmResult | 'eroare';
 
@@ -33,6 +33,7 @@ const CONTINUT: Record<Exclude<Stare, 'loading'>, { titlu: string; text: string;
 };
 
 export const Confirmare = () => {
+  const { LAUNCH_EDITION_ORDINAL } = useEditionStrings();
   const [stare, setStare] = useState<Stare>('loading');
 
   useEffect(() => {

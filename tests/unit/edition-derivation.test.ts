@@ -1,55 +1,93 @@
 import { describe, it, expect } from 'vitest';
 import { EDITION } from '../../src/content/edition';
-import {
-  CURRENT_EDITION,
-  CURRENT_LAUNCH_EDITION,
-  TOTAL_SLOTS,
-  WAITLIST_SLOTS,
-  OCCUPIED_SLOTS,
-  EVENT_DATE,
-  EVENT_END_DATE,
-  REGISTRATION_DEADLINE,
-  LAUNCH_DATE,
-  SHOW_COMING_SOON,
-  INSTAGRAM_URL,
-  INSTAGRAM_HANDLE,
-} from '../../src/lib/config';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { deriveEditionDates, INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../src/lib/config';
 
 /**
- * Gardă anti-drift: `config.ts` trebuie să DERIVE corect din `EDITION` (SSOT).
- * Dacă cineva strică derivarea (sau scrie iar valori de mână în config), testul pică.
- * La ediție nouă se editează DOAR `content/edition.ts` — testele astea trec automat.
+ * Gardă anti-drift — cu direcția INVERSATĂ față de cum arăta înainte.
+ *
+ * Până la mutarea configului în DB, testul ăsta verifica că `config.ts` derivă
+ * corect din `EDITION`, pentru că `EDITION` era sursa de adevăr. Acum sursa e
+ * rândul `published` din `event_config`, iar `EDITION` a rămas INSTANTANEUL de
+ * build. Ce trebuie păzit s-a schimbat odată cu ea:
+ *
+ *  1. instantaneul transcrie fidel `EDITION` (altfel primul cadru randează altceva
+ *     decât ediția deployată) — vezi și `eventConfig.test.ts`;
+ *  2. regula de derivare a momentelor absolute e corectă pentru ORICE config,
+ *     nu doar pentru cel din cod;
+ *  3. ce a rămas deliberat în cod (social) nu a plecat din greșeală în document.
  */
 
-const at = (local: string): string => new Date(`${local}${EDITION.tz}`).toISOString();
+const at = (local: string, tz: string): string => new Date(`${local}${tz}`).toISOString();
 
-describe('config.ts derivă din EDITION', () => {
+describe('instantaneul de build transcrie EDITION', () => {
   it('ediții', () => {
-    expect(CURRENT_EDITION).toBe(EDITION.number);
-    expect(CURRENT_LAUNCH_EDITION).toBe(EDITION.launchNumber);
+    expect(SNAPSHOT_CONFIG.number).toBe(EDITION.number);
+    expect(SNAPSHOT_CONFIG.launchNumber).toBe(EDITION.launchNumber);
   });
 
   it('locuri', () => {
-    expect(TOTAL_SLOTS).toBe(EDITION.slots.total);
-    expect(WAITLIST_SLOTS).toBe(EDITION.slots.waitlist);
-    expect(OCCUPIED_SLOTS).toBe(EDITION.slots.occupiedFallback);
+    expect(SNAPSHOT_CONFIG.slots.total).toBe(EDITION.slots.total);
+    expect(SNAPSHOT_CONFIG.slots.waitlist).toBe(EDITION.slots.waitlist);
+    expect(SNAPSHOT_CONFIG.slots.occupiedFallback).toBe(EDITION.slots.occupiedFallback);
   });
 
+  it('starea paginii', () => {
+    expect(SNAPSHOT_CONFIG.showComingSoon).toBe(EDITION.showComingSoon);
+  });
+});
+
+describe('deriveEditionDates compune momentele cu fusul configului', () => {
+  const d = deriveEditionDates(SNAPSHOT_CONFIG);
+
   it('date/ore compuse cu fusul ediției', () => {
-    expect(EVENT_DATE.toISOString()).toBe(at(EDITION.start));
-    expect(REGISTRATION_DEADLINE.toISOString()).toBe(at(EDITION.registrationDeadline));
-    expect(LAUNCH_DATE.toISOString()).toBe(at(EDITION.launchAt));
+    expect(d.EVENT_DATE.toISOString()).toBe(at(EDITION.start, EDITION.tz));
+    expect(d.REGISTRATION_DEADLINE.toISOString()).toBe(
+      at(EDITION.registrationDeadline, EDITION.tz)
+    );
+    expect(d.LAUNCH_DATE.toISOString()).toBe(at(EDITION.launchAt, EDITION.tz));
+    expect(d.NEXT_EDITION_DATE.toISOString()).toBe(at(EDITION.nextEditionAt, EDITION.tz));
   });
 
   it('EVENT_END_DATE = start + durată', () => {
-    expect(EVENT_END_DATE.getTime()).toBe(
-      EVENT_DATE.getTime() + EDITION.durationHours * 60 * 60 * 1000
+    expect(d.EVENT_END_DATE.getTime()).toBe(
+      d.EVENT_DATE.getTime() + EDITION.durationHours * 60 * 60 * 1000
     );
   });
 
-  it('flags + social', () => {
-    expect(SHOW_COMING_SOON).toBe(EDITION.showComingSoon);
+  it('LEADERBOARD_DATE = start − avansul configurat', () => {
+    expect(d.LEADERBOARD_DATE.getTime()).toBe(
+      d.EVENT_DATE.getTime() - EDITION.leaderboardLeadHours * 60 * 60 * 1000
+    );
+  });
+
+  it('regula ține pentru orice config, nu doar pentru cel din cod', () => {
+    const altul = deriveEditionDates({
+      ...SNAPSHOT_CONFIG,
+      tz: '+02:00',
+      start: '2027-03-14T10:00:00',
+      durationHours: 3,
+      leaderboardLeadHours: 2,
+    });
+    expect(altul.EVENT_DATE.toISOString()).toBe(new Date('2027-03-14T10:00:00+02:00').toISOString());
+    expect(altul.EVENT_END_DATE.toISOString()).toBe(
+      new Date('2027-03-14T13:00:00+02:00').toISOString()
+    );
+    expect(altul.LEADERBOARD_DATE.toISOString()).toBe(
+      new Date('2027-03-14T08:00:00+02:00').toISOString()
+    );
+  });
+});
+
+describe('ce rămâne în cod nu pleacă în document', () => {
+  it('social vine tot din EDITION.urls', () => {
     expect(INSTAGRAM_URL).toBe(EDITION.urls.instagram);
     expect(INSTAGRAM_HANDLE).toBe(EDITION.urls.instagramHandle);
+  });
+
+  it('documentul nu cară antrenamentele, URL-urile sau brandul', () => {
+    expect(SNAPSHOT_CONFIG).not.toHaveProperty('training');
+    expect(SNAPSHOT_CONFIG).not.toHaveProperty('urls');
+    expect(SNAPSHOT_CONFIG).not.toHaveProperty('brand');
   });
 });

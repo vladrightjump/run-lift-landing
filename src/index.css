@@ -31,10 +31,23 @@
     /* Pe mobil topbar-ul are două rânduri — ancora coboară mai mult */
     section[id] { scroll-margin-top: 116px; }
   }
-  body { color: var(--e3-text); font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  body { color: var(--e3-text); font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100dvh; }
   ::selection { background: var(--e3-accent); color: var(--e3-bg); }
   a { text-decoration: none; }
   [hidden] { display: none !important; }
+
+  /* Focus vizibil, pe toate paginile. Doar inputurile aveau inel — restul se
+     navigau cu tastatura pe nevăzute. `:focus-visible`, deci mouse-ul nu-l vede.
+     Panourile cu focus programatic (tabindex=-1) și-l scot explicit mai jos. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 2px solid var(--e3-accent);
+    outline-offset: 2px;
+  }
 
   @keyframes toast-in {
     from { opacity: 0; transform: translate(-50%, -16px); }
@@ -574,7 +587,7 @@
 
   /* ---- Auth ---- */
   .admin-auth {
-    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    min-height: 100dvh; display: flex; align-items: center; justify-content: center;
     padding: 24px; box-sizing: border-box;
     background: radial-gradient(ellipse 70% 50% at 50% 0%, var(--e3-surface) 0%, var(--e3-bg) 70%);
   }
@@ -638,6 +651,30 @@
     gap: 12px 16px; flex-wrap: wrap;
   }
   .admin-topbar-meta { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  /* Chip-ul de faza din antetul lipit: ce vede un vizitator ACUM.
+     Culoarea e a fazei, nu decor - „Coming Soon" si „Landing cu inscrieri" sint
+     doua lumi diferite pentru cine intra pe site. */
+  .admin-faza {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 11px; border: 1px solid var(--e3-border);
+    background: var(--e3-bg); text-decoration: none;
+    font-size: 12px; font-weight: 600; color: var(--e3-muted);
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .admin-faza:hover { border-color: var(--e3-accent-dim); color: var(--e3-text); }
+  .admin-faza-eticheta {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--e3-muted-dim);
+  }
+  .admin-faza-valoare { color: var(--e3-text-bright); }
+  .admin-faza-punct {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--e3-muted-dim);
+    flex: none;
+  }
+  .admin-faza.faza-landing .admin-faza-punct { background: var(--e3-accent); }
+  .admin-faza.faza-landing .admin-faza-valoare { color: var(--e3-accent); }
+  .admin-faza.faza-cine-vine .admin-faza-punct { background: var(--e3-accent); }
+  .admin-faza.faza-coming-soon .admin-faza-punct { background: var(--e3-muted); }
   .admin-cd {
     display: flex; align-items: center; gap: 8px;
     font-size: 13px; font-weight: 600; letter-spacing: 1px;
@@ -656,6 +693,75 @@
     max-width: 1200px; margin: 0 auto;
     padding: clamp(28px, 5vw, 48px) clamp(20px, 5vw, 40px);
     display: grid; gap: clamp(28px, 4vw, 40px);
+  }
+
+  /* ---- Panoul „Acum" ----
+     Prima întrebare cu care se deschide backoffice-ul e „unde suntem?", nu
+     „cine s-a înscris" — deci stă înaintea tabelelor și e singurul bloc de pe
+     pagină cu o dungă lime pe margine. */
+  .admin-acum {
+    border: 1px solid var(--e3-border); border-left: 3px solid var(--e3-accent);
+    background: var(--e3-surface); display: grid; gap: 0;
+    animation: stat-pop 0.45s ease-out both;
+  }
+  .admin-acum-principal {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 1px; background: var(--e3-border);
+  }
+  .admin-acum-bloc {
+    background: var(--e3-surface); padding: 20px 24px; display: grid; gap: 8px;
+    align-content: start;
+  }
+  .admin-acum-eticheta {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+  .admin-acum-valoare {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
+    font-size: 16px; font-weight: 600; line-height: 1.4;
+    color: var(--e3-text); text-wrap: pretty;
+  }
+  .admin-acum-valoare.muted { font-weight: 400; color: var(--e3-muted-strong); }
+  .admin-acum-cand {
+    flex-basis: 100%; font-size: 13px; font-weight: 400;
+    color: var(--e3-accent); font-variant-numeric: tabular-nums;
+  }
+  /* Punctul de stare: lime cât timp pagina e „vie" (înscrieri deschise sau
+     ziua cursei), stins în rest. Pulsează doar în fereastra zilei cursei —
+     singurul moment în care starea se schimbă sub ochii tăi. */
+  .admin-acum-punct {
+    width: 9px; height: 9px; border-radius: 50%; flex: none;
+    align-self: center; background: var(--e3-muted-dim);
+  }
+  .faza-landing .admin-acum-punct { background: var(--e3-accent); }
+  .faza-cine-vine .admin-acum-punct {
+    background: var(--e3-accent); animation: dot-blink 1.4s ease-in-out infinite;
+  }
+
+  .admin-acum-atentie {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 14px 24px; border-top: 1px solid var(--e3-border);
+    background: var(--e3-bg);
+  }
+  .admin-acum-ok { font-size: 13px; color: var(--e3-muted); }
+  .admin-acum-semnal {
+    font-family: inherit; font-size: 13px; line-height: 1.4;
+    background: transparent; color: var(--e3-muted-strong);
+    border: 1px solid var(--e3-border); padding: 7px 12px; cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .admin-acum-semnal:hover {
+    border-color: var(--e3-accent); color: var(--e3-accent);
+    background: var(--e3-surface);
+  }
+  .admin-acum-semnal.static { cursor: default; }
+  .admin-acum-semnal.static:hover {
+    border-color: var(--e3-border); color: var(--e3-muted-strong); background: transparent;
+  }
+  .admin-acum-semnal.urgent { border-color: var(--e3-danger); color: var(--e3-danger); }
+  .admin-acum-semnal.urgent:hover {
+    border-color: var(--e3-danger-strong); color: var(--e3-danger-strong);
+    background: var(--e3-danger-bg);
   }
 
   /* ---- Stats ---- */
@@ -692,6 +798,25 @@
     gap: 16px; flex-wrap: wrap;
     border: 1px solid var(--e3-border); border-bottom: none;
     background: var(--e3-surface); padding: 16px 24px;
+  }
+  /* Titlul, căutarea și acțiunile rămân la vedere cât timp derulezi lista.
+     La 40 de participanți, „Adaugă" și „Export CSV" ies din ecran după al
+     zecelea rând și trebuie să te întorci sus ca să ajungi la ele.
+
+     `top` e sub antetul sticky (`.admin-topbar`): 14px padding × 2 + 26px
+     conținut. Sub 900px antetul se rupe pe două rânduri și constanta n-ar mai
+     fi adevărată, deci acolo bara rămâne în flux. */
+  @media (min-width: 900px) {
+    .admin-participanti-head {
+      position: sticky; top: 54px; z-index: 3;
+      /* Opac, nu translucid: rândurile trebuie să treacă PE SUB, nu prin el. */
+      background: var(--e3-surface);
+    }
+  }
+  /* Câte rânduri a lăsat căutarea — altfel o listă scurtă arată la fel ca o
+     căutare fără rezultate pe care ai uitat că e activă. */
+  .admin-table-rezultate {
+    font-size: 13px; color: var(--e3-muted); font-variant-numeric: tabular-nums;
   }
   .admin-table-head h2 {
     margin: 0; font-family: Anton, sans-serif; font-weight: 400;
@@ -756,7 +881,13 @@
     display: grid; grid-template-columns: 48px 1.5fr 1fr 1.5fr 0.9fr 180px;
     gap: 12px; align-items: center; padding: 14px 24px;
     border-bottom: 1px solid var(--e3-hairline);
-    transition: background 0.15s ease; animation: row-in 0.35s ease-out;
+    transition: background 0.15s ease;
+    /* Rândurile sosesc în cascadă, nu toate odată — la 40 de participanți, un
+       bloc care apare instantaneu se citește ca un salt de layout. `--i` vine
+       inline de la randare; întârzierea e plafonată ca lista lungă să nu se
+       construiască o secundă și jumătate. */
+    animation: row-in 0.35s ease-out both;
+    animation-delay: min(calc(var(--i, 0) * 22ms), 400ms);
   }
   .admin-row:hover { background: var(--e3-surface-hover); }
   .admin-row-head {
@@ -764,6 +895,12 @@
     font-size: 11px; font-weight: 700; letter-spacing: 2px;
     text-transform: uppercase; color: var(--e3-muted-dim); animation: none;
   }
+  /* NU face `.admin-row-head` sticky: e înăuntrul lui `.admin-table-wrap`, care
+     are `overflow-x: auto` — iar asta îl face container de scroll pe AMBELE axe
+     (o axă `visible` lângă una care nu e devine `auto`). Sticky s-ar raporta la
+     el, unde nu există derulare verticală, deci regula ar fi moartă. Aceeași
+     capcană ca la `view()` din hero-ul paginii publice.
+     Ce se poate lipi e bara de deasupra, care stă în afara containerului. */
   .admin-row-head:hover { background: transparent; }
   .admin-row-head .right { text-align: right; }
   .admin-cell-nr { font-family: Anton, sans-serif; font-size: 14px; color: var(--e3-muted-dim); font-variant-numeric: tabular-nums; }
@@ -781,6 +918,41 @@
   }
   .admin-btn-delete:hover { background: var(--e3-danger); color: var(--e3-bg); border-color: var(--e3-danger); }
   .admin-empty { padding: 36px 24px; text-align: center; font-size: 15px; color: var(--e3-muted); }
+
+  /* Tabelele au min-width și scrollează orizontal pe telefon. Umbra din dreapta
+     spune că mai e conținut; dispare singură la capăt (background-attachment:
+     local pe straturile de gradient). */
+  .admin-table-wrap {
+    background:
+      linear-gradient(90deg, var(--e3-surface) 30%, rgba(26,29,23,0)) left / 40px 100% no-repeat local,
+      linear-gradient(90deg, rgba(26,29,23,0), var(--e3-surface) 70%) right / 40px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgba(10,14,8,0.5), rgba(10,14,8,0)) left / 16px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgba(10,14,8,0.5), rgba(10,14,8,0)) right / 16px 100% no-repeat scroll,
+      var(--e3-surface);
+  }
+
+  /* ---- Skeleton (admin) ----
+     Barele stau în `.admin-row`, deci moștenesc grila fiecărui tabel și se aliniază
+     singure la coloanele lui. Tabelul nu mai sare la sosirea datelor.
+     Perechea de pe landing stă în edition3.css. */
+  .admin-skel {
+    height: 12px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--e3-border) 0%, var(--e3-surface-hover) 50%, var(--e3-border) 100%);
+    background-size: 200% 100%;
+    animation: admin-shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes admin-shimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+  }
+
+  /* Text doar pentru cititoarele de ecran. */
+  .admin-sr {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+
 
   /* ---- Lista de așteptare ---- */
   .admin-wait-head { display: block; }
@@ -881,58 +1053,315 @@
   }
 
   /* ---- Tabs ---- */
-  .admin-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--e3-border); }
-  .admin-tabs button {
-    background: transparent; border: none; border-bottom: 2px solid transparent;
-    color: var(--e3-muted); cursor: pointer;
-    font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 1.5px;
-    text-transform: uppercase; padding: 12px 18px; margin-bottom: -1px;
-    transition: color 0.2s ease, border-color 0.2s ease;
+  /* Șase tab-uri intră pe lat, dar nu și pe un laptop mic — deci se derulează
+     lateral în loc să se rupă pe două rânduri, care mută tot ce e sub ele. */
+  /* ---- Navigatia: trei grupuri, frunzele grupului deschis dedesubt ----
+     Sapte taburi plate cereau sa stii dinainte in care sta ce cauti. Trei
+     intrebari se aleg fara sa cunosti structura aplicatiei. */
+  .admin-nav { display: grid; gap: 0; }
+  .admin-nav ul { list-style: none; margin: 0; padding: 0; }
+  .admin-nav-grupuri > li { display: grid; }
+  .admin-nav-grupuri > li > button { width: 100%; height: 100%; }
+  .admin-nav-grupuri {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+    background: var(--e3-border); border: 1px solid var(--e3-border);
   }
-  .admin-tabs button:hover { color: var(--e3-text); }
-  .admin-tabs button.active { color: var(--e3-accent); border-bottom-color: var(--e3-accent); }
-  /* Badge de alertă pe tab (ex. emailuri nelivrate). */
+  .admin-nav-grup {
+    display: grid; gap: 2px; justify-items: start; text-align: left;
+    background: var(--e3-bg); border: none; cursor: pointer;
+    padding: 12px 16px; min-height: 62px;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+  }
+  .admin-nav-grup:hover { background: var(--e3-surface); }
+  .admin-nav-grup.activ {
+    background: var(--e3-surface);
+    /* Muchia lime pe interior, nu bordura: bordura ar muta continutul cu 1px. */
+    box-shadow: inset 0 3px 0 var(--e3-accent);
+  }
+  .admin-nav-grup-nume {
+    font-family: Anton, sans-serif; font-size: 16px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--e3-muted);
+    transition: color 0.2s ease;
+  }
+  .admin-nav-grup.activ .admin-nav-grup-nume { color: var(--e3-accent); }
+  /* Intrebarea e ce alege organizatorul; numele grupului e doar eticheta ei. */
+  .admin-nav-grup-intrebare { font-size: 12px; color: var(--e3-muted-dim); }
+  .admin-nav-grup.activ .admin-nav-grup-intrebare { color: var(--e3-muted); }
+
+  .admin-nav-taburi {
+    display: flex; gap: 4px; border-bottom: 1px solid var(--e3-border);
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .admin-nav-taburi::-webkit-scrollbar { display: none; }
+  .admin-nav-tab {
+    position: relative;
+    background: transparent; border: none;
+    color: var(--e3-muted); cursor: pointer; white-space: nowrap; flex: none;
+    font-family: Archivo, sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 0.5px; padding: 12px 16px 14px;
+    transition: color 0.2s ease, background 0.2s ease;
+  }
+  /* Sublinierea se desface din stanga - miscarea spune in ce directie ai mers. */
+  .admin-nav-tab::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: var(--e3-accent);
+    transform: scaleX(0); transform-origin: 0 50%;
+    transition: transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1);
+  }
+  .admin-nav-tab:hover { color: var(--e3-text); background: var(--e3-surface); }
+  .admin-nav-tab.activ { color: var(--e3-accent); }
+  .admin-nav-tab.activ::after { transform: scaleX(1); }
+
+  /* Badge de alerta (ex. emailuri nelivrate). */
   .admin-tab-alert {
     display: inline-block; margin-left: 8px; padding: 1px 7px;
     background: var(--e3-danger); color: var(--e3-bg);
     font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
     vertical-align: middle; font-variant-numeric: tabular-nums;
   }
+  /* Contorul neutru: aceeasi forma ca alerta, dar discret - ca diferenta
+     dintre "uita-te aici" si "atatea sunt". */
+  .admin-tab-contor {
+    display: inline-block; margin-left: 8px; padding: 1px 7px;
+    background: var(--e3-border); color: var(--e3-muted-strong);
+    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
+    vertical-align: middle; font-variant-numeric: tabular-nums;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .admin-nav-tab.activ .admin-tab-contor,
+  .admin-nav-grup.activ .admin-tab-contor {
+    background: var(--e3-accent); color: var(--e3-bg);
+  }
 
-  /* ---- Taburi de ediție ---- */
+  /* ---- Selectorul de editie ----
+     A fost o banda de butoane; la a opta editie se rupea pe doua randuri si
+     manca un sfert de ecran. O lista are inaltime fixa, oricate editii ar fi. */
   .admin-editions {
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     border: 1px solid var(--e3-border); background: var(--e3-surface);
-    padding: 14px 18px;
+    padding: 12px 18px;
   }
   .admin-editions-label {
     font-size: 11px; font-weight: 700; letter-spacing: 2px;
     text-transform: uppercase; color: var(--e3-muted-dim); flex: none;
   }
-  .admin-editions-list { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
-  .admin-editions-loading { font-size: 13px; color: var(--e3-muted); }
-  .admin-edition {
-    display: grid; gap: 2px; justify-items: start; text-align: left;
-    background: var(--e3-bg); border: 1px solid var(--e3-border); cursor: pointer;
-    padding: 8px 14px; transition: border-color 0.2s ease, background 0.2s ease;
+  .admin-editions-control {
+    display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
+    flex-wrap: wrap;
   }
-  .admin-edition:hover { border-color: var(--e3-accent-dim); }
-  .admin-edition-nr {
-    font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 1px;
-    color: var(--e3-muted); font-variant-numeric: tabular-nums;
+  .admin-editions-select {
+    background: var(--e3-bg); color: var(--e3-text);
+    border: 1px solid var(--e3-border); padding: 9px 12px;
+    font-family: Archivo, sans-serif; font-size: 14px; font-weight: 600;
+    min-width: 260px; max-width: 100%; cursor: pointer;
+    transition: border-color 0.2s ease;
   }
-  .admin-edition-meta { font-size: 11px; color: var(--e3-muted-dim); white-space: nowrap; }
-  .admin-edition.active { border-color: var(--e3-accent); background: #161A12; }
-  .admin-edition.active .admin-edition-nr { color: var(--e3-accent); }
-  /* Punct verde = ediția pe care backendul o consideră curentă. */
-  .admin-edition.curenta .admin-edition-nr::after {
-    content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 7px;
-    border-radius: 50%; background: var(--e3-accent); vertical-align: middle;
+  /* Optiunile nu mostenesc culorile controlului: pe Windows in dark mode ar
+     iesi text inchis pe fundal inchis. */
+  .admin-editions-select option { background: var(--e3-bg); color: var(--e3-text); }
+  .admin-editions-select:hover:not(:disabled) { border-color: var(--e3-accent-dim); }
+  .admin-editions-select:disabled { opacity: 0.55; cursor: not-allowed; }
+  /* Starea editiei alese, vizibila cu lista inchisa: de ea depinde daca
+     butoanele de scriere sint active. */
+  .admin-edition-stare {
+    font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--e3-muted-dim); padding: 4px 9px; border: 1px solid var(--e3-border);
   }
+  .admin-edition-stare.curenta { color: var(--e3-accent); border-color: var(--e3-accent-dim); }
   .admin-edition-new { flex: none; padding: 9px 14px; font-size: 13px; }
   .admin-edition-new:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* ---- Bannere de context (arhivă / desincronizare) ---- */
+
+  /* ---- Tabul „Eveniment": formularul de config + aranjarea secțiunilor ---- */
+  .admin-config-form {
+    display: grid; gap: 18px; padding: 20px 0;
+  }
+  /* Grupurile: câmpurile stau sub o întrebare („Când", „Unde"), nu într-o
+     coloană plată de optsprezece rânduri în ordinea din tipul TypeScript. */
+  /* ---- Grup pliabil ----
+     Sase grupuri deschise simultan insemnau douazeci de campuri pe doua ecrane
+     si jumatate. Organizatorul vine sa schimbe UN lucru, nu douazeci: cu
+     grupurile inchise, tot documentul incape intr-un ecran. */
+  .admin-config-grup {
+    margin: 0; padding: 0;
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+  }
+  .admin-config-grup.invalid { border-color: var(--e3-danger); }
+  .admin-config-grup-cap {
+    display: flex; align-items: baseline; gap: 12px; width: 100%;
+    background: transparent; border: none; cursor: pointer; text-align: left;
+    padding: 14px 20px; transition: background 0.2s ease;
+  }
+  .admin-config-grup-cap:hover { background: var(--e3-surface-hover); }
+  .admin-config-grup-sageata {
+    color: var(--e3-muted-dim); font-size: 12px; flex: none; width: 10px;
+  }
+  .admin-config-grup-titlu {
+    font-family: Anton, sans-serif; font-weight: 400; font-size: 17px;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--e3-accent);
+    flex: none;
+  }
+  /* Rezumatul tine locul campurilor cand grupul e inchis. Fara el, plierea ar
+     ascunde informatia in loc s-o comprime. */
+  .admin-config-grup-rezumat {
+    font-size: 13px; color: var(--e3-muted); min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .admin-config-grup-corp { padding: 0 20px 22px; }
+  .admin-config-grup-corp > .admin-config-hint { margin: 0 0 18px; max-width: 62ch; }
+  /* Două coloane pe lat: câmpurile sunt scurte, iar o singură coloană împinge
+     jumătate din formular sub fold degeaba. */
+  .admin-config-grup-campuri {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: 18px 22px; align-items: start;
+  }
+  /* ---- Bara de actiuni lipita jos ----
+     „Salveaza" si „Publica" stateau doar in capul tabului, la doua ecrane si
+     jumatate deasupra locului in care editezi ultimul camp. */
+  .admin-bara-actiuni {
+    position: sticky; bottom: 0; z-index: 15;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px 18px; flex-wrap: wrap;
+    margin-top: 18px; padding: 12px 18px;
+    background: rgba(18,20,16,0.94); backdrop-filter: blur(8px);
+    border: 1px solid var(--e3-border);
+    box-shadow: 0 -10px 28px rgba(10,14,8,0.5);
+  }
+  .admin-bara-stare {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    font-size: 13px; color: var(--e3-muted); min-width: 0;
+  }
+  .admin-bara-detaliu { color: var(--e3-muted-dim); }
+  .admin-bara-problema { color: var(--e3-danger); font-weight: 700; }
+  .admin-bara-butoane { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* O valoare care e o PROPOZITIE, nu o cifra. Fontul de afisare (Anton, mare)
+     e pentru numere: o data scrisa in cuvinte ar ocupa trei randuri si ar iesi
+     din caseta. */
+  .admin-stat-value--text {
+    font-family: Archivo, sans-serif !important;
+    font-size: 15px !important; font-weight: 600; line-height: 1.4;
+    letter-spacing: 0 !important; text-transform: none !important;
+  }
+
+  .admin-config-camp { display: grid; gap: 6px; align-content: start; }
+  .admin-config-eticheta {
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+  .admin-config-camp input,
+  .admin-config-camp select {
+    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    /* Înălțime fixă: `datetime-local` și `time` au înălțimi intrinseci diferite
+       de `text`, deci fără ea rândul de câmpuri iese în trepte. */
+    height: 42px; padding: 0 12px; font-size: 14px; font-family: inherit; min-width: 0;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  /* Selectorul nativ de dată e alb pe fundal închis fără asta. */
+  .admin-config-camp input[type="datetime-local"],
+  .admin-config-camp input[type="time"] { color-scheme: dark; }
+  .admin-config-camp input:focus,
+  .admin-config-camp select:focus {
+    outline: none; border-color: var(--e3-accent);
+    box-shadow: 0 0 0 3px rgba(201,242,75,0.16);
+  }
+  /* Ecoul („sâmbătă, 22 august · peste 3 luni") și explicația. Ecoul e lime
+     fiindcă e o confirmare a acțiunii tocmai făcute; explicația e text de
+     fundal și rămâne gri. */
+  .admin-config-ecou {
+    font-size: 13px; color: var(--e3-accent); line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+  .admin-config-ecou a { color: var(--e3-accent); text-decoration: underline; }
+  .admin-config-ajutor {
+    font-size: 12.5px; color: var(--e3-muted); line-height: 1.45; text-wrap: pretty;
+  }
+  .admin-config-eroare { font-size: 13px; color: var(--e3-danger); line-height: 1.4; }
+  .admin-config-camp.invalid .admin-config-eticheta { color: var(--e3-danger); }
+  .admin-config-camp.invalid input,
+  .admin-config-camp.invalid select { border-color: var(--e3-danger); }
+  .admin-config-camp.invalid input:focus,
+  .admin-config-camp.invalid select:focus { box-shadow: 0 0 0 3px rgba(242,109,109,0.16); }
+  .admin-config-hint { font-size: 13px; color: var(--e3-muted); margin: 0 0 8px; }
+  .admin-config-form h3,
+  .admin-table-section > h3 {
+    font-family: Anton, sans-serif; font-weight: 400; font-size: 20px;
+    letter-spacing: 1px; text-transform: uppercase; margin: 18px 0 4px;
+  }
+  .admin-layout-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .admin-layout-list li {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--e3-bg); border: 1px solid var(--e3-border); padding: 10px 14px;
+  }
+  .admin-layout-list li.ascunsa { opacity: 0.55; }
+  .admin-layout-nr {
+    font-family: Anton, sans-serif; font-size: 15px; color: var(--e3-accent);
+    font-variant-numeric: tabular-nums; min-width: 26px;
+  }
+  .admin-layout-list li.ascunsa .admin-layout-nr { color: var(--e3-muted-dim); }
+  .admin-layout-nume { flex: 1; font-size: 14px; }
+
+  /* Clipurile din bandă. Trei câmpuri per rând, deci nu încap pe o linie ca
+     secțiunile: fiecare clip e un bloc, cu acțiunile în coloana din dreapta. */
+  .admin-reels-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+  .admin-reels-list li {
+    background: var(--e3-bg); border: 1px solid var(--e3-border); padding: 12px 14px;
+  }
+  .admin-reels-list li.invalid { border-color: var(--e3-danger); }
+  .admin-reels-rand { display: flex; align-items: flex-start; gap: 12px; }
+  .admin-reels-campuri { flex: 1; display: grid; gap: 4px; min-width: 0; }
+  .admin-reels-campuri input { width: 100%; }
+  /* Eticheta a doua și a treia au nevoie de aer față de câmpul de deasupra. */
+  .admin-reels-campuri .admin-config-eticheta:not(:first-child) { margin-top: 8px; }
+  .admin-reels-actiuni { display: grid; gap: 6px; }
+
+  /* Panoul Coming Soon. Comutatorul e două butoane, nu un <select>: comutarea
+     e o manetă, iar o manetă se trage dintr-un gest, nu din trei. */
+  .admin-cs-comutator { display: flex; flex-wrap: wrap; gap: 8px; }
+  .admin-cs-presetari { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .admin-layout-list button { flex: none; padding: 6px 12px; font-size: 13px; }
+  .admin-layout-list button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .admin-banner ul { margin: 8px 0 0; padding-left: 20px; }
+
+  /* ---- Telefon ----
+     In ziua cursei adminul se deschide de pe telefon, nu de pe laptop: acolo
+     se cauta un nume in lista si se bifeaza prezenta, in picioare, cu o mana. */
+  @media (max-width: 640px) {
+    .admin-config-grup-cap { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
+    .admin-config-grup-corp { padding: 0 14px 18px; }
+    .admin-config-grup-campuri { gap: 16px; }
+    /* Rezumatul trece pe randul lui: pe un rand cu titlul ar ramane trei litere
+       si trei puncte, adica nicio informatie. */
+    .admin-config-grup-rezumat { flex-basis: 100%; white-space: normal; }
+
+    /* Grupurile de navigatie: intrebarea se ascunde, numele ramane. Trei
+       coloane la 390px inseamna ~120px fiecare, iar „COMUNICARE" nu incape
+       langa o a doua linie de text. */
+    .admin-nav-grup { padding: 10px 10px; min-height: 0; }
+    .admin-nav-grup-nume { font-size: 13px; letter-spacing: 0.5px; }
+    .admin-nav-grup-intrebare { display: none; }
+
+    /* Lista de editii ocupa toata latimea; 260px fixi ar iesi din ecran. */
+    .admin-editions { padding: 12px 14px; gap: 10px; }
+    .admin-editions-select { min-width: 0; width: 100%; }
+    .admin-editions-control { width: 100%; }
+    .admin-edition-new { width: 100%; }
+
+    /* Bara de actiuni ramane lipita, dar butoanele se intind pe toata latimea:
+       o tinta de atins cu degetul, nu una de nimerit cu cursorul. */
+    .admin-bara-actiuni { padding: 10px 12px; gap: 10px; }
+    .admin-bara-butoane { width: 100%; }
+    .admin-bara-butoane > * { flex: 1; text-align: center; min-height: 44px; }
+
+    /* Antetul: chip-ul de faza ramane, countdown-ul la secunda dispare - pe
+       telefon nu incap amandoua, iar faza e cea care conteaza. */
+    .admin-topbar { padding: 10px 14px; }
+    .admin-topbar-meta { gap: 10px; }
+    .admin-cd { display: none; }
+  }
+
+  /* ---- Bannere de context (arhivă, validare, avertismente) ---- */
   .admin-banner {
     border: 1px solid var(--e3-border); border-left: 3px solid var(--e3-accent);
     background: var(--e3-surface); padding: 14px 18px;
@@ -964,9 +1393,27 @@
   }
   .admin-mail-badge.trimis { border-color: #3A4A22; color: var(--e3-accent); }
   .admin-mail-badge.esuat { border-color: #3A2A2A; color: var(--e3-danger); }
+  /* Ceva e trimis, ceva încă lipsește — nici verde, nici roșu. */
+  .admin-mail-badge.partial { border-color: #4A3F22; color: var(--e3-warn, #f2b84b); }
   .admin-mail-badge.niciunul { cursor: default; }
   button.admin-mail-badge:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
   button.admin-mail-badge.niciunul:hover { border-color: var(--e3-border); color: var(--e3-muted-dim); }
+
+  /* ---- Fișa de acoperire (tab „Livrare") ---- */
+  .admin-acoperire { margin-bottom: 28px; }
+  .admin-acoperire .admin-hint {
+    font-size: 12px; color: var(--e3-muted-dim); margin: 4px 0 0; max-width: 68ch;
+  }
+  .admin-acoperire-table .admin-row {
+    display: grid; grid-template-columns: minmax(0, 2fr) repeat(auto-fit, minmax(90px, 1fr));
+    align-items: center; gap: 8px;
+  }
+  .admin-celula {
+    text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .admin-celula.trimis { color: var(--e3-accent); }
+  .admin-celula.esuat { color: var(--e3-danger); }
+  .admin-celula.lipsa { color: var(--e3-muted-dim); }
 
   /* ---- Tab Emailuri ---- */
   .admin-email {
@@ -1170,7 +1617,6 @@
 
   .cs-root {
     position: relative;
-    min-height: 100vh;
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
@@ -1276,6 +1722,12 @@
     text-transform: uppercase;
     color: var(--e3-text);
     animation: fade-up 0.6s ease-out 0.1s both;
+  }
+  /* „Coming Soon" n-are diacritice, deci 0.92 e sigur. Un „CURÂND" pe rândul
+     al doilea urcă circumflexul peste rândul de deasupra — titlurile cu
+     diacritice primesc aer în plus. */
+  .cs-title--diacritice {
+    line-height: 1.04;
   }
   .cs-sub {
     max-width: 520px;
@@ -1488,7 +1940,7 @@
     to   { background-position: 56px 56px; }
   }
 
-  .dn-root { background: var(--e3-bg); min-height: 100vh; }
+  .dn-root { background: var(--e3-bg); min-height: 100dvh; }
   .dn-accent { color: var(--e3-accent); }
   .dn-container { max-width: 1200px; margin: 0 auto; }
 
@@ -1510,9 +1962,28 @@
   }
   .dn-topbar-cta:hover { background: var(--e3-accent-hover); transform: translateY(-2px); }
 
+  /* Butonul de direcții ancorat peste harta antrenamentelor. Același tipar ca
+     `.venue-map-link` de la locația cursei, în namespace-ul paginii. */
+  .dn-map-link {
+    position: absolute; right: 12px; bottom: 12px; z-index: 2;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-family: Anton, sans-serif; font-size: 13px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 9px 16px; text-decoration: none;
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .dn-map-link:hover {
+    background: var(--e3-accent-hover); transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(201,242,75,0.28);
+  }
+  .dn-map-link:active { transform: translateY(0) scale(0.97); box-shadow: none; }
+
   .dn-hero {
     position: relative; min-height: 82vh; display: flex; align-items: flex-end;
-    overflow: hidden; border-bottom: 1px solid var(--e3-border);
+    /* `clip`, nu `hidden`: taie la fel, dar nu creează container de scroll.
+       Cu `hidden`, `view(block)` din `.e3-hero-copy` s-ar lega de secțiune — un
+       scroller fără overflow — și parallaxul n-ar porni niciodată. Aceeași
+       capcană ca la hero-ul landing-ului. */
+    overflow: clip; border-bottom: 1px solid var(--e3-border);
   }
   .dn-hero-stripes {
     position: absolute; inset: 0;
@@ -1575,11 +2046,48 @@
   }
   .dn-story-text { margin: 0; font-size: 17px; line-height: 1.6; color: var(--e3-muted-strong); text-wrap: pretty; }
   .dn-values { display: grid; gap: 16px; }
+  /* Cardurile se ridică pe arc, ca pe landing (`--e3-spring`), și primesc
+     aceeași tentă lime la hover. Erau doar o schimbare de bordură — pe pagina
+     principală același card se ridică, se colorează și capătă umbră, deci cele
+     două pagini se simțeau ca două site-uri. */
   .dn-value-card {
     background: var(--e3-surface); border: 1px solid var(--e3-border); padding: 24px;
-    transition: border-color 0.25s ease, transform 0.25s ease;
   }
-  .dn-value-card:hover { border-color: var(--e3-accent); transform: translateY(-2px); }
+  /* Cardurile „cum arată un antrenament": aceleași declarații care erau inline
+     pe componentă. Mutate aici ca `:hover` să le poată bate — inline ar câștiga
+     la specificitate și tenta lime n-ar apărea niciodată (aceeași lecție ca la
+     `.e3-card`). Rămân fără fundal, ca înainte: pe pagina asta cartonașele cu
+     bordură simplă sunt convenția locală. */
+  .dn-step {
+    border: 1px solid var(--e3-border); padding: 28px 24px; display: grid; gap: 10px;
+  }
+  .dn-step-nr { font-family: Anton, sans-serif; font-size: 34px; color: var(--e3-accent); }
+  .dn-step-titlu {
+    font-family: Anton, sans-serif; font-size: 15px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .dn-step p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong); }
+
+  /* Ridicarea pe arc și tenta lime la hover — ca pe landing. Erau doar o
+     schimbare de bordură, deci aceleași carduri se simțeau ca alt site. */
+  .dn-value-card, .dn-step {
+    transition: background 0.25s var(--e3-spring), border-color 0.25s var(--e3-spring),
+                transform 0.25s var(--e3-spring), box-shadow 0.25s var(--e3-spring);
+  }
+  .dn-value-card:hover, .dn-step:hover {
+    background: var(--e3-surface-tint); border-color: var(--e3-accent);
+    transform: translateY(-4px); box-shadow: 0 14px 32px rgba(10,14,8,0.55);
+  }
+
+  /* Cartonașele de comunitate intră în cascadă, nu toate odată. `--i` vine
+     inline de la randare. */
+  .dn-stat {
+    animation: fade-up 0.5s ease-out both;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+  /* Rândurile de orar — accent la trecerea cursorului, ca `.e3-row` pe landing. */
+  .dn-orar-row { transition: background 0.2s ease, box-shadow 0.2s ease; }
+  .dn-orar-row:hover { background: var(--e3-surface-hover); box-shadow: inset 3px 0 0 var(--e3-accent); }
   .dn-value-title {
     font-family: Anton, sans-serif; font-size: 13px; color: var(--e3-accent);
     letter-spacing: 2px; margin-bottom: 8px;

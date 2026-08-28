@@ -77,9 +77,12 @@ test.describe('Tabul „Despre noi" — landing', () => {
 
   test('nu strică celelalte acțiuni din antet (Înscrie-te duce la formular)', async ({ page }) => {
     await page.goto('/?preview=landing');
-    await page.locator('header a[href="#inscriere"]').click();
-    await expect(page).toHaveURL(/#inscriere$/);
-    await expect(page.locator('#inscriere')).toBeVisible();
+    // „Înscrie-te" nu mai e ancoră spre secțiunea 03: deschide formularul ca
+    // overlay, cu href="/inscriere" ca rezervă dacă JS-ul n-a pornit.
+    const cta = page.locator('header a[href="/inscriere"]');
+    await expect(cta).toBeVisible();
+    await cta.click();
+    await expect(page.getByRole('dialog', { name: /înscriere/i })).toBeVisible();
   });
 
   test('rămâne în viewport pe mobil (375px)', async ({ page }) => {

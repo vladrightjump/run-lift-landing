@@ -1,4 +1,3 @@
-import { EVENT_DATE } from './config';
 
 export type FormData = {
   nume: string;
@@ -24,23 +23,19 @@ export const MIN_AGE = 14;
 const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
- * Data calendaristică a evenimentului în fusul Chișinăului, ca [an, lună, zi].
+ * Data calendaristică a evenimentului, ca [an, lună, zi].
  *
- * `EVENT_DATE.getDate()` ar citi în fusul browserului: pentru un vizitator din
- * Honolulu, startul de 25 iulie 07:00 (ora Chișinăului) cade pe 24 iulie local,
- * iar pragul de vârstă s-ar muta cu o zi. Regula „minim 14 ani la data
- * evenimentului" trebuie să dea același rezultat pe orice dispozitiv.
+ * Se citește direct din componentele string-ului local al ediției
+ * (`config.start`, ex. „2026-08-22T07:00:00"), NU dintr-un `Date`. Un `Date`
+ * s-ar citi în fusul browserului: pentru un vizitator din Honolulu, startul de
+ * 22 august 07:00 (ora Chișinăului) cade pe 21 august local, iar pragul de
+ * vârstă s-ar muta cu o zi. Regula „minim 14 ani la data evenimentului" trebuie
+ * să dea același rezultat pe orice dispozitiv.
  */
-const EVENT_YMD: [number, number, number] = (() => {
-  const iso = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Chisinau',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(EVENT_DATE);
-  const [y, m, d] = iso.split('-').map(Number);
+const eventYmd = (startLocal: string): [number, number, number] => {
+  const [y, m, d] = startLocal.split('T')[0].split('-').map(Number);
   return [y, m, d];
-})();
+};
 
 /**
  * Vârsta (ani întregi) pe care o are cineva la data evenimentului.
@@ -54,7 +49,7 @@ const EVENT_YMD: [number, number, number] = (() => {
  *     `getFullYear/getMonth/getDate` citesc în fusul local — într-un fus cu
  *     offset negativ data „aluneca" cu o zi și schimba vârsta la limită.
  */
-export const ageAtEvent = (isoBirth: string): number | null => {
+export const ageAtEvent = (isoBirth: string, startLocal: string): number | null => {
   const parts = ISO_DATE_RE.exec(isoBirth);
   if (!parts) return null;
   const year = Number(parts[1]);
@@ -72,7 +67,7 @@ export const ageAtEvent = (isoBirth: string): number | null => {
     return null;
   }
 
-  const [eventYear, eventMonth, eventDay] = EVENT_YMD;
+  const [eventYear, eventMonth, eventDay] = eventYmd(startLocal);
   let age = eventYear - year;
   const m = eventMonth - month;
   if (m < 0 || (m === 0 && eventDay < day)) age--;
@@ -80,21 +75,21 @@ export const ageAtEvent = (isoBirth: string): number | null => {
 };
 
 // Mesaj de eroare pentru câmpul „data nașterii" — depinde de motiv.
-export const dataNasteriiError = (isoBirth: string): string | null => {
+export const dataNasteriiError = (isoBirth: string, startLocal: string): string | null => {
   if (!isoBirth) return 'Introdu data nașterii.';
-  const age = ageAtEvent(isoBirth);
+  const age = ageAtEvent(isoBirth, startLocal);
   if (age === null) return 'Data nașterii nu e validă.';
   if (age < MIN_AGE) return `Trebuie să ai minim ${MIN_AGE} ani la data evenimentului.`;
   if (age > 100) return 'Data nașterii nu e validă.';
   return null;
 };
 
-export const validate = (data: FormData): FieldErrors => {
+export const validate = (data: FormData, startLocal: string): FieldErrors => {
   const errors: FieldErrors = {};
   if (data.nume.length < 3) errors.nume = true;
   if (!PHONE_RE.test(normalizePhone(data.telefon))) errors.telefon = true;
   if (!EMAIL_RE.test(data.email)) errors.email = true;
-  if (dataNasteriiError(data.dataNasterii) !== null) errors.dataNasterii = true;
+  if (dataNasteriiError(data.dataNasterii, startLocal) !== null) errors.dataNasterii = true;
   if (!data.acord) errors.acord = true;
   return errors;
 };

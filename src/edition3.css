@@ -7,9 +7,105 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&display=swap');
 
-.e3-root { min-height: 100vh; background: var(--e3-bg); color: var(--e3-text); font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; }
+/* 100dvh, nu 100vh: pe iOS Safari bara de adresă schimbă 100vh și pagina saltă. */
+.e3-root { min-height: 100dvh; background: var(--e3-bg); color: var(--e3-text); font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; }
 .e3-root ::selection { background: var(--e3-accent); color: var(--e3-bg); }
 .e3-root a { color: var(--e3-accent); }
+
+/* ---- Grain ----
+   Un strat fix de zgomot peste tot. Rupe plateul digital al fundalului fără să
+   adauge nicio culoare — e alb la 100% transparență, doar luminanță.
+
+   `.e3-grain` e aceeași textură ca utilitar de sine stătător, pentru paginile
+   care nu stau sub `.e3-root` (`/despre-noi` are propria rădăcină, `.dn-root`,
+   iar `.e3-root` i-ar impune și culoarea linkurilor). */
+.e3-root::after,
+.e3-grain::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none; opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Focus vizibil: regula e globală, în index.css. */
+
+/* ---- Carduri ----
+   Erau complet inerte: nici hover, nici tranziție. Umbra e verde-închis, nu
+   negru — ia nuanța fundalului, cum cere o sursă de lumină coerentă. */
+/* Suprafața și bordura stau AICI, nu inline pe componentă. Cât timp erau
+   `style={{ background, border }}`, o declarație inline bătea `:hover` la
+   specificitate și tenta lime nu se aplica niciodată — hover-ul exista în CSS
+   dar era mort în pagină. */
+.e3-card {
+  background: var(--e3-surface);
+  border: 1px solid var(--e3-border);
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.e3-card:hover {
+  background: var(--e3-surface-tint);
+  border-color: var(--e3-accent);
+  transform: translateY(-4px);
+  box-shadow: 0 14px 32px rgba(10,14,8,0.55);
+}
+
+/* Rândurile de detalii (Unde/Când/Start) — accent la trecerea cursorului. */
+.e3-row { transition: background 0.2s ease, box-shadow 0.2s ease; }
+.e3-row:hover { background: var(--e3-surface-hover); box-shadow: inset 3px 0 0 var(--e3-accent); }
+
+/* ---- Grila „Formatul" ----
+   Erau trei coloane egale — tiparul cel mai previzibil cu putință. Acum e o
+   scară: lățimi inegale și fiecare card coborât față de precedentul, ca pașii
+   RUN → LIFT → REPEAT să se citească ca o progresie, nu ca un meniu.
+   Sub 900px redevine o coloană, unde scara n-ar avea sens. */
+.e3-format-grid { display: grid; gap: 16px; }
+@media (min-width: 900px) {
+  .e3-format-grid { grid-template-columns: 4.5fr 4fr 3.5fr; align-items: start; }
+  .e3-format-grid > :nth-child(2) { margin-top: 44px; }
+  .e3-format-grid > :nth-child(3) { margin-top: 88px; }
+}
+
+/* Indexul pasului — cifră mare, fantomatică, în spatele titlului. */
+.e3-step { position: relative; overflow: hidden; }
+.e3-step-idx {
+  position: absolute; top: -18px; right: 8px;
+  font-family: Anton, sans-serif; font-size: 96px; line-height: 1;
+  color: var(--e3-text); opacity: 0.045; pointer-events: none;
+  font-variant-numeric: tabular-nums;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.e3-card:hover .e3-step-idx { opacity: 0.1; transform: translateY(4px); }
+
+/* ---- Skeleton ----
+   Înlocuiește textul „Se încarcă…". Are forma rândurilor care urmează, deci
+   lista nu mai sare când sosesc datele. */
+.e3-skel-row {
+  display: flex; align-items: center; gap: 18px;
+  padding: 15px 22px; border-bottom: 1px solid var(--e3-hairline);
+}
+.e3-skel {
+  height: 12px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--e3-border) 0%, var(--e3-surface-hover) 50%, var(--e3-border) 100%);
+  background-size: 200% 100%;
+  animation: e3-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes e3-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* Text doar pentru cititoarele de ecran (starea de încărcare rămâne anunțată). */
+.e3-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* Secundele din countdown pulsează la fiecare tick — bara sticky devine vie. */
+.e3-tick { animation: e3-tick 1s ease-out; }
+@keyframes e3-tick {
+  0%   { opacity: 0.45; transform: translateY(-2px); }
+  35%  { opacity: 1; transform: translateY(0); }
+}
 
 /* Butonul/CTA lime standard */
 .e3-cta { transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
@@ -57,8 +153,544 @@
 /* Fundalul video din hero — rămâne fundalul întunecat dacă e ascuns. */
 .e3-hero-video { background: var(--e3-bg); }
 
+/* ======================================================================
+   Mișcare legată de scroll
+   ----------------------------------------------------------------------
+   Totul de aici merge pe `animation-timeline`, deci browserul conduce
+   animația din poziția scroll-ului, pe compositor — fără listener de
+   scroll, fără reflow, fără JS. Unde nu există suport (Safari < 26,
+   Firefox < 144), `@supports` lasă pagina exact cum era: elementele stau
+   la starea finală, nu dispar. `useScrollReveal` rămâne baza universală
+   pentru intrarea blocurilor.
+   ====================================================================== */
+
+/* Arc, nu liniar: depășește ținta și se așază. Dă greutate mișcării. */
+:root { --e3-spring: cubic-bezier(0.34, 1.4, 0.64, 1); }
+
+@supports (animation-timeline: view()) {
+  /* ---- Bara de progres ----
+     Fir lime sub topbar care se umple pe măsură ce cobori pagina. */
+  .e3-progress {
+    position: fixed; top: 0; left: 0; right: 0; height: 2px;
+    transform-origin: 0 50%; transform: scaleX(0);
+    background: linear-gradient(90deg, var(--e3-accent-dim), var(--e3-accent));
+    z-index: 60; pointer-events: none;
+    animation: e3-progress linear both;
+    animation-timeline: scroll(root block);
+  }
+
+  /* ---- Hero care se retrage ----
+     Textul urcă mai încet decât pagina și se stinge pe ieșire — profunzime
+     între conținut și clipul din spate, fără parallax pe JS.
+
+     `view()` se leagă mereu de cel mai apropiat container de scroll — nu i se
+     poate numi scroller-ul, cum se poate la `scroll()`. Cât timp secțiunea hero
+     avea `overflow: hidden`, ea ERA acel container: unul fără overflow
+     scrollabil, deci timeline-ul nu avansa niciodată și parallaxul era mort.
+     Secțiunea folosește acum `overflow: clip` (taie la fel, dar nu creează
+     container de scroll), așa că progresul se măsoară față de fereastră. */
+  .e3-hero-copy {
+    animation: e3-hero-exit linear both;
+    animation-timeline: view(block);
+    animation-range: exit-crossing 0% exit-crossing 100%;
+    will-change: transform, opacity;
+  }
+  /* Clipul se mișcă în sens invers, mai puțin — separă planurile. */
+  .e3-hero-video {
+    animation: e3-hero-drift linear both;
+    animation-timeline: view(block);
+    animation-range: exit-crossing 0% exit-crossing 100%;
+  }
+
+  /* ---- Titlurile de secțiune ----
+     Se dezvăluie de jos printr-o mască, legat de progresul scroll-ului:
+     literele Anton „cresc" din linia de bază, nu apar pur și simplu. */
+  .e3-title {
+    animation: e3-wipe linear both;
+    animation-timeline: view(block);
+    animation-range: entry 10% cover 28%;
+  }
+  /* Numărul secțiunii alunecă în urma titlului. */
+  .e3-title-num {
+    animation: e3-slide-in linear both;
+    animation-timeline: view(block);
+    animation-range: entry 10% cover 26%;
+  }
+
+  /* ---- Bara de sloturi ----
+     Segmentele ocupate se umplu în lanț când bara intră în ecran.
+     Delay-ul per segment vine din `--i`, pus inline la randare. */
+  .e3-slot-fill {
+    animation: e3-slot-pop linear both;
+    animation-timeline: view(block);
+    animation-range: entry 20% cover 40%;
+    animation-delay: calc(var(--i, 0) * 18ms);
+    transform-origin: 50% 100%;
+  }
+}
+
+@keyframes e3-progress { to { transform: scaleX(1); } }
+@keyframes e3-hero-exit {
+  to { transform: translateY(-72px); opacity: 0.25; }
+}
+@keyframes e3-hero-drift {
+  to { transform: translateY(28px) scale(1.06); }
+}
+/* Starea finală lasă clipul lărgit în toate direcțiile: virgula de sub Ț și Ș
+   („LOCAȚIA", „ÎNSCRIERE") coboară sub caseta textului și ar fi retezată de un
+   `inset` care se oprește exact la margine. */
+@keyframes e3-wipe {
+  from { clip-path: inset(100% 0 0 0); transform: translateY(24px); }
+  to   { clip-path: inset(-30% -6% -30% -6%); transform: translateY(0); }
+}
+@keyframes e3-slide-in {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes e3-slot-pop {
+  from { transform: scaleY(0.25); opacity: 0.35; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+
+/* ---- Sclipirea de pe CTA ----
+   O dâră de lumină traversează butonul la hover. Umbra de sub el rămâne
+   verde-închis, deci lumina pare să vină din aceeași direcție. */
+.e3-shine { position: relative; overflow: hidden; isolation: isolate; }
+.e3-shine::after {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,0.55) 50%, transparent 62%);
+  transform: translateX(-120%);
+  transition: transform 0.65s cubic-bezier(0.25, 0.6, 0.3, 1);
+}
+.e3-shine:hover::after { transform: translateX(120%); }
+
+/* ---- Bordură-reflector ----
+   Cardurile primesc un halou lime care urmărește cursorul. Coordonatele
+   vin din `useSpotlight`, ca procente pe --sx/--sy. Fără cursor deasupra,
+   opacitatea e 0, deci pe touch nu se întâmplă nimic. */
+.e3-spot { position: relative; }
+.e3-spot::before {
+  content: ''; position: absolute; inset: 0;
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.3s ease;
+  background: radial-gradient(
+    260px circle at var(--sx, 50%) var(--sy, 50%),
+    rgba(201,242,75,0.13),
+    transparent 65%
+  );
+}
+.e3-spot:hover::before { opacity: 1; }
+
+/* Cardurile se ridică pe arc, nu pe „ease" — se simte mai fizic. */
+.e3-card { transition-timing-function: var(--e3-spring); }
+
+/* ======================================================================
+   Stratul al doilea de mișcare
+   ----------------------------------------------------------------------
+   Adăugat peste cel de sus, nu în locul lui. Aceleași reguli: doar
+   `transform` / `opacity` / culoare, `@supports` acolo unde depinde de
+   scroll timelines, și totul se stinge la `prefers-reduced-motion`.
+   ====================================================================== */
+
+/* ---- Titlul din hero ----
+   Cuvintele cresc din linia de bază prin aceeași mască folosită la titlurile
+   de secțiune, ca intrarea paginii și intrările de pe scroll să fie același
+   gest. Marginile negative din starea finală lasă loc pentru coada lui „y".
+   `--d` e întârzierea per cuvânt, pusă inline la randare. */
+.e3-word { display: inline-block; animation: e3-mask-up 0.85s var(--e3-spring) both; animation-delay: var(--d, 0s); }
+@keyframes e3-mask-up {
+  from { clip-path: inset(105% -8% -35% -8%); transform: translateY(0.28em); }
+  to   { clip-path: inset(-35% -8% -35% -8%); transform: translateY(0); }
+}
+
+/* ---- Banda rulantă ----
+   Pasul RUN → LIFT → REPEAT, ca o bandă de start. Pista se mișcă singură,
+   iar scroll-ul îi mai dă un impuls: `animation-timeline` e o listă care se
+   potrivește pe `animation-name`, deci a doua animație e legată de scroll
+   fără să anuleze bucla. Fără suport rămâne doar bucla.
+   Conținutul e duplicat exact o dată, iar animația se oprește la -50%, deci
+   bucla e continuă. Copia poartă aria-hidden în TSX. */
+.e3-marquee {
+  overflow: hidden; position: relative;
+  background: var(--e3-accent);
+  padding: 12px 0;
+  /* Capetele se sting în fundal, ca banda să nu pară retezată de viewport. */
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.e3-marquee-track {
+  display: flex; width: max-content;
+  animation: e3-marquee 32s linear infinite;
+  will-change: transform;
+}
+.e3-marquee-group { display: flex; flex-shrink: 0; }
+.e3-marquee-item {
+  font-family: Anton, sans-serif; font-size: clamp(15px, 2.2vw, 20px);
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--e3-bg); padding: 0 22px; white-space: nowrap;
+}
+/* Punctul dintre cuvinte — nu un caracter, ca să nu-l citească screen readerul. */
+.e3-marquee-item::after {
+  content: ''; display: inline-block; vertical-align: middle;
+  width: 6px; height: 6px; margin-left: 22px;
+  background: var(--e3-bg); opacity: 0.55;
+}
+/* Pauza. Mișcarea care nu se oprește singură are nevoie de un fel de a fi
+   oprită (WCAG 2.2.2) — iar hover-ul nu e unul: nu există pe touch și nu se
+   ajunge la el cu tastatura. Deci hover, ca înlesnire pentru citit, ȘI un buton
+   real, care comandă prin `data-oprita` de pe bandă.
+
+   Fără `:focus-within` aici, deliberat: singurul element focusabil din bandă e
+   chiar butonul de pauză, deci regula ar însemna „cât timp ții degetul pe
+   comandă, banda stă" — apeși „Pornește" și nu se întâmplă nimic până muți
+   focusul. Vizibilitatea butonului ține de focus (mai jos); oprirea, nu. */
+.e3-marquee:hover .e3-marquee-track,
+.e3-marquee[data-oprita='true'] .e3-marquee-track { animation-play-state: paused; }
+@keyframes e3-marquee { to { transform: translateX(-50%); } }
+
+.e3-marquee-pauza {
+  position: absolute; right: 0; top: 0; bottom: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; border: none; cursor: pointer;
+  background: var(--e3-accent); color: var(--e3-bg);
+  font-size: 11px; line-height: 1;
+  /* Se vede doar când e nevoie de ea: la hover, la focus de tastatură, sau cât
+     timp banda e oprită. În rest ar fi un buton permanent peste un element pur
+     decorativ. */
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.e3-marquee:hover .e3-marquee-pauza,
+.e3-marquee:focus-within .e3-marquee-pauza,
+.e3-marquee[data-oprita='true'] .e3-marquee-pauza { opacity: 1; }
+/* Fără mișcare de oprit, butonul n-are rost. */
+@media (prefers-reduced-motion: reduce) {
+  .e3-marquee-pauza { display: none; }
+}
+
+@supports (animation-timeline: scroll()) {
+  .e3-marquee-track {
+    animation: e3-marquee 32s linear infinite, e3-marquee-push linear both;
+    animation-timeline: auto, scroll(root block);
+  }
+  /* Împinsul e mic în mod deliberat: banda trebuie să reacționeze la scroll,
+     nu să curgă din el. Peste ~8% din lățime ar rupe senzația de buclă. */
+  @keyframes e3-marquee-push { to { translate: -8% 0; } }
+}
+
+/* ---- Antetul care se strânge ----
+   Nu schimbăm înălțimea: ar însemna layout la fiecare cadru, pe un element
+   sticky, exact în timpul scroll-ului.
+
+   Fundalul mai dens și umbra stau pe un STRAT separat, a cărui opacitate se
+   animează — nu direct pe `background`/`box-shadow` ale barei. Animate direct,
+   ar cere un repaint al întregii bare la fiecare cadru de scroll; ca opacitate
+   pe un strat propriu, treaba rămâne la compositor. */
+/* Padding, gap și mărimile mărcii stau AICI, nu inline pe componentă: inline ar
+   bate media query-ul de mai jos la specificitate, iar antetul ar rămâne la fel
+   pe telefon fără ca nimic să pară stricat. Aceeași lecție ca la `.e3-card`. */
+.e3-topbar {
+  position: relative; isolation: isolate;
+  padding: 14px clamp(16px, 4vw, 40px);
+  gap: 12px 24px;
+}
+.e3-topbar-mark { width: 30px; height: 30px; font-size: 15px; }
+.e3-topbar-cta { padding: 11px 22px; font-size: 13px; }
+.e3-topbar::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  pointer-events: none; opacity: 0;
+  background: rgba(12,14,10,0.99);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  border-bottom: 1px solid var(--e3-accent-dim);
+}
+@supports (animation-timeline: scroll()) {
+  .e3-topbar::before {
+    animation: e3-fade-in linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 200px;
+  }
+  .e3-topbar-mark {
+    animation: e3-mark-shrink linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 200px;
+  }
+}
+@keyframes e3-fade-in { to { opacity: 1; } }
+@keyframes e3-mark-shrink { to { transform: scale(0.88); } }
+
+/* Antetul pe ecrane înguste.
+   Regula de mobil exista în `index.css`, dar viza `.topbar` — o clasă pe care
+   antetul landing-ului n-o poartă (are stiluri inline). Rezultatul: pe telefon
+   „Înscrie-te" se rupea pe două rânduri și bara creștea. Acum că bara are
+   `.e3-topbar`, se poate lega de ea. */
+@media (max-width: 560px) {
+  .e3-topbar { padding: 10px 16px; gap: 8px 12px; }
+  .e3-topbar-cta { padding: 9px 14px; font-size: 12px; white-space: nowrap; }
+  .e3-topbar-mark { width: 26px; height: 26px; font-size: 13px; }
+}
+
+/* ---- Cifrele din countdown ----
+   Fiecare unitate se rostogolește când se schimbă: React o remontează (cheia
+   include valoarea), iar animația pornește la montare. Masca e sigură — Anton
+   n-are cifre cu coadă sub linia de bază. */
+.e3-digit { display: inline-block; overflow: hidden; vertical-align: bottom; line-height: 1; }
+.e3-digit > span { display: block; animation: e3-digit-roll 0.42s var(--e3-spring) both; }
+@keyframes e3-digit-roll { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+/* ---- Rândurile care sosesc ----
+   Lista de participanți vine asincron, deci intrarea e la montare, nu pe
+   scroll. Întârzierea e plafonată: la 40 de rânduri, 45ms fiecare ar însemna
+   o cascadă de aproape două secunde. */
+.e3-row-in {
+  animation: e3-fade-up 0.5s ease-out both;
+  animation-delay: min(calc(var(--i, 0) * 45ms), 620ms);
+}
+
+/* ---- Butonul magnetic ----
+   Se lasă atras de cursor. Folosim proprietatea `translate`, nu `transform`,
+   fiindcă hover-ul de pe .e3-cta* ocupă deja `transform` — cele două se
+   compun în loc să se anuleze. Coordonatele vin din `useMagnetic`. */
+.e3-mag {
+  translate: var(--mx, 0px) var(--my, 0px);
+  transition: translate 0.35s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* ---- Ultimele locuri ----
+   Când mai sunt puține, contorul respiră. E singurul element de pe pagină
+   care pulsează în afara punctului „live" — deci citește ca urgență, nu ca
+   decor. */
+.e3-urgent { animation: e3-urgent 2.2s ease-in-out infinite; }
+@keyframes e3-urgent {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.72; transform: scale(1.06); }
+}
+
+/* ---- Secțiunea „Instagram" ----
+   Bandă full-bleed pe tonul adânc al paletei, cu o șină de carduri portret în
+   stânga și blocul de text în dreapta.
+
+   De ce șină cu scroll-snap și nu o grilă în trepte ca „Formatul": grila aia e
+   calibrată pe exact trei carduri, iar aici numărul de clipuri vine din admin.
+   Șina ține și unul, și șapte, fără recalibrare, iar pe mobil e chiar gestul
+   platformei de unde vin clipurile. Ca bonus, cele două secțiuni nu mai citesc
+   ca aceeași secțiune de două ori.
+
+   Banda NU e roșie ca referința: roșul e brandul de acolo. Pagina asta are un
+   accent (lime) și o temă (întunecată); o bandă roșie la mijlocul scroll-ului
+   ar citi ca alt site. Referința contribuie compoziția, nu paleta. */
+.e3-reels {
+  position: relative;
+  /* `hidden`, altfel cuvântul-fantomă (lat cât toată banda) împinge scroll
+     orizontal pe `<body>`. */
+  overflow: hidden;
+  padding: clamp(72px, 10vw, 120px) clamp(20px, 5vw, 40px);
+  border-bottom: 1px solid var(--e3-border);
+  background: var(--e3-bg-deep);
+}
+
+/* Cuvântul-fantomă. Același limbaj ca `.e3-step-idx`, la scara benzii: prezent
+   ca textură, nu ca text de citit. Unul singur — referința are trei suprapuse,
+   ceea ce devine zgomot. */
+.e3-reels-ghost {
+  position: absolute;
+  top: 4%;
+  left: -2%;
+  z-index: 0;
+  font-family: Anton, sans-serif;
+  font-size: clamp(56px, 13vw, 168px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--e3-accent);
+  /* Textură, nu text. Sub coloana din dreapta trece pe sub un paragraf care
+     trebuie citit, deci pragul e „se simte", nu „se citește". */
+  opacity: 0.045;
+  pointer-events: none;
+  user-select: none;
+}
+
+.e3-reels-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  gap: clamp(32px, 6vw, 88px);
+}
+
+/* Șina. `overflow-x` fără bară vizibilă: pe desktop cu 3 clipuri nu are ce
+   derula, iar bara ar desena o linie sub carduri degeaba. */
+.e3-reels-rail {
+  display: flex;
+  gap: clamp(14px, 2vw, 22px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* Spațiu pentru `translateY(-4px)` din `.e3-card:hover`, altfel hover-ul e
+     tăiat de marginea containerului care derulează. */
+  padding: 6px 0;
+  margin: -6px 0;
+  /* Marginea din dreapta se stinge, ca un card tăiat de capătul șinei să
+     citească drept „mai sunt”, nu drept card rupt. CSS-ul nu poate ști dacă
+     lista chiar depășește lățimea; o stingere permanentă pe ultimii 6% nu
+     strică nimic când nu depășește, pentru că acolo nu e niciun card. */
+  -webkit-mask-image: linear-gradient(to right, #000 94%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 94%, transparent 100%);
+}
+.e3-reels-rail::-webkit-scrollbar { display: none; }
+
+.e3-reels-item {
+  flex: 0 0 72vw;
+  margin: 0;
+  scroll-snap-align: start;
+}
+
+/* Cardul. Colțuri drepte ca tot restul paginii; `.e3-card` aduce suprafața,
+   bordura și hover-ul. */
+.e3-reel {
+  display: block;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  /* Resetul de `<button>`: fără el, UA-ul adaugă padding și bordură proprie. */
+  padding: 0;
+  border-radius: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.e3-reel-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* Fotografiile vin de pe Instagram, deci nu-s calibrate pentru paleta asta.
+     Le temperăm ca să stea în bandă; la hover își recapătă culoarea. */
+  filter: saturate(0.9) brightness(0.82);
+  transition: filter 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.e3-reel:hover .e3-reel-poster { filter: none; transform: scale(1.03); }
+
+/* Fără poster, cardul rămâne desenat, nu gol. */
+.e3-reel-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: Anton, sans-serif;
+  font-size: clamp(64px, 12vw, 104px);
+  line-height: 1;
+  color: var(--e3-text);
+  opacity: 0.07;
+  font-variant-numeric: tabular-nums;
+}
+
+.e3-reel-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding-left: 3px; /* triunghiul optic nu e centrat geometric */
+  background: var(--e3-accent);
+  color: var(--e3-bg);
+  font-size: 15px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease;
+}
+.e3-reel:hover .e3-reel-play {
+  background: var(--e3-accent-hover);
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+/* Cardul după click: iframe-ul Instagram, în locul façade-ului. Fundalul alb e
+   al lor și nu se poate stiliza — e cross-origin. */
+.e3-reel--live { background: #fff; border: 1px solid var(--e3-accent); }
+.e3-reel-frame { width: 100%; height: 100%; border: 0; display: block; }
+
+.e3-reel-caption {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--e3-muted-strong);
+  text-wrap: pretty;
+}
+/* Plasa de siguranță se repetă sub FIECARE card, deci nu poate fi strigată:
+   patru linkuri lime cu majuscule ar face din ea patru CTA-uri care concurează
+   cu înscrierea. Rămâne o linie de subsol — mereu prezentă, mereu focusabilă,
+   dar citită abia când o cauți. */
+.e3-reel-out {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--e3-muted-dim);
+  transition: color 0.2s ease;
+}
+.e3-reel-out:hover, .e3-reel-out:focus-visible { color: var(--e3-accent); }
+
+.e3-reels-body {
+  margin: 0 0 24px;
+  max-width: 46ch;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--e3-muted-strong);
+  text-wrap: pretty;
+}
+
+.e3-reels-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--e3-accent);
+}
+
+/* Peste 900px banda se așază ca în referință: media în stânga, text în dreapta,
+   cardurile decalate pe doi timpi. Sub prag rămâne o coloană cu TEXTUL PRIMUL —
+   o secțiune care începe cu imagini fără titlu nu se citește. */
+@media (min-width: 900px) {
+  .e3-reels-inner {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    align-items: center;
+  }
+  /* Calibrat ca trei carduri să încapă întregi în coloana de media, iar al
+     patrulea să se vadă pe jumătate: exact cât să spună că șina continuă. */
+  .e3-reels-item { flex-basis: clamp(164px, 16vw, 200px); }
+  /* Decalajul pe doi timpi, nu rampa în trei trepte a „Formatului”. */
+  .e3-reels-item:nth-child(2n) { margin-top: clamp(20px, 4vw, 52px); }
+  .e3-reels-text { position: sticky; top: 96px; }
+}
+
+/* Pe ecran mic un card și jumătate încap în lățime, iar o treaptă acolo arată
+   ca un bug de layout, nu ca ritm. */
+@media (max-width: 899px) {
+  .e3-reels-text { order: -1; }
+  .e3-reels-item { margin-top: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .e3-root *, .e3-cta-lg { animation: none !important; }
+  /* Cardurile rămân clicabile; dispar doar zoomul și virajul de culoare.
+     Butonul de play NU primește `transform: none` — centrarea lui ESTE un
+     transform, iar anularea l-ar muta în colț. Se anulează doar creșterea. */
+  .e3-reel-poster, .e3-reel-play { transition: none !important; }
+  .e3-reel:hover .e3-reel-poster { transform: none; filter: saturate(0.9) brightness(0.82); }
+  .e3-reel:hover .e3-reel-play { transform: translate(-50%, -50%); }
   /* Fără mișcare: ascundem clipul, rămâne fundalul întunecat + overlay. */
   .e3-hero-video { display: none; }
+  /* Animațiile de scroll lasă elementele la starea finală, nu la cea inițială. */
+  .e3-title { clip-path: none !important; }
+  .e3-word { clip-path: none !important; }
+  .e3-progress { display: none; }
+  .e3-shine::after { display: none; }
+  .e3-spot::before { display: none; }
+  /* Banda rămâne, dar stă pe loc: mesajul e text, nu mișcarea. */
+  .e3-marquee-track { transform: none !important; translate: none !important; }
+  .e3-mag { translate: none !important; }
 }

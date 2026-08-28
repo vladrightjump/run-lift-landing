@@ -1,19 +1,31 @@
-import {
-  EVENT_WHERE,
-  EVENT_WHEN,
-  EVENT_START_TIME,
-  MAP_EMBED_SRC,
-  MAP_DIRECTIONS_URL,
-} from '../../content/format';
+import { useEditionStrings } from '../../hooks/useEventConfig';
 import { sectionNum, sectionTitle } from './shared';
 
-const MAP_SRC = MAP_EMBED_SRC;
-const DIRECTIONS_URL = MAP_DIRECTIONS_URL;
+type Props = {
+  /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
+  num?: string;
+};
 
 /** Secțiunea „Locația": detalii (unde/când/start) + hartă + link Google Maps. */
-export const VenueSection = () => {
+export const VenueSection = ({ num = '02' }: Props) => {
+  const {
+    EVENT_WHERE,
+    EVENT_WHEN,
+    EVENT_START_TIME,
+    MAP_EMBED_SRC: MAP_SRC,
+    MAP_DIRECTIONS_URL: DIRECTIONS_URL,
+  } = useEditionStrings();
+
+  // Ton mai adânc decât secțiunile vecine — alternanța dă pagina în trepte,
+  // fără să introducă vreo culoare nouă (`bg-deep` e deja în paletă).
   return (
-      <section style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', borderBottom: '1px solid var(--e3-border)' }}>
+      <section
+        style={{
+          padding: 'clamp(56px, 8vw, 88px) clamp(20px, 5vw, 40px) clamp(64px, 9vw, 96px)',
+          borderBottom: '1px solid var(--e3-border)',
+          background: 'var(--e3-bg-deep)',
+        }}
+      >
         <div
           style={{
             maxWidth: 1200,
@@ -26,10 +38,10 @@ export const VenueSection = () => {
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-              <span style={sectionNum}>02</span>
-              <h2 style={sectionTitle}>Locația</h2>
+              <span className="e3-title-num" style={sectionNum}>{num}</span>
+              <h2 className="e3-title" style={sectionTitle}>Locația</h2>
             </div>
-            <div style={{ display: 'grid', gap: 0, border: '1px solid var(--e3-border)' }}>
+            <div data-reveal style={{ display: 'grid', gap: 0, border: '1px solid var(--e3-border)' }}>
               {[
                 { k: 'Unde', v: EVENT_WHERE, lime: false },
                 { k: 'Când', v: EVENT_WHEN, lime: false },
@@ -37,6 +49,7 @@ export const VenueSection = () => {
               ].map((row, i, arr) => (
                 <div
                   key={row.k}
+                  className="e3-row"
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -56,7 +69,7 @@ export const VenueSection = () => {
               Vino cu 30 de minute înainte pentru check-in și încălzire. Hidratare la fața locului.
             </p>
           </div>
-          <div>
+          <div data-reveal>
             <div style={{ border: '1px solid var(--e3-border)', overflow: 'hidden', background: 'var(--e3-surface)' }}>
               <iframe
                 title={`${EVENT_WHERE} — hartă`}

@@ -10,10 +10,17 @@
  * din `EDITION`.
  */
 import { EDITION } from './edition';
-import { formatRoDate, weekdayRo, timeOf } from './format';
+import { formatRoDate, weekdayRo, timeOf, deriveEventStrings } from './format';
+import { SNAPSHOT_CONFIG } from './eventConfig';
 
 const when = `${weekdayRo(EDITION.start, true)}, ${formatRoDate(EDITION.start)}`;
-const place = `${EDITION.venue.name}, ${EDITION.venue.city}`;
+/**
+ * Locul cursei, derivat din INSTANTANEUL de build — nu din configul publicat.
+ * Meta se injectează în HTML la build, iar scraper-ele de share nu rulează JS,
+ * deci aici nu există „runtime" de citit. O schimbare de locație din admin se
+ * vede în share preview abia la următorul deploy; admin-ul o spune explicit.
+ */
+const place = deriveEventStrings(SNAPSHOT_CONFIG).EVENT_WHERE;
 
 export const META = {
   /** „Run + Lift — Hyrox Trial · 8 august 2026". */

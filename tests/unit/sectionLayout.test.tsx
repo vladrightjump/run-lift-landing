@@ -1,0 +1,232 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { Landing } from '../../src/components/Landing';
+import { EventConfigProvider } from '../../src/hooks/useEventConfig';
+import { SNAPSHOT_CONFIG, type SectionLayoutEntry } from '../../src/content/eventConfig';
+
+/**
+ * Ordinea și vizibilitatea secțiunilor vin din configul publicat.
+ *
+ * Ce se păzește aici: numărul afișat se derivă din POZIȚIA în lista filtrată,
+ * nu se stochează. Dacă ar fi stocat, ascunderea unei secțiuni ar lăsa o gaură
+ * („01, 03, 04") sau două secțiuni ar purta același număr.
+ */
+
+const randeaza = (
+  layout: SectionLayoutEntry[],
+  mode?: 'full' | 'leaderboard',
+  reels = SNAPSHOT_CONFIG.reels
+) =>
+  render(
+    <EventConfigProvider override={{ ...SNAPSHOT_CONFIG, layout, reels }}>
+      <Landing mode={mode} />
+    </EventConfigProvider>
+  );
+
+/** Un clip valid, pentru testele în care secțiunea „Instagram" trebuie să apară. */
+const CU_CLIPURI = {
+  ...SNAPSHOT_CONFIG.reels,
+  items: [{ code: 'ABC12345', kind: 'reel' as const, poster: '', caption: 'Marți dimineața' }],
+};
+
+/** Titlurile secțiunilor, în ordinea în care apar în DOM, cu numărul lor. */
+const sectiuniDinPagina = (): string[] =>
+  Array.from(document.querySelectorAll('.e3-title-num')).map((el) => {
+    const titlu = el.parentElement?.querySelector('.e3-title')?.textContent?.trim() ?? '?';
+    return `${el.textContent?.trim()} ${titlu}`;
+  });
+
+beforeEach(() => {
+  // Landing-ul folosește IntersectionObserver (scroll reveal) și matchMedia.
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return [];
+      }
+      root = null;
+      rootMargin = '';
+      thresholds = [];
+    }
+  );
+  vi.stubGlobal('matchMedia', (q: string) => ({
+    matches: false,
+    media: q,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }));
+});
+
+afterEach(() => {
+  // Fără asta, arborii randați se adună în `document` și interogările de mai
+  // jos (care merg pe tot documentul) ar vedea și secțiunile testului anterior.
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe('ordinea secțiunilor urmează configul', () => {
+  it('ordinea implicită numerotează 01–04', () => {
+    randeaza(SNAPSHOT_CONFIG.layout);
+    expect(sectiuniDinPagina()).toEqual([
+      '01 Formatul',
+      '02 Locația',
+      '03 Înscriere',
+      '04 Cine vine',
+    ]);
+  });
+
+  it('mutarea locației înaintea formatului le schimbă și numerele', () => {
+    randeaza([
+      { key: 'venue', visible: true },
+      { key: 'format', visible: true },
+      { key: 'registration', visible: true },
+      { key: 'participants', visible: true },
+    ]);
+    const sectiuni = sectiuniDinPagina();
+    expect(sectiuni[0]).toBe('01 Locația');
+    expect(sectiuni[1]).toBe('02 Formatul');
+  });
+});
+
+describe('vizibilitatea scoate secțiunea și renumerotează restul', () => {
+  it('ascunderea locației nu lasă gaură în numerotare', () => {
+    randeaza([
+      { key: 'format', visible: true },
+      { key: 'venue', visible: false },
+      { key: 'registration', visible: true },
+      { key: 'participants', visible: true },
+    ]);
+    const sectiuni = sectiuniDinPagina();
+    expect(sectiuni).toEqual(['01 Formatul', '02 Înscriere', '03 Cine vine']);
+    expect(sectiuni.some((s) => s.includes('Locația'))).toBe(false);
+  });
+
+  it('o singură secțiune vizibilă rămâne „01"', () => {
+    randeaza([
+      { key: 'format', visible: false },
+      { key: 'venue', visible: true },
+      { key: 'registration', visible: false },
+      { key: 'participants', visible: false },
+    ]);
+    expect(sectiuniDinPagina()).toEqual(['01 Locația']);
+  });
+
+  it('numerele sunt unice și consecutive oricare ar fi filtrarea', () => {
+    randeaza([
+      { key: 'participants', visible: true },
+      { key: 'format', visible: false },
+      { key: 'venue', visible: true },
+      { key: 'registration', visible: true },
+    ]);
+    const numere = sectiuniDinPagina().map((s) => s.split(' ')[0]);
+    expect(numere).toEqual(['01', '02', '03']);
+    expect(new Set(numere).size).toBe(numere.length);
+  });
+});
+
+describe('„Instagram" fără clipuri nu lasă gaură în numerotare', () => {
+  const CU_REELS: SectionLayoutEntry[] = [
+    { key: 'format', visible: true },
+    { key: 'reels', visible: true },
+    { key: 'venue', visible: true },
+  ];
+
+  it('vizibilă în layout dar fără clipuri → dispare, iar restul se renumerotează', () => {
+    // Capcana pe care o păzește testul: dacă secțiunea s-ar filtra prin
+    // `return null` în componentă, ea AR CONSUMA poziția din lista filtrată,
+    // iar „Locația" ar primi 03 în loc de 02.
+    randeaza(CU_REELS);
+    expect(sectiuniDinPagina()).toEqual(['01 Formatul', '02 Locația']);
+  });
+
+  it('cu un clip, își ia numărul din poziția ei', () => {
+    randeaza(CU_REELS, undefined, CU_CLIPURI);
+    expect(sectiuniDinPagina()).toEqual(['01 Formatul', '02 Instagram', '03 Locația']);
+  });
+
+  it('ascunsă din layout nu apare, chiar dacă are clipuri', () => {
+    randeaza(
+      [
+        { key: 'format', visible: true },
+        { key: 'reels', visible: false },
+      ],
+      undefined,
+      CU_CLIPURI
+    );
+    expect(sectiuniDinPagina()).toEqual(['01 Formatul']);
+  });
+});
+
+describe('secțiunea „Instagram" nu cere nimic de la Instagram până la click', () => {
+  it('la randare nu există niciun iframe — doar façade-uri', () => {
+    randeaza([{ key: 'reels', visible: true }], undefined, CU_CLIPURI);
+    expect(document.querySelectorAll('iframe')).toHaveLength(0);
+  });
+
+  it('clicul pe card montează iframe-ul, pe ruta cerută de `kind`', () => {
+    randeaza([{ key: 'reels', visible: true }], undefined, CU_CLIPURI);
+    fireEvent.click(screen.getByRole('button', { name: /Redă clipul/ }));
+    const frame = document.querySelector('iframe');
+    expect(frame?.getAttribute('src')).toBe(
+      'https://www.instagram.com/reel/ABC12345/embed/'
+    );
+  });
+
+  it('linkul canonic e prezent de la început, ca plasă dacă iframe-ul e blocat', () => {
+    randeaza([{ key: 'reels', visible: true }], undefined, CU_CLIPURI);
+    const link = screen.getByRole('link', { name: /Deschide pe Instagram/ });
+    expect(link.getAttribute('href')).toBe('https://www.instagram.com/reel/ABC12345/');
+  });
+
+  it('un clip de tip „p" folosește ruta „p", nu „reel"', () => {
+    randeaza([{ key: 'reels', visible: true }], undefined, {
+      ...CU_CLIPURI,
+      items: [{ code: 'XYZ98765', kind: 'p' as const, poster: '', caption: '' }],
+    });
+    expect(screen.getByRole('link', { name: /Deschide pe Instagram/ }).getAttribute('href')).toBe(
+      'https://www.instagram.com/p/XYZ98765/'
+    );
+  });
+});
+
+describe('ziua cursei nu e configurabilă', () => {
+  it('modul leaderboard își păstrează aranjarea, oricare ar fi configul', () => {
+    // Configul cere o cu totul altă ordine, cu formatul ascuns.
+    randeaza(
+      [
+        { key: 'format', visible: false },
+        { key: 'registration', visible: true },
+      ],
+      'leaderboard'
+    );
+    expect(sectiuniDinPagina()).toEqual(['01 Cine vine', '02 Formatul', '03 Locația']);
+  });
+
+  it('înscrierea nu apare în fereastra de dinaintea startului', () => {
+    randeaza(SNAPSHOT_CONFIG.layout, 'leaderboard');
+    expect(screen.queryByText('Înscriere')).toBeNull();
+  });
+});
+
+describe('cazul limita: nicio sectiune vizibila', () => {
+  it('pagina ramane intreaga (hero + footer), fara sectiuni si fara sa crape', () => {
+    // Config valid: R19 blocheaza doar ascunderea inscrierii cat timp inscrierile
+    // sunt DESCHISE. Dupa deadline, a ascunde tot e alegerea organizatorului.
+    randeaza([
+      { key: 'format', visible: false },
+      { key: 'venue', visible: false },
+      { key: 'registration', visible: false },
+      { key: 'participants', visible: false },
+    ]);
+    expect(sectiuniDinPagina()).toEqual([]);
+    // Hero-ul si antetul raman — pagina nu e goala, doar fara sectiuni numerotate.
+    expect(screen.getAllByRole('heading', { level: 1 }).length).toBeGreaterThan(0);
+  });
+});
