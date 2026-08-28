@@ -23,6 +23,8 @@ export const isTurnstileEnabled = (): boolean => TURNSTILE_SITE_KEY.length > 0;
 const SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 /** Cât așteptăm un token înainte să renunțăm (challenge-urile grele pot dura). */
 const EXECUTE_TIMEOUT_MS = 25_000;
+/** Cât așteptăm `api.js`. Separat de cel de sus: se aplică înainte de challenge. */
+const LOAD_TIMEOUT_MS = 10_000;
 
 /**
  * Verificarea anti-bot nu s-a putut face în client (script blocat de un adblocker,
@@ -64,11 +66,26 @@ const loadApi = (): Promise<TurnstileApi> => {
     script.src = SCRIPT_URL;
     script.async = true;
     script.defer = true;
+    // Termen limită pe ÎNCĂRCARE. `onerror` prinde un refuz (adblock, DNS), dar
+    // NU o cerere care atârnă: acolo nu se declanșează niciodată nimic, iar
+    // cronometrul de 25s de mai jos nici măcar nu e armat încă — se armează
+    // abia după ce `loadApi()` se rezolvă. Fără asta, un `api.js` care nu
+    // răspunde lasă formularul în „se trimite" la nesfârșit.
+    const timer = window.setTimeout(() => {
+      script.remove();
+      reject(new TurnstileError('api.js nu a răspuns la timp'));
+    }, LOAD_TIMEOUT_MS);
+    const done = () => window.clearTimeout(timer);
     script.onload = () => {
+      done();
       if (window.turnstile) resolve(window.turnstile);
       else reject(new TurnstileError('api.js încărcat, dar window.turnstile lipsește'));
     };
-    script.onerror = () => reject(new TurnstileError('api.js nu s-a putut încărca'));
+    script.onerror = () => {
+      done();
+      script.remove();
+      reject(new TurnstileError('api.js nu s-a putut încărca'));
+    };
     document.head.appendChild(script);
   }).catch((err) => {
     // Permite o nouă încercare la următorul submit (rețea revenită, adblock oprit).

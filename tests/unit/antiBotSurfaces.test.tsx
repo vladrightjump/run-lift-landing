@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, fireEvent, screen } from '@testing-library/react';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import type { ReactElement } from 'react';
 import { EventConfigProvider } from '../../src/hooks/useEventConfig';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
@@ -63,6 +65,44 @@ const SUPRAFETE: { nume: string; element: () => ReactElement; deschide?: string 
     element: () => <DespreNoi />,
   },
 ];
+
+/**
+ * Garda care nu depinde de memoria nimănui.
+ *
+ * Testul de randare de mai jos verifică o listă scrisă de mână — exact felul de
+ * listă pe care cineva uită s-o completeze, adică fix greșeala care a produs
+ * `RegistrationForm.tsx` fără capcană. Ăsta întreabă sistemul de fișiere: orice
+ * `.tsx` din `src/` care conține `<form` trebuie să menționeze și `hpProps`.
+ */
+describe('niciun formular din src/ nu scapă fără capcană', () => {
+  /** Singurul `<form>` care NU e public: autentificarea în backoffice. */
+  const EXCEPTII = new Set(['src/admin/AdminLogin.tsx']);
+
+  it('fiecare fișier cu <form> folosește hpProps', () => {
+    const radacina = path.resolve(__dirname, '../..');
+    const fisiere: string[] = [];
+    const scaneaza = (dir: string) => {
+      for (const intrare of readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, intrare.name);
+        if (intrare.isDirectory()) scaneaza(p);
+        else if (intrare.name.endsWith('.tsx')) fisiere.push(p);
+      }
+    };
+    scaneaza(path.join(radacina, 'src'));
+
+    const fataCapcana = fisiere
+      .filter((f) => readFileSync(f, 'utf8').includes('<form'))
+      .map((f) => path.relative(radacina, f))
+      .filter((rel) => !EXCEPTII.has(rel))
+      .filter((rel) => !readFileSync(path.join(radacina, rel), 'utf8').includes('hpProps'));
+
+    expect(
+      fataCapcana,
+      `Formular public fără capcană anti-bot: ${fataCapcana.join(', ')}. ` +
+        'Adaugă `<input type="text" {...hpProps} />` în <form> și componenta în SUPRAFETE.'
+    ).toEqual([]);
+  });
+});
 
 describe('capcana anti-bot e pe toate formularele publice', () => {
   beforeEach(() => {

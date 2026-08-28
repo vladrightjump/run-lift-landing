@@ -48,11 +48,14 @@ export const useAntiBot = () => {
     mountedAt.current = Date.now();
   }, []);
 
-  const collect = async (): Promise<AntiBot> => ({
-    token: await getTurnstileToken(),
-    hp,
-    elapsed: Date.now() - mountedAt.current,
-  });
+  const collect = async (): Promise<AntiBot> => {
+    // `elapsed` se măsoară ÎNAINTE de await, nu după. Token-ul poate dura
+    // secunde, iar dacă între timp formularul e resetat (`restart()` mută
+    // `mountedAt` la acum), scăderea de după await ar da aproape zero — și
+    // serverul ar respinge o înscriere umană ca `too_fast`.
+    const elapsed = Date.now() - mountedAt.current;
+    return { token: await getTurnstileToken(), hp, elapsed };
+  };
 
   const hpProps = {
     name: HONEYPOT_NAME,

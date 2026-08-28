@@ -31,6 +31,26 @@ const SIM_LOADING_MS = 1800;
 const delay = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 const pad2 = (n: number | string) => String(n).padStart(2, '0');
 
+/**
+ * Mesajul pentru un submit eșuat. Stă aici, nu inline în `catch`, fiindcă sunt
+ * DOUĂ căi care pot pica din aceleași motive — înscrierea normală și comutarea
+ * automată pe lista de așteptare — iar când clasificarea era duplicată, a doua a
+ * rămas în urmă și dădea „Înscrierea nu a putut fi trimisă" pentru un captcha
+ * blocat.
+ */
+const mesajPentru = (err: unknown): string =>
+  isTimeoutError(err)
+    ? 'Serverul răspunde greu. Încearcă din nou.'
+    : isDuplicateError(err)
+    ? 'Există deja o înscriere cu acest email.'
+    : isTurnstileError(err)
+    ? antiBotErrorMessage(err)
+    : isBotRejectedError(err)
+    ? ANTIBOT_MESSAGES.captcha
+    : isNetworkOrCspError(err)
+    ? 'Conexiune blocată sau indisponibilă. Reîncearcă.'
+    : 'Înscrierea nu a putut fi trimisă.';
+
 type Params = {
   stats: PublicStats | null;
   now: number;
@@ -251,25 +271,18 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
           logClientError('waitlist', wlErr, {
             status: wlErr instanceof SubmitHttpError ? wlErr.status : undefined,
           });
-          finishError('Înscrierea nu a putut fi trimisă.');
+          // Aceeași clasificare ca pe calea principală. Ramura asta își cere un
+          // token NOU (cel dintâi s-a consumat), deci poate pica din exact
+          // aceleași motive anti-bot — iar un mesaj generic ar trimite omul să
+          // reîncerce la nesfârșit în loc să-i spună să oprească blocantul.
+          finishError(mesajPentru(wlErr));
           return;
         }
       }
       logClientError(asWaitlist ? 'waitlist' : 'registration', err, {
         status: err instanceof SubmitHttpError ? err.status : undefined,
       });
-      const msg = isTimeoutError(err)
-        ? 'Serverul răspunde greu. Încearcă din nou.'
-        : isDuplicateError(err)
-        ? 'Există deja o înscriere cu acest email.'
-        : isTurnstileError(err)
-        ? antiBotErrorMessage(err)
-        : isBotRejectedError(err)
-        ? ANTIBOT_MESSAGES.captcha
-        : isNetworkOrCspError(err)
-        ? 'Conexiune blocată sau indisponibilă. Reîncearcă.'
-        : 'Înscrierea nu a putut fi trimisă.';
-      finishError(msg);
+      finishError(mesajPentru(err));
     }
   };
 

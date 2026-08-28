@@ -14,9 +14,27 @@ import { describe, it, expect, afterAll } from 'vitest';
  *   SUPABASE_SERVICE_ROLE_KEY=eyJ... \
  *   npm run test:integration
  *
- * Siguranță:
- *  - Toate inserările folosesc o EDIȚIE DE TEST (`TEST_EDITION`), invizibilă în
- *    `public_stats` (care filtrează ediția curentă) — nu se amestecă cu datele reale.
+ * ⚠️ IZOLAREA PE EDIȚIE NU MAI FUNCȚIONEAZĂ PE `registrations` / `event_waitlist`.
+ *
+ * `TEST_EDITION` a fost gândit ca sertar separat, invizibil în `public_stats`. De
+ * când există trigger-ul `forteaza_editia_curenta` (runlift_forteaza_editia_la_insert),
+ * premisa e falsă: trigger-ul NU are gardă de rol și suprascrie `new.editie` cu
+ * ediția curentă la ORICE insert care nu setează `runlift.guard_bypass` — inclusiv
+ * cele făcute aici cu service_role prin PostgREST, fiindcă PostgREST nu setează
+ * acel GUC. Deci rândurile de test aterizează în EDIȚIA CURENTĂ: apar în
+ * `public_stats` și consumă din plafonul real cât ține rularea.
+ *
+ * Consecințe practice, până când cineva decide cum se izolează suita (ar trebui
+ * inserat printr-un helper SECURITY DEFINER care setează `guard_bypass`, ca
+ * `admin_add_registration`):
+ *  - NU rula suita în fereastra de înscrieri a unei ediții deschise.
+ *  - Cu ediția închisă (`registration_deadline` trecut), `registrations_guard_trg`
+ *    respinge oricum inserările în `registrations` — testele care depind de ele
+ *    vor pica din motive de ediție, nu de schemă.
+ *  - `launch_notifications` n-are trigger de ediție și nici plafon, deci acolo
+ *    izolarea prin `TEST_EDITION` chiar ține.
+ *
+ * Restul plaselor de siguranță:
  *  - Fiecare rulare are un prefix de email unic; `afterAll` șterge tot ce a creat,
  *    cu service_role (bypass RLS).
  *  - Emailurile NU se trimit: nu apelăm funcția edge în modurile care trimit.
@@ -142,7 +160,12 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     );
     const rows = (await check.json()) as Array<{ email: string; editie: number }>;
     expect(rows).toHaveLength(1);
-    expect(rows[0].editie).toBe(TEST_EDITION);
+    // NU `TEST_EDITION`: `forteaza_editia_curenta` a suprascris valoarea trimisă
+    // (vezi avertismentul din capul fișierului). Ce se verifică aici e că insert-ul
+    // pe calea service_role funcționează și că ediția o pune serverul — adică exact
+    // proprietatea pe care se bazează `submit-form` după lockdown.
+    expect(rows[0].editie).not.toBe(TEST_EDITION);
+    expect(typeof rows[0].editie).toBe('number');
   });
 
   it.skipIf(!submitFormDeployed)('submit-form respinge capcana completată, fără să scrie nimic', async () => {

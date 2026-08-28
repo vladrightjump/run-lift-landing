@@ -47,16 +47,35 @@ revoke insert on runlift.launch_notifications from anon;
 
 commit;
 
--- Verificare (rulează separat, după commit) — ambele trebuie să dea 0 rânduri.
--- Interogările NU numesc cele trei tabele: întreabă „mai poate `anon` insera
+-- Verificare (rulează separat, după commit) — trebuie să dea 0 rânduri.
+--
+-- Interogarea NU numește cele trei tabele: întreabă „mai poate `anon` insera
 -- ORIUNDE în runlift?". Dacă o migrare viitoare adaugă un tabel public cu
--- politică de insert, vrem să apară aici, nu să treacă pe lângă listă.
+-- politică de insert, apare aici, nu trece pe lângă o listă scrisă de mână.
 --
---   select tablename, policyname from pg_policies
---    where schemaname = 'runlift' and cmd = 'INSERT' and roles::text like '%anon%';
+-- Se uită la grant ȘI la accesibilitate, nu la grant singur: alte zece tabele
+-- din runlift au grant de INSERT pentru `anon` (admin_events, app_config,
+-- email_log, event_config, …), dar au RLS activ FĂRĂ nicio politică, deci
+-- scrierea e refuzată oricum. O interogare doar pe grant-uri ar întoarce mereu
+-- rânduri și ar face verificarea inutilă — „trebuie să dea 0" n-ar fi adevărat
+-- niciodată.
 --
---   select table_name, privilege_type from information_schema.role_table_grants
---    where table_schema = 'runlift' and grantee = 'anon' and privilege_type = 'INSERT';
+--   select c.relname
+--     from pg_class c
+--     join pg_namespace n on n.oid = c.relnamespace
+--    where n.nspname = 'runlift'
+--      and c.relkind = 'r'
+--      and has_table_privilege('anon', c.oid, 'INSERT')
+--      and (
+--        not c.relrowsecurity
+--        or exists (
+--          select 1 from pg_policies p
+--           where p.schemaname = 'runlift' and p.tablename = c.relname
+--             and p.cmd = 'INSERT' and p.roles::text like '%anon%'
+--        )
+--      );
+--
+-- Înainte de migrare întoarce exact cele trei tabele; după, zero.
 --
 -- Și testul care contează cu adevărat, din terminal (trebuie să dea 401/403):
 --

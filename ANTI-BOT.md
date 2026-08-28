@@ -163,6 +163,23 @@ generic („Înscrierea nu a putut fi trimisă"), fiindcă un 401 de la PostgRES
 `TypeError` și nu declanșează îndemnul de reîncărcare. De aceea pasul 5 se face într-o
 fereastră în care o înscriere pierdută e acceptabilă.
 
+**Poarta dintre 4 și 5: care formular o dă depinde de starea ediției.** Verifică întâi:
+
+```sql
+select key, value from runlift.app_config
+ where key in ('registration_deadline','event_capacity','current_event_edition');
+```
+
+Dacă `registration_deadline` a trecut — cum era la 28 aug 2026: deadline 22 aug, ediția 5 cu
+31/40 locuri — `registrations_guard_trg` respinge orice înscriere cu `registration_closed`,
+deci **formularul de înscriere nu poate fi poarta**: ar pica din motive care n-au nicio
+legătură cu Turnstile, și ai crede că deploy-ul e stricat. Folosește atunci „Anunță-mă la
+lansare" (`launch_notifications` n-are nici deadline, nici plafon) și confirmă cu
+service_role că rândul a aterizat. Cu ediția deschisă, poarta firească e chiar înscrierea.
+
+Partea bună a unei ediții închise: nu există fereastră de înscrieri de stricat, deci pasul 5
+se poate face liniștit.
+
 **Preview-urile nu pot trimite formulare.** `redirectCanonic` mută vizitatorul pe domeniu
 DOAR de pe producție (`src/lib/canonicalHost.ts`), deci un preview rămâne pe `*.vercel.app`
 și primește refuz de CORS de la `submit-form`. Formularele se testează local
@@ -170,20 +187,29 @@ DOAR de pe producție (`src/lib/canonicalHost.ts`), deci un preview rămâne pe 
 
 ### După pasul 2: dovada că Turnstile chiar verifică
 
-`verifyTurnstile` începe cu `if (!TURNSTILE_SECRET) return { ok: true }` — un secret care nu
-a ajuns la funcție face captcha să accepte orice, tăcut, iar `curl`-ul de lockdown de mai jos
-trece identic în ambele cazuri. Cu token gol și `elapsed` peste prag, **trebuie să dea 403**:
+Funcția refuză să pornească fără `TURNSTILE_SECRET_KEY` (răspunde `captcha_unconfigured`),
+dar asta acoperă doar secretul ABSENT — nu unul greșit. Cu token gol și `elapsed` peste prag,
+**trebuie să dea 403**:
 
 ```bash
 curl -s -w '\n%{http_code}\n' \
   -X POST 'https://whyndrjcezmtajbykeil.supabase.co/functions/v1/submit-form' \
   -H 'apikey: sb_publishable_SR4wCG4ZsSZYAqobBjUF_g_Xx4pRbHh' \
   -H 'Content-Type: application/json' \
-  -d '{"mode":"launch","token":"","hp":"","elapsed":30000,
-       "data":{"nume":"Test","prenume":"Test","email":"probe@test.md","telefon":"069000000"}}'
+  -d '{"mode":"launch","token":"","hp":"","elapsed":30000,"data":{}}'
 ```
 
-Un 200 înseamnă că secretul lipsește și captcha e oprit.
+`data` e gol INTENȚIONAT. Captcha se verifică înaintea validării payload-ului, deci:
+
+- **403 `captcha_failed`** → captcha verifică. Corect.
+- **400 `invalid:nume`** → cererea a trecut de captcha și a picat abia la validare, adică
+  verificarea nu se face. Ceva e greșit cu secretul.
+- **200** → nu se poate ajunge aici cu `data` gol; dacă totuși vezi 200, funcția deployată e
+  o versiune veche.
+
+Cu un `data` complet, varianta „captcha oprit" ar fi INSERAT un rând real în
+`launch_notifications` și ar fi trimis un email real — proba ar fi produs exact mizeria pe
+care o caută.
 
 ### Verificarea care contează
 

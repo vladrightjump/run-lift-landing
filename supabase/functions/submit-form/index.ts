@@ -54,6 +54,14 @@ if (!SERVICE_KEY) {
 const DB_SCHEMA = Deno.env.get("DB_SCHEMA") ?? "runlift";
 // Secretul Turnstile. Lipsă = verificarea e sărită (dev/preview fără Cloudflare).
 const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET_KEY") ?? "";
+/** Consimțământ explicit ca funcția să meargă FĂRĂ captcha (dev/preview). */
+const TURNSTILE_OPTIONAL = Deno.env.get("TURNSTILE_OPTIONAL") === "1";
+if (!TURNSTILE_SECRET && !TURNSTILE_OPTIONAL) {
+  console.error(
+    "submit-form: lipsește TURNSTILE_SECRET_KEY — funcția respinge tot cu " +
+      "captcha_unconfigured. Pune secretul, sau TURNSTILE_OPTIONAL=1 pe medii fără Cloudflare."
+  );
+}
 
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const SITEVERIFY_TIMEOUT_MS = 5_000;
@@ -125,8 +133,19 @@ type VerifyResult = { ok: true } | { ok: false; motiv: string };
  *                             într-o fereastră de câteva minute.
  */
 async function verifyTurnstile(token: string, ip: string | null): Promise<VerifyResult> {
-  if (!TURNSTILE_SECRET) return { ok: true }; // nu e configurat (dev/preview)
+  // Secret lipsă = captcha oprit. În dev e util; în producție ar fi o gaură
+  // tăcută — funcția ar accepta orice, iar `curl`-ul de lockdown ar trece
+  // identic. Deci bypass-ul cere consimțământ explicit, ca la SERVICE_KEY:
+  // `supabase secrets set TURNSTILE_OPTIONAL=1` doar pe mediile fără Cloudflare.
+  if (!TURNSTILE_SECRET) {
+    if (TURNSTILE_OPTIONAL) return { ok: true };
+    return { ok: false, motiv: "captcha_unconfigured" };
+  }
   if (!token) return { ok: false, motiv: "missing_token" };
+  // Token-ele Turnstile sunt documentate ≤2048 caractere. Fără plafon, un token
+  // uriaș ar face `siteverify` să răspundă 4xx — adică exact ramura de fail-open,
+  // provocată la comandă. Cu plafonul, respingem înainte să întrebăm Cloudflare.
+  if (token.length > 2048) return { ok: false, motiv: "bad_token" };
 
   const body = new FormData();
   body.append("secret", TURNSTILE_SECRET);
@@ -139,15 +158,31 @@ async function verifyTurnstile(token: string, ip: string | null): Promise<Verify
       body,
       signal: AbortSignal.timeout(SITEVERIFY_TIMEOUT_MS),
     });
+    // Fail-open DOAR pe pana lor, nu pe orice răspuns. Un 4xx e verdictul
+    // Cloudflare despre CEREREA noastră (token malformat, secret greșit) și e
+    // influențabil de client — dacă l-am accepta, un atacator ar putea provoca
+    // singur ramura permisivă. 5xx și 429 sunt indisponibilitate de partea lor:
+    // acolo se aplică politica din capul funcției.
     if (!res.ok) {
-      console.error("turnstile siteverify HTTP", res.status, "— fail-open");
-      return { ok: true };
+      if (res.status >= 500 || res.status === 429) {
+        console.error("turnstile siteverify indisponibil:", res.status, "— fail-open");
+        return { ok: true };
+      }
+      console.warn("turnstile siteverify a respins cererea:", res.status);
+      return { ok: false, motiv: `siteverify_${res.status}` };
     }
     const data = (await res.json()) as { success?: boolean; "error-codes"?: string[] };
     if (data.success) return { ok: true };
-    const codes = (data["error-codes"] ?? []).join(",");
-    console.warn("turnstile respins:", codes);
-    return { ok: false, motiv: codes || "verification_failed" };
+    const codes = data["error-codes"] ?? [];
+    // Cloudflare își semnalează propria pană cu 200 + success:false +
+    // `internal-error`. E fix cazul pe care politica spune să-l acceptăm, deci
+    // n-are ce căuta în ramura de respingere.
+    if (codes.includes("internal-error")) {
+      console.error("turnstile internal-error — fail-open");
+      return { ok: true };
+    }
+    console.warn("turnstile respins:", codes.join(","));
+    return { ok: false, motiv: codes.join(",") || "verification_failed" };
   } catch (err) {
     // Timeout sau rețea căzută spre Cloudflare — vezi politica de mai sus.
     console.error("turnstile siteverify indisponibil — fail-open:", err);
@@ -263,7 +298,10 @@ Deno.serve(async (req) => {
   }
 
   const mode = str(payload.mode) as Mode;
-  if (!TABLE[mode]) return json(req, 400, { error: "unknown_mode" });
+  // `Object.hasOwn`, nu `TABLE[mode]`: cu indexarea simplă, `mode: "constructor"`
+  // (sau "toString") rezolvă prin lanțul de prototipuri, trece de gardă și ajunge
+  // interpolat în URL-ul PostgREST.
+  if (!Object.hasOwn(TABLE, mode)) return json(req, 400, { error: "unknown_mode" });
 
   // --- Filtre ieftine, înaintea apelului la Cloudflare ---
   // Honeypot: câmp ascuns pe care un om nu-l vede, deci nu-l completează.
@@ -304,10 +342,14 @@ Deno.serve(async (req) => {
     });
   }
 
+  // NU se așteaptă: emailul e best-effort, exact cum spune docblock-ul lui
+  // `fireEmail`. Așteptat, un Resend lent ar mânca din bugetul de 15s al
+  // clientului și ar transforma o înscriere reușită într-un timeout în UI.
+  // `fireEmail` își înghite singur erorile, deci promisiunea nu poate respinge.
   if (mode === "registration" && id) {
-    await fireEmail({ mode: "confirm", id });
+    void fireEmail({ mode: "confirm", id });
   } else if (mode === "launch") {
-    await fireEmail({ mode: "info", email: str(data.email) });
+    void fireEmail({ mode: "info", email: str(data.email) });
   }
 
   return json(req, 200, { ok: true, ...(id ? { id } : {}) });
