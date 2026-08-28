@@ -22,18 +22,35 @@
 // `current_event_edition()` / `current_launch_edition()`, deci pur și simplu nu o
 // trimitem: ediția o decide serverul, din `app_config`.
 //
+// Câte straturi o apără, verificat pe DB-ul live (28 aug 2026):
+//   • `registrations`, `event_waitlist` — DOUĂ: DEFAULT-ul coloanei PLUS
+//     trigger-ul `forteaza_editia_curenta`, care NU are gardă de rol. Se aplică
+//     și scrierilor de aici, fiindcă nu setăm `runlift.guard_bypass` (îl setează
+//     doar RPC-urile de admin, care aleg ediția deliberat). Deci chiar dacă
+//     cineva ar strecura `editie` în plic, trigger-ul o suprascrie.
+//   • `launch_notifications` — UNUL SINGUR: are DEFAULT, dar NU are trigger.
+//     Aici `validateLaunchRow` e singurul lucru care ține câmpul afară din rând.
+//     Dacă adaugi vreodată `editie` în `row`, o scrii pe bune.
+//
 // Trigger-ele `registrations_guard_trg` (event_full / registration_closed) și
 // `event_waitlist_cap_trg` (waitlist_full) rămân active — sunt trigger-e, nu
 // politici RLS, deci se aplică și scrierilor făcute cu cheia de service.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-// Aceeași convenție ca în `send-email`: pe proiectele cu chei noi
-// (sb_publishable/sb_secret) env-ul legacy poate lipsi, iar căderea pe cheia anon
-// ar face insert-urile să pice tăcut după lockdown.
+// Pe proiectele cu chei noi (sb_publishable/sb_secret) env-ul legacy poate lipsi,
+// de unde a doua variantă. NU cădem pe SUPABASE_ANON_KEY, deși `send-email` o face: acolo e inofensiv,
+// aici ar fi o bombă cu ceas. Cu cheia anon funcția merge perfect până în
+// secunda în care se aplică lockdown-ul, apoi fiecare insert dă 401 — adică
+// exact după ce poarta de verificare („o înscriere reală trece") a spus da.
+// Mai bine pică zgomotos la deploy decât tăcut în producție.
 const SERVICE_KEY =
-  Deno.env.get("RUNLIFT_SERVICE_KEY") ??
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
-  Deno.env.get("SUPABASE_ANON_KEY")!;
+  Deno.env.get("RUNLIFT_SERVICE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+if (!SERVICE_KEY) {
+  console.error(
+    "submit-form: lipsește RUNLIFT_SERVICE_KEY / SUPABASE_SERVICE_ROLE_KEY — " +
+      "scrierile ar pica după lockdown. Vezi ANTI-BOT.md, pasul 1 din deploy."
+  );
+}
 const DB_SCHEMA = Deno.env.get("DB_SCHEMA") ?? "runlift";
 // Secretul Turnstile. Lipsă = verificarea e sărită (dev/preview fără Cloudflare).
 const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET_KEY") ?? "";
@@ -46,6 +63,15 @@ const MIN_FORM_MS = 3_000;
 // Originile cărora browserul le permite să citească răspunsul. CORS NU e o
 // barieră de securitate (un `curl` nu-l respectă) — apărarea reală e Turnstile.
 // Listăm și dev server-ul Vite, altfel formularele nu se pot testa local.
+//
+// Preview-urile Vercel NU sunt aici, deliberat. `redirectCanonic` mută
+// vizitatorul pe parktraining.fit DOAR de pe producție (`env !== 'production'
+// → null`, vezi src/lib/canonicalHost.ts), deci un preview rămâne pe
+// `*.vercel.app` și formularele lui primesc refuz de CORS. Consecința, scrisă
+// pe față: formularele se testează local sau pe producție, nu pe preview.
+// Alternativa ar fi un pattern `*.vercel.app` aici plus cheia Turnstile în
+// scope-ul Preview din Vercel — mai multă suprafață pentru un mediu pe care
+// oricum nu-l folosim la înscrieri reale.
 const ORIGINI = ["https://parktraining.fit", "http://localhost:5173"];
 
 const corsFor = (req: Request): Record<string, string> => {
@@ -143,6 +169,14 @@ function validateEventRow(data: Row): { row: Row } | { error: string } {
   if (nume.length < 3) return { error: "nume" };
   if (!EMAIL_RE.test(email)) return { error: "email" };
   if (!PHONE_RE.test(telefon)) return { error: "telefon" };
+  // Doar FORMATUL datei, nu și pragul de 14 ani. Nu e o scăpare: politica RLS
+  // dinaintea lockdown-ului cerea doar `acord = true`, deci serverul n-a
+  // verificat niciodată vârsta. Regula trăiește în `validate()` din client, care
+  // are nevoie de `config.start` — o dată publicată pe care funcția asta n-o are
+  // fără încă un apel de rețea pe calea critică a fiecărei înscrieri.
+  // Lockdown-ul nu are voie să SLĂBEASCĂ validarea; nici nu trebuie să inventeze
+  // reguli noi în aceeași mișcare. Dacă vrei pragul și pe server, e o schimbare
+  // separată, cu costul ei discutat.
   if (dataNasterii && !ISO_DATE_RE.test(dataNasterii)) return { error: "data_nasterii" };
   // Vechea politică RLS cerea `acord = true`; regula rămâne, doar locul s-a mutat.
   if (data.acord !== true) return { error: "acord" };
