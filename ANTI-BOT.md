@@ -97,17 +97,22 @@ rescris.
 
 | Unde | Variabilă | Valoare |
 |---|---|---|
-| Vercel → Environment Variables | `VITE_TURNSTILE_SITE_KEY` | cheia publică (site key) |
+| Vercel → Environment Variables (**doar Production**) | `VITE_TURNSTILE_SITE_KEY` | cheia publică (site key) |
 | Supabase → Edge Function secrets | `TURNSTILE_SECRET_KEY` | cheia secretă |
+| Supabase → Edge Function secrets | `RUNLIFT_SERVICE_KEY` | cheia de service (`sb_secret_…`) |
 
-Ambele se iau din Cloudflare Dashboard → Turnstile → Add site (gratuit, nelimitat).
+Primele două se iau din Cloudflare Dashboard → Turnstile → Add site (gratuit, nelimitat).
 
-Chei de test Cloudflare, utile în preview/CI:
+Chei de test Cloudflare, pentru dev local și CI. Funcționează pe orice domeniu, inclusiv
+`localhost`, și produc token-uri dummy (`XXXX.DUMMY.TOKEN.XXXX`). Cheile de producție resping
+token-urile dummy, și invers — deci setul se folosește întreg, nu amestecat:
 
 | Site key | Secret key | Efect |
 |---|---|---|
-| `1x00000000000000000000AA` | `1x0000000000000000000000000000000AA` | trece mereu |
+| `1x00000000000000000000BB` | `1x0000000000000000000000000000000AA` | trece mereu, widget **invizibil** (ăsta ne trebuie: rulăm `appearance: interaction-only`) |
+| `1x00000000000000000000AA` | `1x0000000000000000000000000000000AA` | trece mereu, widget vizibil |
 | `2x00000000000000000000AB` | `2x0000000000000000000000000000000AA` | blochează mereu |
+| `3x00000000000000000000FF` | — | forțează challenge interactiv |
 
 **Lipsa cheilor dezactivează protecția**, deliberat, ca dev-ul local să meargă fără cont
 Cloudflare. Ca să nu se întâmple asta tăcut în producție:
@@ -120,30 +125,69 @@ Cloudflare. Ca să nu se întâmple asta tăcut în producție:
 
 ## Runbook de deploy
 
-**Ordinea contează.** Migrarea se rulează ULTIMA — altfel formularele pică între pași.
+**Merge-ul ESTE deploy-ul frontendului.** `.github/workflows/ci-deploy.yml` rulează la
+fiecare push în `main` și, dacă `verify` trece, apasă `VERCEL_DEPLOY_HOOK_URL`, apoi
+`scripts/check-live-deploy.mjs` confirmă pe live noul SHA. Auto-deploy-ul git al Vercel e
+dezactivat (`vercel.json`: `git.deploymentEnabled.main: false`), iar workflow-ul își spune
+singur „acest pipeline e singura cale spre producție". Deci **nu** `vercel --prod`: ar pune
+pe producție un build al cărui commit nu e `main`, sărind peste `check-live-deploy`.
+
+Două constrângeri de ordine, nu una: cheia publică trebuie să fie în Vercel **înainte de
+merge** (altfel garda din `check-deploy-config.ts` face `exit 1` la build-ul de producție și
+frontendul nu ajunge sus), iar migrarea e **ULTIMA**.
 
 ```bash
-# 1. Secretul, în Supabase
-supabase secrets set TURNSTILE_SECRET_KEY=0x4AAA... --project-ref whyndrjcezmtajbykeil
+# 1. Secretele, în Supabase. AMBELE — `submit-form` refuză să scrie fără cheia de
+#    service, tocmai ca să nu cadă tăcut pe cheia anon și să moară la lockdown.
+supabase secrets set TURNSTILE_SECRET_KEY=0x4AAA... RUNLIFT_SERVICE_KEY=sb_secret_... \
+  --project-ref whyndrjcezmtajbykeil
+supabase secrets list --project-ref whyndrjcezmtajbykeil   # ambele trebuie să apară
 
 # 2. Funcția Edge. `--no-verify-jwt` fiindcă e apelată din browser doar cu `apikey`,
 #    fără sesiune de utilizator (la fel ca `send-email`).
 supabase functions deploy submit-form --no-verify-jwt --project-ref whyndrjcezmtajbykeil
 
-# 3. Cheia publică, în Vercel (Production + Preview), apoi frontendul
+# 3. Cheia publică, în Vercel — DOAR Production (vezi nota despre preview mai jos).
 vercel env add VITE_TURNSTILE_SITE_KEY production
-npm run verify && vercel --prod
 
-# 4. DUPĂ ce producția merge pe calea nouă: lockdown-ul
-#    (Supabase → SQL Editor, conținutul supabase-migration-turnstile-lockdown.sql)
+# 4. Merge PR #1 → CI rulează verify și publică. Aștepți `check-live-deploy.mjs`.
+
+# 5. DUPĂ ce producția merge pe calea nouă: lockdown-ul, prin MCP `apply_migration`,
+#    nume `runlift_turnstile_lockdown` (conținutul migrării). Apoi `get_advisors`.
 ```
 
-Între pașii 3 și 4 ambele căi funcționează. E intenționat: cine are pagina veche deschisă
-într-un tab nu pică.
+Între pașii 4 și 5 ambele căi funcționează. E intenționat — dar motivul e „noul frontend
+trebuie confirmat live înainte ca `submit-form` să rămână singura cale de scriere", nu
+protecția tab-urilor vechi: un tab deschis de o oră tot va pica după pasul 5, cu mesajul
+generic („Înscrierea nu a putut fi trimisă"), fiindcă un 401 de la PostgREST nu e
+`TypeError` și nu declanșează îndemnul de reîncărcare. De aceea pasul 5 se face într-o
+fereastră în care o înscriere pierdută e acceptabilă.
+
+**Preview-urile nu pot trimite formulare.** `redirectCanonic` mută vizitatorul pe domeniu
+DOAR de pe producție (`src/lib/canonicalHost.ts`), deci un preview rămâne pe `*.vercel.app`
+și primește refuz de CORS de la `submit-form`. Formularele se testează local
+(`http://localhost:5173`, care e în `ORIGINI`) sau pe producție.
+
+### După pasul 2: dovada că Turnstile chiar verifică
+
+`verifyTurnstile` începe cu `if (!TURNSTILE_SECRET) return { ok: true }` — un secret care nu
+a ajuns la funcție face captcha să accepte orice, tăcut, iar `curl`-ul de lockdown de mai jos
+trece identic în ambele cazuri. Cu token gol și `elapsed` peste prag, **trebuie să dea 403**:
+
+```bash
+curl -s -w '\n%{http_code}\n' \
+  -X POST 'https://whyndrjcezmtajbykeil.supabase.co/functions/v1/submit-form' \
+  -H 'apikey: sb_publishable_SR4wCG4ZsSZYAqobBjUF_g_Xx4pRbHh' \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"launch","token":"","hp":"","elapsed":30000,
+       "data":{"nume":"Test","prenume":"Test","email":"probe@test.md","telefon":"069000000"}}'
+```
+
+Un 200 înseamnă că secretul lipsește și captcha e oprit.
 
 ### Verificarea care contează
 
-După pasul 4 — trebuie să dea **401** sau **403**:
+După pasul 5 — trebuie să dea **401** sau **403**:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' \
@@ -153,15 +197,23 @@ curl -s -o /dev/null -w '%{http_code}\n' \
   -d '{"nume":"Bot Test","telefon":"069000000","email":"bot@test.md","acord":true}'
 ```
 
-Dacă dă 201, lockdown-ul nu s-a aplicat și captcha e decorativ.
+Dacă dă 201, lockdown-ul nu s-a aplicat și captcha e decorativ. (Și dacă dă 201, șterge
+rândul `bot@test.md` — altfel ocupă un loc din cele 40.)
 
 Apoi o înscriere reală de pe site, cap-coadă, plus verificarea că emailul de confirmare a
 plecat (`/admin` → „Livrare").
 
-### Rollback
+### Rollback — doi pași, în ordine
 
-`supabase-migration-turnstile-lockdown.sql` are secțiunea de rollback comentată la final
-(repune politicile și grant-urile exact cum erau).
+SQL-ul singur **nu repară nimic**: bundle-ul livrat scrie doar prin `submit-form`, deci
+re-acordarea insert-ului către `anon` redeschide gaura fără să repună vreun formular în
+funcțiune.
+
+1. Promovează în Vercel deployment-ul de producție dinaintea merge-ului. Auto-deploy-ul git
+   e dezactivat, deci e o promovare manuală din dashboard, nu un push.
+2. Abia apoi blocul comentat de la finalul `supabase-migration-turnstile-lockdown.sql`, care
+   repune politicile în forma lor de AZI — inclusiv `editie = current_event_edition()`.
+   (Versiunea veche a blocului o pierdea, adică „revenirea" ar fi fost o regresie.)
 
 ## Teste
 
@@ -171,8 +223,14 @@ plecat (`/admin` → „Livrare").
 | `tests/unit/antiBot.test.ts` | colectarea dovezilor, honeypot, repornirea cronometrului |
 | `tests/unit/supabase.test.ts` | plicul spre `submit-form`, absența ediției, propagarea erorilor |
 | `tests/unit/deploy-config.test.ts` | cele trei directive CSP pentru Turnstile |
+| `tests/unit/antiBotSurfaces.test.tsx` | **fiecare formular public are capcana** — garda împotriva unui formular nou fără honeypot |
 | `tests/*.spec.ts` (e2e) | fluxurile reale prin `submit-form` |
 | `tests/integration/backend.live.test.ts` | **lockdown-ul pe backendul real** + honeypot/too_fast |
+
+`antiBotSurfaces.test.tsx` există fiindcă exact asta s-a rupt o dată deja:
+`RegistrationForm.tsx` a apărut pe `main` după ce PR-ul fusese scris, merge-ul l-a lăsat în
+pace, testele erau verzi, iar `/inscriere` și overlay-ul trimiteau fără capcană. Dacă adaugi
+un formular public nou, adaugă-l și acolo.
 
 Testul de integrare `lockdown: cheia publishable NU mai poate insera direct` e cel care
 prinde o regresie reală. Rulează-l după orice migrare care atinge RLS:
@@ -180,6 +238,15 @@ prinde o regresie reală. Rulează-l după orice migrare care atinge RLS:
 ```bash
 RUNLIFT_LIVE=1 SUPABASE_URL=… SUPABASE_ANON_KEY=… SUPABASE_SERVICE_ROLE_KEY=… \
   npm run test:integration
+```
+
+Două teste din suita live au **porți de mediu**, fiindcă altfel suita nu poate fi verde nici
+înainte, nici după deploy — cele care lovesc `submit-form` dau 404 până la pasul 2, iar cel
+de lockdown TREBUIE să pice până la pasul 5, altfel nu măsoară nimic:
+
+```bash
+RUNLIFT_SUBMIT_FORM_DEPLOYED=1   # după pasul 2
+RUNLIFT_LOCKDOWN_APPLIED=1       # după pasul 5
 ```
 
 ## Rămas deschis
