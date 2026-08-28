@@ -14,7 +14,14 @@ import type { EditionDates } from '../lib/config';
 export type FazaSite = 'coming-soon' | 'landing' | 'cine-vine' | 'dupa-cursa';
 
 /** Tabul spre care duce un semnal de atenție. Ține de UI, nu de logică. */
-export type TabAdmin = 'participanti' | 'email' | 'livrare' | 'lansare' | 'sabloane' | 'eveniment';
+export type TabAdmin =
+  | 'participanti'
+  | 'email'
+  | 'livrare'
+  | 'lansare'
+  | 'sabloane'
+  | 'eveniment'
+  | 'coming-soon';
 
 export type Reper = {
   eticheta: string;
@@ -38,6 +45,22 @@ export type StareCurenta = {
   /** Primul reper care n-a trecut încă. `null` după ultimul. */
   urmatorul: Reper | null;
   atentie: Atentie[];
+};
+
+/**
+ * Aceeași fază, în două-trei cuvinte — pentru antetul lipit, unde propoziția
+ * întreagă n-ar încăpea.
+ *
+ * De ce în antet: „ce vede vizitatorul acum" era scris o singură dată, în
+ * panoul din capul paginii, care dispare la primul scroll. Întrebarea asta nu
+ * se pune o dată la deschidere; se pune de fiecare dată când te pregătești să
+ * schimbi ceva.
+ */
+export const ETICHETA_FAZA: Record<FazaSite, string> = {
+  'coming-soon': 'Coming Soon',
+  landing: 'Landing cu înscrieri',
+  'cine-vine': 'Cine vine',
+  'dupa-cursa': 'Countdown după cursă',
 };
 
 const CE_VEDE: Record<FazaSite, string> = {

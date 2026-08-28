@@ -59,6 +59,18 @@ const deschideCiorna = async () => {
     name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
   });
   fireEvent.click(buton);
+  // Grupurile pornesc pliate. Testele de mai jos sînt despre reguli (validare,
+  // salvare, publicare), nu despre plierea în sine, deci le deschidem pe toate
+  // — exact ce face și organizatorul când vrea să vadă tot documentul.
+  // Plierea are propriul bloc de teste, mai jos.
+  deschideGrupurile();
+};
+
+/** Deschide fiecare grup încă pliat. */
+const deschideGrupurile = () => {
+  for (const cap of document.querySelectorAll('.admin-config-grup-cap')) {
+    if (cap.getAttribute('aria-expanded') === 'false') fireEvent.click(cap);
+  }
 };
 
 const camp = (eticheta: string | RegExp): HTMLInputElement =>
@@ -128,6 +140,7 @@ describe('ciorna pentru ediția următoare', () => {
         name: new RegExp(`Ciornă pentru ediția ${SNAPSHOT_CONFIG.number + 1}`),
       })
     );
+    deschideGrupurile();
     expect(camp('Numărul ediției').value).toBe(String(SNAPSHOT_CONFIG.number + 1));
     // Locul se păstrează ca punct de plecare, nu se golește.
     expect(camp('Numele locului').value).toBe(SNAPSHOT_CONFIG.venue.name);
@@ -145,7 +158,7 @@ describe('editarea nu atinge site-ul', () => {
   it('„Salvează ciorna" trimite documentul editat', async () => {
     await deschideCiorna();
     fireEvent.change(camp('Numele evenimentului'), { target: { value: 'Winter Trial' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Salvează ciorna' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
 
     await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalledTimes(1));
     const [, editie, doc] = saveEventConfigDraft.mock.calls[0];
@@ -169,7 +182,7 @@ describe('validarea blochează publicarea', () => {
     expect(eroareaCampului('Se închid înscrierile')).toMatch(/nu poate fi după startul cursei/i);
 
     expect(screen.getByRole('button', { name: 'Publică' }).hasAttribute('disabled')).toBe(true);
-    expect(screen.getByRole('button', { name: 'Salvează ciorna' }).hasAttribute('disabled')).toBe(
+    expect(screen.getByRole('button', { name: 'Salvează' }).hasAttribute('disabled')).toBe(
       true
     );
   });
@@ -264,7 +277,7 @@ describe('refuzurile serverului ajung la organizator', () => {
       new Error('Supabase 400: config_invalid: capacitatea trebuie sa fie pozitiva')
     );
     await deschideCiorna();
-    fireEvent.click(screen.getByRole('button', { name: 'Salvează ciorna' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
 
     await waitFor(() =>
       expect(showToast).toHaveBeenCalledWith({
@@ -311,5 +324,153 @@ describe('versiuni anterioare', () => {
     randeaza();
     await screen.findByText(/Nicio ciornă deschisă/);
     expect(screen.queryByText('Versiuni anterioare')).toBeNull();
+  });
+});
+
+describe('clipurile din bandă', () => {
+  const adauga = async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
+  };
+
+  it('lipirea unui link umple codul și îl arată în ecou', async () => {
+    await adauga();
+    fireEvent.change(camp('Linkul clipului'), {
+      target: { value: 'https://www.instagram.com/reel/ABC12345/?igsh=xyz' },
+    });
+    expect(screen.getByText(/cod: ABC12345/)).toBeTruthy();
+  });
+
+  it('TASTAREA nu se autodistruge', async () => {
+    // Regresia păzită: câmpul era controlat de URL-ul RECOMPUS din codul
+    // parsat, iar la tastare fiecare caracter în parte e un URL invalid — deci
+    // câmpul se golea singur la prima literă și nu se putea scrie nimic în el.
+    await adauga();
+    const input = camp('Linkul clipului');
+
+    let text = '';
+    for (const ch of 'https://www.instagram.com/reel/ABC12345/') {
+      text += ch;
+      fireEvent.change(input, { target: { value: text } });
+      expect(camp('Linkul clipului').value).toBe(text);
+    }
+    expect(screen.getByText(/cod: ABC12345/)).toBeTruthy();
+  });
+
+  it('la ieșirea din câmp rămâne forma canonică, fără query-ul de tracking', async () => {
+    await adauga();
+    const input = camp('Linkul clipului');
+    fireEvent.change(input, {
+      target: { value: 'https://www.instagram.com/reels/ABC12345/?igsh=xyz' },
+    });
+    fireEvent.blur(input);
+    // `/reels/` s-a normalizat la `/reel/`, iar query-ul a dispărut.
+    expect(camp('Linkul clipului').value).toBe('https://www.instagram.com/reel/ABC12345/');
+  });
+
+  it('un link fără cod lasă rândul semnalat, nu publicabil', async () => {
+    await adauga();
+    fireEvent.change(camp('Linkul clipului'), {
+      target: { value: 'https://tiktok.com/@x/video/1' },
+    });
+    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
+  });
+});
+
+describe('grupurile pliate comprimă documentul, nu îl ascund', () => {
+  /** Capacele grupurilor, cu textul lor (titlu + rezumat când e pliat). */
+  const capace = (): string[] =>
+    [...document.querySelectorAll('.admin-config-grup-cap')].map((c) => c.textContent ?? '');
+
+  const deschis = (titlu: string): boolean =>
+    [...document.querySelectorAll('.admin-config-grup-cap')]
+      .find((c) => c.textContent?.includes(titlu))
+      ?.getAttribute('aria-expanded') === 'true';
+
+  it('la deschiderea ciornei, câmpurile nu sînt toate pe ecran', async () => {
+    randeaza();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    // Douăzeci de câmpuri deschise simultan erau două ecrane și jumătate.
+    expect(screen.queryByLabelText('Numele locului')).toBeNull();
+    expect(deschis('Unde')).toBe(false);
+  });
+
+  it('rezumatul ține locul câmpurilor — plierea comprimă, nu ascunde', async () => {
+    randeaza();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    const text = capace().join(' | ');
+    // Locul, capacitatea și data se citesc fără să deschizi nimic.
+    expect(text).toContain(SNAPSHOT_CONFIG.venue.name);
+    expect(text).toContain(String(SNAPSHOT_CONFIG.slots.total));
+    expect(text).toMatch(/august 2026/);
+  });
+
+  it('un grup se deschide la click și se închide la al doilea', async () => {
+    randeaza();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    const cap = [...document.querySelectorAll('.admin-config-grup-cap')].find((c) =>
+      c.textContent?.includes('Unde')
+    )!;
+    fireEvent.click(cap);
+    expect(camp('Numele locului')).toBeTruthy();
+    fireEvent.click(cap);
+    expect(screen.queryByLabelText('Numele locului')).toBeNull();
+  });
+
+  it('un grup cu eroare se deschide singur și NU se mai poate închide', async () => {
+    // Altfel „Publică" ar rămâne blocat de o eroare ascunsă sub un capac, iar
+    // bannerul de sus ar spune CE e greșit fără să arate UNDE.
+    await deschideCiorna();
+    fireEvent.change(camp('Coordonatele'), { target: { value: 'Valea Morilor' } });
+
+    const cap = [...document.querySelectorAll('.admin-config-grup-cap')].find((c) =>
+      c.textContent?.includes('Unde')
+    )!;
+    fireEvent.click(cap); // încercăm să-l închidem
+    expect(deschis('Unde')).toBe(true);
+    expect(camp('Coordonatele')).toBeTruthy();
+  });
+});
+
+describe('câmpurile predispuse la greșeli sînt liste, nu text liber', () => {
+  const control = (eticheta: string) => screen.getByLabelText(eticheta) as HTMLSelectElement;
+
+  it('durata, ora de check-in și fusul sînt `select`', async () => {
+    await deschideCiorna();
+    for (const eticheta of ['Durata', 'Check-in de la', 'Fusul orar']) {
+      expect(control(eticheta).tagName).toBe('SELECT');
+    }
+  });
+
+  it('fusul oferă doar valorile Moldovei, în forma pe care o cere serverul', async () => {
+    await deschideCiorna();
+    // „+3:00” în loc de „+03:00” trecea de input și cădea abia la „Publică”.
+    const valori = [...control('Fusul orar').options].map((o) => o.value);
+    expect(valori).toContain('+03:00');
+    expect(valori).toContain('+02:00');
+    expect(valori.every((v) => /^[+-]\d{2}:\d{2}$/.test(v))).toBe(true);
+  });
+
+  it('o valoare din afara listei nu se pierde', async () => {
+    // Un document scris manual în DB nu trebuie să pară că are altă valoare.
+    listEventConfig.mockResolvedValue([
+      rand({ config: { ...SNAPSHOT_CONFIG, checkinFrom: '04:07' } }),
+    ]);
+    await deschideCiorna();
+    expect(control('Check-in de la').value).toBe('04:07');
   });
 });

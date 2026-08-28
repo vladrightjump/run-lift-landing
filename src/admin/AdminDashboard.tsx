@@ -27,6 +27,8 @@ import type {
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminEventTab } from './AdminEventTab';
+import { AdminComingSoonTab } from './AdminComingSoonTab';
+import { AdminNav } from './AdminNav';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
@@ -41,21 +43,13 @@ import {
 } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
-import { useEventConfig, useEditionStrings, useEditionDates } from '../hooks/useEventConfig';
+import { useNow } from '../hooks/useNow';
+import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
 import { AdminSkeleton, AdminFeedSkeleton } from './AdminSkeleton';
 import { AdminAcum } from './AdminAcum';
-import type { TabAdmin } from './stareCurenta';
+import { fazaSite, ETICHETA_FAZA, type TabAdmin } from './stareCurenta';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
-
-const launchFmt = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-});
 
 type Props = {
   token: string;
@@ -75,38 +69,7 @@ type AdminToast = {
  * lucrului din spatele tabului: lista celor care au cerut să fie anunțați.
  * `descriere` ajunge în `title` — răspunsul la „ce e aici?" fără să dai click.
  */
-const TABURI: { cheie: TabAdmin; eticheta: string; descriere: string }[] = [
-  {
-    cheie: 'participanti',
-    eticheta: 'Participanți',
-    descriere: 'Cine s-a înscris, lista de așteptare și activitatea recentă',
-  },
-  {
-    cheie: 'email',
-    eticheta: 'Trimite emailuri',
-    descriere: 'Trimitere în masă către participanți sau lista de așteptare',
-  },
-  {
-    cheie: 'livrare',
-    eticheta: 'Livrare',
-    descriere: 'Ce email a ajuns la cine și ce n-a ajuns',
-  },
-  {
-    cheie: 'lansare',
-    eticheta: 'Abonați la anunț',
-    descriere: 'Adresele lăsate prin „Anunță-mă la lansare” pe pagina publică',
-  },
-  {
-    cheie: 'eveniment',
-    eticheta: 'Eveniment',
-    descriere: 'Data, locul, locurile și ce arată pagina — se publică fără deploy',
-  },
-  {
-    cheie: 'sabloane',
-    eticheta: 'Șabloane',
-    descriere: 'Textul emailurilor de confirmare, reminder, anunț și badge',
-  },
-];
+// Gruparea taburilor stă în `adminNavigatie.ts`, ca modul pur.
 
 const dateFmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short' });
 const formatDate = (iso: string): string => dateFmt.format(new Date(iso)).replace('.', '');
@@ -207,10 +170,13 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const CURRENT_EDITION = config.number;
   const TOTAL_SLOTS = config.slots.total;
   const WAITLIST_SLOTS = config.slots.waitlist;
-  const { LAUNCH_EDITION_ORDINAL } = useEditionStrings();
-  const { LAUNCH_DATE } = useEditionDates();
-  const LAUNCH_LABEL = launchFmt.format(LAUNCH_DATE);
+  const dates = useEditionDates();
+  const { LAUNCH_DATE } = dates;
   const cd = useCountdown(LAUNCH_DATE);
+  // Faza pentru chip-ul din antet. Un minut e destul: fazele se masoara in ore
+  // si zile, iar countdown-ul la secunda exista deja langa el.
+  const acumMs = useNow(60_000);
+  const fazaAcum = fazaSite(config, dates, acumMs);
 
   // Ediția pe care backendul o consideră curentă. Doar ea acceptă modificări:
   // ascunderea butoanelor de aici e comoditate, refuzul real vine din RPC-urile
@@ -413,6 +379,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     livrare: null,
     lansare: null,
     eveniment: null,
+    'coming-soon': null,
     sabloane: null,
   };
 
@@ -616,13 +583,29 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           <span className="admin-badge">Backoffice</span>
         </div>
         <div className="admin-topbar-meta">
-          <span className="topbar-info">Ediția {LAUNCH_EDITION_ORDINAL} · anunț {LAUNCH_LABEL}</span>
-          <span className="admin-cd">
-            <span className="countdown-dot" />
-            {cd.done
-              ? 'Anunțul e live'
-              : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`}
-          </span>
+          {/* Ce vede un vizitator ACUM, in antetul lipit. Intrebarea nu se pune
+              o data la deschidere: se pune de fiecare data cand te pregatesti sa
+              schimbi ceva, iar panoul din capul paginii dispare la primul scroll. */}
+          <a
+            className={`admin-faza faza-${fazaAcum}`}
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Deschide site-ul public intr-un tab nou"
+          >
+            <span className="admin-faza-punct" aria-hidden="true" />
+            <span className="admin-faza-eticheta">Pe site</span>
+            <span className="admin-faza-valoare">{ETICHETA_FAZA[fazaAcum]}</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          {/* Numaratoarea spre anunt dispare dupa ce trece: un „Anuntul e live"
+              lipit permanent in antet e zgomot, nu informatie. */}
+          {!cd.done && (
+            <span className="admin-cd">
+              <span className="countdown-dot" />
+              {`Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`}
+            </span>
+          )}
           <button type="button" className="admin-logout" onClick={onLogout}>
             Ieși din cont
           </button>
@@ -658,30 +641,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             le deschizi. Contorul lipsește cât timp datele nu au sosit — un „0"
             afișat în timpul încărcării ar fi o minciună scurtă, dar tocmai pe
             aia o citește organizatorul când intră. */}
-        <nav className="admin-tabs" aria-label="Secțiunile backoffice-ului">
-          {TABURI.map(({ cheie, eticheta, descriere }) => {
-            const contor = contorTab[cheie];
-            const alerta = cheie === 'livrare' && nelivrate > 0;
-            return (
-              <button
-                key={cheie}
-                type="button"
-                className={tab === cheie ? 'active' : ''}
-                // `true`, nu `page`: taburile schimbă panoul, nu adresa.
-                aria-current={tab === cheie ? true : undefined}
-                title={descriere}
-                onClick={() => setTab(cheie)}
-              >
-                {eticheta}
-                {alerta ? (
-                  <span className="admin-tab-alert">{nelivrate}</span>
-                ) : (
-                  contor !== null && <span className="admin-tab-contor">{contor}</span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        <AdminNav tab={tab} onTab={setTab} contorTab={contorTab} nelivrate={nelivrate} />
 
         {tab === 'sabloane' && (
           <AdminTemplatesTab token={token} onAuthError={handleAuthError} />
@@ -714,6 +674,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
         {tab === 'eveniment' && (
           <AdminEventTab
+            token={token}
+            onAuthError={handleAuthError}
+            showToast={showToast}
+          />
+        )}
+
+        {tab === 'coming-soon' && (
+          <AdminComingSoonTab
             token={token}
             onAuthError={handleAuthError}
             showToast={showToast}

@@ -166,6 +166,35 @@ export const saveEventConfigDraft = (
 export const publishEventConfig = (token: string, editie: number): Promise<string> =>
   rpc<string>('admin_publish_event_config', { p_token: token, p_editie: editie });
 
+/**
+ * Comută ecranul de dinainte de lansare și mută țintele numărătorilor, cu efect
+ * IMEDIAT pe site — fără ciornă și fără „Publică".
+ *
+ * De ce ocolește fluxul ciornă → publică: comutarea e o operație de un singur
+ * gest, făcută de regulă sub presiune („anunțul iese acum"). Ciorna e potrivită
+ * pentru o ediție întreagă, unde verificarea înainte merită pașii; aici e o
+ * manetă. Serverul petice exact trei chei pe documentul publicat și îl
+ * revalidează prin aceeași poartă ca publicarea, deci scurtătura e de pași, nu
+ * de verificări.
+ *
+ * Rezultatul rămâne reversibil: peticul scrie un rând nou, deci apare în
+ * „Versiuni anterioare".
+ *
+ * Refuzuri așteptate: `no_published`, `config_invalid: …`.
+ */
+export const setComingSoon = (
+  token: string,
+  show: boolean,
+  launchAt: string,
+  nextEditionAt: string
+): Promise<string> =>
+  rpc<string>('admin_set_coming_soon', {
+    p_token: token,
+    p_show: show,
+    p_launch_at: launchAt,
+    p_next_edition_at: nextEditionAt,
+  });
+
 /** Revenire la o versiune păstrată — republicare, deci rescrie și scalarele. */
 export const restoreEventConfig = (token: string, id: string): Promise<string> =>
   rpc<string>('admin_restore_event_config', { p_token: token, p_id: id });

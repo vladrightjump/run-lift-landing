@@ -7,7 +7,12 @@ import {
   restoreEventConfig,
   type AdminEventConfigRow,
 } from '../lib/adminApi';
-import { parseEventConfig, type EventConfig, type SectionKey } from '../content/eventConfig';
+import {
+  parseEventConfig,
+  MAX_REELS,
+  type EventConfig,
+  type SectionKey,
+} from '../content/eventConfig';
 import {
   validateEventConfig,
   avertismenteEventConfig,
@@ -15,6 +20,11 @@ import {
   comutaVizibilitatea,
   layoutComplet,
   cioarnaPentruEditiaUrmatoare,
+  parseInstagramUrl,
+  adaugaReel,
+  stergeReel,
+  mutaReel,
+  seteazaReel,
   type CampInvalid,
 } from './eventConfigForm';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
@@ -38,7 +48,36 @@ const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
   venue: 'Locația',
   registration: 'Înscriere',
   participants: 'Cine vine',
+  reels: 'Instagram',
 };
+
+/**
+ * Valorile din listele formularului.
+ *
+ * Câmpurile astea erau text sau `number` liber, iar greșeala nu se vedea la
+ * tastare: „+3:00” în loc de „+03:00”, „6:30” în loc de „06:30”, o durată de
+ * 20 în loc de 2. Toate treceau de input și cădeau abia la „Publică”, ca refuz
+ * al serverului. O listă nu poate produce niciuna dintre ele.
+ *
+ * Valorile din afara listei nu se pierd: fiecare select adaugă valoarea curentă
+ * ca opțiune dacă nu e printre ele, altfel un document scris manual în DB ar
+ * părea că are altă valoare decât are.
+ */
+const DURATE = [1, 1.5, 2, 2.5, 3, 4, 5, 6] as const;
+
+/** Sferturi de oră între 05:00 și 12:00 — fereastra în care începe o cursă. */
+const ORE_CHECKIN: string[] = Array.from({ length: (12 - 5) * 4 + 1 }, (_, i) => {
+  const minuteTotale = 5 * 60 + i * 15;
+  const h = String(Math.floor(minuteTotale / 60)).padStart(2, '0');
+  const m = String(minuteTotale % 60).padStart(2, '0');
+  return `${h}:${m}`;
+});
+
+/** Doar fusurile Moldovei; restul n-au ce căuta într-o cursă din Chișinău. */
+const FUSURI: [string, string][] = [
+  ['+03:00', '+03:00 · Chișinău vara (EEST)'],
+  ['+02:00', '+02:00 · Chișinău iarna (EET)'],
+];
 
 /** Traduce refuzurile serverului în ceva citibil, fără să le reformuleze regula. */
 const mesajRefuz = (err: unknown): string => {
@@ -119,9 +158,39 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   const acum = useNow(60_000);
   const hartaUrl = ciorna ? linkHarta(ciorna.venue.mapQuery) : null;
 
+  /**
+   * Are vreunul dintre câmpurile grupului o problemă?
+   *
+   * Un grup cu erori se deschide singur și nu se mai poate închide: altfel
+   * „Publică" ar rămâne blocat de o eroare ascunsă sub un capac, iar bannerul
+   * de sus ar spune CE e greșit fără să arate UNDE.
+   */
+  const areEroare = (campuri: string[]): boolean => campuri.some((c) => erori.has(c));
+
   const seteaza = <K extends keyof EventConfig>(cheie: K, valoare: EventConfig[K]) => {
     atinsa.current = true;
     setCiorna((c) => (c ? { ...c, [cheie]: valoare } : c));
+  };
+
+  /**
+   * Textul brut din câmpurile de link ale clipurilor, pe index.
+   *
+   * De ce nu se poate randa direct din `code`: câmpul ar fi controlat de o
+   * valoare RECOMPUSĂ din ce s-a parsat, iar la tastare (nu lipire) fiecare
+   * caracter în parte e un URL invalid — deci câmpul s-ar goli singur la prima
+   * literă. Ciorna primește codul; câmpul păstrează ce a scris omul.
+   *
+   * Se golește la orice schimbare de structură (adăugare, ștergere, mutare):
+   * rândurile sunt identificate prin index, iar altfel textul ar rămâne agățat
+   * de poziție, nu de clip.
+   */
+  const [linkBrut, setLinkBrut] = useState<Record<number, string>>({});
+  const seteazaReels = (items: EventConfig['reels']['items'], structural = false) => {
+    if (structural) setLinkBrut({});
+    setCiorna((c) => {
+      atinsa.current = true;
+      return c ? { ...c, reels: { ...c.reels, items } } : c;
+    });
   };
 
   const porneste = () => {
@@ -222,30 +291,9 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               >
                 Renunță
               </button>
-              <button
-                type="button"
-                className="admin-btn-ghost"
-                onClick={salveazaCiorna}
-                disabled={salveaza || !poatePublica}
-              >
-                {salveaza ? 'Se salvează…' : 'Salvează ciorna'}
-              </button>
-              <a
-                className="admin-btn-ghost"
-                href="/?config=draft"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Previzualizează
-              </a>
-              <button
-                type="button"
-                className="admin-btn-accent"
-                onClick={() => setConfirmPublicare(true)}
-                disabled={publica || !poatePublica}
-              >
-                {publica ? 'Se publică…' : 'Publică'}
-              </button>
+              {/* Salveaza / Previzualizeaza / Publica traiesc DOAR in bara
+                  lipita jos. Aceleasi trei butoane si sus, si jos, inseamna ca
+                  la fiecare apasare intrebi care set e cel „real". */}
             </>
           )}
         </div>
@@ -259,7 +307,13 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           </div>
           <div className="admin-stat">
             <span className="admin-stat-label">Start</span>
-            <span className="admin-stat-value">{publicat.start.replace('T', ' ')}</span>
+            {/* Scria „2026-08-22 07:00:00" — formatul în care o ține documentul,
+                nu unul în care cineva citește o dată. Ziua săptămânii e chiar
+                lucrul pe care organizatorul îl verifică: o cursă mutată din
+                greșeală de sâmbătă pe duminică arată identic în cifre. */}
+            <span className="admin-stat-value admin-stat-value--text">
+              {descrieMoment(publicat.start, publicat.tz, acum) || publicat.start}
+            </span>
           </div>
           <div className="admin-stat">
             <span className="admin-stat-label">Locuri</span>
@@ -314,7 +368,13 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             </div>
           ))}
 
-          <Grup titlu="Ediția" ajutor="Cum se numește și a câta e.">
+          <Grup
+            titlu="Ediția"
+            ajutor="Cum se numește și a câta e."
+            deschisImplicit
+            areEroare={areEroare(['number', 'launchNumber', 'eventName', 'concept'])}
+            rezumat={`Ediția ${ciorna.number} · ${ciorna.eventName}`}
+          >
             <Camp
               eticheta="Numărul ediției"
               ajutor="Ediția la care se înscrie lumea acum."
@@ -376,6 +436,17 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           <Grup
             titlu="Când"
             ajutor="Toate orele sunt locale, în fusul de mai jos. Sub fiecare dată scrie ce înseamnă — verifică mai ales ziua săptămânii."
+            areEroare={areEroare([
+              'start',
+              'durationHours',
+              'checkinFrom',
+              'registrationDeadline',
+              'launchAt',
+              'nextEditionAt',
+              'leaderboardLeadHours',
+              'tz',
+            ])}
+            rezumat={descrieMoment(ciorna.start, ciorna.tz, acum) || ciorna.start}
           >
             <Camp
               eticheta="Startul cursei"
@@ -397,14 +468,17 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               eroare={erori.get('durationHours')}
             >
               {(p) => (
-                <input
+                <select
                   {...p}
-                  type="number"
-                  min={1}
-                  step={0.5}
-                  value={ciorna.durationHours}
+                  value={String(ciorna.durationHours)}
                   onChange={(e) => seteaza('durationHours', Number(e.target.value))}
-                />
+                >
+                  {DURATE.map((h) => (
+                    <option key={h} value={h}>
+                      {h === 1 ? '1 oră' : `${String(h).replace('.', ',')} ore`}
+                    </option>
+                  ))}
+                </select>
               )}
             </Camp>
             <Camp
@@ -413,12 +487,22 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               eroare={erori.get('checkinFrom')}
             >
               {(p) => (
-                <input
+                <select
                   {...p}
-                  type="time"
                   value={ciorna.checkinFrom}
                   onChange={(e) => seteaza('checkinFrom', e.target.value)}
-                />
+                >
+                  {/* O valoare scrisa de mana care nu e in lista ramane vizibila,
+                      altfel selectul ar arata alta ora decat cea din document. */}
+                  {!ORE_CHECKIN.includes(ciorna.checkinFrom) && (
+                    <option value={ciorna.checkinFrom}>{ciorna.checkinFrom}</option>
+                  )}
+                  {ORE_CHECKIN.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
               )}
             </Camp>
             <Camp
@@ -489,12 +573,26 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               eroare={erori.get('tz')}
             >
               {(p) => (
-                <input {...p} value={ciorna.tz} onChange={(e) => seteaza('tz', e.target.value)} />
+                <select {...p} value={ciorna.tz} onChange={(e) => seteaza('tz', e.target.value)}>
+                  {!FUSURI.some(([v]) => v === ciorna.tz) && (
+                    <option value={ciorna.tz}>{ciorna.tz}</option>
+                  )}
+                  {FUSURI.map(([valoare, eticheta]) => (
+                    <option key={valoare} value={valoare}>
+                      {eticheta}
+                    </option>
+                  ))}
+                </select>
               )}
             </Camp>
           </Grup>
 
-          <Grup titlu="Unde" ajutor="Ce scrie în secțiunea „Locația” și ce se vede pe hartă.">
+          <Grup
+            titlu="Unde"
+            ajutor="Ce scrie în secțiunea „Locația” și ce se vede pe hartă."
+            areEroare={areEroare(['venue.name', 'venue.city', 'venue.mapQuery', 'venue.zoom'])}
+            rezumat={`${ciorna.venue.name}, ${ciorna.venue.city}`}
+          >
             <Camp
               eticheta="Numele locului"
               ajutor="Ex. „Scările de Granit”."
@@ -551,7 +649,12 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             </Camp>
           </Grup>
 
-          <Grup titlu="Locuri" ajutor="Câți încap și ce se întâmplă când se umple.">
+          <Grup
+            titlu="Locuri"
+            ajutor="Câți încap și ce se întâmplă când se umple."
+            areEroare={areEroare(['slots.total', 'slots.waitlist'])}
+            rezumat={`${ciorna.slots.total} locuri · ${ciorna.slots.waitlist} pe lista de așteptare`}
+          >
             <Camp
               eticheta="Locuri disponibile"
               ajutor="Bara de pe pagină are exact atâtea segmente."
@@ -594,7 +697,13 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             </Camp>
           </Grup>
 
-          <Grup titlu="Ce arată pagina" ajutor="Ecranul de pornire și ordinea secțiunilor.">
+          <Grup
+            titlu="Ce arată pagina"
+            ajutor="Ecranul de pornire și ordinea secțiunilor."
+            rezumat={`${ciorna.showComingSoon ? 'Coming Soon' : 'Landing'} · ${
+              ciorna.layout.filter((x) => x.visible).length
+            } secțiuni vizibile`}
+          >
             <Camp
               eticheta="Homepage-ul arată"
               ajutor="„Coming Soon” ține pagina pe numărătoarea inversă spre momentul anunțului, fără formular."
@@ -611,6 +720,181 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               )}
             </Camp>
           </Grup>
+
+          <Grup
+            titlu="Instagram"
+            ajutor="Clipurile din bandă. Lipești linkul din Instagram — codul se extrage singur."
+            areEroare={probleme.some((x) => x.camp.startsWith('reels'))}
+            rezumat={
+              ciorna.reels.items.length === 0
+                ? 'Niciun clip · secțiunea nu apare pe pagină'
+                : `${ciorna.reels.items.length} ${
+                    ciorna.reels.items.length === 1 ? 'clip' : 'clipuri'
+                  }`
+            }
+          >
+            <Camp
+              eticheta="Titlul secțiunii"
+              eroare={erori.get('reels.headline')}
+            >
+              {(p) => (
+                <input
+                  {...p}
+                  value={ciorna.reels.headline}
+                  onChange={(e) =>
+                    seteaza('reels', { ...ciorna.reels, headline: e.target.value })
+                  }
+                />
+              )}
+            </Camp>
+            <Camp
+              eticheta="Textul de lângă bandă"
+              ajutor="Două rânduri. Ce vede cineva care nu ne-a văzut niciodată alergând."
+            >
+              {(p) => (
+                <textarea
+                  {...p}
+                  rows={3}
+                  value={ciorna.reels.body}
+                  onChange={(e) => seteaza('reels', { ...ciorna.reels, body: e.target.value })}
+                />
+              )}
+            </Camp>
+          </Grup>
+
+          <h3>Clipurile din bandă</h3>
+          <p className="admin-config-hint">
+            Ordinea de aici e ordinea din bandă. Fără niciun clip, secțiunea nu apare pe pagină,
+            oricât ar fi de vizibilă în lista de mai jos.
+          </p>
+          {erori.get('reels') && (
+            <div className="admin-banner warn" role="status">
+              {erori.get('reels')}
+            </div>
+          )}
+          <ol className="admin-reels-list">
+            {ciorna.reels.items.map((r, i) => {
+              const eroareCod = erori.get(`reels.${i}.code`);
+              return (
+                <li key={i} className={eroareCod ? 'invalid' : ''}>
+                  <div className="admin-reels-rand">
+                    <span className="admin-layout-nr">{String(i + 1).padStart(2, '0')}</span>
+                    <div className="admin-reels-campuri">
+                      <label className="admin-config-eticheta" htmlFor={`reel-link-${i}`}>
+                        Linkul clipului
+                      </label>
+                      <input
+                        id={`reel-link-${i}`}
+                        autoComplete="off"
+                        aria-invalid={eroareCod ? true : undefined}
+                        placeholder="https://www.instagram.com/reel/ABC12345/"
+                        // Textul brut cât timp se scrie; URL-ul canonic recompus
+                        // din cod după ce câmpul e părăsit. Așa tastarea nu se
+                        // autodistruge, iar la final se vede ce am înțeles.
+                        value={
+                          linkBrut[i] ??
+                          (r.code ? `https://www.instagram.com/${r.kind}/${r.code}/` : '')
+                        }
+                        onChange={(e) => {
+                          const text = e.target.value;
+                          setLinkBrut((m) => ({ ...m, [i]: text }));
+                          const parsat = parseInstagramUrl(text);
+                          seteazaReels(
+                            parsat
+                              ? ciorna.reels.items.map((x, j) =>
+                                  j === i ? { ...x, code: parsat.code, kind: parsat.kind } : x
+                                )
+                              : seteazaReel(ciorna.reels.items, i, 'code', '')
+                          );
+                        }}
+                        onBlur={() =>
+                          // Ce a rămas în câmp după ce s-a extras codul nu mai
+                          // interesează: la ieșire arătăm forma canonică.
+                          setLinkBrut((m) => {
+                            const { [i]: _, ...rest } = m;
+                            return rest;
+                          })
+                        }
+                      />
+                      {eroareCod ? (
+                        <span className="admin-config-eroare" role="alert">
+                          {eroareCod}
+                        </span>
+                      ) : (
+                        r.code && (
+                          <span className="admin-config-ecou">
+                            cod: {r.code} · {r.kind === 'p' ? 'postare' : 'reel'}
+                          </span>
+                        )
+                      )}
+
+                      <label className="admin-config-eticheta" htmlFor={`reel-poster-${i}`}>
+                        Poster (opțional)
+                      </label>
+                      <input
+                        id={`reel-poster-${i}`}
+                        autoComplete="off"
+                        placeholder="/reels/marti.jpg"
+                        value={r.poster}
+                        onChange={(e) =>
+                          seteazaReels(seteazaReel(ciorna.reels.items, i, 'poster', e.target.value))
+                        }
+                      />
+
+                      <label className="admin-config-eticheta" htmlFor={`reel-caption-${i}`}>
+                        Textul de sub card
+                      </label>
+                      <input
+                        id={`reel-caption-${i}`}
+                        autoComplete="off"
+                        placeholder="Marți dimineața, Râșcani"
+                        value={r.caption}
+                        onChange={(e) =>
+                          seteazaReels(seteazaReel(ciorna.reels.items, i, 'caption', e.target.value))
+                        }
+                      />
+                    </div>
+                    <div className="admin-reels-actiuni">
+                      <button
+                        type="button"
+                        className="admin-btn-ghost"
+                        disabled={i === 0}
+                        aria-label={`Mută clipul ${i + 1} mai devreme`}
+                        onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, -1), true)}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-btn-ghost"
+                        disabled={i === ciorna.reels.items.length - 1}
+                        aria-label={`Mută clipul ${i + 1} mai târziu`}
+                        onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, 1), true)}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-btn-ghost"
+                        aria-label={`Șterge clipul ${i + 1}`}
+                        onClick={() => seteazaReels(stergeReel(ciorna.reels.items, i), true)}
+                      >
+                        Șterge
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+          <button
+            type="button"
+            className="admin-btn-ghost"
+            disabled={ciorna.reels.items.length >= MAX_REELS}
+            onClick={() => seteazaReels(adaugaReel(ciorna.reels.items), true)}
+          >
+            + Adaugă clip
+          </button>
 
           <h3>Secțiunile paginii</h3>
           <p className="admin-config-hint">
@@ -657,6 +941,58 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               </li>
             ))}
           </ol>
+        </div>
+      )}
+
+      {/* Bara lipita jos.
+          „Salveaza" si „Publica" stateau doar in capul tabului, adica la doua
+          ecrane si jumatate deasupra locului in care editezi ultimul camp. Ca sa
+          publici trebuia sa derulezi inapoi, iar starea ciornei (salvata sau nu)
+          nu se vedea deloc de jos. */}
+      {ciorna !== null && (
+        <div className="admin-bara-actiuni" role="status">
+          <span className="admin-bara-stare">
+            {probleme.length > 0 ? (
+              <span className="admin-bara-problema">
+                {probleme.length === 1
+                  ? '1 câmp de reparat'
+                  : `${probleme.length} câmpuri de reparat`}
+              </span>
+            ) : (
+              <>
+                <strong>Ediția {ciorna.number}</strong>
+                <span className="admin-bara-detaliu">
+                  {descrieMoment(ciorna.start, ciorna.tz, acum) || ciorna.start}
+                </span>
+              </>
+            )}
+          </span>
+          <div className="admin-bara-butoane">
+            <a
+              className="admin-btn-ghost"
+              href="/?config=draft"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Previzualizează
+            </a>
+            <button
+              type="button"
+              className="admin-btn-ghost"
+              onClick={salveazaCiorna}
+              disabled={salveaza || !poatePublica}
+            >
+              {salveaza ? 'Se salvează…' : 'Salvează'}
+            </button>
+            <button
+              type="button"
+              className="admin-btn-accent"
+              onClick={() => setConfirmPublicare(true)}
+              disabled={publica || !poatePublica}
+            >
+              {publica ? 'Se publică…' : 'Publică'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -729,21 +1065,66 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
  * în care apar în tipul TypeScript — o ordine care are sens pentru cod, nu
  * pentru omul care deschide pagina ca să mute ora cursei.
  */
+/**
+ * O secțiune a formularului, pliabilă, cu rezumat pe capac.
+ *
+ * De ce pliabilă: cele șase grupuri însemnau douăzeci de câmpuri deschise
+ * simultan, pe două ecrane și jumătate. Organizatorul vine însă să schimbe un
+ * lucru — ora, locul, capacitatea — nu douăzeci. Cu grupurile închise, tot
+ * documentul încape într-un ecran, iar cel deschis e cel la care lucrezi.
+ *
+ * `rezumat` e ce ține locul câmpurilor când grupul e închis. Fără el, plierea
+ * ar ascunde informația în loc s-o comprime, iar organizatorul ar fi nevoit să
+ * deschidă fiecare grup ca să verifice ce a pus.
+ *
+ * Un grup cu erori se deschide singur și rămâne deschis: o problemă ascunsă
+ * sub un capac e o problemă pe care „Publică" o raportează fără să arate unde.
+ */
 const Grup = ({
   titlu,
   ajutor,
+  rezumat,
+  areEroare = false,
+  deschisImplicit = false,
   children,
 }: {
   titlu: string;
   ajutor?: string;
+  rezumat?: ReactNode;
+  areEroare?: boolean;
+  deschisImplicit?: boolean;
   children: ReactNode;
-}) => (
-  <fieldset className="admin-config-grup">
-    <legend>{titlu}</legend>
-    {ajutor && <p className="admin-config-hint">{ajutor}</p>}
-    <div className="admin-config-grup-campuri">{children}</div>
-  </fieldset>
-);
+}) => {
+  const [deschisManual, setDeschisManual] = useState(deschisImplicit);
+  const deschis = deschisManual || areEroare;
+  const idCorp = useId();
+
+  return (
+    <section className={`admin-config-grup${deschis ? ' deschis' : ''}${areEroare ? ' invalid' : ''}`}>
+      <button
+        type="button"
+        className="admin-config-grup-cap"
+        aria-expanded={deschis}
+        // `aria-expanded` singur spune „e deschis" fără să spună CE e deschis.
+        aria-controls={idCorp}
+        onClick={() => setDeschisManual((v) => !v)}
+      >
+        <span className="admin-config-grup-sageata" aria-hidden="true">
+          {deschis ? '▾' : '▸'}
+        </span>
+        <span className="admin-config-grup-titlu">{titlu}</span>
+        {!deschis && rezumat && <span className="admin-config-grup-rezumat">{rezumat}</span>}
+        {areEroare && <span className="admin-tab-alert">!</span>}
+      </button>
+      {deschis && (
+        <div className="admin-config-grup-corp" id={idCorp}>
+          {ajutor && <p className="admin-config-hint">{ajutor}</p>}
+          <div className="admin-config-grup-campuri">{children}</div>
+        </div>
+      )}
+    </section>
+  );
+};
 
 /** Ce primește controlul din interiorul unui `Camp`, gata de împrăștiat pe el. */
 type ControlCamp = {

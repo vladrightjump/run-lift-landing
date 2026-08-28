@@ -1,7 +1,9 @@
 import {
   SECTION_KEYS,
   DEFAULT_LAYOUT,
+  MAX_REELS,
   type EventConfig,
+  type ReelEntry,
   type SectionKey,
   type SectionLayoutEntry,
 } from '../content/eventConfig';
@@ -26,6 +28,8 @@ const ORA_RE = /^\d{2}:\d{2}$/;
 /** Punct exact, nu căutare text: „lat,lng". */
 const MAP_QUERY_RE = /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/;
 const TZ_RE = /^[+-]\d{2}:\d{2}$/;
+/** Codul unui clip. Aceeași regulă ca la parsare (`content/eventConfig.ts`). */
+const REEL_CODE_RE = /^[A-Za-z0-9_-]{5,32}$/;
 
 /**
  * Toate problemele documentului, nu doar prima — organizatorul le vede pe toate
@@ -92,6 +96,27 @@ export const validateEventConfig = (c: EventConfig): CampInvalid[] => {
     );
   }
 
+  // Clipurile. Aceleași reguli ca `event_config_validate`; serverul rămâne
+  // autoritatea, aici doar nu-l lăsăm pe organizator să afle la „Publică".
+  cere(
+    c.reels.items.length <= MAX_REELS,
+    'reels',
+    `Cel mult ${MAX_REELS} clipuri în secțiunea Instagram.`
+  );
+  c.reels.items.forEach((r, i) => {
+    cere(
+      REEL_CODE_RE.test(r.code),
+      `reels.${i}.code`,
+      'Lipește linkul clipului din Instagram (ex. instagram.com/reel/ABC12345/).'
+    );
+  });
+  const coduri = c.reels.items.map((r) => r.code).filter((code) => REEL_CODE_RE.test(code));
+  cere(
+    new Set(coduri).size === coduri.length,
+    'reels',
+    'Același clip apare de două ori în bandă.'
+  );
+
   const chei = c.layout.map((s) => s.key);
   cere(
     chei.every((k) => SECTION_KEYS.includes(k)),
@@ -131,8 +156,78 @@ export const avertismenteEventConfig = (c: EventConfig): Avertisment[] => {
     });
   }
 
+  const faraPoster = c.reels.items.filter((r) => !r.poster.trim()).length;
+  if (faraPoster > 0) {
+    av.push({
+      mesaj:
+        `${faraPoster} ${faraPoster === 1 ? 'clip nu are' : 'clipuri n-au'} poster. ` +
+        'Cardul se randează cu cifra lui mare în locul imaginii — arată intenționat, ' +
+        'nu stricat, dar o fotografie vinde clipul mai bine.',
+    });
+  }
+
+  // NU avertizăm pentru „Instagram vizibilă, dar fără clipuri": e starea
+  // implicită a oricărui document (layout-ul o completează vizibilă, lista e
+  // goală până adaugă cineva un clip). Un avertisment care pornește aprins e un
+  // avertisment pe care nimeni nu-l mai citește. Pagina o ascunde singură, iar
+  // `GHID-EDITIE-NOUA.md` spune de ce.
+
   return av;
 };
+
+/**
+ * Codul unui clip din URL-ul lipit din Instagram.
+ *
+ * De ce parsăm în loc să cerem codul: organizatorul apasă „Copiază linkul" în
+ * aplicație și lipește. Ce iese de acolo arată aşa —
+ * `https://www.instagram.com/reel/ABC12345/?igsh=MXY...` — și nimeni n-ar
+ * trebui pus să extragă manual bucata din mijloc.
+ *
+ * Acceptăm `/reel/`, `/reels/` și `/p/`, cu sau fără `www`, cu sau fără query.
+ * `/reels/` (plural) se normalizează la `reel`: e forma pe care o dă share-ul
+ * din browser, dar ruta de embed e la singular.
+ */
+export const parseInstagramUrl = (
+  input: string
+): { code: string; kind: 'reel' | 'p' } | null => {
+  const text = input.trim();
+  if (!text) return null;
+
+  const m = /instagram\.com\/(reels?|p)\/([A-Za-z0-9_-]{5,32})/i.exec(text);
+  if (m) return { code: m[2], kind: m[1].toLowerCase() === 'p' ? 'p' : 'reel' };
+
+  // Un cod lipit direct rămâne valid: dacă cineva știe deja codul, nu-l punem
+  // să construiască un URL în jurul lui doar ca să treacă de validare.
+  if (/^[A-Za-z0-9_-]{5,32}$/.test(text)) return { code: text, kind: 'reel' };
+
+  return null;
+};
+
+/** Rândul gol pe care îl adaugă „+ Adaugă clip". */
+export const adaugaReel = (items: ReelEntry[]): ReelEntry[] =>
+  items.length >= MAX_REELS
+    ? items
+    : [...items, { code: '', kind: 'reel', poster: '', caption: '' }];
+
+export const stergeReel = (items: ReelEntry[], i: number): ReelEntry[] =>
+  items.filter((_, j) => j !== i);
+
+/** Mută un clip cu o poziție. Ordinea din listă e ordinea din bandă. */
+export const mutaReel = (items: ReelEntry[], i: number, directie: -1 | 1): ReelEntry[] => {
+  const j = i + directie;
+  if (i < 0 || i >= items.length || j < 0 || j >= items.length) return items;
+  const copie = [...items];
+  [copie[i], copie[j]] = [copie[j], copie[i]];
+  return copie;
+};
+
+/** Schimbă un câmp al unui clip, fără să atingă restul listei. */
+export const seteazaReel = <K extends keyof ReelEntry>(
+  items: ReelEntry[],
+  i: number,
+  camp: K,
+  valoare: ReelEntry[K]
+): ReelEntry[] => items.map((r, j) => (j === i ? { ...r, [camp]: valoare } : r));
 
 /** Mută o secțiune cu o poziție în sus sau în jos. */
 export const mutaSectiune = (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { Landing } from '../../src/components/Landing';
 import { EventConfigProvider } from '../../src/hooks/useEventConfig';
 import { SNAPSHOT_CONFIG, type SectionLayoutEntry } from '../../src/content/eventConfig';
@@ -12,12 +12,22 @@ import { SNAPSHOT_CONFIG, type SectionLayoutEntry } from '../../src/content/even
  * („01, 03, 04") sau două secțiuni ar purta același număr.
  */
 
-const randeaza = (layout: SectionLayoutEntry[], mode?: 'full' | 'leaderboard') =>
+const randeaza = (
+  layout: SectionLayoutEntry[],
+  mode?: 'full' | 'leaderboard',
+  reels = SNAPSHOT_CONFIG.reels
+) =>
   render(
-    <EventConfigProvider override={{ ...SNAPSHOT_CONFIG, layout }}>
+    <EventConfigProvider override={{ ...SNAPSHOT_CONFIG, layout, reels }}>
       <Landing mode={mode} />
     </EventConfigProvider>
   );
+
+/** Un clip valid, pentru testele în care secțiunea „Instagram" trebuie să apară. */
+const CU_CLIPURI = {
+  ...SNAPSHOT_CONFIG.reels,
+  items: [{ code: 'ABC12345', kind: 'reel' as const, poster: '', caption: 'Marți dimineața' }],
+};
 
 /** Titlurile secțiunilor, în ordinea în care apar în DOM, cu numărul lor. */
 const sectiuniDinPagina = (): string[] =>
@@ -118,6 +128,71 @@ describe('vizibilitatea scoate secțiunea și renumerotează restul', () => {
     const numere = sectiuniDinPagina().map((s) => s.split(' ')[0]);
     expect(numere).toEqual(['01', '02', '03']);
     expect(new Set(numere).size).toBe(numere.length);
+  });
+});
+
+describe('„Instagram" fără clipuri nu lasă gaură în numerotare', () => {
+  const CU_REELS: SectionLayoutEntry[] = [
+    { key: 'format', visible: true },
+    { key: 'reels', visible: true },
+    { key: 'venue', visible: true },
+  ];
+
+  it('vizibilă în layout dar fără clipuri → dispare, iar restul se renumerotează', () => {
+    // Capcana pe care o păzește testul: dacă secțiunea s-ar filtra prin
+    // `return null` în componentă, ea AR CONSUMA poziția din lista filtrată,
+    // iar „Locația" ar primi 03 în loc de 02.
+    randeaza(CU_REELS);
+    expect(sectiuniDinPagina()).toEqual(['01 Formatul', '02 Locația']);
+  });
+
+  it('cu un clip, își ia numărul din poziția ei', () => {
+    randeaza(CU_REELS, undefined, CU_CLIPURI);
+    expect(sectiuniDinPagina()).toEqual(['01 Formatul', '02 Instagram', '03 Locația']);
+  });
+
+  it('ascunsă din layout nu apare, chiar dacă are clipuri', () => {
+    randeaza(
+      [
+        { key: 'format', visible: true },
+        { key: 'reels', visible: false },
+      ],
+      undefined,
+      CU_CLIPURI
+    );
+    expect(sectiuniDinPagina()).toEqual(['01 Formatul']);
+  });
+});
+
+describe('secțiunea „Instagram" nu cere nimic de la Instagram până la click', () => {
+  it('la randare nu există niciun iframe — doar façade-uri', () => {
+    randeaza([{ key: 'reels', visible: true }], undefined, CU_CLIPURI);
+    expect(document.querySelectorAll('iframe')).toHaveLength(0);
+  });
+
+  it('clicul pe card montează iframe-ul, pe ruta cerută de `kind`', () => {
+    randeaza([{ key: 'reels', visible: true }], undefined, CU_CLIPURI);
+    fireEvent.click(screen.getByRole('button', { name: /Redă clipul/ }));
+    const frame = document.querySelector('iframe');
+    expect(frame?.getAttribute('src')).toBe(
+      'https://www.instagram.com/reel/ABC12345/embed/'
+    );
+  });
+
+  it('linkul canonic e prezent de la început, ca plasă dacă iframe-ul e blocat', () => {
+    randeaza([{ key: 'reels', visible: true }], undefined, CU_CLIPURI);
+    const link = screen.getByRole('link', { name: /Deschide pe Instagram/ });
+    expect(link.getAttribute('href')).toBe('https://www.instagram.com/reel/ABC12345/');
+  });
+
+  it('un clip de tip „p" folosește ruta „p", nu „reel"', () => {
+    randeaza([{ key: 'reels', visible: true }], undefined, {
+      ...CU_CLIPURI,
+      items: [{ code: 'XYZ98765', kind: 'p' as const, poster: '', caption: '' }],
+    });
+    expect(screen.getByRole('link', { name: /Deschide pe Instagram/ }).getAttribute('href')).toBe(
+      'https://www.instagram.com/p/XYZ98765/'
+    );
   });
 });
 
