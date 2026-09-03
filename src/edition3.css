@@ -421,10 +421,24 @@
    antetul landing-ului n-o poartă (are stiluri inline). Rezultatul: pe telefon
    „Înscrie-te" se rupea pe două rânduri și bara creștea. Acum că bara are
    `.e3-topbar`, se poate lega de ea. */
+/* Acțiunile nu se comprimă NICIODATĂ sub lățimea textului lor.
+   `white-space: nowrap` (mai jos) oprea ruperea pe două rânduri, dar nu și
+   micșorarea cutiei: flex-ul îngusta butonul, iar textul ieșea din el și se
+   vedea tăiat — pe iPhone „Înscrie-te" se citea „Înscri". Cel care cedează
+   spațiu trebuie să fie data, care se poate rupe pe mai multe rânduri. */
+.e3-topbar-cta,
+.e3-topbar-about { flex-shrink: 0; }
+.e3-topbar-actions { gap: 24px; }
+
 @media (max-width: 560px) {
   .e3-topbar { padding: 10px 16px; gap: 8px 12px; }
   .e3-topbar-cta { padding: 9px 14px; font-size: 12px; white-space: nowrap; }
   .e3-topbar-mark { width: 26px; height: 26px; font-size: 13px; }
+
+  /* Cele trei nu încap pe un rând sub ~430px. Data trece pe rândul ei, iar
+     „Despre noi" și „Înscrie-te" rămân alături, la mărimea lor întreagă. */
+  .e3-topbar-actions { flex-wrap: wrap; gap: 8px 16px; }
+  .e3-topbar-meta { flex-basis: 100%; }
 }
 
 /* ---- Cifrele din countdown ----

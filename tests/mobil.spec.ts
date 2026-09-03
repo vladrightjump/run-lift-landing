@@ -71,3 +71,44 @@ for (const { nume, url } of INTRARI) {
     expect(depasire).toBeLessThanOrEqual(0);
   });
 }
+
+/**
+ * Butonul „Înscrie-te" din antet, pe lățimi de telefon.
+ *
+ * Regresia păzită: `white-space: nowrap` oprea ruperea pe două rânduri, dar NU
+ * și micșorarea cutiei. Flex-ul îngusta butonul sub lățimea textului, textul
+ * ieșea din el, iar pe iPhone se citea „Înscri". Cutia încăpea în ecran, deci
+ * nici testul de scroll orizontal, nici cel de vizibilitate nu-l prindeau — de
+ * aceea aserțiunea e pe `scrollWidth` vs `clientWidth`, nu pe poziție.
+ *
+ * 320px e cea mai îngustă lățime pe care o mai servește iOS (iPhone SE 1).
+ */
+const LATIMI_TELEFON = [320, 375, 390, 430] as const;
+
+for (const latime of LATIMI_TELEFON) {
+  test(`antet @${latime}px: „Înscrie-te" se vede întreg și nu iese din ecran`, async ({ page }) => {
+    await page.setViewportSize({ width: latime, height: 812 });
+    await fixClock(page);
+    await mockStats(page);
+    await page.goto('/?preview=landing');
+
+    const cta = page.locator('header a').filter({ hasText: /înscrie-te/i }).first();
+    await expect(cta).toBeVisible();
+
+    const m = await cta.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return {
+        taiat: el.scrollWidth > el.clientWidth + 1,
+        stanga: r.left,
+        dreapta: r.right,
+        latimeEcran: window.innerWidth,
+        scrollOrizontal: document.documentElement.scrollWidth > window.innerWidth,
+      };
+    });
+
+    expect(m.taiat, 'textul butonului e mai lat decât butonul — apare tăiat').toBe(false);
+    expect(m.stanga).toBeGreaterThanOrEqual(0);
+    expect(m.dreapta).toBeLessThanOrEqual(m.latimeEcran);
+    expect(m.scrollOrizontal, 'pagina derulează orizontal').toBe(false);
+  });
+}

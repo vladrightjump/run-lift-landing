@@ -113,13 +113,18 @@ export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
             </>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
+        {/* `gap` stă în CSS, nu aici: inline ar bate media query-ul de mobil,
+            iar rândurile rupte ar rămâne depărtate cu 24px. */}
+        <div className="e3-topbar-actions" style={{ display: 'flex', alignItems: 'center' }}>
+          <span
+            className="e3-topbar-meta"
+            style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}
+          >
             {EVENT_META}
           </span>
           <a
             href="/despre-noi"
-            className="e3-link"
+            className="e3-link e3-topbar-about"
             style={{
               fontSize: 13,
               fontWeight: 600,
