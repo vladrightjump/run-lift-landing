@@ -26,25 +26,77 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+
       - name: Typecheck (app + teste)
         run: |
           npm run typecheck
           npm run typecheck:tests
+
       - name: Teste unitare + integrare
         run: npm run test
-      - name: Instalează browserul Playwright
-        run: npx playwright install --with-deps chromium
-      - name: Teste e2e
-        run: npm run test:e2e
+
+      # Build-ul urcă ÎNAINTEA testelor e2e, pentru că acelea rulează acum pe
+      # `dist/`, nu pe dev server. Tot aici pică garda CSP↔config, deci o
+      # nepotrivire de configurare se vede înainte să pornească browserul.
       - name: Build (include garda CSP↔config + ștampila de versiune)
         run: npm run build
+
+      # Browserul se schimbă doar când se schimbă versiunea Playwright din
+      # lockfile, deci cheia e chiar ea. Fără cache, descărcarea costa ~28s la
+      # fiecare rulare. `--with-deps` (bibliotecile de sistem) rămâne pe calea
+      # de miss: pachetele apt nu sunt în cache-ul de browsere.
+      - name: Versiunea Playwright (cheie de cache)
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache browsere Playwright
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Instalează browserul Playwright
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # Pe cache hit lipsesc doar bibliotecile de sistem, nu și browserul.
+      - name: Instalează dependențele de sistem ale browserului
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Pe build-ul de producție, nu pe dev server: 58s în loc de 2m01s pe
+      # aceleași două worker-e, și verifică exact bundle-ul care se deployează.
+      - name: Teste e2e (pe build-ul de producție)
+        run: npm run test:e2e:preview
+
+      # Reporterul e `list`, deci nu există raport HTML. Ce ajută la depanare
+      # sunt urmele scrise de `trace: 'on-first-retry'`, în `test-results/`.
+      - name: Urmele Playwright, la eșec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
   deploy:
     name: Deploy Vercel + verificare live
     needs: test
     runs-on: ubuntu-latest
     steps:
+      # Job-ul are nevoie de exact două fișiere: scriptul de verificare și
+      # `vercel.json` (din care citește CSP-ul așteptat). Un checkout parțial
+      # e destul — și nu există `setup-node`, pentru că scriptul e Node pur,
+      # iar runner-ul vine deja cu Node 20+.
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/check-live-deploy.mjs
+            vercel.json
+          sparse-checkout-cone-mode: false
+
       - name: Declanșează deploy-ul Vercel (deploy hook)
         env:
           HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
@@ -55,9 +107,7 @@ jobs:
           fi
           curl -fsS -X POST "$HOOK" > /dev/null
           echo "Deploy declanșat pentru ${GITHUB_SHA:0:8}."
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+
       - name: Verifică pe live că build-ul nou e sus (+ CSP corect)
         env:
           EXPECTED_SHA: ${{ github.sha }}

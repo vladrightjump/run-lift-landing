@@ -13,8 +13,8 @@ Workflow: `.github/workflows/ci-deploy.yml`.
 push main
    │
    ├─ job „test" ─ npm ci → typecheck (app+teste) → teste unitare
-   │               → teste e2e (Playwright) → build
-   │                                            └─ garda CSP↔config + ștampila de versiune
+   │               → build → teste e2e (Playwright, PE build)
+   │                  └─ garda CSP↔config + ștampila de versiune
    │   (dacă PICĂ ceva → STOP, nu se deployează)
    ▼
    └─ job „deploy" (doar dacă „test" e verde)
@@ -27,6 +27,20 @@ push main
 
 Dacă build-ul nou nu apare live sau CSP-ul e desincronizat, pipeline-ul e **roșu** —
 ai semnalul imediat, nu afli de la utilizatori.
+
+### De ce build-ul e ÎNAINTEA testelor e2e
+
+Testele rulează pe `dist/`, servit de `vite preview`, nu pe dev server. Pe aceleași
+două worker-e ale runner-ului, 2m01s → 58s: dev server-ul transformă modulele la
+fiecare cerere, iar suita încarcă pagina de sute de ori. În plus, ce se verifică e
+chiar bundle-ul care se deployează.
+
+Local, `npm run test:e2e` rămâne pe dev server (cu HMR și reutilizarea unui server
+deja pornit) — acolo vrei feedback rapid, nu fidelitate. `npm run verify` rulează
+varianta de CI, deci reproduce exact ce se întâmplă în pipeline.
+
+Comanda pe build e `npm run test:e2e:preview` și cere un `dist/` proaspăt: servește
+ce găsește, deci construiește întâi.
 
 ## Cum știe că „build-ul nou e live"
 
