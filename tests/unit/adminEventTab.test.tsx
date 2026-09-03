@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
 import { AdminEventTab } from '../../src/admin/AdminEventTab';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { formatRoDate } from '../../src/content/format';
 import type { AdminEventConfigRow } from '../../src/lib/adminApi';
 
 /**
@@ -35,6 +36,18 @@ const rand = (over: Partial<AdminEventConfigRow> = {}): AdminEventConfigRow => (
   published_at: '2026-08-01T10:00:00Z',
   ...over,
 });
+
+/**
+ * Momente exprimate în ore FAȚĂ DE STARTUL din instantaneu, în formatul cerut de
+ * `datetime-local` (fără secunde). Scrise de mână, se legau de ediția care le-a
+ * inspirat și cădeau de partea greșită a validării la prima aliniere a
+ * instantaneului pe ediția publicată.
+ */
+const fataDeStart = (ore: number): string => {
+  const d = new Date(`${SNAPSHOT_CONFIG.start}Z`);
+  d.setUTCMinutes(d.getUTCMinutes() + Math.round(ore * 60));
+  return d.toISOString().slice(0, 16);
+};
 
 const showToast = vi.fn();
 const onAuthError = vi.fn(() => false);
@@ -172,7 +185,7 @@ describe('editarea nu atinge site-ul', () => {
 describe('validarea blochează publicarea', () => {
   it('un deadline după start dezactivează „Publică" și spune de ce', async () => {
     await deschideCiorna();
-    fireEvent.change(camp('Se închid înscrierile'), { target: { value: '2026-08-22T09:00' } });
+    fireEvent.change(camp('Se închid înscrierile'), { target: { value: fataDeStart(2) } });
 
     // Mesajul apare în DOUĂ locuri, deliberat: bannerul de sus (îl vezi și când
     // câmpul vinovat e sub fold) și sub câmpul însuși (nu trebuie să ghicești
@@ -198,10 +211,10 @@ describe('validarea blochează publicarea', () => {
 
   it('corectarea reactivează publicarea', async () => {
     await deschideCiorna();
-    fireEvent.change(camp('Se închid înscrierile'), { target: { value: '2026-08-22T09:00' } });
+    fireEvent.change(camp('Se închid înscrierile'), { target: { value: fataDeStart(2) } });
     expect(screen.getByRole('button', { name: 'Publică' }).hasAttribute('disabled')).toBe(true);
 
-    fireEvent.change(camp('Se închid înscrierile'), { target: { value: '2026-08-22T07:00' } });
+    fireEvent.change(camp('Se închid înscrierile'), { target: { value: fataDeStart(0) } });
     expect(screen.getByRole('button', { name: 'Publică' }).hasAttribute('disabled')).toBe(false);
   });
 });
@@ -412,7 +425,9 @@ describe('grupurile pliate comprimă documentul, nu îl ascund', () => {
     // Locul, capacitatea și data se citesc fără să deschizi nimic.
     expect(text).toContain(SNAPSHOT_CONFIG.venue.name);
     expect(text).toContain(String(SNAPSHOT_CONFIG.slots.total));
-    expect(text).toMatch(/august 2026/);
+    // Data startului, scrisă în română — derivată din instantaneu, ca luna să
+    // nu fie o constantă care expiră la ediția următoare.
+    expect(text).toContain(formatRoDate(SNAPSHOT_CONFIG.start));
   });
 
   it('un grup se deschide la click și se închide la al doilea', async () => {
