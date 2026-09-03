@@ -98,7 +98,8 @@ describe('submitLaunchNotification', () => {
 });
 
 const regData = {
-  nume: '  Vladislav Filip  ',
+  nume: '  Filip  ',
+  prenume: '  Vladislav ',
   telefon: '069 509 949',
   email: '  Vlad@Email.RO ',
   dataNasterii: '1994-10-18',

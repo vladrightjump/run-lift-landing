@@ -1,7 +1,7 @@
 import { SUPABASE } from './config';
 import { parseEventConfig, type EventConfig } from '../content/eventConfig';
 import { logClientError } from './monitoring';
-import { normalizePhone } from './validation';
+import { normalizePhone, numeComplet } from './validation';
 import type { FormData } from './validation';
 
 export const SUBMIT_TIMEOUT_MS = 15_000;
@@ -63,7 +63,7 @@ export const submitRegistration = async (
       },
       body: JSON.stringify({
         ...(id ? { id } : {}),
-        nume: data.nume.trim(),
+        nume: numeComplet(data),
         telefon: normalizePhone(data.telefon),
         email: data.email.trim(),
         data_nasterii: data.dataNasterii || null,
@@ -194,7 +194,7 @@ export const submitWaitlist = async (
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({
-        nume: data.nume.trim(),
+        nume: numeComplet(data),
         telefon: normalizePhone(data.telefon),
         email: data.email.trim(),
         data_nasterii: data.dataNasterii || null,
