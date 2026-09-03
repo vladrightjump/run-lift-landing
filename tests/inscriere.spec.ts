@@ -40,7 +40,8 @@ const mockEmail = (page: Page) =>
   );
 
 const fillValid = async (page: Page) => {
-  await page.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
+  await page.getByPlaceholder('Popescu').fill('Filip');
+  await page.getByPlaceholder('Ana', { exact: true }).fill('Vladislav');
   await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
   await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
   await page.getByPlaceholder('zz.ll.aaaa').fill('15.05.1994');
@@ -159,7 +160,8 @@ test.describe('Înscriere — formular ediția curentă', () => {
     });
 
     await page.goto('/?preview=landing');
-    await page.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
+    await page.getByPlaceholder('Popescu').fill('Filip');
+  await page.getByPlaceholder('Ana', { exact: true }).fill('Vladislav');
     await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
     await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
     await page.locator('input[name="acord"]').check();
@@ -203,7 +205,8 @@ test.describe('Înscriere — formular ediția curentă', () => {
     const wlBtn = page.getByRole('button', { name: /lista de așteptare/i });
     await expect(wlBtn).toBeVisible();
 
-    await page.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
+    await page.getByPlaceholder('Popescu').fill('Filip');
+  await page.getByPlaceholder('Ana', { exact: true }).fill('Vladislav');
     await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
     await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
     await page.getByPlaceholder('zz.ll.aaaa').fill('15.05.1994');

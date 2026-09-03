@@ -19,7 +19,8 @@ import { SUPABASE } from '../../src/lib/config';
  */
 
 const regData = {
-  nume: 'Vladislav Filip',
+  nume: 'Filip',
+  prenume: 'Vladislav',
   telefon: '069509949',
   email: 'vlad@example.com',
   dataNasterii: '1994-10-18',

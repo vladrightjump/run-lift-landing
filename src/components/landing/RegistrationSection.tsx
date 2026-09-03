@@ -212,16 +212,28 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
               >
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 18 }}>
                   <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={label}>Nume complet *</span>
+                    <span style={label}>Nume *</span>
                     <input
                       className="e3-input"
                       name="nume"
                       type="text"
-                      placeholder="Ana Popescu"
-                      autoComplete="name"
+                      placeholder="Popescu"
+                      autoComplete="family-name"
                       style={{ ...inputStyle, borderColor: errors.nume ? 'var(--e3-danger)' : 'var(--e3-border)' }}
                     />
-                    {errors.nume && <span style={fieldErr}>Completează numele complet.</span>}
+                    {errors.nume && <span style={fieldErr}>Completează numele de familie.</span>}
+                  </label>
+                  <label style={{ display: 'grid', gap: 8 }}>
+                    <span style={label}>Prenume *</span>
+                    <input
+                      className="e3-input"
+                      name="prenume"
+                      type="text"
+                      placeholder="Ana"
+                      autoComplete="given-name"
+                      style={{ ...inputStyle, borderColor: errors.prenume ? 'var(--e3-danger)' : 'var(--e3-border)' }}
+                    />
+                    {errors.prenume && <span style={fieldErr}>Completează prenumele.</span>}
                   </label>
                   <label style={{ display: 'grid', gap: 8 }}>
                     <span style={label}>Telefon *</span>
