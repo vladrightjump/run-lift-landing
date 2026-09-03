@@ -13,8 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:preview": "E2E_PREVIEW=1 playwright test",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "verify": "npm run typecheck && npm run typecheck:tests && npm run test && npm run build && npm run test:e2e"
+    "verify": "npm run typecheck && npm run typecheck:tests && npm run test && npm run build && npm run test:e2e:preview"
   },
   "dependencies": {
     "react": "^19.2.0",
