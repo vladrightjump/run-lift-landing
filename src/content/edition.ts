@@ -50,9 +50,9 @@ export type Place = {
 
 export const EDITION = {
   /** Ediția evenimentului (coloana `editie` + `public_stats`). */
-  number: 5,
+  number: 6,
   /** Ediția pentru „Anunță-mă la lansare" (de regulă egală cu `number`). */
-  launchNumber: 5,
+  launchNumber: 6,
 
   /** Branding. `ordinal(number)` derivă „a cincea" în `content/format.ts`. */
   brand: 'Run + Lift',
@@ -64,15 +64,15 @@ export const EDITION = {
   /** Fusul orar al evenimentului (Chișinău, UTC+3 vara). */
   tz: '+03:00',
   /** Startul cursei — local, fără offset. */
-  start: '2026-08-22T07:00:00',
+  start: '2026-09-05T07:00:00',
   /** Durata (h) — pentru EVENT_END_DATE (start + durată). */
-  durationHours: 2,
+  durationHours: 1,
   /** Ora de check-in (afișată în emailuri/landing). */
-  checkinFrom: '06:30',
+  checkinFrom: '06:45',
   /** Până când se poate înscrie cineva — local, fără offset. */
-  registrationDeadline: '2026-08-22T07:00:00',
+  registrationDeadline: '2026-09-05T06:00:00',
   /** Momentul anunțului de lansare (comutarea Coming Soon → landing) — local. */
-  launchAt: '2026-08-19T12:00:00',
+  launchAt: '2026-09-03T12:00:00',
   /** `true` → homepage-ul arată Coming Soon; `false` → landing (înscrieri deschise). */
   showComingSoon: false,
 
@@ -84,7 +84,7 @@ export const EDITION = {
   /** Cu câte ore înainte de start dispare înscrierea de pe homepage. */
   leaderboardLeadHours: 1,
   /** Următorul antrenament — ținta countdown-ului de după cursă, local. */
-  nextEditionAt: '2026-08-29T07:00:00',
+  nextEditionAt: '2026-09-12T07:00:00',
 
   /**
    * Locul CURSEI — se schimbă de la o ediție la alta (evenimentele sunt
@@ -93,11 +93,12 @@ export const EDITION = {
    * greșit, deci ține-le separate.
    */
   venue: {
-    name: 'Scările de Granit',
-    city: 'Valea Morilor',
-    // Pinul „Granit Stairs" (scările de granit din Valea Morilor). Coordonate
-    // exacte, ca embed-ul și direcțiile să cadă fix pe punct.
-    mapQuery: '47.0182357,28.8213041',
+    name: 'Terenul de Basketball',
+    city: 'Parcul La Izvor',
+    // Terenul de basket din Parcul La Izvor. Coordonate exacte, ca embed-ul și
+    // direcțiile să cadă fix pe teren: parcul e destul de mare cât să ratezi
+    // startul căutându-l după nume.
+    mapQuery: '47.0465504,28.7854741',
     zoom: 16,
   } satisfies Place,
 
@@ -126,7 +127,7 @@ export const EDITION = {
   },
 
   slots: {
-    total: 40,
+    total: 16,
     waitlist: 10,
     /** Fallback static pentru „locuri ocupate" dacă `public_stats` nu răspunde. */
     occupiedFallback: 0,
@@ -152,7 +153,7 @@ export const EDITION = {
   },
 
   /** Bump la fiecare ediție ca share-preview-ul (og.png) să nu vină din cache. */
-  ogImageVersion: 5,
+  ogImageVersion: 6,
 } as const;
 
 export type Edition = typeof EDITION;

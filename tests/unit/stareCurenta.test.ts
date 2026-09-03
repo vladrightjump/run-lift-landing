@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { fazaSite, repere, semnaleDeAtentie, stareCurenta } from '../../src/admin/stareCurenta';
 import type { SemnaleAdmin } from '../../src/admin/stareCurenta';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
-import { deriveEditionDates } from '../../src/lib/config';
+import { deriveEditionDates, type EditionDates } from '../../src/lib/config';
 import type { EventConfig } from '../../src/content/eventConfig';
 
 /**
@@ -20,6 +20,16 @@ const config = (over: Partial<EventConfig> = {}): EventConfig => ({
 
 const la = (c: EventConfig, local: string) => new Date(`${local}${c.tz}`).getTime();
 
+/**
+ * Momentele se derivă din repere, nu se scriu de mână. Un „2026-08-20T10:00:00"
+ * era corect doar cât timp instantaneul rămânea pe ediția 5: la prima aliniere
+ * pe ediția publicată cădea în altă fază și testul pica fără ca regula să se fi
+ * schimbat.
+ */
+const inainteDeAnunt = (d: EditionDates) => d.LAUNCH_DATE.getTime() - 86_400_000;
+const intreAnuntSiCursa = (d: EditionDates) =>
+  Math.floor((d.LAUNCH_DATE.getTime() + d.LEADERBOARD_DATE.getTime()) / 2);
+
 const fara: SemnaleAdmin = {
   nelivrate: 0,
   asteptare: 0,
@@ -32,7 +42,7 @@ describe('faza site-ului', () => {
   it('înainte de anunț, cu Coming Soon pornit: Coming Soon', () => {
     const c = config({ showComingSoon: true });
     const d = deriveEditionDates(c);
-    expect(fazaSite(c, d, la(c, '2026-08-01T10:00:00'))).toBe('coming-soon');
+    expect(fazaSite(c, d, inainteDeAnunt(d))).toBe('coming-soon');
   });
 
   it('Coming Soon oprit: landing chiar și înainte de momentul anunțului', () => {
@@ -40,13 +50,13 @@ describe('faza site-ului', () => {
     // „landing", `launchAt` nu mai ascunde nimic.
     const c = config({ showComingSoon: false });
     const d = deriveEditionDates(c);
-    expect(fazaSite(c, d, la(c, '2026-08-01T10:00:00'))).toBe('landing');
+    expect(fazaSite(c, d, inainteDeAnunt(d))).toBe('landing');
   });
 
   it('după anunț și înainte de fereastra cursei: landing', () => {
     const c = config({ showComingSoon: true });
     const d = deriveEditionDates(c);
-    expect(fazaSite(c, d, la(c, '2026-08-20T10:00:00'))).toBe('landing');
+    expect(fazaSite(c, d, intreAnuntSiCursa(d))).toBe('landing');
   });
 
   it('în fereastra de dinaintea startului: „cine vine"', () => {

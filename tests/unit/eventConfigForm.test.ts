@@ -29,30 +29,48 @@ describe('documentul valid trece', () => {
   });
 });
 
+/**
+ * Momentele se exprimă în ore FAȚĂ DE START, nu ca date scrise de mână. Scrise
+ * de mână, țineau doar cât timp instantaneul rămânea pe ediția care le-a
+ * inspirat: la prima aliniere pe ediția publicată ajungeau de partea greșită a
+ * graniței și testul pica fără ca vreo regulă să se fi schimbat.
+ */
+const fataDeStart = (ore: number): string => {
+  const d = new Date(`${SNAPSHOT_CONFIG.start}Z`);
+  d.setUTCMinutes(d.getUTCMinutes() + Math.round(ore * 60));
+  return d.toISOString().slice(0, 19);
+};
+
 describe('reguli de relație între repere', () => {
   it('deadline după start e respins', () => {
-    expect(campuri(cu({ registrationDeadline: '2026-08-22T09:00:00' }))).toContain(
+    expect(campuri(cu({ registrationDeadline: fataDeStart(2) }))).toContain(
       'registrationDeadline'
     );
   });
 
-  it('deadline egal cu startul e acceptat — e chiar cazul ediției curente', () => {
+  it('deadline egal cu startul e acceptat', () => {
     expect(campuri(cu({ registrationDeadline: SNAPSHOT_CONFIG.start }))).not.toContain(
       'registrationDeadline'
     );
   });
 
   it('următorul antrenament înainte de finalul cursei e respins', () => {
-    // Start 07:00 + 2h = 09:00; ținta la 08:00 e în timpul cursei.
-    expect(campuri(cu({ nextEditionAt: '2026-08-22T08:00:00' }))).toContain('nextEditionAt');
+    // Finalul e start + `durationHours`; ținta la jumătatea cursei e înăuntru.
+    expect(campuri(cu({ nextEditionAt: fataDeStart(SNAPSHOT_CONFIG.durationHours / 2) }))).toContain(
+      'nextEditionAt'
+    );
   });
 
   it('următorul antrenament fix la finalul cursei e respins (trebuie strict după)', () => {
-    expect(campuri(cu({ nextEditionAt: '2026-08-22T09:00:00' }))).toContain('nextEditionAt');
+    expect(campuri(cu({ nextEditionAt: fataDeStart(SNAPSHOT_CONFIG.durationHours) }))).toContain(
+      'nextEditionAt'
+    );
   });
 
   it('durata mai lungă mută granița, deci și verdictul', () => {
-    const c = cu({ durationHours: 24, nextEditionAt: '2026-08-22T20:00:00' });
+    // Aceeași țintă, acceptabilă la durata reală, cade în interiorul unei curse
+    // de 24h — granița e a duratei, nu a datei.
+    const c = cu({ durationHours: 24, nextEditionAt: fataDeStart(13) });
     expect(campuri(c)).toContain('nextEditionAt');
   });
 });

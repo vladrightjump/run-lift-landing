@@ -50,7 +50,12 @@ describe('useCountdown', () => {
 
   it('avansează în timp real, o dată pe secundă', () => {
     vi.useFakeTimers();
-    const { result } = renderHook(() => useCountdown(inViitor(10_000)));
+    // Ținta se calculează O DATĂ, în afara funcției de randare. `inViitor` în
+    // interior ar produce un reper nou la fiecare re-randare — o țintă care
+    // fuge înainte cu exact cât a trecut ceasul, deci un countdown care nu
+    // scade niciodată. `useEditionDates()` întoarce repere fixe.
+    const tinta = inViitor(10_000);
+    const { result } = renderHook(() => useCountdown(tinta));
     const initial = result.current.secunde;
     act(() => {
       vi.advanceTimersByTime(3000);
@@ -66,5 +71,71 @@ describe('useCountdown', () => {
     });
     expect(result.current.done).toBe(true);
     expect(result.current.secunde).toBe('00');
+  });
+});
+
+/**
+ * Ținta se schimbă după primul cadru — cazul real, nu unul teoretic: pagina
+ * pornește pe instantaneul de build (ediția încheiată) și primește reperele
+ * ediției publicate când răspunde `public_config()`.
+ */
+describe('useCountdown — ținta se schimbă din mers', () => {
+  it('o țintă trecută înlocuită cu una viitoare nu rămâne „done"', () => {
+    const { result, rerender } = renderHook(({ tinta }) => useCountdown(tinta), {
+      initialProps: { tinta: new Date(Date.now() - 1000) },
+    });
+    expect(result.current.done).toBe(true);
+
+    rerender({ tinta: inViitor(3 * 3_600_000 + 500) });
+
+    expect(result.current.done).toBe(false);
+    expect(result.current.ore).toBe('03');
+  });
+
+  it('după schimbare numără mai departe, o dată pe secundă', () => {
+    vi.useFakeTimers();
+    const { result, rerender } = renderHook(({ tinta }) => useCountdown(tinta), {
+      initialProps: { tinta: new Date(Date.now() - 1000) },
+    });
+
+    rerender({ tinta: inViitor(10_000) });
+    const initial = result.current.secunde;
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(result.current.secunde).not.toBe(initial);
+  });
+
+  // Reciproca: o ediție care se încheie cât tabul e deschis trebuie să treacă
+  // pe „done", nu doar să înghețe pe ultima valoare afișată.
+  it('o țintă viitoare înlocuită cu una trecută devine „done"', () => {
+    const { result, rerender } = renderHook(({ tinta }) => useCountdown(tinta), {
+      initialProps: { tinta: inViitor(3 * 3_600_000) },
+    });
+    expect(result.current.done).toBe(false);
+
+    rerender({ tinta: new Date(Date.now() - 1000) });
+
+    expect(result.current.done).toBe(true);
+    expect(result.current.secunde).toBe('00');
+  });
+
+  // Aceeași milisecundă venită ca obiect `Date` nou (fiecare refresh de config
+  // întoarce repere noi) nu e o schimbare de țintă.
+  it('o țintă identică re-creată nu resetează numărătoarea', () => {
+    vi.useFakeTimers();
+    const ms = Date.now() + 10_000;
+    const { result, rerender } = renderHook(({ tinta }) => useCountdown(tinta), {
+      initialProps: { tinta: new Date(ms) },
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    const dupaTreiSecunde = result.current.secunde;
+
+    rerender({ tinta: new Date(ms) });
+
+    expect(result.current.secunde).toBe(dupaTreiSecunde);
   });
 });
