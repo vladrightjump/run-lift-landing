@@ -23,6 +23,15 @@ export type Recipient = {
    * dezabonare, deci acolo e mereu `false`.
    */
   dezabonat: boolean;
+  /**
+   * Tokenul cu care își poate elibera locul, pentru `{link_renunt}`.
+   *
+   * Numai PARTICIPANȚII au unul: cine e pe lista de așteptare sau pe cea de
+   * lansare n-are încă un loc de eliberat. Gol → variabila nu se poate rezolva,
+   * iar rândul pe care stă cade (vezi `fillTemplate`), ca să nu plece un
+   * „{link_renunt}" literal.
+   */
+  tokenRenunt: string;
 };
 
 export const normalizeParticipant = (r: AdminRegistration): Recipient => ({
@@ -33,6 +42,7 @@ export const normalizeParticipant = (r: AdminRegistration): Recipient => ({
   telefon: r.telefon,
   created_at: r.created_at,
   dezabonat: r.dezabonat_la !== null,
+  tokenRenunt: r.token_renunt ?? '',
 });
 
 export const normalizeLaunch = (r: AdminLaunchSignup): Recipient => ({
@@ -43,6 +53,8 @@ export const normalizeLaunch = (r: AdminLaunchSignup): Recipient => ({
   telefon: r.telefon,
   created_at: r.created_at,
   dezabonat: r.dezabonat_la !== null,
+  // Lista de lansare nu ține locuri: n-are ce elibera.
+  tokenRenunt: '',
 });
 
 // Lista de așteptare a EVENIMENTULUI (event_waitlist): nu are prenume separat și nu
@@ -55,6 +67,9 @@ export const normalizeWaitlist = (r: AdminWaitlistEntry): Recipient => ({
   telefon: r.telefon,
   created_at: r.created_at,
   dezabonat: false,
+  // Încă n-are loc — abia promovarea îi dă unul, iar emailul de promovare îi
+  // duce linkul.
+  tokenRenunt: '',
 });
 
 /** Elimină dublurile după email (case-insensitive), păstrând prima apariție. */
@@ -111,10 +126,45 @@ export const fillTemplate = (
   r: Recipient,
   dataInscrierii: string,
   config: EventConfig | null = null
-): string =>
-  fillEventVars(text, config)
+): string => {
+  const cuEveniment = fillEventVars(text, config);
+  const cuLink = r.tokenRenunt
+    ? cuEveniment.replace(/\{link_renunt\}/g, linkRenunt(r.tokenRenunt))
+    : faraLinkRenunt(cuEveniment);
+
+  return cuLink
     .replace(/\{nume\}/g, r.nume)
     .replace(/\{prenume\}/g, r.prenume || r.nume.split(/\s+/)[0] || '')
     .replace(/\{email\}/g, r.email)
     .replace(/\{telefon\}/g, r.telefon)
     .replace(/\{data_inscrierii\}/g, dataInscrierii);
+};
+
+/**
+ * Linkul de eliberare a locului. Aceeași formă ca în funcția edge `send-email`
+ * — duplicată pentru că trimiterea manuală din backoffice compune textele în
+ * client, iar cea automată pe server.
+ */
+export const linkRenunt = (token: string): string =>
+  `https://parktraining.fit/renunt?token=${token}`;
+
+/**
+ * Textul fără paragraful care poartă `{link_renunt}`.
+ *
+ * `{link_renunt}` e singura variabilă care poate lipsi LEGITIM: cine e pe lista
+ * de așteptare sau de lansare n-are un loc de eliberat. Cade PARAGRAFUL întreg,
+ * nu doar variabila și nici doar rândul ei, pentru că în șabloanele reale
+ * introducerea stă pe rândul de deasupra:
+ *
+ *     Dacă nu mai poți participa, eliberează-ți locul aici:
+ *     {link_renunt}
+ *
+ * Șterge doar rândul cu variabila și rămâne o frază care trimite spre nimic —
+ * mai rău decât dacă lipsea tot. Paragraful e unitatea corectă și pentru că e
+ * exact cum împarte textul și randarea HTML a emailului (`split(/\n{2,}/)`).
+ */
+export const faraLinkRenunt = (text: string): string =>
+  text
+    .split(/\n{2,}/)
+    .filter((p) => !p.includes('{link_renunt}'))
+    .join('\n\n');

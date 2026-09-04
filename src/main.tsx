@@ -6,6 +6,7 @@ import { DespreNoi } from './components/DespreNoi';
 import { Confirmare } from './components/Confirmare';
 import { Inscriere } from './components/Inscriere';
 import { Unsubscribe } from './components/Unsubscribe';
+import { Renunt } from './components/Renunt';
 import { installGlobalMonitoring } from './lib/monitoring';
 import { EventConfigProvider } from './hooks/useEventConfig';
 import { redirectCanonic } from './lib/canonicalHost';
@@ -31,7 +32,8 @@ if (!rootEl) throw new Error('Root element #root not found');
 
 // Pagini fără router: /admin → backoffice, /despre-noi → prezentare + formular,
 // /confirmare → confirmarea înscrierii din email, /inscriere → formularul singur
-// (linkul din bio/story), /unsubscribe → dezabonare, restul → landing.
+// (linkul din bio/story), /unsubscribe → dezabonare, /renunt → eliberarea
+// locului din linkul de reminder, restul → landing.
 const path = window.location.pathname.replace(/\/+$/, '');
 
 const page =
@@ -45,6 +47,8 @@ const page =
     <Inscriere />
   ) : path === '/unsubscribe' ? (
     <Unsubscribe />
+  ) : path === '/renunt' ? (
+    <Renunt />
   ) : (
     <App />
   );

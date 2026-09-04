@@ -4,7 +4,10 @@
 //  • "admin"     — trimitere în masă din backoffice; necesită token de admin.
 //  • "confirm"   — confirmare automată după înscriere (UUID recent).
 //  • "broadcast" — trimitere către toți participanții ediției curente; folosit de
-//                  reminder-ul programat. Protejat cu secret (header x-broadcast-secret).
+//                  reminderele programate. Protejat cu secret (header
+//                  x-broadcast-secret). `payload.template` alege șablonul, ca un
+//                  orar cu mai multe remindere să poată trimite texte diferite
+//                  („cu 3 zile înainte" ≠ „azi alergăm") prin același mod.
 //
 // Fiecare încercare de trimitere, în orice mod, lasă un rând în `runlift.email_log`
 // (via RPC `log_emails`): adresă, subiect, text, status + răspunsul providerului la
@@ -137,8 +140,46 @@ async function loadBadge(): Promise<string> {
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-const fillVars = (text: string, nume: string, email: string, telefon = ""): string =>
+/**
+ * Linkul prin care cineva își eliberează locul, pentru `{link_renunt}`.
+ *
+ * Duce la PAGINA de confirmare, nu la RPC-ul care eliberează locul. Scanerele de
+ * linkuri ale providerilor deschid URL-urile din emailuri ca să le verifice; un
+ * link care ar elibera locul la simpla deschidere l-ar fi dat mai departe fără
+ * ca omul să fi atins ceva. Pagina cere un click explicit — același motiv pentru
+ * care RFC 8058 cere POST la dezabonare.
+ */
+const linkRenunt = (token?: string): string =>
+  token ? `https://parktraining.fit/renunt?token=${token}` : "";
+
+/**
+ * Textul fără paragraful care poartă `{link_renunt}` — pentru destinatarii care
+ * n-au un loc de eliberat (lista de așteptare).
+ *
+ * Cade PARAGRAFUL, nu doar variabila și nici doar rândul ei: în șabloanele reale
+ * introducerea stă pe rândul de deasupra („eliberează-ți locul aici:"), iar
+ * ștearsă singură variabila ar lăsa o frază care trimite spre nimic. Aceeași
+ * unitate ca `renderHtml`, care oricum împarte textul pe `\n{2,}`.
+ *
+ * Oglindește `faraLinkRenunt` din `src/admin/emailAudience.ts` — duplicat pentru
+ * că trimiterea manuală compune textele în client, cea automată aici.
+ */
+const faraLinkRenunt = (text: string): string =>
   text
+    .split(/\n{2,}/)
+    .filter((p) => !p.includes("{link_renunt}"))
+    .join("\n\n");
+
+// `linkRenunt` e per DESTINATAR (poartă tokenul lui), deci se rezolvă aici, nu
+// în `fillEventVars`, care știe doar despre ediție.
+const fillVars = (
+  text: string,
+  nume: string,
+  email: string,
+  telefon = "",
+  linkRenunt = ""
+): string =>
+  (linkRenunt ? text.replace(/\{link_renunt\}/g, linkRenunt) : faraLinkRenunt(text))
     .replace(/\{nume\}/g, nume)
     .replace(/\{prenume\}/g, (nume || "atlet").split(/\s+/)[0])
     .replace(/\{email\}/g, email)
@@ -329,14 +370,23 @@ Deno.serve(async (req: Request) => {
   if (mode === "confirm") {
     const id = String(payload.id ?? "");
     if (!id) return json(400, { error: "missing_id" });
-    const rows = await rpc<{ email: string; nume: string }[]>("confirm_lookup", { p_id: id });
+    const rows = await rpc<{ email: string; nume: string; token_renunt?: string }[]>(
+      "confirm_lookup",
+      { p_id: id }
+    );
     const row = rows && rows[0];
     if (!row?.email) return json(200, { sent: 0, skipped: true });
 
     const tpl = await loadTemplate("bulk_participant_confirmare");
     const subject = tpl?.subiect || CONFIRM_SUBJECT_FALLBACK;
     const badge = await loadBadge();
-    const text = fillVars(tpl?.text_email || CONFIRM_TEXT_FALLBACK, row.nume, row.email);
+    const text = fillVars(
+      tpl?.text_email || CONFIRM_TEXT_FALLBACK,
+      row.nume,
+      row.email,
+      "",
+      linkRenunt(row.token_renunt)
+    );
     const r = await sendOne({ to: row.email, subject, text }, badge);
     await logSends([
       {
@@ -361,14 +411,26 @@ Deno.serve(async (req: Request) => {
   if (mode === "promoted") {
     const id = String(payload.id ?? "");
     if (!id) return json(400, { error: "missing_id" });
-    const rows = await rpc<{ email: string; nume: string }[]>("confirm_lookup", { p_id: id });
+    const rows = await rpc<{ email: string; nume: string; token_renunt?: string }[]>(
+      "confirm_lookup",
+      { p_id: id }
+    );
     const row = rows && rows[0];
     if (!row?.email) return json(200, { sent: 0, skipped: true });
 
     const tpl = await loadTemplate("bulk_waitlist_promovare");
     const subject = tpl?.subiect || PROMOTED_SUBJECT_FALLBACK;
     const badge = await loadBadge();
-    const text = fillVars(tpl?.text_email || PROMOTED_TEXT_FALLBACK, row.nume, row.email);
+    // Cine tocmai a urcat de pe lista de așteptare poate, la rândul lui, să nu
+    // mai poată veni. Fără link, locul lui se blochează exact cum se bloca al
+    // celui pe care l-a înlocuit.
+    const text = fillVars(
+      tpl?.text_email || PROMOTED_TEXT_FALLBACK,
+      row.nume,
+      row.email,
+      "",
+      linkRenunt(row.token_renunt)
+    );
     const r = await sendOne({ to: row.email, subject, text }, badge);
     await logSends([
       {
@@ -456,8 +518,25 @@ Deno.serve(async (req: Request) => {
     const audience = payload.audience === "asteptare" ? "asteptare" : "participanti";
     const rpcName = audience === "asteptare" ? "waitlist_recipients" : "edition2_recipients";
 
-    const tplKey =
-      audience === "asteptare" ? "bulk_waitlist_anunt" : "bulk_participant_reminder";
+    // Cheia șablonului poate fi impusă de apelant — asta e ce face posibil un
+    // orar cu mai multe remindere: `maybe_send_reminder` trimite „cu 72h înainte"
+    // pe un text și „cu 3h înainte" pe altul, prin același mod `broadcast`.
+    //
+    // Listă închisă, nu orice string: cheia vine dintr-un apel autentificat cu
+    // secretul de broadcast, dar o cheie inexistentă ar cădea tăcut pe textul de
+    // rezervă din cod — adică un email generic, plecat, deci ireparabil. Mai bine
+    // pe reminderul implicit, care cel puțin e cel editat din /admin.
+    const TEMPLATES_PERMISE = [
+      "bulk_participant_reminder",
+      "bulk_participant_reminder_final",
+      "bulk_waitlist_anunt",
+    ];
+    const cerut = String(payload.template ?? "");
+    const tplKey = TEMPLATES_PERMISE.includes(cerut)
+      ? cerut
+      : audience === "asteptare"
+        ? "bulk_waitlist_anunt"
+        : "bulk_participant_reminder";
     const tpl = await loadTemplate(tplKey);
     const subjFallback =
       audience === "asteptare" ? ANNOUNCE_SUBJECT_FALLBACK : REMINDER_SUBJECT_FALLBACK;
@@ -467,7 +546,9 @@ Deno.serve(async (req: Request) => {
     const subject = String(payload.subject ?? tpl?.subiect ?? subjFallback);
     const text = String(payload.text ?? tpl?.text_email ?? textFallback);
     const recipients =
-      (await rpc<{ email: string; nume: string; token_unsub: string }[]>(rpcName, {})) ?? [];
+      (await rpc<
+        { email: string; nume: string; token_unsub: string; token_renunt?: string }[]
+      >(rpcName, {})) ?? [];
     if (recipients.length === 0) return json(200, { sent: 0, failed: 0, note: "no_recipients" });
 
     // Idempotență opțională: dacă se dă `once_key`, trimitem o SINGURĂ dată pentru acea cheie
@@ -490,7 +571,10 @@ Deno.serve(async (req: Request) => {
       const unsubApi = r.token_unsub
         ? `${SUPABASE_URL}/functions/v1/unsubscribe?token=${r.token_unsub}`
         : undefined;
-      const body = fillVars(text, r.nume, r.email);
+      // `waitlist_recipients` nu întoarce token de renunțare (cei de pe listă
+      // n-au încă un loc de eliberat), deci acolo variabila rămâne goală și
+      // rândul pe care stă cade — vezi `fillVars`.
+      const body = fillVars(text, r.nume, r.email, "", linkRenunt(r.token_renunt));
       const res = await sendOne({ to: r.email, subject, text: body }, badge, unsubPage, unsubApi);
       if (res.ok) sent++;
       else errors.push({ to: r.email, status: res.status });

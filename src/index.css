@@ -14,6 +14,10 @@
   --e3-muted-strong: #C9CCBE;
   --e3-muted-dim: #5E6355;
   --e3-danger: #F26D6D;
+  /* Chihlimbar pentru „atenție": valoarea trece, dar consecința ei nu e cea
+     așteptată. Coralul de deasupra înseamnă „reparat înainte de publicare" și
+     nu poate însemna și altceva fără să înceteze să însemne ceva. */
+  --e3-warn: #F2B84B;
   --e3-danger-strong: #E5484D;
   --e3-danger-bg: #3A1A1A;
   --e3-hairline: #232620;
@@ -1284,6 +1288,137 @@
   .admin-config-camp.invalid input:focus,
   .admin-config-camp.invalid select:focus { box-shadow: 0 0 0 3px rgba(242,109,109,0.16); }
   .admin-config-hint { font-size: 13px; color: var(--e3-muted); margin: 0 0 8px; }
+  .admin-config-hint code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    background: var(--e3-surface-hover); border: 1px solid var(--e3-border);
+    padding: 1px 5px; color: var(--e3-text);
+  }
+
+  /* Bifă inline (ex. „Activ" pe un rând de reminder): eticheta e ținta de click,
+     deci întreg rândul e apăsabil, nu doar pătratul de 13px. */
+  .admin-config-optiune {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
+    font-size: 13.5px; color: var(--e3-text); cursor: pointer; user-select: none;
+  }
+  .admin-config-optiune input { width: auto; margin: 0; accent-color: var(--e3-accent); }
+
+  /* ---- Atenție pe câmp ----
+     Nici eroare (nu blochează nimic), nici ecou (nu confirmă nimic): valoarea
+     e validă, dar consecința ei nu e cea așteptată. Chihlimbar, nu coral —
+     roșul de lângă un câmp înseamnă „reparat înainte de a publica", iar aici
+     publicarea trece. */
+  .admin-config-atentie {
+    font-size: 13px; color: var(--e3-warn); line-height: 1.4;
+    display: flex; gap: 7px;
+  }
+  .admin-config-atentie::before { content: "▲"; font-size: 9px; line-height: 1.7; flex: none; }
+  .admin-config-camp.atentie select,
+  .admin-config-camp.atentie input { border-color: #4A3F22; }
+
+  /* ---- Chip-uri de presetare ----
+     Valorile pe care le alegi de fiecare dată, dintr-un click. Nu înlocuiesc
+     câmpul de dedesubt — îl completează, și rămâne editabil după. */
+  .admin-presetari { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .admin-chip {
+    font: inherit; font-size: 12px; line-height: 1.2;
+    padding: 6px 11px; cursor: pointer;
+    background: transparent; color: var(--e3-muted-strong);
+    border: 1px solid var(--e3-border);
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .admin-chip:hover:not(:disabled) {
+    border-color: var(--e3-accent); color: var(--e3-accent); background: var(--e3-surface-hover);
+  }
+  .admin-chip:active:not(:disabled) { transform: translateY(1px); }
+  /* Dezactivat = „asta e deja valoarea". Nu-l ascundem: dispariția unui buton
+     la care tocmai te uitai citește ca o eroare, nu ca o confirmare. */
+  .admin-chip:disabled { opacity: 0.4; cursor: default; }
+
+  .admin-config-locuri { grid-column: 1 / -1; display: grid; gap: 8px; }
+
+  /* ---- Oferta de mutare în bloc ----
+     Startul mutat trage după el patru repere. Oferit, nu aplicat: un formular
+     care rescrie câmpuri neatinse e un formular în care nu mai știi ce ai
+     setat tu. Stă lângă câmpul care a produs-o. */
+  .admin-config-mutare {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px 18px; flex-wrap: wrap;
+    padding: 12px 16px; font-size: 13px; line-height: 1.5;
+    color: var(--e3-text); background: var(--e3-surface-tint);
+    border-left: 3px solid var(--e3-accent);
+    animation: row-in 0.25s ease both;
+  }
+  .admin-config-mutare strong { color: var(--e3-accent); }
+  .admin-config-mutare-butoane { display: flex; gap: 8px; flex-wrap: wrap; flex: none; }
+  .admin-config-mutare .admin-btn-accent,
+  .admin-config-mutare .admin-btn-ghost { padding: 8px 14px; font-size: 12px; }
+
+  /* ---- Cronologia ediției ----
+     Șase momente stăteau în șase câmpuri, fiecare corect în sine, niciunul
+     spunând în ce relație e cu celelalte. Dar întrebarea deschisă cât timp
+     completezi formularul nu e „ce scrie în câmpul ăsta", e „se ține totul în
+     ordine?" — iar la asta răspunde doar ordinea, nu valorile.
+     Rândurile sunt sortate după momentul real: un anunț care cade după deadline
+     se vede pentru că sare din locul lui, nu pentru că o regulă o spune. */
+  .admin-cronologie {
+    grid-column: 1 / -1; list-style: none; margin: 0 0 4px; padding: 0;
+    position: relative; font-variant-numeric: tabular-nums;
+  }
+  /* Firul care leagă punctele. Se oprește la primul și la ultimul, altfel ar
+     sugera că desfășurarea începe înainte de anunț și continuă la nesfârșit. */
+  .admin-cronologie::before {
+    content: ""; position: absolute; left: 4px; top: 14px; bottom: 14px;
+    width: 1px; background: var(--e3-border);
+  }
+  .admin-cronologie-reper {
+    display: grid; align-items: baseline;
+    grid-template-columns: 9px minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1.5fr);
+    gap: 4px 14px; padding: 5px 0;
+  }
+  .admin-cronologie-punct {
+    grid-column: 1; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--e3-bg); border: 1px solid var(--e3-muted-dim);
+    align-self: center; position: relative; z-index: 1;
+  }
+  .admin-cronologie-nume { font-size: 13px; color: var(--e3-muted-strong); }
+  .admin-cronologie-cand { font-size: 13px; color: var(--e3-text); }
+  .admin-cronologie-fata { font-size: 12px; color: var(--e3-muted-dim); }
+
+  /* Startul e reperul față de care se măsoară tot restul — și singurul pe care
+     îl caută ochiul când deschide grupul. */
+  .admin-cronologie-reper.start .admin-cronologie-punct {
+    background: var(--e3-accent); border-color: var(--e3-accent);
+    box-shadow: 0 0 0 3px rgba(201,242,75,0.15);
+  }
+  .admin-cronologie-reper.start .admin-cronologie-nume {
+    color: var(--e3-accent); font-weight: 700;
+    letter-spacing: 0.4px; text-transform: uppercase; font-size: 12px;
+  }
+  .admin-cronologie-reper.start .admin-cronologie-cand { color: var(--e3-text-bright); font-weight: 600; }
+
+  /* Trecut ≠ greșit: o ediție în desfășurare are repere consumate, și e normal.
+     Estompate, nu ascunse — dispariția lor ar rupe ordinea pe care o arătăm. */
+  .admin-cronologie-reper.trecut .admin-cronologie-nume,
+  .admin-cronologie-reper.trecut .admin-cronologie-cand { color: var(--e3-muted-dim); }
+  .admin-cronologie-reper.trecut .admin-cronologie-punct { border-style: dashed; }
+
+  .admin-cronologie-reper.problema .admin-cronologie-punct {
+    background: var(--e3-warn); border-color: var(--e3-warn); box-shadow: none;
+  }
+  .admin-cronologie-reper.problema .admin-cronologie-fata { color: var(--e3-warn); }
+
+  @media (max-width: 720px) {
+    /* Patru coloane pe un telefon înseamnă patru cuvinte rupte pe rând. Numele
+       și momentul urcă împreună; relația față de start trece dedesubt. */
+    .admin-cronologie-reper {
+      grid-template-columns: 9px minmax(0, 1fr);
+      gap: 2px 12px;
+    }
+    .admin-cronologie-cand,
+    .admin-cronologie-fata { grid-column: 2; }
+    .admin-config-mutare-butoane { width: 100%; }
+  }
   .admin-config-form h3,
   .admin-table-section > h3 {
     font-family: Anton, sans-serif; font-weight: 400; font-size: 20px;

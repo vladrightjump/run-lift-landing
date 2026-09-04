@@ -20,6 +20,14 @@ export type AdminRegistration = {
   editie: number;
   /** Dezabonat de la emailuri; null = primește în continuare. */
   dezabonat_la: string | null;
+  /**
+   * Tokenul din `{link_renunt}` — cu el își eliberează locul din email.
+   *
+   * Opțional în tip, nu în DB: rândurile din `admin-preview.tsx` (backoffice-ul
+   * demonstrativ, fără server) nu-l au, iar un câmp obligatoriu ar fi cerut
+   * inventarea unor UUID-uri care nu deschid nimic.
+   */
+  token_renunt?: string;
 };
 
 export const getStoredToken = (): string | null => {
@@ -156,9 +164,9 @@ export const saveEventConfigDraft = (
   });
 
 /**
- * Publică ciorna. Aceeași tranzacție scrie și cele cinci scalare din
- * `app_config` pe care le citesc guard-urile — de asta nu mai există
- * desincronizare de aliniat manual.
+ * Publică ciorna. Aceeași tranzacție scrie și cele șase scalare din
+ * `app_config` pe care le citesc guard-urile și cron-ul de remindere — de asta
+ * nu mai există desincronizare de aliniat manual.
  *
  * Refuzuri așteptate: `no_draft`, `config_invalid: …`,
  * `registration_hidden_while_open: …`.

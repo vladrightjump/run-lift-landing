@@ -59,6 +59,69 @@ export type SectionLayoutEntry = {
   visible: boolean;
 };
 
+/**
+ * Un reminder programat înainte de start.
+ *
+ * De ce ține DOCUMENTUL orarul, și nu `app_config`: „cu 24 de ore înainte" n-are
+ * niciun sens fără `start`, iar `start` trăiește aici. Ținute separat, ar fi
+ * putut ajunge să descrie ediții diferite — exact clasa de desincronizare pe
+ * care documentul a venit s-o închidă. Publicarea copiază orarul în
+ * `app_config.reminder_schedule`, de unde îl citește cron-ul.
+ */
+export type ReminderEntry = {
+  /** Cu câte ore înainte de `start` pleacă. Întreg pozitiv. */
+  offsetHours: number;
+  /** Oprit = rămâne în listă, dar nu pleacă. Ștergerea e altceva. */
+  enabled: boolean;
+  /** Cheia din `email_templates`. Fiecare reminder își poate avea textul lui. */
+  template: ReminderTemplateKey;
+};
+
+/**
+ * Șabloanele pe care le poate folosi un reminder.
+ *
+ * Listă închisă, nu text liber: cheia ajunge în apelul de broadcast, iar una
+ * greșit tastată ar produce un email trimis pe textul de rezervă din cod — plecat,
+ * deci ireparabil. Aceleași chei există în `email_templates` (vezi migrarea
+ * `remindere-si-renuntare`).
+ */
+export const REMINDER_TEMPLATE_KEYS = [
+  'bulk_participant_reminder',
+  'bulk_participant_reminder_final',
+] as const;
+
+export type ReminderTemplateKey = (typeof REMINDER_TEMPLATE_KEYS)[number];
+
+/**
+ * Plafon de remindere per ediție. Peste atât nu mai e o reamintire, e spam —
+ * iar fiecare email în plus e o ocazie de dezabonare.
+ */
+export const MAX_REMINDERS = 5;
+
+/**
+ * Cât timp după scadență mai are voie un reminder să plece (ore).
+ *
+ * Fereastra veche era [start − offset, start] întreagă, deci un reminder „cu 24h
+ * înainte" putea pleca oricând în acele 24 de ore — inclusiv cu 20 de minute
+ * înainte de start, dacă atunci s-a nimerit prima rulare de cron. Cu grația de
+ * mai jos, ori pleacă aproape de ora promisă, ori nu mai pleacă deloc: un
+ * reminder „de mâine" primit în drum spre cursă e mai rău decât niciunul.
+ *
+ * Trebuie să rămână mai mare decât intervalul cron-ului (15 min), altfel o
+ * singură rulare ratată ar sări reminderul. Aceeași valoare e codificată în
+ * `runlift.maybe_send_reminder()`.
+ */
+export const REMINDER_GRACE_HOURS = 2;
+
+/**
+ * Orarul implicit: un singur reminder, cu o zi înainte — exact comportamentul
+ * dinaintea orarului configurabil. Un document fără cheia `reminders` (publicat
+ * înainte de migrare) cade pe el, deci nimic nu se schimbă tăcut.
+ */
+export const DEFAULT_REMINDERS: ReminderEntry[] = [
+  { offsetHours: 24, enabled: true, template: 'bulk_participant_reminder' },
+];
+
 /** Locul cursei, așa cum vine din document (fără `landmark` — cursa n-are). */
 export type VenueConfig = Pick<Place, 'name' | 'city' | 'mapQuery' | 'zoom'>;
 
@@ -86,6 +149,8 @@ export type EventConfig = {
   };
   layout: SectionLayoutEntry[];
   reels: ReelsConfig;
+  /** Reminderele automate dinaintea startului. Listă goală = niciunul. */
+  reminders: ReminderEntry[];
 };
 
 /** Ordinea implicită — folosită când documentul n-are `layout` sau e gol. */
@@ -137,6 +202,9 @@ export const SNAPSHOT_CONFIG: EventConfig = {
     body: EDITION.reels.body,
     items: EDITION.reels.items.map((r) => ({ ...r })),
   },
+  // Copie, nu referința: instantaneul nu trebuie să poată fi modificat prin
+  // constanta partajată — același motiv ca la `reels.items`.
+  reminders: DEFAULT_REMINDERS.map((r) => ({ ...r })),
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -189,6 +257,43 @@ const parseReels = (raw: unknown): ReelsConfig => {
     body: typeof raw.body === 'string' ? raw.body : DEFAULT_REELS.body,
     items,
   };
+};
+
+/**
+ * `reminders` din document. Tolerant, ca `layout` și `reels`: o intrare stricată
+ * cade, restul orarului rămâne.
+ *
+ * Cheia LIPSĂ e altceva decât o listă GOALĂ, iar distincția contează:
+ *  • lipsă  → document publicat înainte de orarul configurabil → cade pe
+ *             `DEFAULT_REMINDERS` (reminderul de 24h de dinainte). Altfel
+ *             migrarea ar fi oprit tăcut reminderele deja promise.
+ *  • `[]`   → organizatorul a șters toate reminderele, deliberat. Se respectă.
+ */
+const parseReminders = (raw: unknown): ReminderEntry[] => {
+  if (raw === undefined || raw === null) return DEFAULT_REMINDERS.map((r) => ({ ...r }));
+  if (!Array.isArray(raw)) return [];
+
+  const vazute = new Set<number>();
+  return raw
+    .filter(
+      (r): r is ReminderEntry =>
+        isRecord(r) &&
+        typeof r.offsetHours === 'number' &&
+        Number.isInteger(r.offsetHours) &&
+        r.offsetHours > 0 &&
+        typeof r.enabled === 'boolean' &&
+        REMINDER_TEMPLATE_KEYS.includes(r.template as ReminderTemplateKey)
+    )
+    .filter((r) => {
+      // Două remindere la același avans ar produce două emailuri identice în
+      // aceeași clipă — cheia de idempotență din DB e (ediție, offset), deci
+      // al doilea n-ar pleca oricum. Cade aici, ca lista să spună adevărul.
+      if (vazute.has(r.offsetHours)) return false;
+      vazute.add(r.offsetHours);
+      return true;
+    })
+    .slice(0, MAX_REMINDERS)
+    .map((r) => ({ offsetHours: r.offsetHours, enabled: r.enabled, template: r.template }));
 };
 
 /**
@@ -287,5 +392,6 @@ export const parseEventConfig = (raw: unknown): EventConfig | null => {
     },
     layout: layout.length > 0 ? layout : DEFAULT_LAYOUT,
     reels: parseReels(raw.reels),
+    reminders: parseReminders(raw.reminders),
   };
 };
