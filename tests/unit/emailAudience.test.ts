@@ -134,3 +134,25 @@ describe('emailAudience', () => {
     expect(fillTemplate('{nume}-{nume}', rec({ nume: 'X' }), '')).toBe('X-X');
   });
 });
+
+describe('fillTemplate leagă și variabilele evenimentului', () => {
+  it('rezolvă într-un singur pas și persoana, și evenimentul', async () => {
+    const { SNAPSHOT_CONFIG } = await import('../../src/content/eventConfig');
+    const out = fillTemplate(
+      'Salut, {prenume}! Ne vedem {data_cursei}, ora {ora_start}, la {locul}.',
+      rec({ nume: 'Ana Pop', prenume: 'Ana' }),
+      '1 ianuarie',
+      SNAPSHOT_CONFIG
+    );
+    expect(out).toContain('Ana');
+    expect(out).toContain(SNAPSHOT_CONFIG.venue.name);
+    expect(out).not.toMatch(/\{[a-z_]+\}/);
+  });
+
+  it('fără config, doar variabilele de persoană se rezolvă', () => {
+    // Garda pentru cablare: dacă cineva uită să paseze configul dintr-un tab,
+    // emailul pleacă vizibil stricat, nu cu o dată greșită.
+    const out = fillTemplate('{prenume} — {data_cursei}', rec({ prenume: 'Ana' }), '');
+    expect(out).toBe('Ana — {data_cursei}');
+  });
+});

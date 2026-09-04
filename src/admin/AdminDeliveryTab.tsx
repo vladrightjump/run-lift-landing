@@ -3,6 +3,7 @@ import { toCsv } from '../lib/csv';
 import { sendBulkEmail, listEmailTemplates, InvalidTokenError } from '../lib/adminApi';
 import type { AdminEmailLogEntry, AdminRegistration } from '../lib/adminApi';
 import { normalizeParticipant, fillTemplate } from './emailAudience';
+import { useEventConfig } from '../hooks/useEventConfig';
 import {
   motivEsec as motiv,
   ultimaIncercarePerCheie,
@@ -59,6 +60,8 @@ export const AdminDeliveryTab = ({
   onRefresh,
   showToast,
 }: Props) => {
+  // Configul publicat — sursa variabilelor de eveniment din șabloane.
+  const configPublicat = useEventConfig();
   const [filtru, setFiltru] = useState<Filtru>('toate');
   const [query, setQuery] = useState('');
   const [deschis, setDeschis] = useState<string | null>(null);
@@ -191,8 +194,8 @@ export const AdminDeliveryTab = ({
         [
           {
             to: p.email,
-            subject: fillTemplate(tpl.subiect, r, data),
-            text: fillTemplate(tpl.text_email, r, data),
+            subject: fillTemplate(tpl.subiect, r, data, configPublicat),
+            text: fillTemplate(tpl.text_email, r, data, configPublicat),
           },
         ],
         { audience: 'participanti', editie }

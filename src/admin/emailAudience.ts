@@ -3,6 +3,8 @@
  * Pură și testabilă — `AdminEmailTab` doar o consumă. Vezi `emailAudience.test.ts`.
  */
 import type { AdminRegistration, AdminLaunchSignup, AdminWaitlistEntry } from '../lib/adminApi';
+import { fillEventVars } from '../content/format';
+import type { EventConfig } from '../content/eventConfig';
 
 export type Audience = 'participanti' | 'eveniment' | 'lansare' | 'toti';
 
@@ -96,11 +98,21 @@ export const audientaLog = (audience: Audience): 'participanti' | 'asteptare' =>
   audience === 'participanti' || audience === 'toti' ? 'participanti' : 'asteptare';
 
 /**
- * Înlocuiește variabilele dintr-un șablon cu datele destinatarului. `dataInscrierii`
- * vine deja formatată de caller (funcția rămâne pură, fără dependență de fus/locale).
+ * Înlocuiește variabilele dintr-un șablon: întâi cele ale evenimentului (data,
+ * ora, locul — din configul publicat), apoi cele ale destinatarului.
+ * `dataInscrierii` vine deja formatată de caller (funcția rămâne pură, fără
+ * dependență de fus/locale).
+ *
+ * `config` lipsă lasă variabilele de eveniment literale — vezi `fillEventVars`.
+ * Nu inventăm o dată.
  */
-export const fillTemplate = (text: string, r: Recipient, dataInscrierii: string): string =>
-  text
+export const fillTemplate = (
+  text: string,
+  r: Recipient,
+  dataInscrierii: string,
+  config: EventConfig | null = null
+): string =>
+  fillEventVars(text, config)
     .replace(/\{nume\}/g, r.nume)
     .replace(/\{prenume\}/g, r.prenume || r.nume.split(/\s+/)[0] || '')
     .replace(/\{email\}/g, r.email)

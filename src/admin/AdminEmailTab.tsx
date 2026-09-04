@@ -15,6 +15,7 @@ import type {
 import { cheieDifuzare, ultimaDifuzare, audienteAmbigue } from './sendLock';
 import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
 import type { Audience, Recipient } from './emailAudience';
+import { useEventConfig } from '../hooks/useEventConfig';
 
 type Props = {
   token: string;
@@ -49,7 +50,25 @@ const WAITLIST_KEYS = ['bulk_waitlist_anunt'] as const;
 // „Mesaj liber" nu se salvează nicăieri — e mereu ultimul, gol.
 const FREE_TEMPLATE: Template = { nume: 'Mesaj liber', subiect: '', corp: '' };
 
-const VARIABLES = ['{nume}', '{prenume}', '{telefon}', '{email}', '{data_inscrierii}'] as const;
+/**
+ * Câmpurile inserabile. Primele cinci descriu PERSOANA, restul EVENIMENTUL —
+ * derivate din configul publicat, deci o ediție nouă le schimbă singură. Înainte
+ * data și locul se tastau de mână și rămâneau pe ediția trecută.
+ */
+const VARIABLES = [
+  '{nume}',
+  '{prenume}',
+  '{telefon}',
+  '{email}',
+  '{data_inscrierii}',
+  '{data_cursei}',
+  '{data_scurta}',
+  '{ora_start}',
+  '{ora_checkin}',
+  '{locul}',
+  '{numele_cursei}',
+  '{editia}',
+] as const;
 
 const timpDifuzare = new Intl.DateTimeFormat('ro-RO', {
   day: 'numeric',
@@ -69,6 +88,8 @@ export const AdminEmailTab = ({
   formatDate,
   showToast,
 }: Props) => {
+  // Configul publicat — sursa variabilelor de eveniment din șabloane.
+  const configPublicat = useEventConfig();
   const [audience, setAudience] = useState<Audience>('participanti');
   const [launchRows, setLaunchRows] = useState<AdminLaunchSignup[]>([]);
   const [dbTemplates, setDbTemplates] = useState<AdminEmailTemplate[]>([]);
@@ -174,8 +195,10 @@ export const AdminEmailTab = ({
       ? 'lista „Anunță-mă la lansare"'
       : 'toți (participanți + liste de așteptare)';
 
+  // Previzualizarea trece prin aceeași substituție ca trimiterea — altfel ai
+  // verifica alt text decât cel care pleacă.
   const fill = (text: string, r: Recipient): string =>
-    fillTemplate(text, r, formatDate(r.created_at));
+    fillTemplate(text, r, formatDate(r.created_at), configPublicat);
 
   const switchAudience = (a: Audience) => {
     if (a === audience) return;

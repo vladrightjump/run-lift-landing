@@ -22,17 +22,17 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
   bulk_participant_confirmare: {
     titlu: 'Trimitere în masă · Confirmare (participanți)',
     descriere:
-      'Punct de plecare pentru tab-ul „Email" → Participanți. Variabile: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii} (o singură acoladă).',
+      'Punct de plecare pentru tab-ul „Email" → Participanți. Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii} (o singură acoladă). Despre eveniment, completate din ediția publicată: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia} — folosește-le în loc să scrii data de mână, altfel șablonul rămâne pe ediția veche.',
   },
   bulk_participant_reminder: {
     titlu: 'Trimitere în masă · Reminder eveniment (participanți)',
     descriere:
-      'Reminderul de dinaintea evenimentului, din tab-ul „Email" → Participanți. Variabile: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}.',
+      'Reminderul de dinaintea evenimentului, din tab-ul „Email" → Participanți. Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}. Despre eveniment: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia}.',
   },
   bulk_waitlist_anunt: {
     titlu: 'Trimitere în masă · Anunț eveniment (listă de așteptare)',
     descriere:
-      'Anunțul cu link de înscriere, din tab-ul „Email" → Listă de așteptare. Variabile: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}.',
+      'Anunțul cu link de înscriere, din tab-ul „Email" → Listă de așteptare. Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}. Despre eveniment: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia}.',
   },
   event_badge: {
     titlu: 'Badge eveniment (capul fiecărui email)',
