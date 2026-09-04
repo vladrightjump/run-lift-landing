@@ -102,8 +102,14 @@ const FUSURI: [string, string][] = [
  */
 const Blocat = createContext(false);
 
-/** Traduce refuzurile serverului în ceva citibil, fără să le reformuleze regula. */
-const mesajRefuz = (err: unknown): string => {
+/**
+ * Motivul recunoscut al serverului — sau `null` când nu-l știm traduce.
+ *
+ * Separat de `mesajRefuz` pentru că doar ASTA e motivul. Propoziția de rezervă
+ * de mai jos e o formulare despre salvare, iar bara are nevoie s-o aleagă pe
+ * cea potrivită pasului care a picat.
+ */
+const motivRefuz = (err: unknown): string | null => {
   const text = err instanceof Error ? err.message : String(err);
   if (text.includes('registration_hidden_while_open')) {
     return 'Nu poți ascunde secțiunea de înscriere cât timp înscrierile sunt deschise. Mută deadline-ul sau lasă secțiunea vizibilă.';
@@ -113,8 +119,28 @@ const mesajRefuz = (err: unknown): string => {
     const m = /config_invalid: ([^"\\}]+)/.exec(text);
     return `Serverul a respins configul: ${m?.[1]?.trim() ?? 'document invalid'}.`;
   }
-  return 'Nu am putut salva. Încearcă din nou.';
+  return null;
 };
+
+/** Traduce refuzurile serverului în ceva citibil, fără să le reformuleze regula. */
+const mesajRefuz = (err: unknown): string =>
+  motivRefuz(err) ?? 'Nu am putut salva. Încearcă din nou.';
+
+/** Care dintre cele două scrieri a fost refuzată. */
+type Pas = 'salvare' | 'publicare';
+
+/**
+ * Refuzul, spunând CARE pas a picat.
+ *
+ * Pasul nu poate veni din motivul serverului: acela ramifică pe codul de
+ * eroare, nu pe apelul care l-a primit, iar pentru orice nu recunoaște
+ * `mesajRefuz` răspunde „Nu am putut salva" — inclusiv pentru o publicare
+ * picată. Organizatorul ar citi că nu s-a salvat exact când salvarea trecuse.
+ */
+const refuzCuPas = (pas: Pas, err: unknown): string =>
+  `${pas === 'salvare' ? 'Salvarea' : 'Publicarea'} a fost refuzată: ${
+    motivRefuz(err) ?? 'încearcă din nou.'
+  }`;
 
 export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   const [randuri, setRanduri] = useState<AdminEventConfigRow[] | null>(null);
@@ -122,6 +148,14 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   const [salveaza, setSalveaza] = useState(false);
   const [publica, setPublica] = useState(false);
   const [confirmPublicare, setConfirmPublicare] = useState(false);
+  /**
+   * Ultimul refuz, până la următoarea încercare.
+   *
+   * Toastul a pornit și n-a fost văzut: 3,2 secunde, peste bara pe care tocmai
+   * ai apăsat, fix când se închide dialogul. Rămâne — e semnalul „tocmai s-a
+   * întâmplat" — dar mesajul stă și în bară, unde e „încă e adevărat".
+   */
+  const [refuz, setRefuz] = useState<string | null>(null);
   // Ciorna nu se rescrie sub degetele organizatorului la fiecare poll.
   const atinsa = useRef(false);
   const [build, setBuild] = useState<BuildInfo | null>(null);
@@ -216,21 +250,26 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
     });
   };
 
+  // Un refuz descrie documentul care l-a produs. Când se schimbă ciorna
+  // deschisă, reproșul nu mai are despre ce să fie.
   const porneste = () => {
     const baza = publicat;
     if (!baza) return;
     atinsa.current = true;
+    setRefuz(null);
     setCiorna(cioarnaPentruEditiaUrmatoare(baza));
   };
 
   const porneteDinPublicat = () => {
     if (!publicat) return;
     atinsa.current = true;
+    setRefuz(null);
     setCiorna({ ...publicat, layout: layoutComplet(publicat.layout) });
   };
 
   const salveazaCiorna = async () => {
     if (!ciorna || probleme.length > 0) return;
+    setRefuz(null);
     setSalveaza(true);
     try {
       await saveEventConfigDraft(token, ciorna.number, ciorna);
@@ -241,7 +280,11 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       atinsa.current = false;
       incarca();
     } catch (err) {
-      if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuz(err) });
+      if (!onAuthError(err)) {
+        const msg = refuzCuPas('salvare', err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
     } finally {
       setSalveaza(false);
     }
@@ -264,9 +307,14 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   const publicaCiorna = async () => {
     if (!ciorna) return;
     setConfirmPublicare(false);
+    setRefuz(null);
     setPublica(true);
+    // Care apel a picat — singurul lucru care spune dacă editările au ajuns
+    // sau nu pe server. Motivul serverului nu-l poate spune.
+    let pas: Pas = 'salvare';
     try {
       await saveEventConfigDraft(token, ciorna.number, ciorna);
+      pas = 'publicare';
       await publishEventConfig(token, ciorna.number);
       showToast({
         kind: 'success',
@@ -275,13 +323,18 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       atinsa.current = false;
       incarca();
     } catch (err) {
-      if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuz(err) });
+      if (!onAuthError(err)) {
+        const msg = refuzCuPas(pas, err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
     } finally {
       setPublica(false);
     }
   };
 
   const revino = async (id: string, editie: number) => {
+    setRefuz(null);
     try {
       await restoreEventConfig(token, id);
       showToast({
@@ -324,6 +377,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                 className="admin-btn-ghost"
                 onClick={() => {
                   atinsa.current = false;
+                  setRefuz(null);
                   setCiorna(null);
                 }}
               >
@@ -997,12 +1051,16 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       {ciorna !== null && (
         <div className="admin-bara-actiuni" role="status">
           <span className="admin-bara-stare">
+            {/* Problemele de validare au întâietate: ele dezactivează „Publică",
+                deci un refuz vechi n-are ce concura cu ele. */}
             {probleme.length > 0 ? (
               <span className="admin-bara-problema">
                 {probleme.length === 1
                   ? '1 câmp de reparat'
                   : `${probleme.length} câmpuri de reparat`}
               </span>
+            ) : refuz ? (
+              <span className="admin-bara-problema">{refuz}</span>
             ) : (
               <>
                 <strong>Ediția {ciorna.number}</strong>

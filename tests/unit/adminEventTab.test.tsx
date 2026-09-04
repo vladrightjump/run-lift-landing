@@ -601,3 +601,114 @@ describe('formularul e blocat cât ține publicarea', () => {
     elibereaza();
   });
 });
+
+/**
+ * Issue #12, partea a doua: refuzul nu trebuie să treacă tăcut prin UI.
+ *
+ * Toastul EXISTĂ deja și a pornit — `mesajRefuz` traduce `no_draft` de la
+ * început. E o notificare de 3,2 secunde, peste bara pe care tocmai ai apăsat,
+ * fix cînd se închide dialogul. A pornit și n-a fost văzută. Deci mesajul
+ * rămîne și în bară, pînă la următoarea încercare.
+ *
+ * Pasul (salvare vs publicare) NU poate veni din `mesajRefuz`: acela ramifică
+ * pe codul de eroare al serverului, iar ramura lui de rezervă zice „Nu am putut
+ * salva" pentru ORICE nu recunoaște — inclusiv pentru o publicare refuzată.
+ */
+describe('refuzul rămâne citibil după ce trece toastul', () => {
+  const bara = () => document.querySelector('.admin-bara-actiuni') as HTMLElement;
+  const refuz = () => bara().querySelector('.admin-bara-problema')?.textContent ?? '';
+
+  const publica = async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+    fireEvent.click(screen.getByRole('button', { name: /Da, publică/ }));
+  };
+
+  it('o publicare refuzată își lasă motivul în bară', async () => {
+    publishEventConfig.mockRejectedValue(
+      new Error('registration_hidden_while_open: înscrierile sunt deschise')
+    );
+    await deschideCiorna();
+    await publica();
+
+    await waitFor(() => expect(refuz()).toMatch(/înscrierile sunt deschise/i));
+  });
+
+  it('un refuz la publicare nu se dă drept eșec de salvare', async () => {
+    // Garda pentru KTD5. Fără marcajul pasului, ramura de rezervă din
+    // `mesajRefuz` ar zice „Nu am putut salva" pentru o publicare picată.
+    publishEventConfig.mockRejectedValue(new Error('boom necunoscut'));
+    await deschideCiorna();
+    await publica();
+
+    await waitFor(() => expect(refuz()).toBeTruthy());
+    expect(refuz()).toMatch(/public/i);
+    expect(refuz()).not.toMatch(/nu am putut salva/i);
+  });
+
+  it('o salvare refuzată din fluxul de publicare se citește ca salvare', async () => {
+    saveEventConfigDraft.mockRejectedValue(new Error('boom necunoscut'));
+    await deschideCiorna();
+    await publica();
+
+    await waitFor(() => expect(refuz()).toBeTruthy());
+    expect(refuz()).toMatch(/salv/i);
+    expect(publishEventConfig).not.toHaveBeenCalled();
+  });
+
+  it('o publicare reușită nu lasă niciun refuz în bară', async () => {
+    await deschideCiorna();
+    await publica();
+
+    await waitFor(() => expect(publishEventConfig).toHaveBeenCalledTimes(1));
+    expect(refuz()).toBe('');
+  });
+
+  it('o încercare nouă curăță refuzul dinainte', async () => {
+    publishEventConfig.mockRejectedValueOnce(new Error('boom necunoscut'));
+    await deschideCiorna();
+    await publica();
+    await waitFor(() => expect(refuz()).toBeTruthy());
+
+    publishEventConfig.mockResolvedValue('pub-id');
+    await publica();
+    await waitFor(() => expect(refuz()).toBe(''));
+  });
+
+  it('refuzul nu supraviețuiește renunțării la ciornă', async () => {
+    // „Renunță" doar anulează `ciorna`; bara se demontează, dar starea
+    // componentei rămîne. Fără curățare, ciorna următoare s-ar deschide cu
+    // reproșul celei aruncate.
+    publishEventConfig.mockRejectedValue(new Error('boom necunoscut'));
+    await deschideCiorna();
+    await publica();
+    await waitFor(() => expect(refuz()).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Renunță' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`) })
+    );
+    expect(refuz()).toBe('');
+  });
+
+  it('o problemă de validare ia slotul înaintea unui refuz vechi', async () => {
+    publishEventConfig.mockRejectedValue(new Error('boom necunoscut'));
+    await deschideCiorna();
+    await publica();
+    await waitFor(() => expect(refuz()).toBeTruthy());
+
+    fireEvent.change(camp('Se închid înscrierile'), { target: { value: fataDeStart(2) } });
+    expect(refuz()).toMatch(/de reparat/);
+  });
+
+  it('refuzul e anunțat din bară, nu de lângă ea', async () => {
+    // Bara e deja `role="status"`. Mesajul trebuie să fie ÎNĂUNTRU: altfel un
+    // cititor de ecran nu-l anunță niciodată. Căutarea e restrânsă la bară —
+    // tabul are mai multe elemente cu același rol.
+    publishEventConfig.mockRejectedValue(new Error('boom necunoscut'));
+    await deschideCiorna();
+    await publica();
+
+    await waitFor(() => expect(refuz()).toBeTruthy());
+    expect(bara().getAttribute('role')).toBe('status');
+  });
+});
