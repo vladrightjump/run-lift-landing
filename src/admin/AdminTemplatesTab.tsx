@@ -34,10 +34,15 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
     descriere:
       'Anunțul cu link de înscriere, din tab-ul „Email" → Listă de așteptare. Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}. Despre eveniment: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia}.',
   },
+  bulk_waitlist_promovare: {
+    titlu: 'Automat · Promovare de pe lista de așteptare',
+    descriere:
+      'Pleacă SINGUR când se eliberează un loc și primul de pe listă urcă la participanți. Nu-l trimiți tu din niciun tab. Promovarea manuală, din butonul „Promovează", trimite alt text — șablonul „Confirmare (participanți)". Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}. Despre eveniment: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia} — ține-le, altfel omul află că are loc, dar nu și când sau unde.',
+  },
   event_badge: {
     titlu: 'Badge eveniment (capul fiecărui email)',
     descriere:
-      'Eticheta lime din capul fiecărui email (ex. „Nume eveniment · data"). Contează doar câmpul „Text"; „Subiect" e ignorat, dar nu-l lăsa gol. Fără variabile.',
+      'Eticheta lime din capul fiecărui email. Contează doar câmpul „Text"; „Subiect" e ignorat, dar nu-l lăsa gol. Acceptă variabilele de eveniment — implicit „{numele_cursei} · {data_scurta}", ca să se alinieze singur la ediția publicată.',
   },
 };
 
