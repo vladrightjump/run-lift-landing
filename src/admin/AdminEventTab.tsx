@@ -105,9 +105,9 @@ const Blocat = createContext(false);
 /**
  * Motivul recunoscut al serverului — sau `null` când nu-l știm traduce.
  *
- * Separat de `mesajRefuz` pentru că doar ASTA e motivul. Propoziția de rezervă
- * de mai jos e o formulare despre salvare, iar bara are nevoie s-o aleagă pe
- * cea potrivită pasului care a picat.
+ * Separat pentru că doar ASTA e motivul. `null` nu înseamnă doar „mesaj
+ * necunoscut": înseamnă că serverul n-a răspuns în termeni pe care-i știm, deci
+ * de regulă că n-a răspuns deloc. Cine compune mesajul are nevoie de diferență.
  */
 const motivRefuz = (err: unknown): string | null => {
   const text = err instanceof Error ? err.message : String(err);
@@ -122,25 +122,35 @@ const motivRefuz = (err: unknown): string | null => {
   return null;
 };
 
-/** Traduce refuzurile serverului în ceva citibil, fără să le reformuleze regula. */
-const mesajRefuz = (err: unknown): string =>
-  motivRefuz(err) ?? 'Nu am putut salva. Încearcă din nou.';
+/** Care dintre scrierile tabului a picat. */
+type Pas = 'salvare' | 'publicare' | 'revenire';
 
-/** Care dintre cele două scrieri a fost refuzată. */
-type Pas = 'salvare' | 'publicare';
+const NUMELE_PASULUI: Record<Pas, string> = {
+  salvare: 'Salvarea',
+  publicare: 'Publicarea',
+  revenire: 'Revenirea la versiunea aleasă',
+};
 
 /**
- * Refuzul, spunând CARE pas a picat.
+ * Refuzul, spunând CARE scriere a picat.
  *
  * Pasul nu poate veni din motivul serverului: acela ramifică pe codul de
- * eroare, nu pe apelul care l-a primit, iar pentru orice nu recunoaște
- * `mesajRefuz` răspunde „Nu am putut salva" — inclusiv pentru o publicare
- * picată. Organizatorul ar citi că nu s-a salvat exact când salvarea trecuse.
+ * eroare, nu pe apelul care l-a primit. O funcție care alege singură o
+ * propoziție de rezervă ar spune „Nu am putut salva" și pentru o publicare
+ * picată — organizatorul ar citi că nu s-a salvat exact când salvarea trecuse.
+ *
+ * A doua distincție, la fel de importantă: cu motiv de la server ȘTIM că
+ * scrierea a fost refuzată. Fără el — o cădere de rețea — nu știm dacă a ajuns
+ * sau nu, iar „a fost refuzată" ar fi o afirmație pe care n-o putem susține.
+ * Un `admin_save_event_config_draft` care a apucat să scrie și și-a pierdut
+ * răspunsul arată identic cu unul care n-a plecat niciodată.
  */
-const refuzCuPas = (pas: Pas, err: unknown): string =>
-  `${pas === 'salvare' ? 'Salvarea' : 'Publicarea'} a fost refuzată: ${
-    motivRefuz(err) ?? 'încearcă din nou.'
-  }`;
+const refuzCuPas = (pas: Pas, err: unknown): string => {
+  const motiv = motivRefuz(err);
+  return motiv
+    ? `${NUMELE_PASULUI[pas]} a fost refuzată: ${motiv}`
+    : `${NUMELE_PASULUI[pas]} n-a primit răspuns — nu știm dacă a ajuns pe server. Reîncarcă pagina și verifică înainte să reîncerci.`;
+};
 
 export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   const [randuri, setRanduri] = useState<AdminEventConfigRow[] | null>(null);
@@ -204,6 +214,17 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   // Meta de share e injectată la build, deci o publicare o lasă în urmă până la
   // următorul deploy. Notificare, nu blocaj.
   const campuriVechi = build && publicat ? campuriVechiInBuild(build, publicat) : [];
+
+  /**
+   * O scriere e în zbor — formularul și toate butoanele care ating serverul
+   * sunt inerte.
+   *
+   * Salvarea contează la fel de mult ca publicarea: și ea ține documentul pe
+   * care l-a capturat, iar la succes resetează `atinsa` și cheamă `incarca()`,
+   * care rescrie ciorna din server. Ce s-a tastat în timpul dus-întorsului
+   * dispărea fără urmă.
+   */
+  const ocupat = salveaza || publica;
 
   const probleme: CampInvalid[] = ciorna ? validateEventConfig(ciorna) : [];
   const avertismente = ciorna ? avertismenteEventConfig(ciorna) : [];
@@ -305,7 +326,9 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
    * eșuînd apoi la „Publică".
    */
   const publicaCiorna = async () => {
-    if (!ciorna) return;
+    // Aceeași gardă ca la salvare: butonul dezactivat nu e o gardă, iar
+    // dialogul nu prinde focusul în capcană.
+    if (!ciorna || probleme.length > 0) return;
     setConfirmPublicare(false);
     setRefuz(null);
     setPublica(true);
@@ -344,7 +367,14 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       atinsa.current = false;
       incarca();
     } catch (err) {
-      if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuz(err) });
+      if (!onAuthError(err)) {
+        // Republicarea e singurul buton care schimbă site-ul dintr-un click.
+        // Refuzul ei merită aceeași bară ca al celorlalte două scrieri, nu doar
+        // toastul de 3,2 secunde.
+        const msg = refuzCuPas('revenire', err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
     }
   };
 
@@ -375,6 +405,9 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               <button
                 type="button"
                 className="admin-btn-ghost"
+                // Abandonul demontează bara, deci un refuz apărut după el n-ar
+                // avea unde să se afișeze — exact garanția pe care o dăm.
+                disabled={ocupat}
                 onClick={() => {
                   atinsa.current = false;
                   setRefuz(null);
@@ -437,12 +470,22 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       )}
 
       {ciorna === null ? (
-        <div className="admin-empty">
-          Nicio ciornă deschisă. Pornește una ca să schimbi ediția — nimic nu ajunge pe site până nu
-          apeși „Publică”.
-        </div>
+        <>
+          {/* Fără ciornă deschisă bara nu se randează, iar „Revino la asta" e
+              tocmai butonul care se apasă de aici. Refuzul lui are nevoie de un
+              loc al lui, altfel rămâne doar pe toast. */}
+          {refuz && (
+            <div className="admin-banner warn" role="status">
+              {refuz}
+            </div>
+          )}
+          <div className="admin-empty">
+            Nicio ciornă deschisă. Pornește una ca să schimbi ediția — nimic nu ajunge pe site până
+            nu apeși „Publică”.
+          </div>
+        </>
       ) : (
-        <Blocat.Provider value={publica}>
+        <Blocat.Provider value={ocupat}>
         <div className="admin-config-form">
           {probleme.length > 0 && (
             <div className="admin-banner warn" role="status">
@@ -879,7 +922,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <input
                         id={`reel-link-${i}`}
                         autoComplete="off"
-                        disabled={publica}
+                        disabled={ocupat}
                         aria-invalid={eroareCod ? true : undefined}
                         placeholder="https://www.instagram.com/reel/ABC12345/"
                         // Textul brut cât timp se scrie; URL-ul canonic recompus
@@ -928,7 +971,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <input
                         id={`reel-poster-${i}`}
                         autoComplete="off"
-                        disabled={publica}
+                        disabled={ocupat}
                         placeholder="/reels/marti.jpg"
                         value={r.poster}
                         onChange={(e) =>
@@ -942,7 +985,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <input
                         id={`reel-caption-${i}`}
                         autoComplete="off"
-                        disabled={publica}
+                        disabled={ocupat}
                         placeholder="Marți dimineața, Râșcani"
                         value={r.caption}
                         onChange={(e) =>
@@ -954,7 +997,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <button
                         type="button"
                         className="admin-btn-ghost"
-                        disabled={publica || i === 0}
+                        disabled={ocupat || i === 0}
                         aria-label={`Mută clipul ${i + 1} mai devreme`}
                         onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, -1), true)}
                       >
@@ -963,7 +1006,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <button
                         type="button"
                         className="admin-btn-ghost"
-                        disabled={publica || i === ciorna.reels.items.length - 1}
+                        disabled={ocupat || i === ciorna.reels.items.length - 1}
                         aria-label={`Mută clipul ${i + 1} mai târziu`}
                         onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, 1), true)}
                       >
@@ -972,7 +1015,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <button
                         type="button"
                         className="admin-btn-ghost"
-                        disabled={publica}
+                        disabled={ocupat}
                         aria-label={`Șterge clipul ${i + 1}`}
                         onClick={() => seteazaReels(stergeReel(ciorna.reels.items, i), true)}
                       >
@@ -987,7 +1030,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           <button
             type="button"
             className="admin-btn-ghost"
-            disabled={publica || ciorna.reels.items.length >= MAX_REELS}
+            disabled={ocupat || ciorna.reels.items.length >= MAX_REELS}
             onClick={() => seteazaReels(adaugaReel(ciorna.reels.items), true)}
           >
             + Adaugă clip
@@ -1014,7 +1057,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   type="button"
                   className="admin-btn-ghost"
                   onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, -1))}
-                  disabled={publica || i === 0}
+                  disabled={ocupat || i === 0}
                   aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai sus`}
                 >
                   ↑
@@ -1023,7 +1066,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   type="button"
                   className="admin-btn-ghost"
                   onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, 1))}
-                  disabled={publica || i === ciorna.layout.length - 1}
+                  disabled={ocupat || i === ciorna.layout.length - 1}
                   aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai jos`}
                 >
                   ↓
@@ -1032,7 +1075,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   type="button"
                   className="admin-btn-ghost"
                   onClick={() => seteaza('layout', comutaVizibilitatea(ciorna.layout, s.key))}
-                  disabled={publica}
+                  disabled={ocupat}
                 >
                   {s.visible ? 'Ascunde' : 'Arată'}
                 </button>
@@ -1085,7 +1128,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               onClick={salveazaCiorna}
               // `publica` la fel de mult ca `salveaza`: publicarea salvează ea
               // însăși, deci un al doilea „Salvează" din zbor ar scrie peste.
-              disabled={salveaza || publica || !poatePublica}
+              disabled={ocupat || !poatePublica}
             >
               {salveaza ? 'Se salvează…' : 'Salvează'}
             </button>
@@ -1093,7 +1136,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               type="button"
               className="admin-btn-accent"
               onClick={() => setConfirmPublicare(true)}
-              disabled={publica || !poatePublica}
+              disabled={ocupat || !poatePublica}
             >
               {publica ? 'Se publică…' : 'Publică'}
             </button>
@@ -1115,6 +1158,9 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   <button
                     type="button"
                     className="admin-btn-ghost"
+                    // Republicare imediată — n-are ce căuta în paralel cu o
+                    // salvare sau o publicare pe același rând.
+                    disabled={ocupat}
                     onClick={() => revino(v.id, v.editie)}
                   >
                     Revino la asta

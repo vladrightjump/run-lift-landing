@@ -712,3 +712,157 @@ describe('refuzul rămâne citibil după ce trece toastul', () => {
     expect(bara().getAttribute('role')).toBe('status');
   });
 });
+
+/**
+ * Găurile găsite la review-ul de cod, după ce U1 și U2 erau deja verzi.
+ *
+ * Lacătul era legat doar de `publica`, deși „Salvează" are exact același
+ * dus-întors și, la succes, resetează `atinsa` și cheamă `incarca()` — deci
+ * ce se tasta între timp dispărea. Iar cele două butoane care ating serverul
+ * din afara barei („Renunță" și „Revino la asta") rămâneau vii sub ea.
+ */
+describe('lacătul acoperă ambele scrieri, nu doar publicarea', () => {
+  /** O promisiune ținută pe loc, ca să inspectăm starea din zbor. */
+  const tinePeLoc = (mock: typeof saveEventConfigDraft) => {
+    let elibereaza!: (v: string) => void;
+    mock.mockReturnValue(
+      new Promise<string>((res) => {
+        elibereaza = res;
+      })
+    );
+    return () => elibereaza('id');
+  };
+
+  it('câmpurile sînt inerte și cât ține o salvare', async () => {
+    const elibereaza = tinePeLoc(saveEventConfigDraft);
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+
+    await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalledTimes(1));
+    expect(camp('Numele evenimentului').hasAttribute('disabled')).toBe(true);
+    elibereaza();
+  });
+
+  it('controalele de reels și de layout sînt inerte în zbor', async () => {
+    // Ele nu trec prin `Camp`, deci nu le atinge contextul — au nevoie de
+    // propria gardă, iar un control nou adăugat aici e ușor de uitat.
+    const elibereaza = tinePeLoc(publishEventConfig);
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
+    // Un clip fără cod e invalid, iar „Publică" ar rămâne dezactivat.
+    fireEvent.change(camp('Linkul clipului'), {
+      target: { value: 'https://www.instagram.com/reel/ABC12345/' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+    fireEvent.click(screen.getByRole('button', { name: /Da, publică/ }));
+
+    await waitFor(() => expect(publishEventConfig).toHaveBeenCalledTimes(1));
+    expect(camp('Linkul clipului').hasAttribute('disabled')).toBe(true);
+    expect(
+      screen.getByRole('button', { name: /Mută „Locația” mai sus/ }).hasAttribute('disabled')
+    ).toBe(true);
+    elibereaza();
+  });
+
+  it('„Renunță" nu poate arunca ciorna de sub o publicare în zbor', async () => {
+    const elibereaza = tinePeLoc(publishEventConfig);
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+    fireEvent.click(screen.getByRole('button', { name: /Da, publică/ }));
+
+    await waitFor(() => expect(publishEventConfig).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('button', { name: 'Renunță' }).hasAttribute('disabled')).toBe(true);
+    elibereaza();
+  });
+});
+
+describe('refuzurile celorlalte scrieri ajung tot în bară', () => {
+  const bara = () => document.querySelector('.admin-bara-actiuni') as HTMLElement;
+  const refuz = () => bara().querySelector('.admin-bara-problema')?.textContent ?? '';
+
+  it('un „Salvează" refuzat lasă motivul în bară, nu doar în toast', async () => {
+    saveEventConfigDraft.mockRejectedValue(new Error('boom necunoscut'));
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+
+    await waitFor(() => expect(refuz()).toBeTruthy());
+    expect(refuz()).toMatch(/salv/i);
+  });
+
+  it('un „Revino la asta" refuzat spune că revenirea a picat, nu salvarea', async () => {
+    // `mesajRefuz` avea o singură propoziție de rezervă, despre salvare, iar
+    // republicarea o moștenea: „Nu am putut salva" pe butonul care repune
+    // versiunea veche pe site.
+    restoreEventConfig.mockRejectedValue(new Error('boom necunoscut'));
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'veche', status: 'superseded', published_at: '2026-07-01T09:00:00Z' }),
+    ]);
+    randeaza();
+    fireEvent.click(await screen.findByRole('button', { name: 'Revino la asta' }));
+
+    // Fără ciornă deschisă bara nu există — refuzul are propriul banner.
+    const banner = await waitFor(() => {
+      const b = document.querySelector('.admin-banner.warn');
+      if (!b) throw new Error('niciun banner');
+      return b as HTMLElement;
+    });
+    expect(banner.textContent).toMatch(/revenirea/i);
+    expect(banner.textContent).not.toMatch(/salvarea/i);
+  });
+
+  it('o cădere de rețea nu se dă drept refuz al serverului', async () => {
+    // Un `admin_save_event_config_draft` care a apucat să scrie și și-a pierdut
+    // răspunsul arată identic cu unul care n-a plecat. „A fost refuzată" ar fi
+    // o afirmație pe care n-o putem susține.
+    saveEventConfigDraft.mockRejectedValue(new Error('Failed to fetch'));
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+
+    await waitFor(() => expect(refuz()).toBeTruthy());
+    expect(refuz()).not.toMatch(/a fost refuzată/i);
+    expect(refuz()).toMatch(/nu știm dacă a ajuns/i);
+  });
+
+  it('un refuz cu motiv de la server spune răspicat că a fost refuzat', async () => {
+    publishEventConfig.mockRejectedValue(
+      new Error('registration_hidden_while_open: înscrierile sunt deschise')
+    );
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+    fireEvent.click(screen.getByRole('button', { name: /Da, publică/ }));
+
+    await waitFor(() => expect(refuz()).toMatch(/a fost refuzată/i));
+  });
+});
+
+describe('publicarea trimite ce e pe ecran chiar și peste o ciornă veche de pe server', () => {
+  it('documentul publicat e cel editat, nu ciorna care era deja salvată', async () => {
+    // Cazul real din #12, în forma lui cea mai rea: EXISTĂ o ciornă pe server,
+    // deci vechea variantă nu cădea cu `no_draft` — publica documentul ei și
+    // raporta succes. Fără rândul ăsta în fixtură, testul n-ar putea pica.
+    listEventConfig.mockResolvedValue([
+      rand({
+        id: 'ciorna-veche',
+        status: 'draft',
+        published_at: null,
+        config: { ...SNAPSHOT_CONFIG, eventName: 'Ciorna Veche' },
+      }),
+      rand(),
+    ]);
+    randeaza();
+    // Tabul deschide singur ciorna de pe server.
+    await waitFor(() => expect(camp('Numărul ediției')).toBeTruthy());
+    deschideGrupurile();
+    expect(camp('Numele evenimentului').value).toBe('Ciorna Veche');
+
+    fireEvent.change(camp('Numele evenimentului'), { target: { value: 'Winter Trial' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+    fireEvent.click(screen.getByRole('button', { name: /Da, publică/ }));
+
+    await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalledTimes(1));
+    const [, , doc] = saveEventConfigDraft.mock.calls[0];
+    expect(doc.eventName).toBe('Winter Trial');
+    await waitFor(() => expect(publishEventConfig).toHaveBeenCalledTimes(1));
+  });
+});
