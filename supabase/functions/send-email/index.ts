@@ -18,6 +18,8 @@
 // nu răspunde — ca să nu pice trimiterea. La ediție nouă NU se mai atinge codul:
 // schimbi șabloanele + badge-ul din /admin (sau din DB).
 
+import { fillEventVars, type ConfigEveniment } from "./eventVars.ts";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 // Cheia pentru apelurile RPC server-side. `log_emails` (jurnalul de livrare) e
 // grant-uita DOAR pentru service_role. Pe proiectele cu chei noi
@@ -92,11 +94,37 @@ async function logSends(rows: LogRow[]): Promise<void> {
   }
 }
 
+// Configul publicat — sursa variabilelor de eveniment din șabloane
+// ({data_cursei}, {locul}, …). `null` dacă RPC-ul pică; atunci variabilele rămân
+// literale, nu inventăm o dată.
+//
+// Fără cache, deliberat: instanțele Edge supraviețuiesc între invocări, deci o
+// valoare ținută la nivel de modul ar rămâne pe ediția de la pornirea instanței
+// — exact vechitura pe care variabilele au venit s-o repare, doar mutată cu un
+// strat mai jos. Un RPC în plus per email e prețul corect.
+async function loadConfig(): Promise<ConfigEveniment | null> {
+  const c = await rpc<ConfigEveniment>("public_config", {});
+  return c && typeof c === "object" && c.start && c.venue ? c : null;
+}
+
 // Citește un șablon (subiect + text) din `email_templates`, după cheie.
+//
+// Variabilele de EVENIMENT se rezolvă chiar aici, pe subiect și pe text, ca să
+// nu poată fi uitate la vreun apel: șabloanele sunt partajate cu trimiterile din
+// admin, unde le rezolvă clientul. Dacă aici n-ar fi rezolvate, un șablon scris
+// cu {data_cursei} ar pleca automat cu textul literal — mai rău decât data
+// veche pe care variabilele au venit s-o repare. Variabilele de PERSOANĂ rămân,
+// le rezolvă `fillVars` la destinatar.
 async function loadTemplate(cheie: string): Promise<Template | null> {
   const rows = await rpc<Template[]>("template_lookup", { p_cheie: cheie });
   const t = rows && rows[0];
-  return t?.text_email ? t : null;
+  if (!t?.text_email) return null;
+  const config = await loadConfig();
+  return {
+    ...t,
+    subiect: fillEventVars(t.subiect ?? "", config),
+    text_email: fillEventVars(t.text_email, config),
+  };
 }
 
 // Badge-ul din capul fiecărui email (ex. „Hyrox Trial · 8 august"), editabil din

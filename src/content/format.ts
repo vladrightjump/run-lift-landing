@@ -153,6 +153,50 @@ export const deriveEventStrings = (config: EventConfig): EventStrings => {
   };
 };
 
+/**
+ * Variabilele de eveniment pentru șabloanele de email.
+ *
+ * De ce există: substituția din emailuri cunoștea doar date despre PERSOANĂ
+ * ({nume}, {prenume}, …), deci data și locul cursei se tastau de mână în
+ * șablon. Publicarea unei ediții noi schimba site-ul și lăsa emailurile în
+ * urmă — iar un participant real primea confirmarea cu data ediției trecute și
+ * se prezenta în ziua greșită. Mai rău decât o pagină nesincronizată: pagina o
+ * vezi, emailul a plecat deja.
+ *
+ * Se derivă din ACELAȘI `deriveEventStrings` din care se derivă și textele de
+ * pe site. Dacă s-ar deriva separat, emailul și pagina ar putea anunța ore
+ * diferite pentru aceeași cursă.
+ */
+export const eventVars = (config: EventConfig): Record<string, string> => {
+  const s = deriveEventStrings(config);
+  return {
+    '{data_cursei}': s.EVENT_WHEN,
+    '{data_scurta}': dayMonth(config.start),
+    '{ora_start}': s.EVENT_START_TIME,
+    '{ora_checkin}': config.checkinFrom,
+    '{locul}': s.EVENT_WHERE,
+    '{numele_cursei}': config.eventName,
+    '{editia}': String(config.number),
+  };
+};
+
+/**
+ * Înlocuiește variabilele de eveniment. Variabilele de persoană rămân neatinse
+ * — le rezolvă pasul următor, care știe cine e destinatarul.
+ *
+ * `config` null (configul publicat n-a putut fi citit) lasă variabilele
+ * LITERALE, deliberat. Un email care spune „• Când: , ora " arată intenționat,
+ * unul care spune „{data_cursei}" arată stricat și e raportat — iar o dată
+ * greșită, cea mai rea dintre cele trei, nu se poate produce deloc.
+ */
+export const fillEventVars = (text: string, config: EventConfig | null): string => {
+  if (!config) return text;
+  return Object.entries(eventVars(config)).reduce(
+    (out, [nume, valoare]) => out.split(nume).join(valoare),
+    text
+  );
+};
+
 // --- Antrenamentele săptămânale --------------------------------------------
 // Separate de cursă: antrenamentele sunt mereu în același parc, evenimentele se
 // mută. `/despre-noi` folosește EXCLUSIV constantele de mai jos.
