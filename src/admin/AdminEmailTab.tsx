@@ -68,6 +68,9 @@ const VARIABLES = [
   '{locul}',
   '{numele_cursei}',
   '{editia}',
+  // Per destinatar, ca `{nume}`: poartă tokenul lui. Doar participanții au unul
+  // — la ceilalți cade tot rândul pe care e scrisă (vezi `fillTemplate`).
+  '{link_renunt}',
 ] as const;
 
 const timpDifuzare = new Intl.DateTimeFormat('ro-RO', {

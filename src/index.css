@@ -1288,6 +1288,19 @@
   .admin-config-camp.invalid input:focus,
   .admin-config-camp.invalid select:focus { box-shadow: 0 0 0 3px rgba(242,109,109,0.16); }
   .admin-config-hint { font-size: 13px; color: var(--e3-muted); margin: 0 0 8px; }
+  .admin-config-hint code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    background: var(--e3-surface-hover); border: 1px solid var(--e3-border);
+    padding: 1px 5px; color: var(--e3-text);
+  }
+
+  /* Bifă inline (ex. „Activ" pe un rând de reminder): eticheta e ținta de click,
+     deci întreg rândul e apăsabil, nu doar pătratul de 13px. */
+  .admin-config-optiune {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
+    font-size: 13.5px; color: var(--e3-text); cursor: pointer; user-select: none;
+  }
+  .admin-config-optiune input { width: auto; margin: 0; accent-color: var(--e3-accent); }
 
   /* ---- Atenție pe câmp ----
      Nici eroare (nu blochează nimic), nici ecou (nu confirmă nimic): valoarea

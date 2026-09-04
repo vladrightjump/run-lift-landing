@@ -228,7 +228,7 @@ const problemaReperului = (
 };
 
 /** Momentul absolut → ISO local în fusul dat. Reciproca lui `la()`. */
-const isoLocalDin = (ms: number, tz: string): string => {
+export const isoLocalDin = (ms: number, tz: string): string => {
   const m = /^([+-])(\d{2}):(\d{2})$/.exec(tz);
   if (!m) return '';
   const semn = m[1] === '-' ? -1 : 1;

@@ -2,8 +2,11 @@ import {
   SECTION_KEYS,
   DEFAULT_LAYOUT,
   MAX_REELS,
+  MAX_REMINDERS,
+  REMINDER_TEMPLATE_KEYS,
   type EventConfig,
   type ReelEntry,
+  type ReminderEntry,
   type SectionKey,
   type SectionLayoutEntry,
 } from '../content/eventConfig';
@@ -117,6 +120,33 @@ export const validateEventConfig = (c: EventConfig): CampInvalid[] => {
     'Același clip apare de două ori în bandă.'
   );
 
+  // Reminderele. Avansul se măsoară în ore înainte de start, deci un întreg
+  // pozitiv; plafonul de 720 (30 de zile) nu e un capriciu, e granița dincolo de
+  // care „reminder" nu mai descrie nimic — un email cu o lună înainte e un anunț.
+  cere(
+    c.reminders.length <= MAX_REMINDERS,
+    'reminders',
+    `Cel mult ${MAX_REMINDERS} remindere per ediție.`
+  );
+  c.reminders.forEach((r, i) => {
+    cere(
+      Number.isInteger(r.offsetHours) && r.offsetHours > 0 && r.offsetHours <= 720,
+      `reminders.${i}.offsetHours`,
+      'Avansul se scrie în ore întregi, între 1 și 720 (30 de zile).'
+    );
+    cere(
+      REMINDER_TEMPLATE_KEYS.includes(r.template),
+      `reminders.${i}.template`,
+      'Șablonul reminderului nu există.'
+    );
+  });
+  const avansuri = c.reminders.map((r) => r.offsetHours);
+  cere(
+    new Set(avansuri).size === avansuri.length,
+    'reminders',
+    'Două remindere au același avans — al doilea n-ar pleca niciodată.'
+  );
+
   const chei = c.layout.map((s) => s.key);
   cere(
     chei.every((k) => SECTION_KEYS.includes(k)),
@@ -148,6 +178,24 @@ export const avertismenteEventConfig = (c: EventConfig): Avertisment[] => {
         'curs și vor arăta ediția de lansare. Bumpeaz-o după cursă, nu înainte.',
     });
   }
+
+  // Zero remindere active e o alegere validă (poate anunți altfel), dar e și
+  // ușor de produs din greșeală bifând greșit — și se descoperă abia din
+  // absențele de la start.
+  if (c.reminders.every((r) => !r.enabled)) {
+    av.push({
+      mesaj:
+        c.reminders.length === 0
+          ? 'Nu e programat niciun reminder. Participanții nu primesc nimic înainte de cursă.'
+          : 'Toate reminderele sunt oprite. Participanții nu primesc nimic înainte de cursă.',
+    });
+  }
+
+  // NU avertizăm pentru „reminderul pleacă înainte de închiderea înscrierilor".
+  // Înscrierile se închid cu o oră înainte de start, deci ORICE reminder util e
+  // înaintea lor — avertismentul ar fi pornit aprins pe fiecare ediție, adică
+  // n-ar mai fi fost citit niciunul. Că un întârziat nu primește reminderul e
+  // inofensiv: tocmai s-a înscris, știe când e cursa.
 
   const ascunse = c.layout.filter((s) => !s.visible).map((s) => s.key);
   if (ascunse.includes('participants')) {
@@ -228,6 +276,47 @@ export const seteazaReel = <K extends keyof ReelEntry>(
   camp: K,
   valoare: ReelEntry[K]
 ): ReelEntry[] => items.map((r, j) => (j === i ? { ...r, [camp]: valoare } : r));
+
+/**
+ * Rândul pe care îl adaugă „+ Adaugă reminder".
+ *
+ * Avansul propus e primul din `AVANSURI_SUGERATE` care nu e deja folosit —
+ * altfel butonul ar produce un duplicat, adică un rând invalid din start.
+ * Când toate sunt luate, cade pe „cu o oră mai devreme decât cel mai devreme".
+ */
+export const AVANSURI_SUGERATE = [24, 72, 3, 48, 12, 6, 1] as const;
+
+export const adaugaReminder = (lista: ReminderEntry[]): ReminderEntry[] => {
+  if (lista.length >= MAX_REMINDERS) return lista;
+  const luate = new Set(lista.map((r) => r.offsetHours));
+  const liber =
+    AVANSURI_SUGERATE.find((h) => !luate.has(h)) ?? Math.max(...lista.map((r) => r.offsetHours)) + 1;
+  return [
+    ...lista,
+    { offsetHours: liber, enabled: true, template: 'bulk_participant_reminder' as const },
+  ];
+};
+
+export const stergeReminder = (lista: ReminderEntry[], i: number): ReminderEntry[] =>
+  lista.filter((_, j) => j !== i);
+
+export const seteazaReminder = <K extends keyof ReminderEntry>(
+  lista: ReminderEntry[],
+  i: number,
+  camp: K,
+  valoare: ReminderEntry[K]
+): ReminderEntry[] => lista.map((r, j) => (j === i ? { ...r, [camp]: valoare } : r));
+
+/**
+ * Orarul în ordinea în care pleacă emailurile (avans mare → avans mic).
+ *
+ * Pentru REZUMAT, nu pentru rânduri: rândurile rămân în ordinea în care le-a
+ * adăugat organizatorul, pentru că o listă care se resortează în timp ce tastezi
+ * avansul mută rândul de sub cursor. Rezumatul („următorul pleacă …") are însă
+ * nevoie de ordinea reală.
+ */
+export const remindereCronologic = (lista: ReminderEntry[]): ReminderEntry[] =>
+  [...lista].sort((a, b) => b.offsetHours - a.offsetHours);
 
 /** Mută o secțiune cu o poziție în sus sau în jos. */
 export const mutaSectiune = (

@@ -25,9 +25,14 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
       'Punct de plecare pentru tab-ul „Email" → Participanți. Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii} (o singură acoladă). Despre eveniment, completate din ediția publicată: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia} — folosește-le în loc să scrii data de mână, altfel șablonul rămâne pe ediția veche.',
   },
   bulk_participant_reminder: {
-    titlu: 'Trimitere în masă · Reminder eveniment (participanți)',
+    titlu: 'Automat · Reminder eveniment (participanți)',
     descriere:
-      'Reminderul de dinaintea evenimentului, din tab-ul „Email" → Participanți. Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}. Despre eveniment: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia}.',
+      'Textul reminderelor programate din /admin → „Eveniment" → Remindere. Pleacă SINGUR, cu atâtea ore înainte de start câte ai pus în orar. Poate fi trimis și manual din tab-ul „Email" → Participanți. Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}, {data_inscrierii}, {link_renunt} (linkul prin care își eliberează locul — rândul pe care stă dispare la cine n-are loc). Despre eveniment: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia}.',
+  },
+  bulk_participant_reminder_final: {
+    titlu: 'Automat · Reminder final (participanți)',
+    descriere:
+      'Al doilea text pe care îl poate folosi un reminder din orar — cel pentru ultimele ore („azi alergăm"), unde contează ora și locul, nu explicațiile. Îl alegi pe rândul de reminder, în /admin → „Eveniment". Aceleași variabile ca reminderul obișnuit.',
   },
   bulk_waitlist_anunt: {
     titlu: 'Trimitere în masă · Anunț eveniment (listă de așteptare)',
@@ -37,7 +42,7 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
   bulk_waitlist_promovare: {
     titlu: 'Automat · Promovare de pe lista de așteptare',
     descriere:
-      'Pleacă SINGUR când se eliberează un loc și primul de pe listă urcă la participanți. Nu-l trimiți tu din niciun tab. Promovarea manuală, din butonul „Promovează", trimite alt text — șablonul „Confirmare (participanți)". Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}. Despre eveniment: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia} — ține-le, altfel omul află că are loc, dar nu și când sau unde.',
+      'Pleacă SINGUR când se eliberează un loc și primul de pe listă urcă la participanți. Nu-l trimiți tu din niciun tab. Promovarea manuală, din butonul „Promovează", trimite alt text — șablonul „Confirmare (participanți)". Variabile despre persoană: {prenume}, {nume}, {email}, {telefon}. Despre eveniment: {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {numele_cursei}, {editia} — ține-le, altfel omul află că are loc, dar nu și când sau unde. Ține și {link_renunt}: cine tocmai a urcat de pe listă poate, la rândul lui, să nu mai poată veni, iar fără link locul lui se blochează exact cum se blocase al celui pe care l-a înlocuit.',
   },
   event_badge: {
     titlu: 'Badge eveniment (capul fiecărui email)',

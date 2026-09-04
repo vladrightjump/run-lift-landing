@@ -139,6 +139,18 @@ const STARE_TEXT: Record<StareCelula, string> = {
   lipsa: 'lipsă',
 };
 
+/**
+ * Ce intră în „Activitate recentă".
+ *
+ * `admin_events` e un jurnal de audit și primește și tipuri pe care feed-ul nu
+ * le arată (`admin_delete`, `config_publish` — lucruri făcute chiar de cel care
+ * se uită la feed). Aici rămân doar cele întâmplate FĂRĂ el: cineva a renunțat,
+ * cineva a fost promovat automat, s-a deschis o ediție.
+ */
+const TIPURI_ACTIVITATE = ['renuntare', 'auto_promote', 'editie_noua'];
+
+const activitateVizibila = (e: AdminEvent): boolean => TIPURI_ACTIVITATE.includes(e.tip);
+
 export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [rows, setRows] = useState<AdminRegistration[] | null>(null);
   const [waitlist, setWaitlist] = useState<AdminWaitlistEntry[] | null>(null);
@@ -985,13 +997,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
               <span className="admin-wait-count">{(events ?? []).length}</span>
             </h2>
             <span className="admin-wait-note">
-              Promovări automate din lista de așteptare (când ștergi un participant, locul se
-              umple singur) și deschiderea edițiilor noi. Feed-ul e comun tuturor edițiilor.
+              Renunțări din linkul de email, promovări automate din lista de așteptare (când se
+              eliberează un loc, se umple singur) și deschiderea edițiilor noi. Feed-ul e comun
+              tuturor edițiilor.
             </span>
           </div>
           <div className="admin-activity">
             {(events ?? [])
-              .filter((e) => e.tip === 'auto_promote' || e.tip === 'editie_noua')
+              .filter(activitateVizibila)
               .map((e) => {
                 if (e.tip === 'editie_noua') {
                   const ed = e.detaliu?.editie;
@@ -1009,6 +1022,24 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 const nume = typeof e.detaliu?.nume === 'string' ? e.detaliu.nume : 'Cineva';
                 const email = typeof e.detaliu?.email === 'string' ? e.detaliu.email : '';
                 const emailed = e.detaliu?.email_queued === true;
+
+                // Renunțarea vine mereu însoțită, în aceeași secundă, de un
+                // `auto_promote` — dacă era cineva pe listă. Nu le comasăm:
+                // sunt două fapte, iar cel de-al doilea poate să LIPSEASCĂ
+                // (listă goală), caz în care locul rămâne liber și trebuie văzut.
+                if (e.tip === 'renuntare') {
+                  return (
+                    <div key={e.id} className="admin-activity-item">
+                      <span className="admin-activity-dot" />
+                      <span className="admin-activity-text">
+                        <strong>{nume}</strong> a renunțat la loc, din linkul din email
+                        {email && <span className="admin-activity-email"> · {email}</span>}
+                      </span>
+                      <span className="admin-activity-time">{formatEventTime(e.created_at)}</span>
+                    </div>
+                  );
+                }
+
                 return (
                   <div key={e.id} className="admin-activity-item">
                     <span className="admin-activity-dot" />
@@ -1027,9 +1058,9 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                 );
               })}
             {events === null && <AdminFeedSkeleton />}
-            {events !== null &&
-              (events ?? []).filter((e) => e.tip === 'auto_promote' || e.tip === 'editie_noua')
-                .length === 0 && <div className="admin-empty">Nicio activitate încă.</div>}
+            {events !== null && (events ?? []).filter(activitateVizibila).length === 0 && (
+              <div className="admin-empty">Nicio activitate încă.</div>
+            )}
           </div>
         </section>
         </>

@@ -313,6 +313,41 @@ export const unsubscribe = async (token: string, signal?: AbortSignal): Promise<
   return (['dezabonat', 'deja_dezabonat'].includes(result) ? result : 'invalid') as UnsubResult;
 };
 
+export type DeclineResult = 'renuntat' | 'deja_renuntat' | 'prea_tarziu' | 'invalid';
+
+/**
+ * Renunțarea la loc, pe baza token-ului din email. Locul se eliberează pe loc și
+ * declanșează promovarea primului din lista de așteptare.
+ *
+ * NU se cheamă la încărcarea paginii, spre deosebire de `unsubscribe`. Diferența
+ * nu e stilistică: dezabonarea e reversibilă cu o reînscriere, pe când locul
+ * eliberat pleacă imediat la altcineva. Pagina cere un click explicit, iar
+ * linkul din email duce la pagină, nu aici — altfel un scaner de linkuri al
+ * providerului ar fi dat locul mai departe fără ca omul să fi atins nimic.
+ */
+export const declineSpot = async (
+  token: string,
+  signal?: AbortSignal
+): Promise<DeclineResult> => {
+  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/decline_spot`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE.publishableKey,
+      'Content-Type': 'application/json',
+      'Content-Profile': SUPABASE.schema,
+    },
+    body: JSON.stringify({ p_token: token }),
+    signal,
+  });
+  if (!res.ok) {
+    throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
+  }
+  const result = (await res.json()) as string;
+  return (['renuntat', 'deja_renuntat', 'prea_tarziu'].includes(result)
+    ? result
+    : 'invalid') as DeclineResult;
+};
+
 export const isDuplicateError = (err: unknown): boolean =>
   err instanceof SubmitHttpError && err.status === 409;
 

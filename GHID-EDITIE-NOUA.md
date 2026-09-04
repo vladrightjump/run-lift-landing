@@ -4,8 +4,9 @@ O ediție nouă se face **din `/admin`**, din tabul **Eveniment**. Fără edită
 generat, fără deploy.
 
 > **Sursa de adevăr:** rândul `published` din `runlift.event_config`. Pagina publică îl citește la
-> runtime (`public_config()`), iar publicarea scrie în ACEEAȘI tranzacție cele cinci valori din
-> `app_config` pe care le citesc guard-urile din DB. Nu mai există „desincronizare" de aliniat manual.
+> runtime (`public_config()`), iar publicarea scrie în ACEEAȘI tranzacție cele șase valori din
+> `app_config` pe care le citesc guard-urile din DB și cron-ul de remindere. Nu mai există
+> „desincronizare" de aliniat manual.
 >
 > `src/content/edition.ts` a rămas **instantaneul de build**: randează primul cadru și acoperă cazul
 > în care backendul nu răspunde. **Nu-l edita ca să schimbi ediția.**
@@ -86,6 +87,40 @@ Versiunea publicată anterior rămâne salvată: dacă ceva e greșit, „**Revi
 ### 4. (Opțional) Textul emailurilor
 Emailurile (confirmare/reminder/anunț + badge) sunt în DB, editabile din **`/admin` → „Șabloane de
 email"**. NU se ating din cod.
+
+---
+
+## Reminderele automate
+
+Din **`/admin` → „Eveniment" → „Remindere"**, în ciornă ca orice altceva. Fiecare rând e un email
+care pleacă **singur**, cu atâtea ore înainte de start câte scrii, **o singură dată**. Cel mult
+cinci per ediție.
+
+Fiecare rând îți spune și când pleacă („pleacă joi, 6 august · 07:00 · peste 2 zile"), iar rezumatul
+cardului spune care e următorul. Textul îl alegi dintre două șabloane — „mâine alergăm" și „azi
+alergăm" — editabile din „Șabloane de email".
+
+**Un reminder pleacă la ora lui sau deloc.** Fereastra e de două ore după scadență; dacă a trecut,
+rândul se marchează `a trecut — nu mai pleacă` și chiar nu mai pleacă. Asta e intenționat: un
+reminder „mâine alergăm" primit în drum spre cursă e mai rău decât niciunul. Dacă ai ratat unul și
+tot vrei să iasă ceva, micșorează avansul (ex. 24 → 6) și publică.
+
+Reminderele se schimbă **fără SQL**. Singurul pas manual e armarea cron-ului, o dată pe proiect —
+`supabase-cron-reminder-ARM.sql`; dacă nu l-ai rulat niciodată, nu pleacă nimic, oricât de frumos
+ar arăta orarul.
+
+## Linkul „nu mai pot veni"
+
+Pune `{link_renunt}` într-un șablon de email către participanți. Cine apasă ajunge pe `/renunt`,
+confirmă cu încă un click, iar locul lui trece **imediat** la primul om de pe lista de așteptare,
+care primește emailul de promovare. Vezi renunțarea în feed-ul „Activitate recentă", iar dacă a
+fost o greșeală o poți anula cu „Undo" din lista de participanți.
+
+Al doilea click nu e o formalitate: fără el, scanerele de linkuri ale Gmail/Apple — care deschid
+URL-urile din emailuri ca să le verifice — ar fi eliberat locuri fără ca omul să atingă nimic.
+
+Variabila e per persoană: la destinatarii care n-au un loc (listele de așteptare/lansare) cade tot
+paragraful în care e scrisă, ca să nu plece o frază care trimite spre nimic.
 
 ---
 
