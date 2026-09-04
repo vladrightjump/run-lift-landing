@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { ReactNode } from 'react';
 import {
   listEventConfig,
@@ -78,6 +87,20 @@ const FUSURI: [string, string][] = [
   ['+03:00', '+03:00 · Chișinău vara (EEST)'],
   ['+02:00', '+02:00 · Chișinău iarna (EET)'],
 ];
+
+/**
+ * Cât ține o publicare, formularul e inert.
+ *
+ * `publicaCiorna` închide dialogul pe prima linie, iar cele două apeluri await
+ * țin documentul pe care l-au capturat. Un câmp rămas viu ar însemna că poți
+ * tasta în timpul dus-întorsului: s-ar publica instantaneul vechi ȘI s-ar
+ * anunța succesul — exact divergența dintre ecran și site pe care tabul o
+ * închide.
+ *
+ * Context, nu prop: `Camp` e un component separat, iar altfel fiecare dintre
+ * cele optsprezece câmpuri ar căra aceeași valoare de mână.
+ */
+const Blocat = createContext(false);
 
 /** Traduce refuzurile serverului în ceva citibil, fără să le reformuleze regula. */
 const mesajRefuz = (err: unknown): string => {
@@ -224,11 +247,26 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
     }
   };
 
+  /**
+   * „Publică" salvează întâi ce e pe ecran, apoi publică.
+   *
+   * `admin_publish_event_config` primește doar `p_editie`: publică rândul
+   * `draft` de pe server, nu documentul din câmpuri. Fără salvarea asta,
+   * apăsarea pe „Publică" fără „Salvează" înainte n-avea ce publica
+   * (`no_draft`) — iar cu o ciornă VECHE pe server publica documentul vechi
+   * și raporta succes. Al doilea e mai rău: nimic nu te trimite să verifici.
+   *
+   * Cele două apeluri nu sînt o tranzacție. Dacă salvarea trece și publicarea
+   * e refuzată, rămîi cu ciorna salvată și cu site-ul pe configul vechi — o
+   * stare din care poți relua, și exact ce obții azi apăsînd „Salvează" și
+   * eșuînd apoi la „Publică".
+   */
   const publicaCiorna = async () => {
     if (!ciorna) return;
     setConfirmPublicare(false);
     setPublica(true);
     try {
+      await saveEventConfigDraft(token, ciorna.number, ciorna);
       await publishEventConfig(token, ciorna.number);
       showToast({
         kind: 'success',
@@ -350,6 +388,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           apeși „Publică”.
         </div>
       ) : (
+        <Blocat.Provider value={publica}>
         <div className="admin-config-form">
           {probleme.length > 0 && (
             <div className="admin-banner warn" role="status">
@@ -786,6 +825,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <input
                         id={`reel-link-${i}`}
                         autoComplete="off"
+                        disabled={publica}
                         aria-invalid={eroareCod ? true : undefined}
                         placeholder="https://www.instagram.com/reel/ABC12345/"
                         // Textul brut cât timp se scrie; URL-ul canonic recompus
@@ -834,6 +874,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <input
                         id={`reel-poster-${i}`}
                         autoComplete="off"
+                        disabled={publica}
                         placeholder="/reels/marti.jpg"
                         value={r.poster}
                         onChange={(e) =>
@@ -847,6 +888,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <input
                         id={`reel-caption-${i}`}
                         autoComplete="off"
+                        disabled={publica}
                         placeholder="Marți dimineața, Râșcani"
                         value={r.caption}
                         onChange={(e) =>
@@ -858,7 +900,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <button
                         type="button"
                         className="admin-btn-ghost"
-                        disabled={i === 0}
+                        disabled={publica || i === 0}
                         aria-label={`Mută clipul ${i + 1} mai devreme`}
                         onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, -1), true)}
                       >
@@ -867,7 +909,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <button
                         type="button"
                         className="admin-btn-ghost"
-                        disabled={i === ciorna.reels.items.length - 1}
+                        disabled={publica || i === ciorna.reels.items.length - 1}
                         aria-label={`Mută clipul ${i + 1} mai târziu`}
                         onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, 1), true)}
                       >
@@ -876,6 +918,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <button
                         type="button"
                         className="admin-btn-ghost"
+                        disabled={publica}
                         aria-label={`Șterge clipul ${i + 1}`}
                         onClick={() => seteazaReels(stergeReel(ciorna.reels.items, i), true)}
                       >
@@ -890,7 +933,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           <button
             type="button"
             className="admin-btn-ghost"
-            disabled={ciorna.reels.items.length >= MAX_REELS}
+            disabled={publica || ciorna.reels.items.length >= MAX_REELS}
             onClick={() => seteazaReels(adaugaReel(ciorna.reels.items), true)}
           >
             + Adaugă clip
@@ -917,7 +960,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   type="button"
                   className="admin-btn-ghost"
                   onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, -1))}
-                  disabled={i === 0}
+                  disabled={publica || i === 0}
                   aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai sus`}
                 >
                   ↑
@@ -926,7 +969,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   type="button"
                   className="admin-btn-ghost"
                   onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, 1))}
-                  disabled={i === ciorna.layout.length - 1}
+                  disabled={publica || i === ciorna.layout.length - 1}
                   aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai jos`}
                 >
                   ↓
@@ -935,6 +978,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   type="button"
                   className="admin-btn-ghost"
                   onClick={() => seteaza('layout', comutaVizibilitatea(ciorna.layout, s.key))}
+                  disabled={publica}
                 >
                   {s.visible ? 'Ascunde' : 'Arată'}
                 </button>
@@ -942,6 +986,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             ))}
           </ol>
         </div>
+        </Blocat.Provider>
       )}
 
       {/* Bara lipita jos.
@@ -980,7 +1025,9 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               type="button"
               className="admin-btn-ghost"
               onClick={salveazaCiorna}
-              disabled={salveaza || !poatePublica}
+              // `publica` la fel de mult ca `salveaza`: publicarea salvează ea
+              // însăși, deci un al doilea „Salvează" din zbor ar scrie peste.
+              disabled={salveaza || publica || !poatePublica}
             >
               {salveaza ? 'Se salvează…' : 'Salvează'}
             </button>
@@ -1031,7 +1078,8 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           <div className="admin-confirm" role="alertdialog" aria-modal="true">
             <h3>Publici ediția {ciorna.number}?</h3>
             <p>
-              Site-ul public trece pe configul ăsta imediat, fără deploy. Vizitatorii vor vedea{' '}
+              Se <strong>salvează ciorna așa cum arată acum</strong>, apoi se publică. Site-ul
+              public trece pe configul ăsta imediat, fără deploy. Vizitatorii vor vedea{' '}
               <strong>{ciorna.showComingSoon ? 'Coming Soon' : 'landing-ul cu înscrieri'}</strong>.
             </p>
             <p className="admin-confirm-note">
@@ -1132,6 +1180,7 @@ type ControlCamp = {
   'aria-describedby'?: string;
   'aria-invalid'?: true;
   autoComplete: 'off';
+  disabled?: true;
 };
 
 /**
@@ -1163,6 +1212,7 @@ const Camp = ({
   const id = useId();
   const idAjutor = `${id}-ajutor`;
   const idEroare = `${id}-eroare`;
+  const blocat = useContext(Blocat);
   // Eroarea prima: e cea care cere o acțiune acum.
   const descrieri = [eroare && idEroare, ajutor && idAjutor].filter(Boolean).join(' ');
 
@@ -1178,6 +1228,7 @@ const Camp = ({
         // Niciun câmp de aici nu e dată personală. Autocompletarea browserului
         // n-are ce oferi, dar poate acoperi valoarea reală cu una veche.
         autoComplete: 'off',
+        disabled: blocat || undefined,
       })}
       {eroare ? (
         <span id={idEroare} className="admin-config-eroare" role="alert">
