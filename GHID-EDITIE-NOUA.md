@@ -22,8 +22,8 @@ Pornește de la ediția publicată, cu numărul incrementat. Editează ce se sch
 - **Ediția evenimentului** — numărul ediției.
 - **Ediția de lansare** — de regulă egală; vezi capcana de mai jos.
 - **Numele evenimentului / Concept** — branding („Hyrox Trial", „Outdoor Adaptive").
-- **Start / Deadline înscriere / Momentul lansării / Următorul antrenament** — local, **fără fus**
-  (`2026-08-22T07:00:00`); se compun cu câmpul *Fus orar*.
+- **Start / Deadline înscriere / Momentul lansării / Următorul antrenament** — se aleg din calendar;
+  se compun cu câmpul *Fus orar*.
 - **Check-in de la**, **Durata (ore)**, **„Cine vine" cu (ore) înainte**.
 - **Locul** — nume, oraș/zonă și **coordonate `lat,lng`** (punct exact, nu text căutat pe hartă).
 - **Locuri** și **Lista de așteptare** — capacitatea.
@@ -33,6 +33,36 @@ Pornește de la ediția publicată, cu numărul incrementat. Editează ce se sch
 Formularul nu te lasă să publici un config imposibil (deadline după start, următorul antrenament
 înainte de finalul cursei, capacitate zero, coordonate scrise ca text). Aceleași reguli sunt
 aplicate și pe server — formularul doar ți le spune mai devreme.
+
+#### Grupul „Când" — startul e ancora, restul atârnă de el
+
+Practic, o ediție nouă înseamnă **o singură decizie**: când e cursa. Celelalte patru momente sunt
+derivate din ea — înscrierile se închid cu o oră înainte, check-inul cu un sfert, anunțul cu câteva
+zile, antrenamentul următor peste o săptămână. Grupul le tratează ca atare:
+
+- Sus stă **cronologia**: cele șase repere în ordinea în care se întâmplă, cu distanța față de start
+  scrisă cu litere. Include și „se termină cursa" (`start + durata`), reperul care comută homepage-ul
+  pe countdown și care nu are câmp propriu. Un reper căzut din ordine se vede pentru că **sare din
+  locul lui**, nu pentru că o regulă spune că a sărit.
+- Sub *Startul cursei* sunt presetările **„Sâmbăta viitoare"** și **„Peste două sâmbete"**, la ora
+  cursei curente.
+- Când muți startul, formularul **oferă** să mute la fel și ce atârnă de el („Startul s-a mutat cu 7
+  zile mai târziu. Mut la fel și…"). Oferit, nu aplicat — dar un singur click ține toată ediția
+  coerentă. Check-inul păstrează **avansul** față de start, nu ora: o cursă mutată la 09:00 are
+  check-in la 08:45.
+- *Check-in de la* se alege ca avans („06:45 · cu 15 min înainte"), nu ca oră ruptă de context.
+
+Semnalele **chihlimbar** ▲ sunt lucruri corecte formal, cu urmări pe care altfel le-ai afla din
+reclamații — nu blochează publicarea. Cel mai important: **anunțul rămas în urmă.** Ciorna ediției
+următoare pornește de la cea publicată, deci moștenește momentul de anunț al ediției TRECUTE. Un
+moment deja consumat înseamnă că homepage-ul nu va sta pe Coming Soon, oricât ai apăsa comutatorul.
+
+#### Grupul „Unde"
+
+Sub titlu sunt **locurile folosite până acum**, dintr-un click — coordonatele nu se pot verifica
+citindu-le, iar cursele se întorc în aceleași două-trei parcuri. Câmpurile rămân editabile după.
+Pentru un loc nou: Google Maps → click dreapta pe punct → prima linie din meniu copiază `lat,lng`,
+apoi verifică-l cu linkul de sub câmp.
 
 ### 2. Previzualizează
 Butonul „**Previzualizează**" deschide `/?config=draft` — pagina reală, randată din ciornă. Doar tu
@@ -146,6 +176,7 @@ avertizează dacă o faci, dar nu te oprește — sunt situații în care e inte
 - `eventConfig.test.ts` — instantaneul transcrie `EDITION`; documentele nerandabile sunt respinse.
 - `formatCharacterization.test.ts` — string-urile derivate nu s-au schimbat la mutarea pe config.
 - `eventConfigForm.test.ts` — regulile formularului (aceleași ca pe server).
+- `reperele.test.ts` — cronologia ediției, semnalele chihlimbar și mutarea în bloc a reperelor.
 - `sectionLayout.test.tsx` — ordinea, vizibilitatea și renumerotarea secțiunilor.
 - `adminEventTab.test.tsx` — nimic nu ajunge pe site fără „Publică".
 - `buildFingerprint.test.ts` — când se anunță că share preview-ul e vechi.

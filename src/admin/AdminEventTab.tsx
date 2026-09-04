@@ -44,6 +44,13 @@ import {
   problemePeCamp,
   linkHarta,
 } from './eventConfigFields';
+import {
+  reperele,
+  mutaReperele,
+  reperiiCareSeMuta,
+  durataRo,
+  type Reper,
+} from './reperele';
 import { useNow } from '../hooks/useNow';
 
 type Props = {
@@ -74,13 +81,97 @@ const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
  */
 const DURATE = [1, 1.5, 2, 2.5, 3, 4, 5, 6] as const;
 
-/** Sferturi de oră între 05:00 și 12:00 — fereastra în care începe o cursă. */
-const ORE_CHECKIN: string[] = Array.from({ length: (12 - 5) * 4 + 1 }, (_, i) => {
-  const minuteTotale = 5 * 60 + i * 15;
-  const h = String(Math.floor(minuteTotale / 60)).padStart(2, '0');
-  const m = String(minuteTotale % 60).padStart(2, '0');
-  return `${h}:${m}`;
-});
+/** Cu cât înainte de start se deschide check-inul. Minute. */
+const AVANSURI_CHECKIN = [0, 10, 15, 20, 30, 45, 60, 90] as const;
+
+/** Cu câte ore înainte de start homepage-ul trece pe „cine vine". */
+const AVANSURI_LEADERBOARD = [0, 1, 2, 3, 6, 12, 24] as const;
+
+/**
+ * Orele de check-in, derivate din startul cursei.
+ *
+ * Lista era fixă, sferturi de oră între 05:00 și 12:00 — adică presupunea că
+ * orice cursă începe dimineața, și nu spunea niciodată CU CÂT înainte e ora
+ * aleasă. Amândouă erau greșeli: o cursă de seară n-avea ce alege, iar „06:45"
+ * lângă un start la 09:00 arată perfect rezonabil până citești ambele câmpuri
+ * odată. Decizia reală nu e „la ce oră", e „cu cât înainte".
+ *
+ * Startul stricat (câmp golit, document vechi) cade înapoi pe lista fixă:
+ * fără o oră de referință, un avans n-are din ce fi calculat.
+ */
+const oreCheckin = (start: string): { valoare: string; eticheta: string }[] => {
+  const m = /T(\d{2}):(\d{2})/.exec(start);
+  if (!m) {
+    return Array.from({ length: (12 - 5) * 4 + 1 }, (_, i) => {
+      const t = 5 * 60 + i * 15;
+      const v = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+      return { valoare: v, eticheta: v };
+    });
+  }
+  const minuteStart = Number(m[1]) * 60 + Number(m[2]);
+  return AVANSURI_CHECKIN.filter((avans) => minuteStart - avans >= 0).map((avans) => {
+    const t = minuteStart - avans;
+    const valoare = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+    return {
+      valoare,
+      eticheta: avans === 0 ? `${valoare} · odată cu startul` : `${valoare} · cu ${durataRo(avans * 60_000)} înainte`,
+    };
+  });
+};
+
+/**
+ * Locurile în care s-a mai alergat.
+ *
+ * Coordonatele se iau altfel din Google Maps: click dreapta pe punct, prima
+ * linie din meniu. E o operație pe telefon, în alt tab, care produce un șir de
+ * cifre pe care nu-l poți verifica citindu-l. Iar cursele se întorc în aceleași
+ * două-trei parcuri. Lista nu înlocuiește câmpurile — le completează, și rămân
+ * editabile după.
+ */
+const LOCURI_SALVATE: { name: string; city: string; mapQuery: string }[] = [
+  { name: 'Terenul de Basketball', city: 'Parcul La Izvor', mapQuery: '47.0465504,28.7854741' },
+  { name: 'Teren Sportiv', city: 'Parcul Râșcani', mapQuery: '47.0411377,28.8714638' },
+  { name: 'Scările de Granit', city: 'Valea Morilor, Chișinău', mapQuery: '47.0182357,28.8213041' },
+];
+
+/** Momentul local, ca ISO fără fus — forma pe care o cere documentul. */
+const caIsoLocal = (d: Date): string => {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+    `T${p(d.getHours())}:${p(d.getMinutes())}:00`
+  );
+};
+
+/**
+ * Presetările pentru startul cursei: următoarele două sâmbete, la ora curentă
+ * a cursei.
+ *
+ * Cursele cad sâmbăta dimineața, iar ciorna ediției următoare pornește cu
+ * startul ediției TRECUTE — deci prima operație de fiecare dată e „mută-l cu o
+ * săptămână, două". Făcut din calendar, asta cere să numeri zilele și să nu
+ * greșești ziua săptămânii, singura greșeală pe care cifrele n-o arată.
+ *
+ * Ora se păstrează din start, nu se inventează: dacă ediția asta e la 08:00, o
+ * presetare care o mută înapoi la 07:00 ar strica exact ce n-a fost cerut.
+ */
+const sambeteleUrmatoare = (acum: number, start: string): { eticheta: string; moment: string }[] => {
+  const ora = /T(\d{2}):(\d{2})/.exec(start);
+  if (!ora) return [];
+  const baza = new Date(acum);
+  baza.setHours(Number(ora[1]), Number(ora[2]), 0, 0);
+  // 6 = sâmbătă. „Azi e sâmbătă" înseamnă sâmbăta VIITOARE: o cursă pusă azi
+  // n-are când fi anunțată.
+  const pana = ((6 - baza.getDay() + 7) % 7) || 7;
+  return [0, 1].map((i) => {
+    const d = new Date(baza);
+    d.setDate(d.getDate() + pana + i * 7);
+    return {
+      eticheta: i === 0 ? `Sâmbăta viitoare, ${ora[1]}:${ora[2]}` : `Peste două sâmbete`,
+      moment: caIsoLocal(d),
+    };
+  });
+};
 
 /** Doar fusurile Moldovei; restul n-au ce căuta într-o cursă din Chișinău. */
 const FUSURI: [string, string][] = [
@@ -169,6 +260,16 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   // Ciorna nu se rescrie sub degetele organizatorului la fiecare poll.
   const atinsa = useRef(false);
   const [build, setBuild] = useState<BuildInfo | null>(null);
+  /**
+   * Startul de la care s-a plecat — reperul față de care se măsoară o mutare.
+   *
+   * NU e „valoarea anterioară a câmpului": un `datetime-local` trimite `change`
+   * la fiecare componentă parcursă (ziua, apoi luna, apoi ora), deci un delta
+   * calculat din ultima valoare ar fi trei mutări mărunte în loc de una. Ancora
+   * stă pe loc până când mutarea e acceptată sau refuzată explicit, iar oferta
+   * spune atunci cât s-a mutat startul cu totul.
+   */
+  const [ancoraStart, setAncoraStart] = useState<string | null>(null);
 
   const incarca = useCallback(
     (signal?: AbortSignal) => {
@@ -177,7 +278,11 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           setRanduri(rows);
           if (atinsa.current) return;
           const draft = rows.find((r) => r.status === 'draft');
-          if (draft) setCiorna(parseEventConfig(draft.config));
+          if (draft) {
+            const cfg = parseEventConfig(draft.config);
+            setCiorna(cfg);
+            setAncoraStart(cfg?.start ?? null);
+          }
         })
         .catch((err) => {
           if (signal?.aborted || onAuthError(err)) return;
@@ -236,6 +341,43 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   const acum = useNow(60_000);
   const hartaUrl = ciorna ? linkHarta(ciorna.venue.mapQuery) : null;
 
+  // Desfășurarea ediției, în ordine. Lista e goală cât timp un format e stricat
+  // — validarea spune deja care câmp, iar o linie de timp desenată din `NaN`
+  // ar fi o afirmație falsă despre document.
+  const repere = useMemo(() => (ciorna ? reperele(ciorna, acum) : []), [ciorna, acum]);
+  const reperPe = useMemo(() => new Map(repere.map((r) => [r.cheie, r])), [repere]);
+
+  /**
+   * Startul s-a mutat — și odată cu el ar trebui să se mute și ce atârnă de el.
+   *
+   * Oferit, nu aplicat: un formular care rescrie patru câmpuri pe care nu le-ai
+   * atins e un formular în care nu mai știi ce ai setat tu. Dar netratat deloc
+   * înseamnă ce se întâmpla până acum — ciorna ediției următoare pornește de la
+   * cea publicată, deci moștenește momentul de anunț al ediției TRECUTE, iar
+   * nimic nu-l semnala până pe site.
+   *
+   * Deltele absurde (câmp golit, an tastat pe jumătate) nu produc ofertă: sub
+   * un minut n-are ce muta, peste doi ani e o stare de trecere, nu o decizie.
+   */
+  const mutareOferita = useMemo(() => {
+    if (!ciorna || ancoraStart === null || ancoraStart === ciorna.start) return null;
+    const delta =
+      new Date(`${ciorna.start}${ciorna.tz}`).getTime() -
+      new Date(`${ancoraStart}${ciorna.tz}`).getTime();
+    if (!Number.isFinite(delta) || Math.abs(delta) < 60_000 || Math.abs(delta) > 730 * 86_400_000) {
+      return null;
+    }
+    const nume = reperiiCareSeMuta({ ...ciorna, start: ancoraStart }, ciorna.start);
+    return nume.length > 0 ? { delta, nume } : null;
+  }, [ciorna, ancoraStart]);
+
+  const mutaTot = () => {
+    if (!ciorna || ancoraStart === null) return;
+    atinsa.current = true;
+    setCiorna(mutaReperele({ ...ciorna, start: ancoraStart }, ciorna.start));
+    setAncoraStart(ciorna.start);
+  };
+
   /**
    * Are vreunul dintre câmpurile grupului o problemă?
    *
@@ -279,6 +421,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
     atinsa.current = true;
     setRefuz(null);
     setCiorna(cioarnaPentruEditiaUrmatoare(baza));
+    setAncoraStart(baza.start);
   };
 
   const porneteDinPublicat = () => {
@@ -286,6 +429,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
     atinsa.current = true;
     setRefuz(null);
     setCiorna({ ...publicat, layout: layoutComplet(publicat.layout) });
+    setAncoraStart(publicat.start);
   };
 
   const salveazaCiorna = async () => {
@@ -412,6 +556,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   atinsa.current = false;
                   setRefuz(null);
                   setCiorna(null);
+                  setAncoraStart(null);
                 }}
               >
                 Renunță
@@ -584,10 +729,29 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             ])}
             rezumat={descrieMoment(ciorna.start, ciorna.tz, acum) || ciorna.start}
           >
+            <LinieDeTimp repere={repere} />
+
             <Camp
               eticheta="Startul cursei"
               eroare={erori.get('start')}
-              ecou={descrieMoment(ciorna.start, ciorna.tz, acum)}
+              ecou={
+                <>
+                  {descrieMoment(ciorna.start, ciorna.tz, acum)}
+                  <span className="admin-presetari">
+                    {sambeteleUrmatoare(acum, ciorna.start).map((s) => (
+                      <button
+                        key={s.eticheta}
+                        type="button"
+                        className="admin-chip"
+                        disabled={ocupat || s.moment === ciorna.start}
+                        onClick={() => seteaza('start', s.moment)}
+                      >
+                        {s.eticheta}
+                      </button>
+                    ))}
+                  </span>
+                </>
+              }
             >
               {(p) => (
                 <input
@@ -598,6 +762,42 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                 />
               )}
             </Camp>
+
+            {/* Mutarea startului, propagată în bloc.
+                Stă lângă câmpul care a produs-o, nu în teancul de bannere de
+                sus: e o ofertă despre ce tocmai s-a tastat, iar la trei ecrane
+                distanță ar fi un reproș fără obiect. */}
+            {mutareOferita && (
+              <div className="admin-config-mutare" role="status">
+                <span>
+                  Startul s-a mutat cu{' '}
+                  <strong>
+                    {durataRo(mutareOferita.delta)}{' '}
+                    {mutareOferita.delta > 0 ? 'mai târziu' : 'mai devreme'}
+                  </strong>
+                  . Mut la fel și {mutareOferita.nume.join(', ')}?
+                </span>
+                <span className="admin-config-mutare-butoane">
+                  <button
+                    type="button"
+                    className="admin-btn-accent"
+                    disabled={ocupat}
+                    onClick={mutaTot}
+                  >
+                    Mută-le și pe ele
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-btn-ghost"
+                    disabled={ocupat}
+                    onClick={() => setAncoraStart(ciorna.start)}
+                  >
+                    Le las cum sunt
+                  </button>
+                </span>
+              </div>
+            )}
+
             <Camp
               eticheta="Durata"
               ajutor="Ore. După start + durată, pagina trece pe countdown-ul următorului antrenament."
@@ -619,27 +819,32 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             </Camp>
             <Camp
               eticheta="Check-in de la"
-              ajutor="Doar ora, în ziua cursei."
+              ajutor="Ora la care se deschide check-inul, în ziua cursei. Opțiunile se măsoară față de start."
               eroare={erori.get('checkinFrom')}
+              atentie={reperPe.get('checkin')?.problema}
+              ecou={reperPe.get('checkin')?.fataDeStart}
             >
-              {(p) => (
-                <select
-                  {...p}
-                  value={ciorna.checkinFrom}
-                  onChange={(e) => seteaza('checkinFrom', e.target.value)}
-                >
-                  {/* O valoare scrisa de mana care nu e in lista ramane vizibila,
-                      altfel selectul ar arata alta ora decat cea din document. */}
-                  {!ORE_CHECKIN.includes(ciorna.checkinFrom) && (
-                    <option value={ciorna.checkinFrom}>{ciorna.checkinFrom}</option>
-                  )}
-                  {ORE_CHECKIN.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              )}
+              {(p) => {
+                const optiuni = oreCheckin(ciorna.start);
+                return (
+                  <select
+                    {...p}
+                    value={ciorna.checkinFrom}
+                    onChange={(e) => seteaza('checkinFrom', e.target.value)}
+                  >
+                    {/* O valoare scrisa de mana care nu e in lista ramane vizibila,
+                        altfel selectul ar arata alta ora decat cea din document. */}
+                    {!optiuni.some((o) => o.valoare === ciorna.checkinFrom) && (
+                      <option value={ciorna.checkinFrom}>{ciorna.checkinFrom}</option>
+                    )}
+                    {optiuni.map((o) => (
+                      <option key={o.valoare} value={o.valoare}>
+                        {o.eticheta}
+                      </option>
+                    ))}
+                  </select>
+                );
+              }}
             </Camp>
             <Camp
               eticheta="Se închid înscrierile"
@@ -662,6 +867,9 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               eticheta="Se anunță ediția"
               ajutor="Până atunci homepage-ul poate sta pe Coming Soon, cu numărătoarea inversă spre momentul ăsta."
               eroare={erori.get('launchAt')}
+              // Ciorna ediției următoare moștenește anunțul ediției trecute —
+              // un moment deja consumat. Nimic nu-l semnala până acum.
+              atentie={reperPe.get('launchAt')?.problema}
               ecou={descrieMoment(ciorna.launchAt, ciorna.tz, acum)}
             >
               {(p) => (
@@ -677,6 +885,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               eticheta="Următorul antrenament"
               ajutor="După ce se termină cursa, pagina numără invers spre data asta. Trebuie să fie după finalul cursei."
               eroare={erori.get('nextEditionAt')}
+              atentie={reperPe.get('nextEditionAt')?.problema}
               ecou={descrieMoment(ciorna.nextEditionAt, ciorna.tz, acum)}
             >
               {(p) => (
@@ -690,17 +899,31 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             </Camp>
             <Camp
               eticheta={'„Cine vine” apare cu'}
-              ajutor="Ore înainte de start. Atunci pagina scoate formularul și urcă lista de participanți sub hero."
+              ajutor="Atunci pagina scoate formularul și urcă lista de participanți sub hero."
               eroare={erori.get('leaderboardLeadHours')}
             >
               {(p) => (
-                <input
+                // Listă, nu număr liber: valoarea e „cu cât înainte", iar un
+                // câmp gol produce `Number('') === 0`, adică „exact la start" —
+                // o setare validă pe care n-a cerut-o nimeni.
+                <select
                   {...p}
-                  type="number"
-                  min={0}
-                  value={ciorna.leaderboardLeadHours}
+                  value={String(ciorna.leaderboardLeadHours)}
                   onChange={(e) => seteaza('leaderboardLeadHours', Number(e.target.value))}
-                />
+                >
+                  {!AVANSURI_LEADERBOARD.some((h) => h === ciorna.leaderboardLeadHours) && (
+                    <option value={String(ciorna.leaderboardLeadHours)}>
+                      {ciorna.leaderboardLeadHours} ore înainte de start
+                    </option>
+                  )}
+                  {AVANSURI_LEADERBOARD.map((h) => (
+                    <option key={h} value={h}>
+                      {h === 0
+                        ? 'Exact la start'
+                        : `${durataRo(h * 3_600_000)} înainte de start`}
+                    </option>
+                  ))}
+                </select>
               )}
             </Camp>
             <Camp
@@ -729,6 +952,27 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             areEroare={areEroare(['venue.name', 'venue.city', 'venue.mapQuery', 'venue.zoom'])}
             rezumat={`${ciorna.venue.name}, ${ciorna.venue.city}`}
           >
+            {/* Locurile în care s-a mai alergat, dintr-un click.
+                Coordonatele nu se pot verifica citindu-le, iar cursele se
+                întorc în aceleași două-trei parcuri: cel mai des, „alegerea
+                locului" e de fapt o recunoaștere, nu o introducere. */}
+            <div className="admin-config-locuri">
+              <span className="admin-config-eticheta">Locuri folosite până acum</span>
+              <span className="admin-presetari">
+                {LOCURI_SALVATE.map((l) => (
+                  <button
+                    key={l.mapQuery}
+                    type="button"
+                    className="admin-chip"
+                    disabled={ocupat || l.mapQuery === ciorna.venue.mapQuery}
+                    onClick={() => seteaza('venue', { ...ciorna.venue, ...l })}
+                  >
+                    {l.name} · {l.city}
+                  </button>
+                ))}
+              </span>
+            </div>
+
             <Camp
               eticheta="Numele locului"
               ajutor="Ex. „Scările de Granit”."
@@ -1304,24 +1548,37 @@ const Camp = ({
   eticheta,
   ajutor,
   eroare,
+  atentie,
   ecou,
   children,
 }: {
   eticheta: string;
   ajutor?: string;
   eroare?: string;
+  /**
+   * Valoarea e acceptabilă, dar consecința ei nu e cea așteptată.
+   *
+   * Separat de `eroare` pentru că nu blochează nimic, și de `ecou` pentru că
+   * nu confirmă nimic. Un anunț cu momentul deja trecut e un document perfect
+   * valid — doar că homepage-ul nu va sta pe Coming Soon, oricât ai apăsa
+   * comutatorul. Marcat `status`, nu `alert`: cere atenție, nu o acțiune acum.
+   */
+  atentie?: string;
   ecou?: ReactNode;
   children: (control: ControlCamp) => ReactNode;
 }) => {
   const id = useId();
   const idAjutor = `${id}-ajutor`;
   const idEroare = `${id}-eroare`;
+  const idAtentie = `${id}-atentie`;
   const blocat = useContext(Blocat);
   // Eroarea prima: e cea care cere o acțiune acum.
-  const descrieri = [eroare && idEroare, ajutor && idAjutor].filter(Boolean).join(' ');
+  const descrieri = [eroare && idEroare, atentie && idAtentie, ajutor && idAjutor]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <div className={`admin-config-camp${eroare ? ' invalid' : ''}`}>
+    <div className={`admin-config-camp${eroare ? ' invalid' : ''}${atentie ? ' atentie' : ''}`}>
       <label className="admin-config-eticheta" htmlFor={id}>
         {eticheta}
       </label>
@@ -1341,11 +1598,64 @@ const Camp = ({
       ) : (
         ecou && <span className="admin-config-ecou">{ecou}</span>
       )}
+      {atentie && (
+        <span id={idAtentie} className="admin-config-atentie" role="status">
+          {atentie}
+        </span>
+      )}
       {ajutor && (
         <span id={idAjutor} className="admin-config-ajutor">
           {ajutor}
         </span>
       )}
     </div>
+  );
+};
+
+/**
+ * Desfășurarea ediției, ca linie de timp.
+ *
+ * Cele șase momente stăteau în șase câmpuri separate, fiecare corect în sine,
+ * niciunul spunând vreodată în ce relație e cu celelalte. Dar întrebarea pe
+ * care organizatorul o are deschisă cât timp completează formularul nu e „ce
+ * scrie în câmpul ăsta" — e „se ține totul în ordine?". Șase datetime-uri
+ * ISO n-o pot răspunde: două date la trei zile distanță arată la fel cu două
+ * la trei luni, iar o zi a săptămânii greșită arată identic cu una corectă.
+ *
+ * Puse în ordinea în care se întâmplă, cu distanța față de start scrisă cu
+ * litere, răspunsul e citit dintr-o privire. Ordinea e a momentelor, nu a
+ * câmpurilor: dacă anunțul cade după deadline, se vede pentru că sare din
+ * locul lui, nu pentru că o regulă spune că a sărit.
+ *
+ * Include și „se termină cursa" — `start + durata` — care nu are câmp propriu
+ * dar e reperul ce comută homepage-ul pe countdown. Până acum era complet
+ * invizibil în admin.
+ */
+const LinieDeTimp = ({ repere }: { repere: Reper[] }) => {
+  if (repere.length === 0) return null;
+
+  return (
+    <ol className="admin-cronologie" aria-label="Desfășurarea ediției">
+      {repere.map((r) => (
+        <li
+          key={r.cheie}
+          className={[
+            'admin-cronologie-reper',
+            r.cheie === 'start' ? 'start' : '',
+            r.trecut ? 'trecut' : '',
+            r.semnal ? 'problema' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <span className="admin-cronologie-punct" aria-hidden="true" />
+          <span className="admin-cronologie-nume">{r.eticheta}</span>
+          <span className="admin-cronologie-cand">{r.cand}</span>
+          {/* Flagul scurt, nu consecința pe larg: linia se citește dintr-o
+              privire, iar explicația stă pe câmpul unde se și repară. */}
+          <span className="admin-cronologie-fata">{r.semnal ?? r.fataDeStart}</span>
+        </li>
+      ))}
+    </ol>
   );
 };

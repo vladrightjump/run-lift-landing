@@ -302,21 +302,31 @@ describe('refuzurile serverului ajung la organizator', () => {
 });
 
 describe('aranjarea secțiunilor', () => {
+  /**
+   * Rândurile listei de SECȚIUNI, nu toate elementele de listă din tab.
+   *
+   * `getAllByRole('listitem')` prindea și clipurile, și cronologia „Când" —
+   * adică ordinea secțiunilor se verifica pe primul `<li>" randat oriunde în
+   * formular. Trecea din coincidență, până când altceva a fost randat mai sus.
+   */
+  const randuriSectiuni = (): HTMLElement[] => [
+    ...document.querySelectorAll<HTMLElement>('.admin-layout-list li'),
+  ];
+
   it('mută o secțiune și renumerotează', async () => {
     await deschideCiorna();
-    const randuri = screen.getAllByRole('listitem');
-    expect(randuri[0].textContent).toContain('Formatul');
+    expect(randuriSectiuni()[0].textContent).toContain('Formatul');
 
     fireEvent.click(screen.getByRole('button', { name: /Mută „Locația” mai sus/ }));
-    expect(screen.getAllByRole('listitem')[0].textContent).toContain('Locația');
+    expect(randuriSectiuni()[0].textContent).toContain('Locația');
   });
 
   it('ascunderea scoate numărul și marchează rândul', async () => {
     await deschideCiorna();
-    const randVenue = screen.getAllByRole('listitem').find((li) => li.textContent?.includes('Locația'))!;
+    const randVenue = randuriSectiuni().find((li) => li.textContent?.includes('Locația'))!;
     fireEvent.click(within(randVenue).getByRole('button', { name: 'Ascunde' }));
 
-    const dupa = screen.getAllByRole('listitem').find((li) => li.textContent?.includes('Locația'))!;
+    const dupa = randuriSectiuni().find((li) => li.textContent?.includes('Locația'))!;
     expect(dupa.className).toContain('ascunsa');
     expect(within(dupa).getByRole('button', { name: 'Arată' })).toBeTruthy();
   });
