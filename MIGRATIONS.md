@@ -54,7 +54,7 @@ prefix `runlift_`:
 | 20260827   | `runlift_publish_upsert_toate_scalarele` | runlift | Publicarea/revenirea scriu toate cele cinci scalare prin UPSERT (`scrie_scalarele_editiei`), nu `update` pe doua dintre ele: un rand lipsa ar fi lasat publicarea sa raporteze succes fara sa schimbe nimic. |
 | 20260827   | `runlift_event_config_validate_search_path` | runlift | `event_config_validate` primește `search_path` pinuit și apeluri `jsonb` calificate `pg_catalog`, ca restul funcțiilor din schemă. |
 | 20260827   | `runlift_reels_si_coming_soon` | runlift | `event_config_validate` acceptă cheia opțională `reels` (banda de clipuri Instagram: plafon 12, cod `^[A-Za-z0-9_-]{5,32}$` pentru că ajunge în `src`-ul unui iframe, `kind` din `(reel,p)`, fără duplicate) și secțiunea `reels` în `layout`. Plus `admin_set_coming_soon(token, show, launch_at, next_edition_at)`: petice exact trei chei pe rândul `published`, revalidează, și scrie un rând NOU (vechiul trece pe `superseded`), deci rămâne reversibil din „Versiuni anterioare". NU atinge `app_config` — niciunul din cele cinci scalare nu derivă din cheile astea. Vezi `supabase-migration-reels-si-coming-soon.sql` |
-| 20260904   | `runlift_remindere_si_renuntare` | runlift | **Remindere:** orarul devine `config.reminders` (listă în documentul de ediție, editabilă din /admin → „Eveniment"), validat de `event_config_validate` (plafon 5, avans întreg 1–720, fără avansuri duplicate, șablon din listă închisă) și copiat de `scrie_scalarele_editiei` în `app_config.reminder_schedule` — al ȘASELEA scalar. `maybe_send_reminder` parcurge orarul, cu cheie de idempotență per (ediție, avans) și fereastră de declanșare `[scadență, scadență + 2h]` în loc de `[start − avans, start]` întreagă; duce cheia șablonului în apelul de broadcast. Șablon nou `bulk_participant_reminder_final`. **Renunțare:** `token_renunt` + `renuntat_la` pe `registrations`, RPC public `decline_spot` (setează `deleted_at` → declanșează auto-promovarea existentă; refuză edițiile încheiate și cursele începute), jurnal `admin_events` cu tip `renuntare`. `edition2_recipients`, `admin_list_registrations` și `confirm_lookup` întorc `token_renunt` (pentru `{link_renunt}`). Șabloanele de reminder + promovare pierd „Check-in de la {ora_checkin}." și capătă linkul. Vezi `supabase-migration-remindere-si-renuntare.sql` |
+| 20260904184209 | `runlift_remindere_si_renuntare` | runlift | **Remindere:** orarul devine `config.reminders` (listă în documentul de ediție, editabilă din /admin → „Eveniment"), validat de `event_config_validate` (plafon 5, avans întreg 1–720, fără avansuri duplicate, șablon din listă închisă) și copiat de `scrie_scalarele_editiei` în `app_config.reminder_schedule` — al ȘASELEA scalar. `maybe_send_reminder` parcurge orarul, cu cheie de idempotență per (ediție, avans) și fereastră de declanșare `[scadență, scadență + 2h]` în loc de `[start − avans, start]` întreagă; duce cheia șablonului în apelul de broadcast. Șablon nou `bulk_participant_reminder_final`. **Renunțare:** `token_renunt` + `renuntat_la` pe `registrations`, RPC public `decline_spot` (setează `deleted_at` → declanșează auto-promovarea existentă; refuză edițiile încheiate și cursele începute), jurnal `admin_events` cu tip `renuntare`. `edition2_recipients`, `admin_list_registrations` și `confirm_lookup` întorc `token_renunt` (pentru `{link_renunt}`). Șabloanele de reminder + promovare pierd „Check-in de la {ora_checkin}." și capătă linkul. Vezi `supabase-migration-remindere-si-renuntare.sql` |
 | 20260825   | `runlift_soft_delete_registrations` | runlift | Ștergere logică pe `registrations` (`deleted_at`) + undo real (`admin_undelete_registration`, păstrează `id`/`created_at`) + gardă de capacitate pe `admin_add_registration` + jurnal de scrieri în `admin_events` (feed neplafonat). Indexul de unicitate devine PARȚIAL (`where deleted_at is null`), auto-promovarea trece de pe `AFTER DELETE` pe `AFTER UPDATE OF deleted_at`, iar `registrations_backup_sync` propagă `deleted_at` și pe ramura UPDATE. Vezi `supabase-migration-soft-delete-registrations.sql` |
 
 **Migrări ale altei aplicații** (schema `public`, gym-app + bot — **hands-off**):
@@ -81,6 +81,23 @@ local (repo-ul nu deține ciclul DB-ului partajat). Unele au fost scrise pentru 
 
 Doar ultimul reflectă schema `runlift` curentă și e menținut la zi (seed pentru start curat de
 ediție); restul sunt păstrate ca referință.
+
+### `supabase-cron-reminder-ARM.sql` — NEAPLICAT
+
+**`pg_cron` nu e instalat în proiect** (`pg_available_extensions` → `installed_version: null`;
+`cron.job` nu există). Verificat pe 4 septembrie 2026, cu ocazia migrării
+`runlift_remindere_si_renuntare`.
+
+Consecința, care nu se vede de nicăieri altundeva: **`maybe_send_reminder()` n-a rulat
+niciodată**, la nicio ediție. Funcția există din `runlift_reminder_idempotent` (7 august), dar
+nimic n-o cheamă — nu există nicio cheie `once_reminder_*` în `app_config`, deci nici un
+reminder automat n-a plecat vreodată. Reminderele trimise până acum au fost difuzări MANUALE
+din `/admin` → „Emailuri".
+
+Orarul din `/admin` → Eveniment → Remindere e deci configurat, dar inert, până când cineva
+rulează fișierul de armare (o singură dată pe proiect). `pg_net` **e** instalat (0.20.3), deci
+auto-promovarea de pe lista de așteptare — care merge tot prin `net.http_post` — chiar
+funcționează; doar cron-ul lipsește.
 
 ---
 
