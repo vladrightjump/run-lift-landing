@@ -127,7 +127,7 @@ export const EDITION = {
   },
 
   slots: {
-    total: 16,
+    total: 25,
     waitlist: 10,
     /** Fallback static pentru „locuri ocupate" dacă `public_stats` nu răspunde. */
     occupiedFallback: 0,
