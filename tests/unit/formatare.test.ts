@@ -30,13 +30,32 @@ describe('formatare — ziua, luna și ora', () => {
 });
 
 describe('formatare — data scurtă din liste', () => {
+  /**
+   * `ziSiLuna` e SINGURA fără fus impus — e o dată de calendar dintr-o listă de
+   * înscrieri, nu un moment — deci se citește în fusul celui care se uită.
+   *
+   * Testele ei trebuie construite tot în ora locală. Prima versiune folosea un
+   * moment UTC („2026-01-09T22:05:00Z") și aștepta „10 ian": trecea pe un ceas
+   * la UTC+3 și pica în CI, care rulează pe UTC. Testul era greșit, nu funcția —
+   * dar exact aici se vede de ce merită ca fusul să fie explicit.
+   */
+  const NOUA_IANUARIE = new Date(2026, 0, 9, 22, 5);
+  const CINCI_SEPTEMBRIE = new Date(2026, 8, 5, 10, 0);
+
   it('scoate punctul de după luna prescurtată', () => {
-    expect(ziSiLuna(DIMINEATA_CURSEI)).toBe('5 sept');
-    expect(ziSiLuna(NOAPTEA_DE_IARNA)).toBe('10 ian');
+    expect(ziSiLuna(CINCI_SEPTEMBRIE)).toBe('5 sept');
+    expect(ziSiLuna(NOUA_IANUARIE)).toBe('9 ian');
+  });
+
+  it('dă aceeași zi de calendar în care a fost construită, oriunde ar rula', () => {
+    // Fără fus impus, ziua afișată e ziua locală a datei — nu se mută peste
+    // miezul nopții pentru cine citește din alt fus decât cel al serverului.
+    const d = new Date(2026, 0, 9, 23, 59);
+    expect(ziSiLuna(d)).toBe('9 ian');
   });
 
   it('nu conține niciun punct', () => {
-    expect(ziSiLuna(DIMINEATA_CURSEI)).not.toContain('.');
+    expect(ziSiLuna(CINCI_SEPTEMBRIE)).not.toContain('.');
   });
 });
 
