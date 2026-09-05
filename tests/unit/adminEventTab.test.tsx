@@ -369,6 +369,10 @@ describe('clipurile din bandă', () => {
     expect(screen.getByText(/cod: ABC12345/)).toBeTruthy();
   });
 
+  // Timeout explicit: testul tastează patruzeci de caractere și re-randează tot
+  // tabul după fiecare, deci durează ~1,4 s pe o mașină de dezvoltare și trece
+  // de pragul implicit de 5 s pe un runner de CI încărcat. Nu e blocaj, e
+  // lungime reală — a picat în CI abia după ce suita a crescut la 725 de teste.
   it('TASTAREA nu se autodistruge', async () => {
     // Regresia păzită: câmpul era controlat de URL-ul RECOMPUS din codul
     // parsat, iar la tastare fiecare caracter în parte e un URL invalid — deci
@@ -383,7 +387,7 @@ describe('clipurile din bandă', () => {
       expect(camp('Linkul clipului').value).toBe(text);
     }
     expect(screen.getByText(/cod: ABC12345/)).toBeTruthy();
-  });
+  }, 20_000);
 
   it('la ieșirea din câmp rămâne forma canonică, fără query-ul de tracking', async () => {
     await adauga();
