@@ -131,14 +131,16 @@ sunt tolerate până le repară cineva. Când repari una, coboară numărul. Nu-
 
 Măsurate pe arborele din 5 septembrie 2026 și fixate cu un punct sub valoarea
 reală — destul de sus cât să prindă ștergerea unei suite, destul de jos cât să
-nu pice pentru zgomot:
+nu pice pentru zgomot. Au fost urcate o dată chiar în aceeași zi, după ce
+împărțirea taburilor de admin a adus încă 21 de teste pe ajutoarele devenite
+testabile — exact mișcarea pe care o cere regula de mai jos:
 
 | | măsurat | prag |
 |---|---|---|
-| linii | 65,92% | 65 |
-| instrucțiuni | 64,59% | 64 |
-| funcții | 58,76% | 58 |
-| ramuri | 57,31% | 56 |
+| linii | 68,87% | 68 |
+| instrucțiuni | 67,71% | 67 |
+| funcții | 62,46% | 61 |
+| ramuri | 60,44% | 59 |
 
 Verificate că mușcă: ștergerea suitei `useRegistration.test.tsx` pică pragul de
 linii și pe cel de funcții.

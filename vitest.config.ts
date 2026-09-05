@@ -25,10 +25,10 @@ export default defineConfig({
       // regresie fără să blocheze un PR pentru zgomot. Se URCĂ pe măsură ce
       // acoperirea crește; nu se coboară niciodată. Vezi `CI-CD.md`.
       thresholds: {
-        lines: 65,
-        statements: 64,
-        functions: 58,
-        branches: 56,
+        lines: 68,
+        statements: 67,
+        functions: 61,
+        branches: 59,
       },
     },
   },
