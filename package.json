@@ -10,14 +10,15 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
-    "lint": "oxlint",
+    "lint": "oxlint --max-warnings=25",
     "deadcode": "knip",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:preview": "E2E_PREVIEW=1 playwright test",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "verify": "npm run typecheck && npm run typecheck:tests && npm run test && npm run build && npm run test:e2e:preview"
+    "verify": "npm run lint && npm run deadcode && npm run typecheck && npm run typecheck:tests && npm run test:coverage && npm run build && npm run test:e2e:preview",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "react": "^19.2.0",

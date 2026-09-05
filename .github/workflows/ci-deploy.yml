@@ -27,13 +27,23 @@ jobs:
           cache: npm
       - run: npm ci
 
+      # Pragurile astea pică în câteva secunde, ÎNAINTE de orice compilare sau
+      # instalare de browser. O încălcare nouă de linter sau un export rămas
+      # nefolosit nu mai costă tot pipeline-ul ca să se vadă.
+      - name: Linter + cod mort
+        run: |
+          npm run lint
+          npm run deadcode
+
       - name: Typecheck (app + teste)
         run: |
           npm run typecheck
           npm run typecheck:tests
 
-      - name: Teste unitare + integrare
-        run: npm run test
+      # Cu acoperire, nu doar cu rezultate: pragurile din `vitest.config.ts` sunt
+      # un clichet — urcă pe măsură ce acoperirea crește, nu coboară niciodată.
+      - name: Teste unitare (cu prag de acoperire)
+        run: npm run test:coverage
 
       # Build-ul urcă ÎNAINTEA testelor e2e, pentru că acelea rulează acum pe
       # `dist/`, nu pe dev server. Tot aici pică garda CSP↔config, deci o
