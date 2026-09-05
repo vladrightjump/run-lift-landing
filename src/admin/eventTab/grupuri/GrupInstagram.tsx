@@ -1,5 +1,6 @@
 import type { EventConfig } from '../../../content/eventConfig';
 import { Grup, Camp } from '../primitive';
+import { areEroareIndexata } from '../ajutoare';
 
 type Props = {
   ciorna: EventConfig;
@@ -12,7 +13,7 @@ export const GrupInstagram = ({ ciorna, seteaza, erori }: Props) => (
   <Grup
     titlu="Instagram"
     ajutor="Clipurile din bandă. Lipești linkul din Instagram — codul se extrage singur."
-    areEroare={[...erori.keys()].some((c) => c.startsWith('reels'))}
+    areEroare={areEroareIndexata(erori, 'reels')}
     rezumat={
       ciorna.reels.items.length === 0
         ? 'Niciun clip · secțiunea nu apare pe pagină'

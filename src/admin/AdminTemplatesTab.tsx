@@ -61,7 +61,12 @@ export const AdminTemplatesTab = () => {
     mesajTimerRef.current = window.setTimeout(() => setMesaj(null), 3500);
   }, []);
 
-  const { date: rows, eroare: loadError, reincarca: refresh } = useAdminResource(listEmailTemplates);
+  const { date: rows, eroare: loadError, reincarca: refresh } = useAdminResource(
+    listEmailTemplates,
+    // Formular în care se SCRIE: nu-l reîmprospătăm sub cursor. Se reîncarcă
+    // doar la montare și după fiecare salvare.
+    null
+  );
 
   // Ciorna se populează doar pentru șabloanele needitate încă: o reîmprospătare
   // nu are voie să calce peste ce tocmai a scris organizatorul.

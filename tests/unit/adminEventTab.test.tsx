@@ -881,3 +881,51 @@ describe('publicarea trimite ce e pe ecran chiar și peste o ciornă veche de pe
     await waitFor(() => expect(publishEventConfig).toHaveBeenCalledTimes(1));
   });
 });
+
+/**
+ * Grupul „Remindere" e singurul, alături de „Instagram", ale cărui erori NU se
+ * numesc după câmp: validarea le scrie pe chei indexate
+ * (`reminders.0.offsetHours`), nu pe cheia plată `reminders`.
+ *
+ * De asta contează: un grup cu eroare trebuie să se deschidă singur și să nu se
+ * mai poată închide. Dacă marcajul se uită doar după cheia plată, un rând de
+ * reminder greșit lasă grupul pliat, iar organizatorul primește un refuz la
+ * „Publică" fără să afle ce câmp îl produce — exact ce spune comentariul lui
+ * `Grup` că nu are voie să se întâmple.
+ *
+ * Erorile se produc TASTÂND, nu semănând un config invalid: `parseEventConfig`
+ * curăță rândurile invalide la parsare, deci un config stricat din start n-ar
+ * ajunge niciodată la validare.
+ */
+describe('erorile indexate deschid grupul care le conține', () => {
+  const grupul = (titlu: string) =>
+    [...document.querySelectorAll('.admin-config-grup')].find((g) =>
+      g.querySelector('.admin-config-grup-cap')?.textContent?.includes(titlu)
+    );
+
+  const capul = (titlu: string) =>
+    grupul(titlu)?.querySelector('.admin-config-grup-cap') as HTMLElement;
+
+  it('un avans invalid pe un rând marchează grupul și îl ține deschis', async () => {
+    await deschideCiorna();
+
+    // Zero e sub minimul de 1 -> cheia `reminders.0.offsetHours`, indexată.
+    fireEvent.change(camp('Cu câte ore înainte de start'), { target: { value: '0' } });
+
+    expect(grupul('Remindere')?.className).toContain('invalid');
+    fireEvent.click(capul('Remindere')); // încercăm să-l închidem
+    expect(capul('Remindere').getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('un avans peste maxim marchează la fel', async () => {
+    await deschideCiorna();
+    fireEvent.change(camp('Cu câte ore înainte de start'), { target: { value: '721' } });
+    expect(grupul('Remindere')?.className).toContain('invalid');
+  });
+
+  it('un avans valid nu marchează nimic', async () => {
+    await deschideCiorna();
+    fireEvent.change(camp('Cu câte ore înainte de start'), { target: { value: '12' } });
+    expect(grupul('Remindere')?.className).not.toContain('invalid');
+  });
+});

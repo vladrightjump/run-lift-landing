@@ -184,3 +184,22 @@ export const refuzCuPas = (pas: Pas, err: unknown): string => {
     ? `${NUMELE_PASULUI[pas]} a fost refuzată: ${motiv}`
     : `${NUMELE_PASULUI[pas]} n-a primit răspuns — nu știm dacă a ajuns pe server. Reîncarcă pagina și verifică înainte să reîncerci.`;
 };
+
+/**
+ * Are grupul vreo eroare pe cheile lui?
+ *
+ * Două grupuri — „Remindere" și „Instagram" — nu-și pot enumera câmpurile:
+ * validarea le scrie erorile pe chei INDEXATE (`reminders.0.offsetHours`,
+ * `reels.2.code`), câte una per rând, plus una plată pentru regulile care
+ * privesc lista întreagă (`reminders` la avansuri duplicate).
+ *
+ * `areEroare` din tab compară exact, deci nu vede rândurile. Confuzia dintre
+ * cele două a scăpat o dată deja: la împărțirea tabului pe grupuri, „Remindere"
+ * a trecut pe potrivire exactă și un avans invalid a rămas nesemnalat, cu grupul
+ * pliat peste el. Aici e numită o singură dată, ca să nu se mai repete.
+ *
+ * Prefixul se compară pe segment (`reminders.`), nu pe text: altfel o cheie
+ * viitoare gen `remindersLegacy` ar fi marcat grupul greșit.
+ */
+export const areEroareIndexata = (erori: Map<string, string>, prefix: string): boolean =>
+  [...erori.keys()].some((cheie) => cheie === prefix || cheie.startsWith(`${prefix}.`));

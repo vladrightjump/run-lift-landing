@@ -520,7 +520,6 @@ export const AdminEventTab = () => {
             ciorna={ciorna}
             seteazaRemindere={seteazaRemindere}
             erori={erori}
-            areEroare={areEroare}
             acum={acum}
           />
 

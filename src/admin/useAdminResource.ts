@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { useAdminPolling } from './useAdminPolling';
+import { useAdminPolling, ADMIN_REFRESH_MS } from './useAdminPolling';
 import { useSesiuneAdmin } from './adminSession';
 
 /**
@@ -30,7 +30,9 @@ export type ResursaAdmin<T> = {
 
 export const useAdminResource = <T>(
   /** Stabil (`useCallback`) — identitatea lui repornește poll-ul. */
-  incarca: (token: string, signal: AbortSignal) => Promise<T>
+  incarca: (token: string, signal: AbortSignal) => Promise<T>,
+  /** `null` = se încarcă o singură dată. Vezi `useAdminPolling`. */
+  intervalMs: number | null = ADMIN_REFRESH_MS
 ): ResursaAdmin<T> => {
   const { token, onAuthError } = useSesiuneAdmin();
   const [date, setDate] = useState<T | null>(null);
@@ -55,7 +57,7 @@ export const useAdminResource = <T>(
     [incarca, token, onAuthError]
   );
 
-  const reincarca = useAdminPolling(cere);
+  const reincarca = useAdminPolling(cere, intervalMs);
 
   return { date, eroare, reincarca };
 };

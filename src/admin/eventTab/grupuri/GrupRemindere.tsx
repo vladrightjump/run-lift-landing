@@ -8,19 +8,18 @@ import {
   type ReminderTemplateKey,
 } from '../../../content/eventConfig';
 import { remindereleProgramate, urmatorulReminder } from '../../remindere';
-import { ETICHETE_SABLOANE } from '../ajutoare';
+import { ETICHETE_SABLOANE, areEroareIndexata } from '../ajutoare';
 
 type Props = {
   ciorna: EventConfig;
   seteazaRemindere: (reminders: EventConfig['reminders']) => void;
   erori: Map<string, string>;
-  areEroare: (campuri: string[]) => boolean;
   /** Momentul curent — orarul se citește față de el. */
   acum: number;
 };
 
 /** „Remindere": orarul emailurilor care pleacă singure înainte de cursă. */
-export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, areEroare, acum }: Props) => {
+export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum }: Props) => {
   const ocupat = useContext(Blocat);
   // Derivate din ciornă, nu primite: grupul e singurul care le folosește, iar
   // ca prop-uri ar fi fost două valori în plus de ținut în sincron.
@@ -31,7 +30,7 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, areEroare, acum
   <Grup
     titlu="Remindere"
     ajutor="Emailurile automate dinaintea cursei. Pleacă singure, o singură dată fiecare."
-    areEroare={areEroare(['reminders'])}
+    areEroare={areEroareIndexata(erori, 'reminders')}
     rezumat={
       urmatorul
         ? `${active.length} ${active.length === 1 ? 'activ' : 'active'} · următorul ${

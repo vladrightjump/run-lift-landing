@@ -26,18 +26,27 @@ const res = (): Prins => {
   return captura.r;
 };
 
-const Sonda = ({ incarca }: { incarca: (t: string, s: AbortSignal) => Promise<unknown> }) => {
-  const r = useAdminResource(incarca);
+const Sonda = ({
+  incarca,
+  intervalMs,
+}: {
+  incarca: (t: string, s: AbortSignal) => Promise<unknown>;
+  intervalMs?: number | null;
+}) => {
+  const r = useAdminResource(incarca, intervalMs);
   useEffect(() => {
     captura.r = r;
   });
   return null;
 };
 
-const randeaza = (incarca: (t: string, s: AbortSignal) => Promise<unknown>) =>
+const randeaza = (
+  incarca: (t: string, s: AbortSignal) => Promise<unknown>,
+  intervalMs?: number | null
+) =>
   render(
     <FurnizorSesiuneAdmin token="jeton" onAuthError={onAuthError} showToast={showToast}>
-      <Sonda incarca={incarca} />
+      <Sonda incarca={incarca} intervalMs={intervalMs} />
     </FurnizorSesiuneAdmin>
   );
 
@@ -166,5 +175,58 @@ describe('adminSession — furnizorul', () => {
     const consola = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => render(<Neinvelit />)).toThrow(/FurnizorSesiuneAdmin/);
     consola.mockRestore();
+  });
+});
+
+/**
+ * Nu tot ce se încarcă trebuie și reîmprospătat.
+ *
+ * Tabul de șabloane e un formular în care organizatorul SCRIE. Înainte de
+ * refactor se încărca o singură dată; consolidarea pe `useAdminResource` i-a dat
+ * din greșeală poll la 15 secunde, adică o re-randare a textarei sub cursor,
+ * pentru date pe care nimeni altcineva nu le schimbă în paralel.
+ */
+describe('useAdminResource — încărcare o singură dată', () => {
+  it('cu `intervalMs: null` nu mai cere nimic după montare', async () => {
+    const incarca = vi.fn().mockResolvedValue([]);
+    randeaza(incarca, null);
+    await lasaSaSeAseze();
+    expect(incarca).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+
+    expect(incarca).toHaveBeenCalledTimes(1);
+  });
+
+  it('reîncărcarea manuală merge în continuare — de asta se folosește după salvare', async () => {
+    const incarca = vi.fn().mockResolvedValue([]);
+    randeaza(incarca, null);
+    await lasaSaSeAseze();
+
+    await act(async () => {
+      res().reincarca();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(incarca).toHaveBeenCalledTimes(2);
+  });
+
+  it('revenirea în tab NU declanșează o cerere când poll-ul e oprit', async () => {
+    const incarca = vi.fn().mockResolvedValue([]);
+    randeaza(incarca, null);
+    await lasaSaSeAseze();
+
+    await act(async () => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(incarca).toHaveBeenCalledTimes(1);
   });
 });
