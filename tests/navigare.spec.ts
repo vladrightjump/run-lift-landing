@@ -103,9 +103,12 @@ test.describe('Drumul dus-întors', () => {
     await page.goto('/despre-noi');
     await page.locator('.dn-footer a[href="/"]').click();
     await expect(page).toHaveURL(/\/$/);
-    // La „/" apare Coming Soon sau landing, în funcție de LAUNCH_DATE —
-    // testul acceptă ambele, ca să nu se rupă la trecerea de la o fază la alta.
-    await expect(page.locator('.cs-root, #inscriere').first()).toBeVisible();
+    // La „/" apare Coming Soon (`.cs-root`) sau landing-ul (`.e3-root`), în
+    // funcție de fază. Testul ăsta verifică DRUMUL, nu faza, deci acceptă orice
+    // fază: landing-ul are trei (`pre`, `leaderboard`, `next`) și doar în `pre`
+    // există `#inscriere`. Fixarea pe `#inscriere` pica în ziua cursei, când
+    // înscrierea dispare de pe homepage. Fazele se testează în `faze.spec.ts`.
+    await expect(page.locator('.cs-root, .e3-root').first()).toBeVisible();
   });
 
   test('logoul din antetul Despre noi duce la pagina principală', async ({ page }) => {

@@ -34,6 +34,18 @@ Ultima actualizare: 4 august 2026.
 - [ ] **Reminder automat** (cron programat) în loc de broadcast manual.
 - [ ] **Vercel Analytics** — activează din dashboard (decomentează scripturile din `index.html`).
 - [ ] **Regenerare `og.png` din EDITION** — momentan asset manual (1200×630) per ediție.
+- [ ] **14 erori de linter, preexistente** — ieșite la iveală când `oxlint` a intrat în repo
+      (5 sep 2026). Nu sunt regresii și nimic nu se vede rupt azi, dar niciuna nu e stilistică:
+      - `set-state-in-effect` (10×) — `setState` sincron într-un efect, deci randări în cascadă:
+        `useCountdown`, `useCountUp`, `useEventConfig`, `useSuccessRedirect`, `useRegistration:69`,
+        `Confirmare`, `Unsubscribe`, `SignupBanner`, `AdminApp`, `AdminComingSoonTab`.
+      - `refs` (3×) — `ref.current` citit în timpul randării: `AdminDashboard:219,221`,
+        `AdminLaunchTab:23`. Componenta poate să nu se actualizeze când te aștepți.
+      - `exhaustive-deps` (2×) + `preserve-manual-memoization` (1×) — `useMemo` cu dependențe
+        lipsă în `useRegistration:88` și cu o dependență care se schimbă la fiecare randare în
+        `AdminDashboard:374`, deci memoizarea nu ține.
+      Le vezi cu `npm run lint`. Refactor-ul din 5 sep le-a lăsat neatinse deliberat: contractul
+      lui e păstrarea comportamentului, iar astea sunt schimbări de comportament.
 
 ---
 

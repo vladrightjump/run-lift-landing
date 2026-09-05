@@ -16,9 +16,10 @@ import { cheieDifuzare, ultimaDifuzare, audienteAmbigue } from './sendLock';
 import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
 import type { Audience, Recipient } from './emailAudience';
 import { useEventConfig } from '../hooks/useEventConfig';
+import { ziLunaOra, ziSiLuna } from '../lib/formatare';
+import { useSesiuneAdmin } from './adminSession';
 
 type Props = {
-  token: string;
   rows: AdminRegistration[];
   /** Lista de așteptare a evenimentului (event_waitlist) a ediției deschise. */
   waitlist: AdminWaitlistEntry[];
@@ -28,8 +29,6 @@ type Props = {
   emailLog: AdminEmailLogEntry[];
   /** Ediție de arhivă: nu mai trimitem emailuri în numele ei. */
   readOnly: boolean;
-  formatDate: (iso: string) => string;
-  showToast: (toast: { kind: 'error' | 'success'; msg: string }) => void;
 };
 
 type Template = { nume: string; subiect: string; corp: string };
@@ -73,24 +72,14 @@ const VARIABLES = [
   '{link_renunt}',
 ] as const;
 
-const timpDifuzare = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-});
-
 export const AdminEmailTab = ({
-  token,
   rows,
   waitlist,
   editie,
   emailLog,
   readOnly,
-  formatDate,
-  showToast,
 }: Props) => {
+  const { token, showToast } = useSesiuneAdmin();
   // Configul publicat — sursa variabilelor de eveniment din șabloane.
   const configPublicat = useEventConfig();
   const [audience, setAudience] = useState<Audience>('participanti');
@@ -201,7 +190,7 @@ export const AdminEmailTab = ({
   // Previzualizarea trece prin aceeași substituție ca trimiterea — altfel ai
   // verifica alt text decât cel care pleacă.
   const fill = (text: string, r: Recipient): string =>
-    fillTemplate(text, r, formatDate(r.created_at), configPublicat);
+    fillTemplate(text, r, ziSiLuna(r.created_at), configPublicat);
 
   const switchAudience = (a: Audience) => {
     if (a === audience) return;
@@ -495,7 +484,7 @@ export const AdminEmailTab = ({
         {anterioara && !readOnly && (
           <div className="admin-banner warn" role="status">
             <strong>
-              Aceeași difuzare a plecat deja pe {timpDifuzare.format(new Date(anterioara.cand))},
+              Aceeași difuzare a plecat deja pe {ziLunaOra(anterioara.cand)},
               către {anterioara.catreCati}{' '}
               {anterioara.catreCati === 1 ? 'destinatar' : 'destinatari'}.
             </strong>{' '}

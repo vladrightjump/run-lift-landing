@@ -13,7 +13,7 @@
  */
 import { SUPABASE } from './backend';
 
-export type VercelJson = {
+type VercelJson = {
   headers?: Array<{ headers?: Array<{ key: string; value: string }> }>;
 };
 
@@ -22,7 +22,7 @@ export const currentSupabaseRef = (): string =>
   new URL(SUPABASE.url).hostname.split('.')[0];
 
 /** Extrage conținutul directivei `connect-src` din headerul CSP al `vercel.json`. */
-export const extractConnectSrc = (vercel: VercelJson): string => {
+const extractConnectSrc = (vercel: VercelJson): string => {
   const all = (vercel.headers ?? []).flatMap((h) => h.headers ?? []);
   const csp = all.find((h) => h.key.toLowerCase() === 'content-security-policy');
   if (!csp) throw new Error('vercel.json: lipsește headerul Content-Security-Policy');

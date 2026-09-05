@@ -20,7 +20,15 @@ export const ADMIN_REFRESH_MS = 15_000;
 export const useAdminPolling = (
   /** Stabil (`useCallback`) — identitatea lui repornește intervalul. */
   fetch: (signal: AbortSignal) => void,
-  intervalMs: number = ADMIN_REFRESH_MS
+  /**
+   * `null` = o singură cerere, la montare.
+   *
+   * Nu tot ce se încarcă în backoffice trebuie și reîmprospătat: tabul de
+   * șabloane e un formular în care organizatorul SCRIE, iar o reîncărcare la
+   * fiecare 15 secunde i-ar re-randa textarea sub cursor fără să aducă nimic —
+   * nimeni altcineva nu editează șabloanele în paralel.
+   */
+  intervalMs: number | null = ADMIN_REFRESH_MS
 ): (() => void) => {
   const abortRef = useRef<AbortController | null>(null);
 
@@ -35,6 +43,11 @@ export const useAdminPolling = (
 
   useEffect(() => {
     refresh();
+    if (intervalMs === null) {
+      // Fără interval și fără listener: rămâne doar cererea de la montare,
+      // reîmprospătarea manuală și anularea la demontare.
+      return () => abortRef.current?.abort();
+    }
     const id = window.setInterval(refresh, intervalMs);
     const onVisible = () => {
       if (document.visibilityState === 'visible') refresh();

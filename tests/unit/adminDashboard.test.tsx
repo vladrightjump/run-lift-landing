@@ -140,3 +140,137 @@ describe('AdminDashboard — undo la ștergere', () => {
     expect(await screen.findByText(/re-înscrisă/i)).toBeDefined();
   });
 });
+
+describe('AdminDashboard — navigarea între taburi', () => {
+  /**
+   * Deschide un tab așa cum o face organizatorul: întâi grupul, apoi tabul.
+   * Navigația are două niveluri, iar taburile unui grup inactiv nici nu sunt
+   * randate — de asta clicul direct pe „Șabloane" n-ar găsi nimic.
+   */
+  const deschide = async (grup: string, eticheta: string) => {
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Ana Popescu');
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(grup) }));
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(eticheta) }));
+  };
+
+  it('pornește pe „Participanți", cu tabelul lor', async () => {
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    expect(await screen.findByText('Ana Popescu')).toBeDefined();
+    expect(screen.getByLabelText('Caută în lista de participanți')).toBeDefined();
+  });
+
+  it('deschiderea „Șabloane" schimbă vederea și lasă participanții în urmă', async () => {
+    await deschide('Comunicare', 'Șabloane');
+    expect(await screen.findByText('Șabloane de email')).toBeDefined();
+    expect(screen.queryByLabelText('Caută în lista de participanți')).toBeNull();
+  });
+
+  it('deschiderea „Livrare" schimbă vederea', async () => {
+    await deschide('Comunicare', 'Livrare');
+    await waitFor(() =>
+      expect(screen.queryByLabelText('Caută în lista de participanți')).toBeNull()
+    );
+  });
+
+  it('un singur tab e randat odată — vederile nu se suprapun', async () => {
+    await deschide('Comunicare', 'Șabloane');
+    await screen.findByText('Șabloane de email');
+    expect(screen.queryByRole('button', { name: 'Export CSV' })).toBeNull();
+  });
+
+  it('vederile taburilor închise nu se strecoară peste cel deschis', async () => {
+    // Verificarea în cealaltă direcție: pe „Participanți" NU trebuie să apară
+    // nimic din celelalte taburi. Fără ea, o condiție de randare stricată
+    // (`{true && …}` în loc de `{tab === '…' && …}`) ar trece neobservată,
+    // pentru că testul de mai sus se uită doar la tabul deschis.
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Ana Popescu');
+
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDefined();
+    expect(screen.queryByText('Șabloane de email')).toBeNull();
+  });
+});
+
+describe('AdminDashboard — căutarea în participanți', () => {
+  const cauta = async (text: string) => {
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Ana Popescu');
+    fireEvent.change(screen.getByLabelText('Caută în lista de participanți'), {
+      target: { value: text },
+    });
+  };
+
+  it('filtrează după nume', async () => {
+    await cauta('Ana');
+    expect(screen.getByText('Ana Popescu')).toBeDefined();
+    expect(screen.queryByText('Mihai Ionescu')).toBeNull();
+  });
+
+  it('filtrează după email', async () => {
+    await cauta('mihai@exemplu.ro');
+    expect(screen.getByText('Mihai Ionescu')).toBeDefined();
+    expect(screen.queryByText('Ana Popescu')).toBeNull();
+  });
+
+  it('nu ține cont de majuscule', async () => {
+    await cauta('ANA POPESCU');
+    expect(screen.getByText('Ana Popescu')).toBeDefined();
+  });
+
+  it('o căutare fără rezultate golește tabelul, fără să pice', async () => {
+    await cauta('nimeni-pe-lumea-asta');
+    expect(screen.queryByText('Ana Popescu')).toBeNull();
+    expect(screen.queryByText('Mihai Ionescu')).toBeNull();
+  });
+});
+
+describe('AdminDashboard — exportul CSV', () => {
+  it('scrie un fișier cu antetul așteptat și un rând per participant', async () => {
+    // `Blob.text()` nu există în jsdom; prindem conținutul la construire.
+    const bucati: string[] = [];
+    const BlobReal = globalThis.Blob;
+    vi.stubGlobal(
+      'Blob',
+      class extends BlobReal {
+        constructor(parts: BlobPart[], options?: BlobPropertyBag) {
+          bucati.push(parts.map(String).join(''));
+          super(parts, options);
+        }
+      }
+    );
+    const createURL = vi.fn(() => 'blob:fals');
+    vi.stubGlobal('URL', { ...URL, createObjectURL: createURL, revokeObjectURL: vi.fn() });
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Ana Popescu');
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+
+    const csv = bucati.at(-1) ?? '';
+    expect(csv).toContain('Nr');
+    expect(csv).toContain('Nume');
+    expect(csv).toContain('Telefon');
+    expect(csv).toContain('Email');
+    expect(csv).toContain('Ana Popescu');
+    expect(csv).toContain('Mihai Ionescu');
+    expect(click).toHaveBeenCalled();
+
+    click.mockRestore();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('AdminDashboard — sesiunea expirată', () => {
+  it('un token invalid la încărcare duce înapoi la login', async () => {
+    const { InvalidTokenError } = await import('../../src/lib/adminApi');
+    api.current!.listRegistrations.mockRejectedValue(new InvalidTokenError());
+    const onLogout = vi.fn();
+
+    render(<AdminDashboard token="token-test" onLogout={onLogout} />);
+
+    await waitFor(() => expect(onLogout).toHaveBeenCalled());
+  });
+});

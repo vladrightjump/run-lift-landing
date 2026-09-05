@@ -38,7 +38,7 @@ export type ReelEntry = {
   caption: string;
 };
 
-export type ReelsConfig = {
+type ReelsConfig = {
   headline: string;
   body: string;
   items: ReelEntry[];
@@ -48,7 +48,7 @@ export type ReelsConfig = {
 export const MAX_REELS = 12;
 
 /** Textele implicite ale secțiunii, când documentul nu le poartă. */
-export const DEFAULT_REELS: ReelsConfig = {
+const DEFAULT_REELS: ReelsConfig = {
   headline: 'Instagram',
   body: '',
   items: [],
@@ -123,7 +123,7 @@ export const DEFAULT_REMINDERS: ReminderEntry[] = [
 ];
 
 /** Locul cursei, așa cum vine din document (fără `landmark` — cursa n-are). */
-export type VenueConfig = Pick<Place, 'name' | 'city' | 'mapQuery' | 'zoom'>;
+type VenueConfig = Pick<Place, 'name' | 'city' | 'mapQuery' | 'zoom'>;
 
 export type EventConfig = {
   number: number;

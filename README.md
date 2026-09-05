@@ -25,7 +25,7 @@ run-lift-landing/
 │   ├── components/       # Edition3Landing, ComingSoon, Confirmare, DespreNoi, Toast
 │   │                     #   landing/ReelsSection — banda Instagram (façade + iframe la click)
 │   ├── admin/            # backoffice /admin (login, dashboard, email, șabloane)
-│   ├── hooks/            # useCountdown, usePagePhase, useScrollReveal, useToast, useOnlineStatus, useNow, useStats
+│   ├── hooks/            # useCountdown, usePagePhase, useScrollReveal, useToast, useNow, useStats
 │   └── lib/
 │       ├── config.ts     # derivă din content/edition.ts (NU edita valori aici)
 │       ├── backend.ts    # config Supabase (url/key/schema) — mediu, nu ediție

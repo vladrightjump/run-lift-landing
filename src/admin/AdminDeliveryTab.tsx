@@ -13,9 +13,10 @@ import {
   COMUNICARI_EDITIE,
 } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
+import { ziLunaOra } from '../lib/formatare';
+import { useSesiuneAdmin } from './adminSession';
 
 type Props = {
-  token: string;
   editie: number;
   log: AdminEmailLogEntry[] | null;
   /** Participanții ediției — ca să vedem cine n-a primit NIMIC. */
@@ -23,7 +24,6 @@ type Props = {
   /** Ediție de arhivă: nu retrimitem emailuri în trecut. */
   readOnly: boolean;
   onRefresh: () => void;
-  showToast: (toast: { kind: 'error' | 'success'; msg: string }) => void;
 };
 
 type Filtru = 'toate' | 'esuate' | 'trimise' | 'fara-email';
@@ -43,23 +43,14 @@ const MOD_LABELS: Record<string, string> = {
   broadcast: 'Reminder / anunț',
 };
 
-const timpFmt = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-});
-
 export const AdminDeliveryTab = ({
-  token,
   editie,
   log,
   participanti,
   readOnly,
   onRefresh,
-  showToast,
 }: Props) => {
+  const { token, showToast } = useSesiuneAdmin();
   // Configul publicat — sursa variabilelor de eveniment din șabloane.
   const configPublicat = useEventConfig();
   const [filtru, setFiltru] = useState<Filtru>('toate');
@@ -456,7 +447,7 @@ export const AdminDeliveryTab = ({
                   onClick={() => setDeschis(deschis === e.id ? null : e.id)}
                   title={e.status === 'esuat' ? 'Vezi motivul eșecului' : 'Vezi textul trimis'}
                 >
-                  <span className="admin-cell-date">{timpFmt.format(new Date(e.created_at))}</span>
+                  <span className="admin-cell-date">{ziLunaOra(e.created_at)}</span>
                   <span className="admin-cell-name">
                     {e.nume || e.email}
                     {e.nume && <span className="admin-livrare-email">{e.email}</span>}

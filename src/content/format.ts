@@ -60,7 +60,7 @@ const parts = (localIso: string) => {
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Ordinalul feminin RO al ediției („a patra"), cu override opțional din config. */
-export const ordinal = (n: number, override?: string | null): string =>
+const ordinal = (n: number, override?: string | null): string =>
   override ?? ORDINALS_RO[n] ?? `a ${n}-a`;
 
 /** „8 august 2026". */

@@ -45,7 +45,7 @@ export const normalizeParticipant = (r: AdminRegistration): Recipient => ({
   tokenRenunt: r.token_renunt ?? '',
 });
 
-export const normalizeLaunch = (r: AdminLaunchSignup): Recipient => ({
+const normalizeLaunch = (r: AdminLaunchSignup): Recipient => ({
   id: r.id,
   nume: `${r.prenume} ${r.nume}`.trim(),
   prenume: r.prenume,
@@ -145,7 +145,7 @@ export const fillTemplate = (
  * — duplicată pentru că trimiterea manuală din backoffice compune textele în
  * client, iar cea automată pe server.
  */
-export const linkRenunt = (token: string): string =>
+const linkRenunt = (token: string): string =>
   `https://parktraining.fit/renunt?token=${token}`;
 
 /**
@@ -163,7 +163,7 @@ export const linkRenunt = (token: string): string =>
  * mai rău decât dacă lipsea tot. Paragraful e unitatea corectă și pentru că e
  * exact cum împarte textul și randarea HTML a emailului (`split(/\n{2,}/)`).
  */
-export const faraLinkRenunt = (text: string): string =>
+const faraLinkRenunt = (text: string): string =>
   text
     .split(/\n{2,}/)
     .filter((p) => !p.includes('{link_renunt}'))

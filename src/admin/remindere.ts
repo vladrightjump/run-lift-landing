@@ -28,7 +28,7 @@ const la = (localIso: string, tz: string): number => new Date(`${localIso}${tz}`
  *                  pleacă, și ăsta e cazul care merită spus cu voce tare.
  *  • `trecut`    — startul e în urmă; întreaga ediție s-a consumat.
  */
-export type StareReminder = 'oprit' | 'programat' | 'iminent' | 'ratat' | 'trecut';
+type StareReminder = 'oprit' | 'programat' | 'iminent' | 'ratat' | 'trecut';
 
 export type ReminderPlanificat = {
   /** Indexul în `config.reminders` — rândurile se editează după el. */

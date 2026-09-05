@@ -284,7 +284,7 @@ export const seteazaReel = <K extends keyof ReelEntry>(
  * altfel butonul ar produce un duplicat, adică un rând invalid din start.
  * Când toate sunt luate, cade pe „cu o oră mai devreme decât cel mai devreme".
  */
-export const AVANSURI_SUGERATE = [24, 72, 3, 48, 12, 6, 1] as const;
+const AVANSURI_SUGERATE = [24, 72, 3, 48, 12, 6, 1] as const;
 
 export const adaugaReminder = (lista: ReminderEntry[]): ReminderEntry[] => {
   if (lista.length >= MAX_REMINDERS) return lista;
