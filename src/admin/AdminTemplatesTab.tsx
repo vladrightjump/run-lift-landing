@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listEmailTemplates, saveEmailTemplate } from '../lib/adminApi';
 import type { AdminEmailTemplate } from '../lib/adminApi';
-
-type Props = {
-  token: string;
-  onAuthError: (err: unknown) => boolean;
-};
+import { useSesiuneAdmin } from './adminSession';
+import { useAdminResource } from './useAdminResource';
 
 /** Eticheta prietenoasă pentru fiecare șablon cunoscut. */
 const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
@@ -51,13 +48,11 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
   },
 };
 
-export const AdminTemplatesTab = ({ token, onAuthError }: Props) => {
-  const [rows, setRows] = useState<AdminEmailTemplate[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
+export const AdminTemplatesTab = () => {
+  const { token, onAuthError } = useSesiuneAdmin();
   const [draft, setDraft] = useState<Record<string, { subiect: string; text: string }>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [mesaj, setMesaj] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const mesajTimerRef = useRef<number | null>(null);
 
   const arataMesaj = useCallback((kind: 'ok' | 'err', text: string) => {
@@ -66,36 +61,27 @@ export const AdminTemplatesTab = ({ token, onAuthError }: Props) => {
     mesajTimerRef.current = window.setTimeout(() => setMesaj(null), 3500);
   }, []);
 
-  const refresh = useCallback(() => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    listEmailTemplates(token, controller.signal)
-      .then((data) => {
-        setRows(data);
-        setLoadError(false);
-        // Populăm draft-ul doar pentru șabloanele needitate încă.
-        setDraft((prev) => {
-          const next = { ...prev };
-          for (const t of data) {
-            if (!next[t.cheie]) next[t.cheie] = { subiect: t.subiect, text: t.text_email };
-          }
-          return next;
-        });
-      })
-      .catch((err) => {
-        if (controller.signal.aborted || onAuthError(err)) return;
-        setLoadError(true);
-      });
-  }, [token, onAuthError]);
+  const { date: rows, eroare: loadError, reincarca: refresh } = useAdminResource(listEmailTemplates);
 
+  // Ciorna se populează doar pentru șabloanele needitate încă: o reîmprospătare
+  // nu are voie să calce peste ce tocmai a scris organizatorul.
   useEffect(() => {
-    refresh();
-    return () => {
-      abortRef.current?.abort();
+    if (!rows) return;
+    setDraft((prev) => {
+      const next = { ...prev };
+      for (const t of rows) {
+        if (!next[t.cheie]) next[t.cheie] = { subiect: t.subiect, text: t.text_email };
+      }
+      return next;
+    });
+  }, [rows]);
+
+  useEffect(
+    () => () => {
       if (mesajTimerRef.current !== null) window.clearTimeout(mesajTimerRef.current);
-    };
-  }, [refresh]);
+    },
+    []
+  );
 
   const salveaza = async (cheie: string) => {
     const d = draft[cheie];

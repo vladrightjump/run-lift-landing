@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
+import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { AdminEventTab } from '../../src/admin/AdminEventTab';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 import { formatRoDate } from '../../src/content/format';
@@ -53,7 +54,11 @@ const showToast = vi.fn();
 const onAuthError = vi.fn(() => false);
 
 const randeaza = () =>
-  render(<AdminEventTab token="t" onAuthError={onAuthError} showToast={showToast} />);
+  render(
+    <FurnizorSesiuneAdmin token="t" onAuthError={onAuthError} showToast={showToast}>
+      <AdminEventTab />
+    </FurnizorSesiuneAdmin>
+  );
 
 beforeEach(() => {
   vi.clearAllMocks();

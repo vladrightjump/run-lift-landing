@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import type { adminApiMock } from './helpers/adminHarness';
 import { cheieDifuzare } from '../../src/admin/sendLock';
+import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 
 /**
  * Zăvorul pe difuzările manuale. Înainte, butonul de trimitere n-avea memorie:
@@ -54,16 +55,15 @@ const participanti = [
 
 const monteaza = (emailLog: Parameters<typeof AdminEmailTab>[0]['emailLog']) =>
   render(
-    <AdminEmailTab
-      token="token-test"
-      rows={participanti}
-      waitlist={[]}
-      editie={5}
-      emailLog={emailLog}
-      readOnly={false}
-      formatDate={(iso) => iso.slice(0, 10)}
-      showToast={() => {}}
-    />
+    <FurnizorSesiuneAdmin token="token-test" onAuthError={() => false} showToast={() => {}}>
+      <AdminEmailTab
+        rows={participanti}
+        waitlist={[]}
+        editie={5}
+        emailLog={emailLog}
+        readOnly={false}
+      />
+    </FurnizorSesiuneAdmin>
   );
 
 afterEach(() => {

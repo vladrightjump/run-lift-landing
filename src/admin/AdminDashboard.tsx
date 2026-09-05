@@ -51,6 +51,7 @@ import { fazaSite, ETICHETA_FAZA, type TabAdmin } from './stareCurenta';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
 import { ziSiLuna, ziLunaOra } from '../lib/formatare';
+import { FurnizorSesiuneAdmin } from './adminSession';
 
 type Props = {
   token: string;
@@ -576,7 +577,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   };
 
   return (
-    <>
+    <FurnizorSesiuneAdmin token={token} onAuthError={handleAuthError} showToast={showToast}>
       <header className="admin-topbar">
         <div className="brand">
           <span className="admin-logo">
@@ -646,53 +647,42 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         <AdminNav tab={tab} onTab={setTab} contorTab={contorTab} nelivrate={nelivrate} />
 
         {tab === 'sabloane' && (
-          <AdminTemplatesTab token={token} onAuthError={handleAuthError} />
+          <AdminTemplatesTab />
         )}
 
         {tab === 'email' && (
           <AdminEmailTab
-            token={token}
             rows={all}
             waitlist={waitAll}
             editie={editie ?? CURRENT_EDITION}
             emailLog={emailLog ?? []}
             readOnly={arhiva}
-            formatDate={ziSiLuna}
-            showToast={showToast}
           />
         )}
 
         {tab === 'livrare' && (
           <AdminDeliveryTab
-            token={token}
             editie={editie ?? CURRENT_EDITION}
             log={emailLog}
             participanti={all}
             readOnly={arhiva}
             onRefresh={refresh}
-            showToast={showToast}
           />
         )}
 
         {tab === 'eveniment' && (
           <AdminEventTab
-            token={token}
-            onAuthError={handleAuthError}
-            showToast={showToast}
           />
         )}
 
         {tab === 'coming-soon' && (
           <AdminComingSoonTab
-            token={token}
-            onAuthError={handleAuthError}
-            showToast={showToast}
           />
         )}
 
         {tab === 'lansare' && (
           <div className="admin-launch">
-            <AdminLaunchTab token={token} formatDate={ziSiLuna} onAuthError={handleAuthError} />
+            <AdminLaunchTab />
           </div>
         )}
 
@@ -1107,6 +1097,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           )}
         </div>
       )}
-    </>
+    </FurnizorSesiuneAdmin>
   );
 };

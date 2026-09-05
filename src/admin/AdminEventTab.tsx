@@ -43,6 +43,7 @@ import {
   type CampInvalid,
 } from './eventConfigForm';
 import { remindereleProgramate, urmatorulReminder } from './remindere';
+import { useSesiuneAdmin } from './adminSession';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import {
   laDatetimeLocal,
@@ -59,12 +60,6 @@ import {
   type Reper,
 } from './reperele';
 import { useNow } from '../hooks/useNow';
-
-type Props = {
-  token: string;
-  onAuthError: (err: unknown) => boolean;
-  showToast: (t: { kind: 'error' | 'success'; msg: string }) => void;
-};
 
 const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
   format: 'Formatul',
@@ -262,7 +257,8 @@ const refuzCuPas = (pas: Pas, err: unknown): string => {
     : `${NUMELE_PASULUI[pas]} n-a primit răspuns — nu știm dacă a ajuns pe server. Reîncarcă pagina și verifică înainte să reîncerci.`;
 };
 
-export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
+export const AdminEventTab = () => {
+  const { token, onAuthError, showToast } = useSesiuneAdmin();
   const [randuri, setRanduri] = useState<AdminEventConfigRow[] | null>(null);
   const [ciorna, setCiorna] = useState<EventConfig | null>(null);
   const [salveaza, setSalveaza] = useState(false);
