@@ -4,6 +4,7 @@ import { useEditionStrings, useEditionDates } from '../hooks/useEventConfig';
 import { useCountdown } from '../hooks/useCountdown';
 import { useLaunchForm } from '../hooks/useLaunchForm';
 import type { ToastKind } from '../hooks/useToast';
+import { momentComplet, ziLunaLunga } from '../lib/formatare';
 
 type Props = {
   showToast: (kind: ToastKind, msg: string) => void;
@@ -19,24 +20,6 @@ type Props = {
 
 const MARQUEE_ITEMS = ['Aleargă · Ridică · Rezistă', 'Antrenament nou', 'Run + Lift'];
 
-/** „19 august 2026, 12:00" — mereu pe fusul Chișinăului, nu pe cel al vizitatorului. */
-const formatMoment = (d: Date) =>
-  new Intl.DateTimeFormat('ro-RO', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Chisinau',
-  }).format(d);
-
-/** „29 august" — fără an și fără oră, pentru badge. */
-const formatZi = (d: Date) =>
-  new Intl.DateTimeFormat('ro-RO', {
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'Europe/Chisinau',
-  }).format(d);
 
 export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => {
   const { LAUNCH_EDITION_ORDINAL } = useEditionStrings();
@@ -45,7 +28,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
   const tinta = target ?? LAUNCH_DATE;
   const cd = useCountdown(tinta);
   const urmatorul = variant === 'next-session';
-  const momentLabel = formatMoment(tinta);
+  const momentLabel = momentComplet(tinta);
   const { draft, setField, errors, state, submit, reset } = useLaunchForm();
   const [open, setOpen] = useState(false);
   const [duplicate, setDuplicate] = useState(false);
@@ -109,7 +92,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
         <span className="cs-badge">
           <span className="cs-badge-dot" />
           {urmatorul
-            ? `Următorul antrenament · ${formatZi(tinta)}`
+            ? `Următorul antrenament · ${ziLunaLunga(tinta)}`
             : `Antrenament nou · Ediția ${LAUNCH_EDITION_ORDINAL}`}
         </span>
 

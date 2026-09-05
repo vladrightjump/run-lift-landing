@@ -13,6 +13,7 @@ import {
   COMUNICARI_EDITIE,
 } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
+import { ziLunaOra } from '../lib/formatare';
 
 type Props = {
   token: string;
@@ -42,14 +43,6 @@ const MOD_LABELS: Record<string, string> = {
   info: 'Confirmare adresă',
   broadcast: 'Reminder / anunț',
 };
-
-const timpFmt = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-});
 
 export const AdminDeliveryTab = ({
   token,
@@ -456,7 +449,7 @@ export const AdminDeliveryTab = ({
                   onClick={() => setDeschis(deschis === e.id ? null : e.id)}
                   title={e.status === 'esuat' ? 'Vezi motivul eșecului' : 'Vezi textul trimis'}
                 >
-                  <span className="admin-cell-date">{timpFmt.format(new Date(e.created_at))}</span>
+                  <span className="admin-cell-date">{ziLunaOra(e.created_at)}</span>
                   <span className="admin-cell-name">
                     {e.nume || e.email}
                     {e.nume && <span className="admin-livrare-email">{e.email}</span>}

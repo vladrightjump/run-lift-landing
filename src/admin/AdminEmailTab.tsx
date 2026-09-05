@@ -16,6 +16,7 @@ import { cheieDifuzare, ultimaDifuzare, audienteAmbigue } from './sendLock';
 import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
 import type { Audience, Recipient } from './emailAudience';
 import { useEventConfig } from '../hooks/useEventConfig';
+import { ziLunaOra } from '../lib/formatare';
 
 type Props = {
   token: string;
@@ -72,14 +73,6 @@ const VARIABLES = [
   // — la ceilalți cade tot rândul pe care e scrisă (vezi `fillTemplate`).
   '{link_renunt}',
 ] as const;
-
-const timpDifuzare = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-});
 
 export const AdminEmailTab = ({
   token,
@@ -495,7 +488,7 @@ export const AdminEmailTab = ({
         {anterioara && !readOnly && (
           <div className="admin-banner warn" role="status">
             <strong>
-              Aceeași difuzare a plecat deja pe {timpDifuzare.format(new Date(anterioara.cand))},
+              Aceeași difuzare a plecat deja pe {ziLunaOra(anterioara.cand)},
               către {anterioara.catreCati}{' '}
               {anterioara.catreCati === 1 ? 'destinatar' : 'destinatari'}.
             </strong>{' '}

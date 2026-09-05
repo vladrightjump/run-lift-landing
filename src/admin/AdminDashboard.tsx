@@ -50,6 +50,7 @@ import { AdminAcum } from './AdminAcum';
 import { fazaSite, ETICHETA_FAZA, type TabAdmin } from './stareCurenta';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
+import { ziSiLuna, ziLunaOra } from '../lib/formatare';
 
 type Props = {
   token: string;
@@ -71,17 +72,6 @@ type AdminToast = {
  */
 // Gruparea taburilor stă în `adminNavigatie.ts`, ca modul pur.
 
-const dateFmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short' });
-const formatDate = (iso: string): string => dateFmt.format(new Date(iso)).replace('.', '');
-
-const eventFmt = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-});
-const formatEventTime = (iso: string): string => eventFmt.format(new Date(iso));
 
 /**
  * Insigna din tabelul de participanți — cea mai PROASTĂ stare dintre comunicările
@@ -667,7 +657,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             editie={editie ?? CURRENT_EDITION}
             emailLog={emailLog ?? []}
             readOnly={arhiva}
-            formatDate={formatDate}
+            formatDate={ziSiLuna}
             showToast={showToast}
           />
         )}
@@ -702,7 +692,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
         {tab === 'lansare' && (
           <div className="admin-launch">
-            <AdminLaunchTab token={token} formatDate={formatDate} onAuthError={handleAuthError} />
+            <AdminLaunchTab token={token} formatDate={ziSiLuna} onAuthError={handleAuthError} />
           </div>
         )}
 
@@ -882,7 +872,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   <a className="admin-cell-link ellipsis" href={`mailto:${r.email}`}>
                     {r.email}
                   </a>
-                  <span className="admin-cell-date">{formatDate(r.created_at)}</span>
+                  <span className="admin-cell-date">{ziSiLuna(r.created_at)}</span>
                   <span>
                     <button
                       type="button"
@@ -956,7 +946,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   <a className="admin-cell-link ellipsis" href={`mailto:${w.email}`}>
                     {w.email}
                   </a>
-                  <span className="admin-cell-date">{formatDate(w.created_at)}</span>
+                  <span className="admin-cell-date">{ziSiLuna(w.created_at)}</span>
                   {!arhiva && (
                     <div className="admin-cell-actions">
                       <button
@@ -1015,7 +1005,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                         S-a deschis <strong>ediția {typeof ed === 'number' ? ed : '?'}</strong> —
                         înscrierile noi intră aici
                       </span>
-                      <span className="admin-activity-time">{formatEventTime(e.created_at)}</span>
+                      <span className="admin-activity-time">{ziLunaOra(e.created_at)}</span>
                     </div>
                   );
                 }
@@ -1035,7 +1025,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                         <strong>{nume}</strong> a renunțat la loc, din linkul din email
                         {email && <span className="admin-activity-email"> · {email}</span>}
                       </span>
-                      <span className="admin-activity-time">{formatEventTime(e.created_at)}</span>
+                      <span className="admin-activity-time">{ziLunaOra(e.created_at)}</span>
                     </div>
                   );
                 }
@@ -1053,7 +1043,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                     >
                       {emailed ? '✉ trimis' : '✉ eșuat'}
                     </span>
-                    <span className="admin-activity-time">{formatEventTime(e.created_at)}</span>
+                    <span className="admin-activity-time">{ziLunaOra(e.created_at)}</span>
                   </div>
                 );
               })}
