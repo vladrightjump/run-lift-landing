@@ -32,26 +32,26 @@ import { AdminNav } from './AdminNav';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
-import { emailuriNelivrate, acoperire, COMUNICARI_EDITIE } from './deliveryLog';
+import { emailuriNelivrate, acoperire } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
 import { useAdminPolling } from './useAdminPolling';
-import {
-  isDuplicateError,
-  isTimeoutError,
-  isNetworkOrCspError,
-  sendConfirmationEmail,
-} from '../lib/supabase';
+import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
 import { useNow } from '../hooks/useNow';
 import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
-import { AdminSkeleton, AdminFeedSkeleton } from './AdminSkeleton';
+import { AdminSkeleton } from './AdminSkeleton';
 import { AdminAcum } from './AdminAcum';
+import { AdminActivitate } from './AdminActivitate';
+import { AdminAsteptare } from './AdminAsteptare';
+import { AdminCifre } from './AdminCifre';
+import { AdminRandAdaugare } from './AdminRandAdaugare';
 import { fazaSite, ETICHETA_FAZA, type TabAdmin } from './stareCurenta';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
-import { ziSiLuna, ziLunaOra } from '../lib/formatare';
+import { ziSiLuna } from '../lib/formatare';
 import { FurnizorSesiuneAdmin } from './adminSession';
+import { rezumaAcoperire, motivUndoEsuat } from './dashboardRezumate';
 
 type Props = {
   token: string;
@@ -73,74 +73,6 @@ type AdminToast = {
  */
 // Gruparea taburilor stă în `adminNavigatie.ts`, ca modul pur.
 
-
-/**
- * Insigna din tabelul de participanți — cea mai PROASTĂ stare dintre comunicările
- * datorate, nu cea mai recentă trimitere. Un eșec rămâne vizibil chiar dacă altă
- * comunicare a plecat cu bine după el.
- */
-const rezumaAcoperire = (
-  celule: Record<string, StareCelula>
-): { clasa: string; eticheta: string; detaliu: string } => {
-  const stari = COMUNICARI_EDITIE.map((c) => ({ com: c, stare: celule[c.cheie] ?? 'lipsa' }));
-  const detaliu = stari.map(({ com, stare }) => `${com.eticheta}: ${STARE_TEXT[stare]}`).join(' · ');
-  const esuate = stari.filter((s) => s.stare === 'esuat');
-  if (esuate.length) {
-    return {
-      clasa: 'esuat',
-      eticheta: `✕ ${esuate.map((s) => s.com.eticheta.toLowerCase()).join(', ')}`,
-      detaliu,
-    };
-  }
-  const lipsa = stari.filter((s) => s.stare === 'lipsa');
-  if (lipsa.length === stari.length) return { clasa: 'niciunul', eticheta: '— niciunul', detaliu };
-  if (lipsa.length) {
-    return {
-      clasa: 'partial',
-      eticheta: `${stari.length - lipsa.length}/${stari.length}`,
-      detaliu,
-    };
-  }
-  return { clasa: 'trimis', eticheta: '✓ complet', detaliu };
-};
-
-/**
- * De ce n-a mers reversarea. Ambele cauze sunt reale și au apărut exact în
- * fereastra dintre ștergere și undo: locul poate fi luat de auto-promovare, iar
- * adresa poate fi re-înscrisă. Înainte, undo-ul trecea peste amândouă în tăcere.
- */
-const motivUndoEsuat = (err: unknown, nume: string): string => {
-  // `SubmitHttpError.message` poartă corpul răspunsului, deci și numele excepției
-  // ridicate de RPC (`event_full`, `duplicate_email`).
-  const text = err instanceof Error ? err.message : String(err);
-  if (text.includes('event_full')) {
-    return `Locul lui ${nume} a fost ocupat între timp — ediția e plină. Șterge pe altcineva sau adaugă-l manual peste capacitate.`;
-  }
-  if (text.includes('duplicate_email')) {
-    return `Adresa lui ${nume} a fost re-înscrisă între timp, deci nu se mai poate readuce rândul vechi.`;
-  }
-  if (isTimeoutError(err)) return 'Serverul răspunde greu. Verifică lista și încearcă din nou.';
-  if (isNetworkOrCspError(err)) return 'Conexiune blocată sau indisponibilă. Reîncearcă.';
-  return 'Nu am putut anula ștergerea.';
-};
-
-const STARE_TEXT: Record<StareCelula, string> = {
-  trimis: 'trimis',
-  esuat: 'eșuat',
-  lipsa: 'lipsă',
-};
-
-/**
- * Ce intră în „Activitate recentă".
- *
- * `admin_events` e un jurnal de audit și primește și tipuri pe care feed-ul nu
- * le arată (`admin_delete`, `config_publish` — lucruri făcute chiar de cel care
- * se uită la feed). Aici rămân doar cele întâmplate FĂRĂ el: cineva a renunțat,
- * cineva a fost promovat automat, s-a deschis o ediție.
- */
-const TIPURI_ACTIVITATE = ['renuntare', 'auto_promote', 'editie_noua'];
-
-const activitateVizibila = (e: AdminEvent): boolean => TIPURI_ACTIVITATE.includes(e.tip);
 
 export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [rows, setRows] = useState<AdminRegistration[] | null>(null);
@@ -348,8 +280,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const filtered = all.filter(
     (r) => !q || `${r.nume} ${r.telefon} ${r.email}`.toLowerCase().includes(q)
   );
-  const remaining = Math.max(0, TOTAL_SLOTS - all.length);
-  const percent = Math.round((all.length / TOTAL_SLOTS) * 100);
   const waitAll = waitlist ?? [];
 
   // Acoperirea per participant — pentru indicatorul din tabel.
@@ -690,60 +620,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         <>
         {/* Capacitatea (TOTAL_SLOTS) e a ediției CURENTE — pe arhivă ar minți
             (ediția 1 a avut 30 de locuri, nu 20), deci acolo arătăm doar cifrele reale. */}
-        <section className="admin-stats">
-          <div className="admin-stat">
-            <span className="admin-stat-label">Înscriși</span>
-            <span className="admin-stat-value" key={all.length}>
-              {all.length}
-              {!arhiva && <span className="admin-stat-total"> / {TOTAL_SLOTS}</span>}
-            </span>
-          </div>
-          {!arhiva && (
-            <>
-              <div className="admin-stat">
-                <span className="admin-stat-label">Locuri rămase</span>
-                <span className={`admin-stat-value${remaining <= 3 ? ' low' : ''}`} key={remaining}>
-                  {remaining}
-                </span>
-              </div>
-              <div className="admin-stat">
-                <span className="admin-stat-label">Grad de ocupare</span>
-                <span className="admin-stat-value accent" key={percent}>
-                  {percent}%
-                </span>
-              </div>
-            </>
-          )}
-          <div className="admin-stat">
-            <span className="admin-stat-label">În așteptare</span>
-            <span className="admin-stat-value" key={waitAll.length}>
-              {waitAll.length}
-              {!arhiva && <span className="admin-stat-total"> / {WAITLIST_SLOTS}</span>}
-            </span>
-          </div>
-          <div className="admin-stat">
-            <span className="admin-stat-label">Emailuri nelivrate</span>
-            <span className={`admin-stat-value${nelivrate > 0 ? ' low' : ''}`} key={nelivrate}>
-              {nelivrate}
-            </span>
-          </div>
-        </section>
-
-        {!arhiva && (
-          <section className="admin-occupancy">
-            <div className="slots-head">
-              <span className="slots-label">Ocupare locuri</span>
-              <span className="admin-occupancy-count">
-                {all.length} din {TOTAL_SLOTS} locuri ocupate
-              </span>
-            </div>
-            <div className="slots-grid">
-              {Array.from({ length: TOTAL_SLOTS }, (_, i) => (
-                <div key={i} className={`slot admin-slot${i < all.length ? ' filled' : ''}`} />
-              ))}
-            </div>
-          </section>
-        )}
+        <AdminCifre
+          inscrisi={all.length}
+          peAsteptare={waitAll.length}
+          TOTAL_SLOTS={TOTAL_SLOTS}
+          WAITLIST_SLOTS={WAITLIST_SLOTS}
+          nelivrate={nelivrate}
+          arhiva={arhiva}
+        />
 
         <section className="admin-table-section">
           <div className="admin-table-head admin-participanti-head">
@@ -788,56 +672,19 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             </div>
           </div>
 
-          {addOpen && !arhiva && (
-            <div className="admin-add-row">
-              <label className="admin-add-field grow">
-                <span>Nume</span>
-                <input
-                  type="text"
-                  placeholder="Ana Popescu"
-                  value={draft.nume}
-                  onChange={(e) => setDraft((d) => ({ ...d, nume: e.target.value }))}
-                />
-              </label>
-              <label className="admin-add-field">
-                <span>Telefon</span>
-                <input
-                  type="tel"
-                  placeholder="069 xxx xxx"
-                  value={draft.telefon}
-                  onChange={(e) => setDraft((d) => ({ ...d, telefon: e.target.value }))}
-                />
-              </label>
-              <label className="admin-add-field grow">
-                <span>Email</span>
-                <input
-                  type="email"
-                  placeholder="ana@email.md"
-                  value={draft.email}
-                  onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
-                />
-              </label>
-              <button
-                type="button"
-                className="admin-btn-accent"
-                onClick={editId ? handleUpdate : handleAdd}
-                disabled={saving}
-              >
-                {saving ? 'Se salvează…' : editId ? 'Salvează modificările' : 'Salvează'}
-              </button>
-              <button
-                type="button"
-                className="admin-add-cancel"
-                onClick={() => {
-                  setAddOpen(false);
-                  setEditId(null);
-                }}
-              >
-                Anulează
-              </button>
-            </div>
-          )}
-
+          <AdminRandAdaugare
+            deschis={addOpen}
+            arhiva={arhiva}
+            ciorna={draft}
+            setCiorna={setDraft}
+            editId={editId}
+            saving={saving}
+            onSalveaza={editId ? handleUpdate : handleAdd}
+            onRenunta={() => {
+              setAddOpen(false);
+              setEditId(null);
+            }}
+          />
           <div className="admin-table-wrap">
             <div className={`admin-table admin-participanti${arhiva ? ' arhiva' : ''}`}>
               <div className="admin-row admin-row-head">
@@ -907,142 +754,16 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </div>
         </section>
 
-        <section className="admin-table-section">
-          <div className="admin-table-head admin-wait-head">
-            <h2>
-              Lista de așteptare <span className="admin-wait-count">{waitAll.length}</span>
-            </h2>
-            <span className="admin-wait-note">
-              Se completează automat când locurile sunt pline — promovează când se eliberează un loc.
-            </span>
-          </div>
-          <div className="admin-table-wrap">
-            <div className={`admin-table admin-wait${arhiva ? ' arhiva' : ''}`}>
-              <div className="admin-row admin-row-head">
-                <span>#</span>
-                <span>Nume</span>
-                <span>Telefon</span>
-                <span>Email</span>
-                <span>Înscris</span>
-                {!arhiva && <span className="right">Acțiuni</span>}
-              </div>
-              {waitAll.map((w, i) => (
-                <div key={w.id} className="admin-row" style={{ '--i': i } as CSSProperties}>
-                  <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="admin-cell-name">{w.nume}</span>
-                  <a className="admin-cell-link" href={`tel:${w.telefon}`}>
-                    {w.telefon}
-                  </a>
-                  <a className="admin-cell-link ellipsis" href={`mailto:${w.email}`}>
-                    {w.email}
-                  </a>
-                  <span className="admin-cell-date">{ziSiLuna(w.created_at)}</span>
-                  {!arhiva && (
-                    <div className="admin-cell-actions">
-                      <button
-                        type="button"
-                        className="admin-btn-promote"
-                        title="Mută la participanți"
-                        onClick={() => handlePromote(w)}
-                      >
-                        Promovează
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-btn-delete"
-                        title="Șterge din lista de așteptare"
-                        onClick={() => handleDeleteWaitlist(w)}
-                      >
-                        Șterge
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {waitlist === null && <AdminSkeleton cols={arhiva ? 5 : 6} rows={3} />}
-              {waitlist !== null && waitAll.length === 0 && (
-                <div className="admin-empty">
-                  Nicio persoană în așteptare. Lista se completează automat când toate cele{' '}
-                  {TOTAL_SLOTS} locuri sunt ocupate.
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+        <AdminAsteptare
+          waitAll={waitAll}
+          waitlist={waitlist}
+          TOTAL_SLOTS={TOTAL_SLOTS}
+          arhiva={arhiva}
+          onPromote={handlePromote}
+          onDelete={handleDeleteWaitlist}
+        />
 
-        <section className="admin-table-section">
-          <div className="admin-table-head admin-wait-head">
-            <h2>
-              Activitate recentă{' '}
-              <span className="admin-wait-count">{(events ?? []).length}</span>
-            </h2>
-            <span className="admin-wait-note">
-              Renunțări din linkul de email, promovări automate din lista de așteptare (când se
-              eliberează un loc, se umple singur) și deschiderea edițiilor noi. Feed-ul e comun
-              tuturor edițiilor.
-            </span>
-          </div>
-          <div className="admin-activity">
-            {(events ?? [])
-              .filter(activitateVizibila)
-              .map((e) => {
-                if (e.tip === 'editie_noua') {
-                  const ed = e.detaliu?.editie;
-                  return (
-                    <div key={e.id} className="admin-activity-item">
-                      <span className="admin-activity-dot" />
-                      <span className="admin-activity-text">
-                        S-a deschis <strong>ediția {typeof ed === 'number' ? ed : '?'}</strong> —
-                        înscrierile noi intră aici
-                      </span>
-                      <span className="admin-activity-time">{ziLunaOra(e.created_at)}</span>
-                    </div>
-                  );
-                }
-                const nume = typeof e.detaliu?.nume === 'string' ? e.detaliu.nume : 'Cineva';
-                const email = typeof e.detaliu?.email === 'string' ? e.detaliu.email : '';
-                const emailed = e.detaliu?.email_queued === true;
-
-                // Renunțarea vine mereu însoțită, în aceeași secundă, de un
-                // `auto_promote` — dacă era cineva pe listă. Nu le comasăm:
-                // sunt două fapte, iar cel de-al doilea poate să LIPSEASCĂ
-                // (listă goală), caz în care locul rămâne liber și trebuie văzut.
-                if (e.tip === 'renuntare') {
-                  return (
-                    <div key={e.id} className="admin-activity-item">
-                      <span className="admin-activity-dot" />
-                      <span className="admin-activity-text">
-                        <strong>{nume}</strong> a renunțat la loc, din linkul din email
-                        {email && <span className="admin-activity-email"> · {email}</span>}
-                      </span>
-                      <span className="admin-activity-time">{ziLunaOra(e.created_at)}</span>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={e.id} className="admin-activity-item">
-                    <span className="admin-activity-dot" />
-                    <span className="admin-activity-text">
-                      <strong>{nume}</strong> promovat automat din așteptare
-                      {email && <span className="admin-activity-email"> · {email}</span>}
-                    </span>
-                    <span
-                      className={`admin-activity-mail${emailed ? ' ok' : ''}`}
-                      title={emailed ? 'Email de confirmare trimis' : 'Emailul nu a plecat'}
-                    >
-                      {emailed ? '✉ trimis' : '✉ eșuat'}
-                    </span>
-                    <span className="admin-activity-time">{ziLunaOra(e.created_at)}</span>
-                  </div>
-                );
-              })}
-            {events === null && <AdminFeedSkeleton />}
-            {events !== null && (events ?? []).filter(activitateVizibila).length === 0 && (
-              <div className="admin-empty">Nicio activitate încă.</div>
-            )}
-          </div>
-        </section>
+        <AdminActivitate events={events} />
         </>
         )}
       </main>
