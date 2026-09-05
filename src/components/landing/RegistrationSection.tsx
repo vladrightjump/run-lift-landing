@@ -1,13 +1,30 @@
 import type { CSSProperties } from 'react';
-import { INSTAGRAM_URL } from '../../lib/config';
-import { downloadEventIcs, shareSignup } from '../../lib/calendar';
 import { useEventConfig, useEditionStrings } from '../../hooks/useEventConfig';
 import type { FieldName } from '../../lib/validation';
 import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
 import { useCountUp } from '../../hooks/useCountUp';
 import { BirthDateField } from './BirthDateField';
-import { sectionNum, sectionTitle, label, inputStyle, fieldErr } from './shared';
+import { sectionNum, sectionTitle } from './shared';
+import {
+  AntetLocuri,
+  BaraLocuri,
+  BifaAcord,
+  BifaSucces,
+  ButonReincearca,
+  ButonReset,
+  ButonTrimite,
+  CampText,
+  IconEroare,
+  LinkContact,
+  Rotitor,
+  ActiuniSucces,
+  TEXT_EROARE_MESAJ,
+  TEXT_EROARE_TITLU,
+  TEXT_INCARCARE,
+  TEXT_SUCCES_ASTEPTARE,
+  textInchis,
+} from './registrationStates';
 
 /** Prima linie depinde de ediție, restul e proză statică. */
 const summaryItems = (eventSummaryLine: string): string[] => [
@@ -18,6 +35,31 @@ const summaryItems = (eventSummaryLine: string): string[] => [
   'Adu cu tine: apă pentru hidratare și bună dispoziție',
 ];
 
+/** Cadrul comun al panourilor de stare (închis / încărcare / succes / eroare). */
+const panou: CSSProperties = {
+  border: '1px solid var(--e3-border)',
+  background: 'var(--e3-surface)',
+  padding: 'clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px)',
+  textAlign: 'center',
+  display: 'grid',
+  gap: 16,
+  justifyItems: 'center',
+};
+
+const titluPanou: CSSProperties = {
+  fontFamily: 'Anton, sans-serif',
+  fontSize: 'clamp(28px, 6vw, 40px)',
+  textTransform: 'uppercase',
+  letterSpacing: 1,
+};
+
+const mesajPanou: CSSProperties = {
+  margin: 0,
+  fontSize: 16,
+  lineHeight: 1.55,
+  color: 'var(--e3-muted)',
+  maxWidth: 380,
+};
 
 type Props = {
   reg: ReturnType<typeof useRegistration>;
@@ -121,10 +163,7 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                 gap: 12,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
-                  Locuri rămase
-                </span>
+              <AntetLocuri>
                 {/* Contorul respiră doar cât chiar mai sunt locuri puține.
                     Pe zero n-ar mai fi urgență, ci doar zgomot lângă mesajul
                     de „epuizat" de dedesubt. */}
@@ -142,26 +181,8 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                 >
                   {remainingShown ?? '–'} / {TOTAL_SLOTS}
                 </span>
-              </div>
-              <div style={{ display: 'flex', gap: 4 }} aria-hidden="true">
-                {Array.from({ length: TOTAL_SLOTS }, (_, i) => {
-                  const filled = i < slots.occupied;
-                  return (
-                    <div
-                      key={i}
-                      // Doar segmentele ocupate se umplu în lanț; cele goale sunt
-                      // fundal, n-au ce anunța. `--i` dă decalajul din CSS.
-                      className={filled ? 'e3-slot-fill' : undefined}
-                      style={{
-                        height: 8,
-                        flex: 1,
-                        background: filled ? 'var(--e3-accent)' : 'var(--e3-border)',
-                        ...(filled ? ({ '--i': i } as CSSProperties) : null),
-                      }}
-                    />
-                  );
-                })}
-              </div>
+              </AntetLocuri>
+              <BaraLocuri total={TOTAL_SLOTS} ocupate={slots.occupied} gap={4} animat />
               {isSoldOut && !isWaitlistFull && (
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-accent)', fontWeight: 600, textWrap: 'pretty' }}>
                   Locurile s-au epuizat — completează formularul și intri pe lista de așteptare. Te contactăm
@@ -190,56 +211,44 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                 }}
               >
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 18 }}>
-                  <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={label}>Nume *</span>
-                    <input
-                      className="e3-input"
-                      name="nume"
-                      type="text"
-                      placeholder="Popescu"
-                      autoComplete="family-name"
-                      style={{ ...inputStyle, borderColor: errors.nume ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                    />
-                    {errors.nume && <span style={fieldErr}>Completează numele de familie.</span>}
-                  </label>
-                  <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={label}>Prenume *</span>
-                    <input
-                      className="e3-input"
-                      name="prenume"
-                      type="text"
-                      placeholder="Ana"
-                      autoComplete="given-name"
-                      style={{ ...inputStyle, borderColor: errors.prenume ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                    />
-                    {errors.prenume && <span style={fieldErr}>Completează prenumele.</span>}
-                  </label>
-                  <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={label}>Telefon *</span>
-                    <input
-                      className="e3-input"
-                      name="telefon"
-                      type="tel"
-                      placeholder="07xx xxx xxx"
-                      autoComplete="tel"
-                      style={{ ...inputStyle, borderColor: errors.telefon ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                    />
-                    {errors.telefon && <span style={fieldErr}>Numărul de telefon nu e valid.</span>}
-                  </label>
+                  <CampText
+                    nume="nume"
+                    eticheta="Nume *"
+                    tip="text"
+                    placeholder="Popescu"
+                    autoComplete="family-name"
+                    eroare={errors.nume}
+                    mesajEroare="Completează numele de familie."
+                  />
+                  <CampText
+                    nume="prenume"
+                    eticheta="Prenume *"
+                    tip="text"
+                    placeholder="Ana"
+                    autoComplete="given-name"
+                    eroare={errors.prenume}
+                    mesajEroare="Completează prenumele."
+                  />
+                  <CampText
+                    nume="telefon"
+                    eticheta="Telefon *"
+                    tip="tel"
+                    placeholder="07xx xxx xxx"
+                    autoComplete="tel"
+                    eroare={errors.telefon}
+                    mesajEroare="Numărul de telefon nu e valid."
+                  />
                 </div>
                 <div style={{ display: 'grid', gap: 18 }}>
-                  <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={label}>Email *</span>
-                    <input
-                      className="e3-input"
-                      name="email"
-                      type="email"
-                      placeholder="ana@email.ro"
-                      autoComplete="email"
-                      style={{ ...inputStyle, borderColor: errors.email ? 'var(--e3-danger)' : 'var(--e3-border)' }}
-                    />
-                    {errors.email && <span style={fieldErr}>Adresa de email nu e validă.</span>}
-                  </label>
+                  <CampText
+                    nume="email"
+                    eticheta="Email *"
+                    tip="email"
+                    placeholder="ana@email.ro"
+                    autoComplete="email"
+                    eroare={errors.email}
+                    mesajEroare="Adresa de email nu e validă."
+                  />
                   <BirthDateField
                     value={birthISO}
                     onChange={(iso) => {
@@ -254,91 +263,25 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                   Participanții trebuie să aibă minim 14 ani în ziua evenimentului. Stațiile și greutățile sunt
                   adaptate de antrenori la fața locului.
                 </p>
-                <label
-                  style={{ display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer' }}
-                  onChange={() => clearErrorFor('acord')}
-                >
-                  <input
-                    name="acord"
-                    type="checkbox"
-                    style={{
-                      width: 18,
-                      height: 18,
-                      margin: '2px 0 0',
-                      accentColor: 'var(--e3-accent)',
-                      cursor: 'pointer',
-                      outline: `2px solid ${errors.acord ? 'var(--e3-danger)' : 'transparent'}`,
-                      outlineOffset: 2,
-                    }}
-                  />
-                  <span style={{ fontSize: 14, lineHeight: 1.5, color: errors.acord ? 'var(--e3-danger)' : 'var(--e3-muted)' }}>
-                    Confirm că sunt apt din punct de vedere medical pentru efort fizic intens și accept
-                    regulamentul evenimentului. *
-                  </span>
-                </label>
-                {errors.acord && <span style={fieldErr}>Trebuie să accepți regulamentul ca să te poți înscrie.</span>}
-                <button
-                  type="submit"
-                  className="e3-submit e3-shine"
-                  style={{
-                    background: 'var(--e3-accent)',
-                    color: 'var(--e3-bg)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: 'Anton, sans-serif',
-                    fontSize: 20,
-                    letterSpacing: 1.5,
-                    textTransform: 'uppercase',
-                    padding: 18,
-                    marginTop: 4,
-                  }}
-                >
-                  {waitlistMode ? 'Intră pe lista de așteptare' : 'Trimite înscrierea'}
-                </button>
+                <BifaAcord
+                  eroare={errors.acord}
+                  onClear={() => clearErrorFor('acord')}
+                  marime={18}
+                  margineSus="2px 0 0"
+                />
+                <ButonTrimite peListaDeAsteptare={waitlistMode} marginTop={4} />
               </form>
             )}
 
             {/* Închis (eveniment trecut / înscrieri închise / totul plin) */}
             {closedReason && (
-              <div
-                style={{
-                  border: '1px solid var(--e3-border)',
-                  background: 'var(--e3-surface)',
-                  padding: 'clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px)',
-                  textAlign: 'center',
-                  display: 'grid',
-                  gap: 16,
-                  justifyItems: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: 'Anton, sans-serif',
-                    fontSize: 'clamp(24px, 5vw, 34px)',
-                    textTransform: 'uppercase',
-                    letterSpacing: 1,
-                  }}
-                >
-                  {closedReason === 'ended'
-                    ? 'Evenimentul a avut loc'
-                    : closedReason === 'reg'
-                    ? 'Înscrierile s-au închis'
-                    : 'Locurile sunt pline'}
+              <div style={panou}>
+                <div style={{ ...titluPanou, fontSize: 'clamp(24px, 5vw, 34px)' }}>
+                  {textInchis(closedReason).titlu}
                 </div>
-                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: 'var(--e3-muted)', maxWidth: 380 }}>
-                  {closedReason === 'ended'
-                    ? 'Ne vedem la ediția următoare. Urmărește-ne pentru anunțuri.'
-                    : closedReason === 'reg'
-                    ? 'Perioada de înscriere s-a încheiat. Scrie-ne pe Instagram — dacă se eliberează un loc, te anunțăm.'
-                    : 'Toate locurile și lista de așteptare sunt ocupate. Scrie-ne pe Instagram dacă apare o disponibilitate.'}
-                </p>
-                <a
-                  href={INSTAGRAM_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="e3-cta"
-                  style={{
-                    display: 'inline-block',
+                <p style={mesajPanou}>{textInchis(closedReason).mesaj}</p>
+                <LinkContact
+                  stil={{
                     background: 'var(--e3-accent)',
                     color: 'var(--e3-bg)',
                     fontFamily: 'Anton, sans-serif',
@@ -346,37 +289,15 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                     letterSpacing: 1.5,
                     textTransform: 'uppercase',
                     padding: '14px 32px',
-                    textDecoration: 'none',
                   }}
-                >
-                  Contactează organizatorii
-                </a>
+                />
               </div>
             )}
 
             {/* Loading */}
             {phase === 'loading' && (
-              <div
-                style={{
-                  border: '1px solid var(--e3-border)',
-                  background: 'var(--e3-surface)',
-                  padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)',
-                  textAlign: 'center',
-                  display: 'grid',
-                  gap: 22,
-                  justifyItems: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    width: 52,
-                    height: 52,
-                    border: '4px solid var(--e3-border)',
-                    borderTopColor: 'var(--e3-accent)',
-                    borderRadius: '50%',
-                    animation: 'e3-spin 0.8s linear infinite',
-                  }}
-                />
+              <div style={{ ...panou, padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', gap: 22 }}>
+                <Rotitor />
                 <div
                   style={{
                     fontFamily: 'Anton, sans-serif',
@@ -386,196 +307,46 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                     color: 'var(--e3-muted-strong)',
                   }}
                 >
-                  Se trimite înscrierea…
+                  {TEXT_INCARCARE}
                 </div>
               </div>
             )}
 
             {/* Success */}
             {phase === 'success' && (
-              <div
-                style={{
-                  border: '1px solid var(--e3-accent)',
-                  background: 'var(--e3-surface)',
-                  padding: 'clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px)',
-                  textAlign: 'center',
-                  display: 'grid',
-                  gap: 16,
-                  justifyItems: 'center',
-                }}
-              >
-                <div style={{ position: 'relative', width: 84, height: 84, display: 'grid', placeItems: 'center' }}>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      borderRadius: '50%',
-                      border: '2px solid var(--e3-accent)',
-                      animation: 'e3-ring-pulse 1.6s ease-out 0.4s 3',
-                    }}
-                  />
-                  <div
-                    style={{
-                      width: 84,
-                      height: 84,
-                      background: 'var(--e3-accent)',
-                      borderRadius: '50%',
-                      display: 'grid',
-                      placeItems: 'center',
-                      animation: 'e3-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    }}
-                  >
-                    <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-                      <path
-                        d="M10 23 L19 32 L34 13"
-                        stroke="var(--e3-bg)"
-                        strokeWidth="5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{ strokeDasharray: 40, strokeDashoffset: 40, animation: 'e3-draw-check 0.5s ease-out 0.35s forwards' }}
-                      />
-                    </svg>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'Anton, sans-serif',
-                    fontSize: 'clamp(28px, 6vw, 40px)',
-                    textTransform: 'uppercase',
-                    letterSpacing: 1,
-                  }}
-                >
+              <div style={{ ...panou, border: '1px solid var(--e3-accent)' }}>
+                <BifaSucces />
+                <div style={titluPanou}>
                   {submittedAsWaitlist ? 'Ești pe lista de așteptare, ' : 'Te-ai înregistrat, '}
                   {confirmName}!
                 </div>
-                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: 'var(--e3-muted)', maxWidth: 380 }}>
+                <p style={mesajPanou}>
                   {submittedAsWaitlist
-                    ? 'Toate locurile sunt ocupate momentan. Te contactăm pe email sau telefon imediat ce se eliberează un loc — în ordinea înscrierii.'
+                    ? TEXT_SUCCES_ASTEPTARE
                     : `Ți-am trimis un email de confirmare cu toate detaliile. ${SUCCESS_SEE_YOU}`}
                 </p>
-                {!submittedAsWaitlist && (
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => downloadEventIcs(config)}
-                      style={{
-                        background: 'var(--e3-accent)',
-                        color: 'var(--e3-bg)',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontFamily: 'Anton, sans-serif',
-                        fontSize: 15,
-                        letterSpacing: 1,
-                        textTransform: 'uppercase',
-                        padding: '12px 22px',
-                      }}
-                    >
-                      Adaugă în calendar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void shareSignup(config)}
-                      style={{
-                        background: 'transparent',
-                        border: '1px solid var(--e3-accent)',
-                        color: 'var(--e3-accent)',
-                        cursor: 'pointer',
-                        fontFamily: 'Anton, sans-serif',
-                        fontSize: 15,
-                        letterSpacing: 1,
-                        textTransform: 'uppercase',
-                        padding: '12px 22px',
-                      }}
-                    >
-                      Distribuie
-                    </button>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  className="e3-ghost"
+                {!submittedAsWaitlist && <ActiuniSucces config={config} />}
+                <ButonReset
+                  peListaDeAsteptare={submittedAsWaitlist}
                   onClick={resetForm}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid var(--e3-border)',
-                    color: 'var(--e3-muted)',
-                    cursor: 'pointer',
-                    fontFamily: 'Archivo, sans-serif',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    letterSpacing: 2,
-                    textTransform: 'uppercase',
-                    padding: '12px 24px',
-                    marginTop: 8,
-                  }}
-                >
-                  {submittedAsWaitlist ? 'Adaugă altă persoană' : 'Înscrie altă persoană'}
-                </button>
+                  marginTop={8}
+                />
               </div>
             )}
 
             {/* Error */}
             {phase === 'error' && (
-              <div
-                style={{
-                  border: '1px solid var(--e3-danger)',
-                  background: 'var(--e3-surface)',
-                  padding: 'clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px)',
-                  textAlign: 'center',
-                  display: 'grid',
-                  gap: 16,
-                  justifyItems: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    width: 84,
-                    height: 84,
-                    background: 'var(--e3-danger-bg)',
-                    borderRadius: '50%',
-                    display: 'grid',
-                    placeItems: 'center',
-                    animation: 'e3-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  }}
-                >
-                  <span style={{ fontSize: 38, fontWeight: 700, color: 'var(--e3-danger)' }}>✕</span>
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'Anton, sans-serif',
-                    fontSize: 'clamp(28px, 6vw, 40px)',
-                    textTransform: 'uppercase',
-                    letterSpacing: 1,
-                    color: 'var(--e3-danger)',
-                  }}
-                >
-                  Ceva n-a mers
-                </div>
-                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: 'var(--e3-muted)', maxWidth: 380 }}>
-                  Înscrierea nu a putut fi trimisă. Verifică conexiunea la internet și încearcă din nou.
-                </p>
-                <button
-                  type="button"
-                  className="e3-retry"
+              <div style={{ ...panou, border: '1px solid var(--e3-danger)' }}>
+                <IconEroare />
+                <div style={{ ...titluPanou, color: 'var(--e3-danger)' }}>{TEXT_EROARE_TITLU}</div>
+                <p style={mesajPanou}>{TEXT_EROARE_MESAJ}</p>
+                <ButonReincearca
                   onClick={() => {
                     setErrors({});
                     setPhase('form');
                   }}
-                  style={{
-                    background: 'var(--e3-accent)',
-                    color: 'var(--e3-bg)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: 'Anton, sans-serif',
-                    fontSize: 17,
-                    letterSpacing: 1.5,
-                    textTransform: 'uppercase',
-                    padding: '14px 32px',
-                    marginTop: 8,
-                  }}
-                >
-                  Încearcă din nou
-                </button>
+                  stil={{ letterSpacing: 1.5, marginTop: 8 }}
+                />
               </div>
             )}
           </div>

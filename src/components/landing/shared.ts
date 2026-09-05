@@ -46,3 +46,16 @@ export const inputStyle: CSSProperties = {
 };
 
 export const fieldErr: CSSProperties = { fontSize: 13, color: 'var(--e3-danger)' };
+
+/** Butonul mic de acțiune (calendar, distribuire, reîncercare, contact). */
+export const ctaSmall: CSSProperties = {
+  background: 'var(--e3-accent)',
+  color: 'var(--e3-bg)',
+  border: 'none',
+  cursor: 'pointer',
+  fontFamily: 'Anton, sans-serif',
+  fontSize: 15,
+  letterSpacing: 1,
+  textTransform: 'uppercase',
+  padding: '12px 22px',
+};
