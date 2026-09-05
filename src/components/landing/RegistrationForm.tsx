@@ -9,6 +9,7 @@ import type { useRegistration } from '../../hooks/useRegistration';
 import { markJustSignedUp } from '../../lib/justSignedUp';
 import { useSuccessRedirect } from '../../hooks/useSuccessRedirect';
 import { BirthDateField } from './BirthDateField';
+import { label, inputStyle, fieldErr } from './shared';
 
 /**
  * Formularul de înscriere, ambalabil oriunde: pe pagina `/inscriere` și în
@@ -20,24 +21,6 @@ import { BirthDateField } from './BirthDateField';
  * Logica NU e duplicată — vine tot din `useRegistration`, dat prin `reg`.
  */
 
-const label: CSSProperties = {
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: 2,
-  textTransform: 'uppercase',
-  color: 'var(--e3-muted)',
-};
-const inputStyle: CSSProperties = {
-  background: 'var(--e3-bg)',
-  border: '1px solid var(--e3-border)',
-  color: 'var(--e3-text)',
-  fontFamily: 'Archivo, sans-serif',
-  fontSize: 16, // 16px: iOS nu face zoom la focus
-  padding: '13px 14px',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-};
 const panel: CSSProperties = {
   border: '1px solid var(--e3-border)',
   background: 'var(--e3-surface)',
@@ -47,7 +30,6 @@ const panel: CSSProperties = {
   gap: 16,
   justifyItems: 'center',
 };
-const fieldErr: CSSProperties = { fontSize: 13, color: 'var(--e3-danger)' };
 const ctaSmall: CSSProperties = {
   background: 'var(--e3-accent)',
   color: 'var(--e3-bg)',

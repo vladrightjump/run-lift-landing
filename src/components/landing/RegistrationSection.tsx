@@ -7,7 +7,7 @@ import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
 import { useCountUp } from '../../hooks/useCountUp';
 import { BirthDateField } from './BirthDateField';
-import { sectionNum, sectionTitle } from './shared';
+import { sectionNum, sectionTitle, label, inputStyle, fieldErr } from './shared';
 
 /** Prima linie depinde de ediție, restul e proză statică. */
 const summaryItems = (eventSummaryLine: string): string[] => [
@@ -18,27 +18,6 @@ const summaryItems = (eventSummaryLine: string): string[] => [
   'Adu cu tine: apă pentru hidratare și bună dispoziție',
 ];
 
-const label: CSSProperties = {
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: 2,
-  textTransform: 'uppercase',
-  color: 'var(--e3-muted)',
-};
-const inputStyle: CSSProperties = {
-  background: 'var(--e3-bg)',
-  border: '1px solid var(--e3-border)',
-  color: 'var(--e3-text)',
-  fontFamily: 'Archivo, sans-serif',
-  // 16px, nu 15: sub 16 Safari pe iOS face zoom la focus și aruncă layoutul
-  // în lateral la jumătatea formularului.
-  fontSize: 16,
-  padding: '13px 14px',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-};
-const fieldErr: CSSProperties = { fontSize: 13, color: 'var(--e3-danger)' };
 
 type Props = {
   reg: ReturnType<typeof useRegistration>;
