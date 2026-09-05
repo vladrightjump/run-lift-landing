@@ -23,7 +23,7 @@ import type { EventConfig } from '../content/eventConfig';
  */
 
 /** Un moment din desfășurarea ediției. `final` e calculat, nu stocat. */
-export type CheieReper =
+type CheieReper =
   | 'launchAt'
   | 'registrationDeadline'
   | 'checkin'

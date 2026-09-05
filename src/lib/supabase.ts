@@ -171,7 +171,7 @@ export const sendInfoEmail = async (email: string): Promise<void> => {
   }
 };
 
-export type PublicParticipant = { nume: string; echipa: string };
+type PublicParticipant = { nume: string; echipa: string };
 export type PublicStats = { count: number; participants: PublicParticipant[]; waitlist: number };
 
 /**

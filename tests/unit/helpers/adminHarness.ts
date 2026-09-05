@@ -46,7 +46,7 @@ export const logEntry = (
   ...over,
 });
 
-export const editie = (over: Partial<AdminEdition> = {}): AdminEdition => ({
+const editie = (over: Partial<AdminEdition> = {}): AdminEdition => ({
   editie: 5,
   participanti: 2,
   asteptare: 0,

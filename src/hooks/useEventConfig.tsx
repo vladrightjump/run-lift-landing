@@ -37,7 +37,7 @@ const REFRESH_MS = 15_000;
  * și n-ai putea verifica cum arată o ciornă în dimineața cursei — exact repetiția
  * pe care runbook-ul o cere. Așa se compun: `?config=draft&preview=leaderboard`.
  */
-export const configParam = (): string | null =>
+const configParam = (): string | null =>
   new URLSearchParams(window.location.search).get('config');
 
 const EventConfigContext = createContext<EventConfig>(SNAPSHOT_CONFIG);

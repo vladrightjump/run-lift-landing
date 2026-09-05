@@ -156,4 +156,3 @@ export const EDITION = {
   ogImageVersion: 6,
 } as const;
 
-export type Edition = typeof EDITION;

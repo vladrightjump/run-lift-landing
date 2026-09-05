@@ -60,11 +60,11 @@ export const downloadEventIcs = (config: EventConfig): void => {
 };
 
 /** Textul de share pre-completat. */
-export const buildShareText = (config: EventConfig): string =>
+const buildShareText = (config: EventConfig): string =>
   `M-am înscris la ${eventTitle(config)}! Vino și tu — ${EDITION.urls.site}`;
 
 /** URL de share pe WhatsApp cu text pre-completat (fallback dacă nu e Web Share). */
-export const whatsappShareUrl = (config: EventConfig): string =>
+const whatsappShareUrl = (config: EventConfig): string =>
   `https://wa.me/?text=${encodeURIComponent(buildShareText(config))}`;
 
 /**
