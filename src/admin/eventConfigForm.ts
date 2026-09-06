@@ -10,6 +10,7 @@ import {
   type SectionKey,
   type SectionLayoutEntry,
 } from '../content/eventConfig';
+import { candScurt, durataRo, mutaReperele } from './reperele';
 
 /**
  * Regulile formularului de ediție, ca modul pur.
@@ -358,3 +359,105 @@ export const cioarnaPentruEditiaUrmatoare = (publicat: EventConfig): EventConfig
   // `launchNumber` NU se bumpează automat — vezi avertismentul de mai sus.
   layout: layoutComplet(publicat.layout),
 });
+
+/**
+ * Ciorna unei ediții noi din trei câmpuri: startul și numărul de locuri.
+ *
+ * Diferența față de `cioarnaPentruEditiaUrmatoare` e singurul lucru care
+ * contează aici. Aceea COPIAZĂ momentele ediției publicate, inclusiv
+ * `launchAt` — un moment deja consumat — iar consecința („homepage-ul nu mai
+ * stă pe Coming Soon") se descoperă abia pe site. Asta le mută pe toate odată
+ * cu startul, prin `mutaReperele`, deci momentul consumat nu mai are pe unde
+ * să intre: nu e o verificare în plus, e o cale care nu-l mai poate produce.
+ *
+ * `launchNumber` rămâne în urmă și aici, deliberat — bumpul lui e o decizie
+ * despre CE ediție se anunță, nu despre când, și are avertismentul lui.
+ */
+export const cioarnaEditieNoua = (
+  publicat: EventConfig,
+  startNou: string,
+  locuriTotal: number
+): EventConfig => ({
+  ...mutaReperele(publicat, startNou),
+  number: publicat.number + 1,
+  layout: layoutComplet(publicat.layout),
+  slots: { ...publicat.slots, total: locuriTotal },
+});
+
+/** Un câmp al ciornei noi, așa cum îl citește organizatorul înainte să scrie. */
+export type CampCiorna = {
+  eticheta: string;
+  valoare: string;
+  /** Recalculat față de noul start — nu copiat din ediția publicată. */
+  recalculat?: boolean;
+};
+
+/**
+ * Ce duce mai departe ciorna nouă, câmp cu câmp.
+ *
+ * Fără rezumat, dialogul rapid n-ar face decât să mute capcana de la `launchAt`
+ * la orice alt câmp: ai publica o locație sau o capacitate greșită cu MAI multă
+ * încredere decât azi, fiindcă ai avut senzația că ai verificat. Momentele
+ * recalculate se arată cu valoarea NOUĂ — „check-in 08:45", nu „s-a mutat" —
+ * pentru că valoarea e chiar lucrul care se verifică dintr-o privire.
+ *
+ * Se compară cu ediția publicată, deci un câmp neschimbat de mutare (start
+ * identic, oră identică) nu se raportează ca recalculat.
+ */
+export const rezumatCiornaNoua = (publicat: EventConfig, ciorna: EventConfig): CampCiorna[] => {
+  const momente: [keyof EventConfig, string][] = [
+    ['registrationDeadline', 'Se închid înscrierile'],
+    ['launchAt', 'Se anunță ediția'],
+    ['nextEditionAt', 'Următorul antrenament'],
+  ];
+
+  const recalculate: CampCiorna[] = [];
+  if (ciorna.checkinFrom !== publicat.checkinFrom) {
+    recalculate.push({
+      eticheta: 'Check-in de la',
+      valoare: ciorna.checkinFrom,
+      recalculat: true,
+    });
+  }
+  for (const [cheie, eticheta] of momente) {
+    if (ciorna[cheie] === publicat[cheie]) continue;
+    const moment = String(ciorna[cheie]);
+    recalculate.push({ eticheta, valoare: candScurt(moment) || moment, recalculat: true });
+  }
+
+  const mostenite: CampCiorna[] = [
+    { eticheta: 'Locația', valoare: `${publicat.venue.name}, ${publicat.venue.city}` },
+    {
+      eticheta: 'Capacitate',
+      valoare:
+        `${ciorna.slots.total} locuri` +
+        (publicat.slots.waitlist > 0 ? ` · ${publicat.slots.waitlist} pe lista de așteptare` : ''),
+    },
+    { eticheta: 'Durata cursei', valoare: durataRo(publicat.durationHours * 3_600_000) },
+    {
+      eticheta: 'Remindere',
+      valoare:
+        publicat.reminders.length === 0
+          ? 'niciunul'
+          : `${publicat.reminders.filter((r) => r.enabled).length} active din ${publicat.reminders.length}`,
+    },
+    {
+      eticheta: 'Secțiunile paginii',
+      valoare: `${ciorna.layout.filter((s) => s.visible).length} vizibile din ${ciorna.layout.length}`,
+    },
+  ];
+
+  /**
+   * Numărul de ocupate pe care pagina îl arată când statisticile nu răspund.
+   * Se raportează doar când nu e zero: moștenit ca atare, e ocupația ediției
+   * TRECUTE afișată pe una la care încă nu s-a înscris nimeni.
+   */
+  if (publicat.slots.occupiedFallback > 0) {
+    mostenite.push({
+      eticheta: 'Ocupate (valoare de rezervă)',
+      valoare: String(publicat.slots.occupiedFallback),
+    });
+  }
+
+  return [...recalculate, ...mostenite];
+};

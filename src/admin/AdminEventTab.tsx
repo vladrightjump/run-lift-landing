@@ -18,7 +18,6 @@ import {
   mutaSectiune,
   comutaVizibilitatea,
   layoutComplet,
-  cioarnaPentruEditiaUrmatoare,
   parseInstagramUrl,
   adaugaReel,
   stergeReel,
@@ -28,6 +27,7 @@ import {
 } from './eventConfigForm';
 import { useSesiuneAdmin } from './adminSession';
 import { Blocat } from './eventTab/primitive';
+import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
 import { refuzCuPas, type Pas } from './eventTab/ajutoare';
 import { GrupCeArata } from './eventTab/grupuri/GrupCeArata';
 import { GrupLocuri } from './eventTab/grupuri/GrupLocuri';
@@ -73,6 +73,7 @@ export const AdminEventTab = () => {
   const [salveaza, setSalveaza] = useState(false);
   const [publica, setPublica] = useState(false);
   const [confirmPublicare, setConfirmPublicare] = useState(false);
+  const [dialogEditieNoua, setDialogEditieNoua] = useState(false);
   /**
    * Ultimul refuz, până la următoarea încercare.
    *
@@ -247,15 +248,22 @@ export const AdminEventTab = () => {
     });
   };
 
-  // Un refuz descrie documentul care l-a produs. Când se schimbă ciorna
-  // deschisă, reproșul nu mai are despre ce să fie.
-  const porneste = () => {
-    const baza = publicat;
-    if (!baza) return;
+  /**
+   * Ciorna venită din dialogul rapid — reperele îi sunt deja recalculate.
+   *
+   * Ancora se așază pe startul NOU, nu pe cel publicat: mutarea s-a produs
+   * deja, iar o ancoră pe startul vechi ar face formularul să ofere imediat o
+   * a doua mutare, peste una aplicată.
+   *
+   * Un refuz descrie documentul care l-a produs. Când se schimbă ciorna
+   * deschisă, reproșul nu mai are despre ce să fie.
+   */
+  const creeazaDinDialog = (noua: EventConfig) => {
     atinsa.current = true;
     setRefuz(null);
-    setCiorna(cioarnaPentruEditiaUrmatoare(baza));
-    setAncoraStart(baza.start);
+    setDialogEditieNoua(false);
+    setCiorna(noua);
+    setAncoraStart(noua.start);
   };
 
   const porneteDinPublicat = () => {
@@ -374,7 +382,12 @@ export const AdminEventTab = () => {
               <button type="button" className="admin-btn-ghost" onClick={porneteDinPublicat}>
                 Editează ediția {publicat?.number ?? ''}
               </button>
-              <button type="button" className="admin-btn-accent" onClick={porneste}>
+              <button
+                type="button"
+                className="admin-btn-accent"
+                disabled={!publicat}
+                onClick={() => setDialogEditieNoua(true)}
+              >
                 + Ciornă pentru ediția {(publicat?.number ?? 0) + 1}
               </button>
             </>
@@ -806,6 +819,14 @@ export const AdminEventTab = () => {
             </div>
           </div>
         </>
+      )}
+
+      {dialogEditieNoua && publicat && (
+        <DialogEditieNoua
+          publicat={publicat}
+          onCreeaza={creeazaDinDialog}
+          onAnuleaza={() => setDialogEditieNoua(false)}
+        />
       )}
 
       {confirmPublicare && ciorna && (
