@@ -304,7 +304,6 @@ const PROMOTED_TEXT_FALLBACK =
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
-  if (!RESEND_API_KEY) return json(500, { error: "resend_not_configured" });
 
   let payload: Record<string, unknown>;
   try {
@@ -314,6 +313,70 @@ Deno.serve(async (req: Request) => {
   }
 
   const mode = payload.mode;
+
+  // Verificarea cheii de Resend s-a mutat AICI, sub citirea modului: `preview`
+  // nu trimite nimic, deci n-are de ce să depindă de provider. Toate celelalte
+  // moduri o trec exact ca înainte.
+  if (mode !== "preview" && !RESEND_API_KEY) {
+    return json(500, { error: "resend_not_configured" });
+  }
+
+  // ---- PREVIEW: HTML-ul exact cum pleacă, randat și ÎNTORS, fără trimitere ----
+  //
+  // De ce aici și nu în client: `renderHtml` e deja funcția unică prin care trec
+  // toate cele patru moduri de trimitere. Expusă o dată, acoperă permanent
+  // fiecare șablon existent și viitor din `email_templates`. O a doua
+  // implementare în client ar diverge la primul `fillVars` schimbat — și ar
+  // diverge tăcut, fiindcă nimic n-ar compara cele două randări.
+  //
+  // Se randează șablonul SALVAT, nu ciorna din formular: previzualizarea
+  // răspunde la „ce pleacă", iar ce pleacă e ce e în DB.
+  //
+  // Autentificare cu tokenul de sesiune al adminului, ca `mode: "admin"` — NU cu
+  // secretul de difuzare. Secretul există tocmai ca să nu ajungă în browser;
+  // apelantul aici e backoffice-ul, care are deja o sesiune verificată.
+  if (mode === "preview") {
+    const token = String(payload.token ?? "");
+    const valid = await rpc<boolean>("admin_check_token", { p_token: token });
+    if (valid !== true) return json(401, { error: "invalid_token" });
+
+    const cheie = String(payload.template ?? "");
+    if (!cheie) return json(400, { error: "missing_template" });
+    const tpl = await loadTemplate(cheie);
+    // Un șablon inexistent NU cade pe textul de rezervă: previzualizarea ar
+    // arăta atunci un email care nu există nicăieri, cu aerul că e cel real.
+    if (!tpl?.text_email) return json(404, { error: "unknown_template" });
+
+    // Un destinatar REAL al ediției: variabilele se completează cu numele și
+    // tokenurile lui, deci linkurile din previzualizare sunt cele adevărate.
+    // Acolo se strică lucrurile — linkuri rupte, variabile necompletate — nu în
+    // textul brut, care se vede oricum în câmpul de deasupra.
+    const recipients =
+      (await rpc<{ email: string; nume: string; token_unsub?: string; token_renunt?: string }[]>(
+        "edition2_recipients",
+        {}
+      )) ?? [];
+    const cerut = String(payload.email ?? "").trim().toLowerCase();
+    const row = cerut
+      ? recipients.find((r) => r.email.toLowerCase() === cerut)
+      : recipients[0];
+    if (!row) return json(404, { error: "no_recipient" });
+
+    const badge = await loadBadge();
+    const text = fillVars(tpl.text_email, row.nume, row.email, "", linkRenunt(row.token_renunt));
+    const unsubPage = row.token_unsub
+      ? `https://parktraining.fit/unsubscribe?token=${row.token_unsub}`
+      : undefined;
+
+    // Fără `sendOne`, fără `logSends`: o previzualizare care ar lăsa urmă în
+    // jurnalul de livrare ar strica exact instrumentul cu care se citește ce s-a
+    // trimis cu adevărat.
+    return json(200, {
+      html: renderHtml(tpl.subiect, text, badge, unsubPage),
+      subiect: tpl.subiect,
+      pentru: { email: row.email, nume: row.nume },
+    });
+  }
 
   // ---- ADMIN: trimitere în masă, protejat cu token de sesiune ----
   if (mode === "admin") {

@@ -465,3 +465,39 @@ export const sendBulkEmail = async (
   }
   return body as SendEmailResult;
 };
+
+export type EmailPreview = {
+  /** HTML-ul exact cum pleacă — randat de aceeași funcție ca trimiterile. */
+  html: string;
+  subiect: string;
+  /** Destinatarul real pentru care s-au completat variabilele. */
+  pentru: { email: string; nume: string };
+};
+
+/**
+ * HTML-ul randat al unui șablon, pentru un destinatar real al ediției.
+ *
+ * Nu trimite nimic și nu scrie în `email_log`. Fără `email`, serverul alege
+ * primul destinatar al ediției — previzualizarea are nevoie de o persoană
+ * concretă, altfel variabilele rămân acolade și exact ce trebuie verificat
+ * (linkurile) nu se poate verifica.
+ */
+export const previewEmailHtml = async (
+  token: string,
+  template: string,
+  email?: string,
+  signal?: AbortSignal
+): Promise<EmailPreview> => {
+  const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'preview', token, template, email }),
+    signal,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401) throw new InvalidTokenError();
+    throw new SubmitHttpError(res.status, JSON.stringify(body));
+  }
+  return body as EmailPreview;
+};
