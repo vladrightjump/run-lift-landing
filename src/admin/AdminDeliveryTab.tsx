@@ -43,6 +43,7 @@ const MOD_LABELS: Record<string, string> = {
   promoted: 'Promovat din așteptare',
   info: 'Confirmare adresă',
   broadcast: 'Reminder / anunț',
+  alert: 'Alertă către operator',
 };
 
 export const AdminDeliveryTab = ({

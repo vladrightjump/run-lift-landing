@@ -63,6 +63,11 @@ export const motivNerejucabil = (e: AdminEmailLogEntry): string | null => {
   if (e.mod === 'admin') {
     return 'Trimis manual din backoffice — se retrimite din butonul de sus.';
   }
+  if (e.mod === 'alert') {
+    // O alertă către operator descrie o anomalie de ATUNCI. Rejucată, ar
+    // reafirma o stare care poate fi între timp reparată.
+    return 'Alertă către operator — descrie o anomalie de atunci, nu o stare de reafirmat.';
+  }
   if (e.mod === 'info') {
     // Cooldown-ul de 10 minute și `mark_confirmation_sent` fac din rejucare o
     // cerere nouă, nu o reparație. Ascuns, rândul ar părea rezolvat.

@@ -234,3 +234,17 @@ describe('ce se poate rejuca, și ce spune ecranul despre restul', () => {
     expect(emailuriNelivrate(intrari)).toEqual([]);
   });
 });
+
+describe('alertele către operator în jurnal', () => {
+  it('o alertă nu se rejoacă — ar reafirma o stare poate deja reparată', () => {
+    expect(motivNerejucabil(log({ mod: 'alert' }))).toMatch(/anomalie de atunci/);
+  });
+
+  it('o alertă NU intră în fișa de acoperire a participanților', () => {
+    // Fișa numără comunicările DATORATE participanților. O alertă e despre
+    // sistem, către operator — numărată acolo, ar raporta ca „primit" ceva ce
+    // participantul n-a primit.
+    const e = log({ mod: 'alert', email: 'ion@ex.ro', status: 'trimis' });
+    expect(COMUNICARI_EDITIE.some((c) => c.recunoaste(e))).toBe(false);
+  });
+});

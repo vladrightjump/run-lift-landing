@@ -379,7 +379,7 @@ export type AdminEmailLogEntry = {
   subiect: string;
   text_email: string;
   /** Cine a declanșat trimiterea. */
-  mod: 'admin' | 'confirm' | 'promoted' | 'info' | 'broadcast';
+  mod: 'admin' | 'confirm' | 'promoted' | 'info' | 'broadcast' | 'alert';
   audienta: 'participanti' | 'asteptare' | '';
   /**
    * Cheia șablonului cu care s-a randat mesajul; `null` pe rândurile de dinainte

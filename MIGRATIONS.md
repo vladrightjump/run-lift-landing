@@ -145,6 +145,44 @@ funcția Edge depinde de RPC-ul de aici).
 `info` rămâne exclus deliberat: cooldown-ul de 10 minute și `mark_confirmation_sent` fac din
 rejucare o cerere nouă, nu o reparație.
 
+### `supabase-migration-escaladare.sql` — NEAPLICAT
+
+Anomaliile de flux ajung la operator fără să treacă printr-un login. Scris pe 6 septembrie 2026;
+**se aplică manual**, împreună cu `supabase functions deploy send-email --no-verify-jwt` (modul
+`alert` din funcția Edge).
+
+**Cere un pas manual în plus.** Cheia `operator_email` din `app_config` NU e scrisă de migrare:
+
+```sql
+insert into runlift.app_config (key, value)
+values ('operator_email', 'adresa@exemplu.ro')
+on conflict (key) do update set value = excluded.value;
+```
+
+Până atunci `escaladeaza()` nu face nimic — deliberat. O migrare care ar inventa o adresă ar
+trimite alerte către nimeni, cu aerul că sistemul e armat.
+
+Cele trei anomalii, toate de server (o eroare de JS de client sau o violare de CSP **nu** produc
+niciun email — `monitoring.ts` rămâne neatins):
+
+- **confirmare / promovare eșuată** — din funcția Edge, unde eșuează. Confirmarea e
+  „fire-and-forget" din client, deci un eșec e azi invizibil pentru toată lumea;
+- **promovare automată** — din trigger, într-un apel `pg_net` PROPRIU, separat de cel care duce
+  emailul către persoană. Dacă acela pică, exact atunci contează cel mai mult ca operatorul să
+  afle; o escaladare atârnată de același apel ar tăcea fix în cazul pe care există ca să-l prindă;
+- **locuri epuizate** — trigger `AFTER INSERT` pe `registrations`. Din cele două praguri posibile
+  s-a ales momentul UMPLERII, nu prima intrare pe lista de așteptare: e momentul în care operatorul
+  mai poate face ceva (deschide locuri), și cade înainte ca cineva să fie întors.
+
+Garda de deduplicare pe `(ediție, tip, cheie)` refolosește `broadcast_once` — fără ea, o funcție
+care eșuează în buclă ar trimite un email la fiecare încercare și l-ar antrena pe operator să
+ignore canalul. `escaladeaza()` e revocată de la `anon`/`authenticated` și acordată explicit lui
+`service_role`.
+
+**Rămâne descoperit:** o promovare automată al cărei apel `pg_net` de escaladare pică el însuși.
+Prinderea ei cere o reconciliere periodică (`admin_events` vs. `email_log`), deci un ceas — adică
+U1 din plan.
+
 ---
 
 ## Runbook: cum adaug o migrare nouă (runlift)
