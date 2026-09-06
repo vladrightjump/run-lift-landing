@@ -350,8 +350,19 @@ export const listWaitlist = (
     signal
   );
 
+/** Ștergere LOGICĂ — rândul rămâne, cu `deleted_at` setat. */
 export const deleteWaitlist = (token: string, id: string): Promise<void> =>
   rpc<void>('admin_delete_waitlist', { p_token: token, p_id: id });
+
+/**
+ * Reversarea ștergerii de pe listă: același rând, deci același `created_at` și
+ * aceeași poziție în ordinea FIFO de promovare. Refuză cu `waitlist_full` dacă
+ * plafonul s-a umplut între timp, cu `duplicate_email` dacă adresa a fost
+ * re-adăugată, și cu `not_found` dacă rândul a fost promovat — promovarea îl
+ * șterge fizic, deci nu mai e nimic de readus.
+ */
+export const undeleteWaitlist = (token: string, id: string, force = false): Promise<void> =>
+  rpc<void>('admin_undelete_waitlist', { p_token: token, p_id: id, p_force: force });
 
 /** Mută o persoană din așteptare în participanți. Întoarce id-ul nou (sau null
  * dacă emailul era deja înscris). */

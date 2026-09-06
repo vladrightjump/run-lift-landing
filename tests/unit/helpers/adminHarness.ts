@@ -152,6 +152,7 @@ export const adminApiMock = (
       async (_token: string, _id: string, _force?: boolean) => undefined
     ),
     deleteWaitlist: vi.fn(async (_token: string, _id: string) => undefined),
+    undeleteWaitlist: vi.fn(async (_token: string, _id: string, _force?: boolean) => undefined),
     promoteWaitlist: vi.fn(async (_token: string, _id: string) => 'id-promovat'),
     createEdition: vi.fn(async (_token: string) => 6),
     saveEmailTemplate: vi.fn(

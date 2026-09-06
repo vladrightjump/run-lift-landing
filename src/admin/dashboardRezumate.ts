@@ -59,6 +59,15 @@ export const motivUndoEsuat = (err: unknown, nume: string): string => {
   if (text.includes('duplicate_email')) {
     return `Adresa lui ${nume} a fost re-înscrisă între timp, deci nu se mai poate readuce rândul vechi.`;
   }
+  if (text.includes('waitlist_full')) {
+    return `Lista de așteptare s-a umplut între timp, deci ${nume} nu mai încape înapoi pe ea.`;
+  }
+  // Promovarea șterge FIZIC rândul de pe listă. Undo-ul n-are ce reversa, iar
+  // „nu s-a întâmplat nimic" e cel mai prost răspuns posibil aici: persoana e
+  // înscrisă, nu pierdută.
+  if (text.includes('not_found')) {
+    return `${nume} a fost promovat între timp — e la participanți, nu mai e pe listă.`;
+  }
   if (isTimeoutError(err)) return 'Serverul răspunde greu. Verifică lista și încearcă din nou.';
   if (isNetworkOrCspError(err)) return 'Conexiune blocată sau indisponibilă. Reîncearcă.';
   return 'Nu am putut anula ștergerea.';

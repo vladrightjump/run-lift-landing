@@ -274,3 +274,128 @@ describe('AdminDashboard — sesiunea expirată', () => {
     await waitFor(() => expect(onLogout).toHaveBeenCalled());
   });
 });
+
+describe('AdminDashboard — lista de așteptare', () => {
+  const PE_LISTA = {
+    id: 'w1',
+    created_at: '2026-08-21T09:00:00Z',
+    nume: 'Elena Rusu',
+    telefon: '+37360000001',
+    email: 'elena@exemplu.ro',
+    editie: 5 as const,
+  };
+
+  /** Șterge singurul rând de pe listă și întoarce butonul de undo din toast. */
+  const stergeDeAsteptare = async () => {
+    api.current!.listWaitlist.mockResolvedValue([PE_LISTA]);
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Elena Rusu');
+
+    const rand = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
+    fireEvent.click(within(rand).getByRole('button', { name: 'Șterge' }));
+
+    await waitFor(() => expect(api.current?.deleteWaitlist).toHaveBeenCalled());
+    // Prin clasă, nu prin `role="status"`: scheletele de încărcare ale
+    // celorlalte tabele poartă și ele rolul, iar care dintre ele a apucat să se
+    // rezolve depinde de ordinea testelor.
+    const toast = (await screen.findByText(/a fost șters din așteptare/)).closest(
+      '.admin-toast'
+    ) as HTMLElement;
+    return within(toast).getByRole('button', { name: 'Anulează' });
+  };
+
+  it('ștergerea de pe listă are undo, ca și ștergerea unei înscrieri', async () => {
+    // Paritatea lipsă: `handleDelete` avea toast cu undo, `handleDeleteWaitlist`
+    // nu — iar `admin_delete_waitlist` ștergea FIZIC, deci n-avea ce reversa.
+    const undo = await stergeDeAsteptare();
+    fireEvent.click(undo);
+
+    await waitFor(() => expect(api.current?.undeleteWaitlist).toHaveBeenCalled());
+    const [, id] = api.current!.undeleteWaitlist.mock.calls.at(-1)!;
+    expect(id).toBe('w1');
+  });
+
+  it('undo refuzat pentru că lista s-a umplut spune de ce', async () => {
+    const undo = await stergeDeAsteptare();
+    api.current!.undeleteWaitlist.mockRejectedValueOnce(
+      new Error('Supabase 400: {"message":"waitlist_full"}')
+    );
+    fireEvent.click(undo);
+
+    expect(await screen.findByText(/s-a umplut între timp/i)).toBeDefined();
+  });
+
+  it('undo pe un rând promovat între timp spune unde e persoana, nu „nu a mers"', async () => {
+    // Promovarea șterge FIZIC rândul. O întoarcere tăcută ar fi cel mai prost
+    // răspuns: persoana e înscrisă, nu pierdută.
+    const undo = await stergeDeAsteptare();
+    api.current!.undeleteWaitlist.mockRejectedValueOnce(
+      new Error('Supabase 400: {"message":"not_found"}')
+    );
+    fireEvent.click(undo);
+
+    expect(await screen.findByText(/promovat între timp/i)).toBeDefined();
+  });
+
+  it('dublu-clicul pe „Promovează" nu trimite două cereri', async () => {
+    api.current!.listWaitlist.mockResolvedValue([PE_LISTA]);
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Elena Rusu');
+
+    const rand = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
+    const buton = within(rand).getByRole('button', { name: 'Promovează' });
+    fireEvent.click(buton);
+    fireEvent.click(buton);
+
+    await waitFor(() => expect(api.current?.promoteWaitlist).toHaveBeenCalled());
+    expect(api.current?.promoteWaitlist).toHaveBeenCalledTimes(1);
+  });
+
+  it('rândul părăsește tabelul cât timp cererea lui e în zbor', async () => {
+    // Cealaltă jumătate a garanției de mai sus, și motivul pentru care ea ține:
+    // rândul e scos optimist, deci nu mai există buton pe care să se apese a
+    // doua oară. `disabled` pe rând e a doua încuietoare, pentru ziua în care
+    // scoaterea optimistă dispare — nu prima.
+    api.current!.listWaitlist.mockResolvedValue([PE_LISTA]);
+    api.current!.promoteWaitlist.mockImplementationOnce(() => new Promise(() => {}));
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Elena Rusu');
+
+    const rand = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
+    fireEvent.click(within(rand).getByRole('button', { name: 'Promovează' }));
+
+    await waitFor(() => expect(screen.queryByText('Elena Rusu')).toBeNull());
+  });
+
+  it('un rând ocupat nu blochează butoanele celorlalte rânduri', async () => {
+    const alta = { ...PE_LISTA, id: 'w2', nume: 'Radu Vasile', email: 'radu@exemplu.ro' };
+    api.current!.listWaitlist.mockResolvedValue([PE_LISTA, alta]);
+    api.current!.promoteWaitlist.mockImplementationOnce(() => new Promise(() => {}));
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Elena Rusu');
+
+    const primul = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
+    fireEvent.click(within(primul).getByRole('button', { name: 'Promovează' }));
+
+    const alDoilea = screen.getByText('Radu Vasile').closest('.admin-row') as HTMLElement;
+    expect(
+      (within(alDoilea).getByRole('button', { name: 'Promovează' }) as HTMLButtonElement).disabled
+    ).toBe(false);
+  });
+
+  it('butonul redevine activ după un eșec, ca acțiunea să poată fi reîncercată', async () => {
+    api.current!.listWaitlist.mockResolvedValue([PE_LISTA]);
+    api.current!.promoteWaitlist.mockRejectedValueOnce(new Error('Supabase 500: boom'));
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Elena Rusu');
+
+    const rand = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
+    fireEvent.click(within(rand).getByRole('button', { name: 'Promovează' }));
+
+    await waitFor(() =>
+      expect(
+        (within(rand).getByRole('button', { name: 'Promovează' }) as HTMLButtonElement).disabled
+      ).toBe(false)
+    );
+  });
+});

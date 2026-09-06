@@ -99,6 +99,32 @@ rulează fișierul de armare (o singură dată pe proiect). `pg_net` **e** insta
 auto-promovarea de pe lista de așteptare — care merge tot prin `net.http_post` — chiar
 funcționează; doar cron-ul lipsește.
 
+### `supabase-migration-undo-waitlist.sql` — NEAPLICAT
+
+Ștergere logică pe `event_waitlist` + `admin_undelete_waitlist`, cu paritate față de
+`runlift_soft_delete_registrations`. Scris pe 6 septembrie 2026; **se aplică manual** (CI-ul din
+`main` nu deployează migrări).
+
+Ce atinge, cu enumerarea completă a cititorilor — un cititor uitat nu dă eroare, dă un rezultat
+greșit în tăcere:
+
+- `deleted_at` + index parțial pe `(lower(email), editie)`, ca re-înscrierea aceleiași adrese să
+  nu pice pe un rând pe care nimeni nu-l mai vede;
+- **`event_waitlist_cap()`** — plafonul de 10 număra TOATE rândurile ediției. Fără corecție,
+  rândurile șterse ar fi continuat să ocupe plafonul: lista ar fi arătat 7 oameni în backoffice
+  și ar fi respins al optulea cu `waitlist_full`. Plafonul se extrage în `runlift.waitlist_cap()`,
+  citit acum din două locuri;
+- `admin_delete_waitlist` (devine logică, cu jurnal), `admin_undelete_waitlist` (nou, reversare
+  cu gărzi `waitlist_full` / `duplicate_email` / `not_found`);
+- cititorii care trebuie să ignore rândurile retrase: `admin_list_waitlist`,
+  `admin_promote_waitlist`, `auto_promote_from_waitlist`, `public_stats`, `admin_list_editions`.
+
+Ce **nu** se schimbă, notat ca să nu pară scăpat: `admin_create_edition` (`max(editie)` trebuie
+să vadă și rândurile șterse) și ștergerea FIZICĂ a rândului la promovare — manuală sau automată.
+Un soft-delete acolo ar face `admin_undelete_waitlist` să readucă pe listă pe cineva deja înscris;
+așa, undo-ul pe un rând promovat între timp întoarce `not_found`, iar backoffice-ul spune unde e
+persoana.
+
 ---
 
 ## Runbook: cum adaug o migrare nouă (runlift)
