@@ -65,6 +65,14 @@ type LogRow = {
   text_email: string;
   mod: string;
   audienta?: string;
+  /**
+   * Cheia din `email_templates` cu care s-a randat mesajul.
+   *
+   * Fără ea, rejucarea unui `broadcast` ar trebui să ghicească șablonul din
+   * audiență — iar orarul de remindere are DOUĂ șabloane pentru aceeași
+   * audiență. Ghicitul ar retrimite tăcut alt text decât cel eșuat.
+   */
+  sablon?: string;
   ok: boolean;
   provider_status?: number;
   eroare?: string;
@@ -378,6 +386,90 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  // ---- REPLAY: rejucarea unei trimiteri eșuate, prin fluxul ei ----
+  //
+  // Diferența față de retrimiterea prin modul `admin` — singura posibilă până
+  // acum — e că NU se reia textul din jurnal. Mesajul se reconstruiește din
+  // șablon și din starea de ACUM a destinatarului, deci:
+  //   • linkul de dezabonare se readaugă (modul `admin` nu-l pune deloc);
+  //   • `{link_renunt}` se completează cu tokenul curent, iar paragraful cade
+  //     pentru cine n-are un loc de eliberat, ca la difuzarea originală;
+  //   • cine s-a dezabonat între timp nu mai e destinatar.
+  //
+  // Cele patru motive scrise în `AdminDeliveryTab.tsx:87-99` rămân valide; asta
+  // nu le contrazice, le respectă pe altă cale. `info` rămâne exclus — pentru el
+  // rejucarea ar fi o CERERE nouă, nu o reparație — iar refuzul vine cu motiv,
+  // decis o singură dată, în `admin_replay_lookup`.
+  if (mode === "replay") {
+    const token = String(payload.token ?? "");
+    const valid = await rpc<boolean>("admin_check_token", { p_token: token });
+    if (valid !== true) return json(401, { error: "invalid_token" });
+
+    const logId = String(payload.log_id ?? "");
+    if (!logId) return json(400, { error: "missing_log_id" });
+
+    const found = await rpc<
+      {
+        ok: boolean;
+        motiv: string | null;
+        mod: string;
+        sablon: string;
+        audienta: string;
+        email: string;
+        nume: string;
+        token_renunt?: string;
+        token_unsub?: string;
+        editie: number;
+      }[]
+    >("admin_replay_lookup", { p_token: token, p_log_id: logId });
+    const plan = found && found[0];
+    if (!plan) return json(500, { error: "lookup_failed" });
+    if (!plan.ok) return json(409, { error: "not_replayable", motiv: plan.motiv });
+
+    const tpl = await loadTemplate(plan.sablon);
+    if (!tpl?.text_email) return json(404, { error: "unknown_template" });
+
+    const badge = await loadBadge();
+    const text = fillVars(tpl.text_email, plan.nume, plan.email, "", linkRenunt(plan.token_renunt));
+    // Difuzările poartă linkul de dezabonare; cele automate (confirmare,
+    // promovare) nu — sunt tranzacționale. Aceeași regulă ca la trimiterea
+    // originală, nu o alegere nouă făcută aici.
+    const unsubPage =
+      plan.mod === "broadcast" && plan.token_unsub
+        ? `https://parktraining.fit/unsubscribe?token=${plan.token_unsub}`
+        : undefined;
+    const unsubApi =
+      plan.mod === "broadcast" && plan.token_unsub
+        ? `${SUPABASE_URL}/functions/v1/unsubscribe?token=${plan.token_unsub}`
+        : undefined;
+
+    const r = await sendOne(
+      { to: plan.email, subject: tpl.subiect, text },
+      badge,
+      unsubPage,
+      unsubApi
+    );
+    // Se jurnalizează cu modul ORIGINAL, nu cu „replay": fișa de acoperire
+    // răspunde la „cui îi lipsește confirmarea", iar un mod nou ar scoate
+    // reparația din coloana pe care tocmai a reparat-o.
+    await logSends([
+      {
+        email: plan.email,
+        nume: plan.nume,
+        subiect: tpl.subiect,
+        text_email: text,
+        mod: plan.mod,
+        audienta: plan.audienta,
+        sablon: plan.sablon,
+        ok: r.ok,
+        provider_status: r.status,
+        eroare: r.ok ? undefined : r.body,
+        editie: plan.editie,
+      },
+    ]);
+    return json(200, { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1, mod: plan.mod });
+  }
+
   // ---- ADMIN: trimitere în masă, protejat cu token de sesiune ----
   if (mode === "admin") {
     const token = String(payload.token ?? "");
@@ -459,6 +551,7 @@ Deno.serve(async (req: Request) => {
         text_email: text,
         mod: "confirm",
         audienta: "participanti",
+        sablon: "bulk_participant_confirmare",
         ok: r.ok,
         provider_status: r.status,
         eroare: r.ok ? undefined : r.body,
@@ -503,6 +596,7 @@ Deno.serve(async (req: Request) => {
         text_email: text,
         mod: "promoted",
         audienta: "participanti",
+        sablon: "bulk_waitlist_promovare",
         ok: r.ok,
         provider_status: r.status,
         eroare: r.ok ? undefined : r.body,
@@ -648,6 +742,7 @@ Deno.serve(async (req: Request) => {
         text_email: body,
         mod: "broadcast",
         audienta: audience,
+        sablon: tplKey,
         ok: res.ok,
         provider_status: res.status,
         eroare: res.ok ? undefined : res.body,

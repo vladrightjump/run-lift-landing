@@ -125,6 +125,26 @@ Un soft-delete acolo ar face `admin_undelete_waitlist` să readucă pe listă pe
 așa, undo-ul pe un rând promovat între timp întoarce `not_found`, iar backoffice-ul spune unde e
 persoana.
 
+### `supabase-migration-rejucare.sql` — NEAPLICAT
+
+Rejucarea unei trimiteri eșuate prin fluxul modului ei. Scris pe 6 septembrie 2026; **se aplică
+manual**, împreună cu `supabase functions deploy send-email --no-verify-jwt` (modul `replay` din
+funcția Edge depinde de RPC-ul de aici).
+
+- **`email_log.sablon`** — coloană nouă. Fără ea, rejucarea unui `broadcast` ar trebui să ghicească
+  șablonul din audiență, iar orarul de remindere are DOUĂ șabloane pentru aceeași audiență
+  (`bulk_participant_reminder` și `…_final`). Ghicitul ar retrimite tăcut alt text decât cel eșuat.
+  Rândurile vechi rămân cu `null`, iar ecranul spune de ce nu se pot rejuca.
+- `log_emails` și `admin_list_email_log` duc coloana mai departe.
+- **`admin_replay_lookup(token, log_id)`** — răspunde la „ce mod, ce șablon, ce destinatar, sau de
+  ce nu se poate". Nu trimite nimic: decizia stă într-un singur loc, ca ecranul și funcția Edge să
+  dea același verdict. Destinatarul se rezolvă din starea de ACUM (`lower(email)` + `editie`), deci
+  filtrul de dezabonare al difuzării se aplică și la rejucare — exact ce sărea retrimiterea oarbă
+  prin modul `admin`.
+
+`info` rămâne exclus deliberat: cooldown-ul de 10 minute și `mark_confirmation_sent` fac din
+rejucare o cerere nouă, nu o reparație.
+
 ---
 
 ## Runbook: cum adaug o migrare nouă (runlift)

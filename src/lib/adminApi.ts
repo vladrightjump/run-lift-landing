@@ -381,6 +381,12 @@ export type AdminEmailLogEntry = {
   /** Cine a declanșat trimiterea. */
   mod: 'admin' | 'confirm' | 'promoted' | 'info' | 'broadcast';
   audienta: 'participanti' | 'asteptare' | '';
+  /**
+   * Cheia șablonului cu care s-a randat mesajul; `null` pe rândurile de dinainte
+   * ca jurnalul s-o rețină. Fără ea, o difuzare nu se poate rejuca: orarul are
+   * două șabloane pentru aceeași audiență, iar ghicitul ar retrimite alt text.
+   */
+  sablon: string | null;
   status: 'trimis' | 'esuat';
   /** Codul HTTP de la Resend (200 la succes, 4xx/5xx la eșec). */
   provider_status: number | null;
@@ -500,4 +506,36 @@ export const previewEmailHtml = async (
     throw new SubmitHttpError(res.status, JSON.stringify(body));
   }
   return body as EmailPreview;
+};
+
+/** Refuzul serverului la o rejucare, cu motivul din `admin_replay_lookup`. */
+export type ReplayRefuz =
+  | 'mod_exclus'
+  | 'sablon_necunoscut'
+  | 'destinatar_lipsa'
+  | 'dezabonat'
+  | 'jurnal_lipsa';
+
+/**
+ * Rejoacă o trimitere eșuată prin fluxul MODULUI ei.
+ *
+ * Nu reia textul din jurnal: serverul reconstruiește mesajul din șablon și din
+ * starea de acum a destinatarului. De aceea poate refuza — cine s-a dezabonat
+ * între timp nu mai e destinatar, iar o înscriere ștearsă n-are cui primi.
+ */
+export const replayEmail = async (
+  token: string,
+  logId: string
+): Promise<{ sent: number; failed: number; mod: string }> => {
+  const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'replay', token, log_id: logId }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401) throw new InvalidTokenError();
+    throw new SubmitHttpError(res.status, JSON.stringify(body));
+  }
+  return body as { sent: number; failed: number; mod: string };
 };

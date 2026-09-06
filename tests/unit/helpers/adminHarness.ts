@@ -39,6 +39,7 @@ export const logEntry = (
   text_email: '',
   mod: 'admin',
   audienta: 'participanti',
+  sablon: null,
   status: 'trimis',
   provider_status: 200,
   eroare: null,

@@ -1016,6 +1016,13 @@
     overflow-wrap: anywhere;
   }
   .admin-livrare-eroare strong { color: var(--e3-danger); }
+  .admin-livrare-rejucare {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  }
+  .admin-livrare-nota {
+    margin: 0; flex: 1 1 220px; font-size: 12px; line-height: 1.5;
+    color: var(--e3-muted-dim); overflow-wrap: anywhere;
+  }
   .admin-livrare-text {
     margin: 0; padding: 12px 14px; max-height: 260px; overflow: auto;
     background: var(--e3-bg); border: 1px solid var(--e3-hairline);
