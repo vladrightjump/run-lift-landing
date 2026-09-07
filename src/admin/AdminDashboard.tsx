@@ -9,6 +9,7 @@ import {
   listRegistrations,
   listWaitlist,
   deleteWaitlist,
+  undeleteWaitlist,
   promoteWaitlist,
   listAdminEvents,
   listEditions,
@@ -335,9 +336,28 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       .finally(() => setCreatingEdition(false));
   };
 
+  /**
+   * Rândurile cu o acțiune în zbor.
+   *
+   * Pe rând, nu global: un rând ocupat n-are de ce să înghețe restul tabelului,
+   * iar organizatorul lucrează pe mai multe rânduri în aceeași fereastră de
+   * câteva secunde. Butoanele se randau fără `disabled` cât ținea dus-întorsul,
+   * deci al doilea clic pleca la server ca și primul.
+   */
+  const [randuriOcupate, setRanduriOcupate] = useState<ReadonlySet<string>>(new Set());
+  const elibereaza = (id: string) =>
+    setRanduriOcupate((s) => {
+      const fara = new Set(s);
+      fara.delete(id);
+      return fara;
+    });
+  const ocupa = (id: string) => setRanduriOcupate((s) => new Set(s).add(id));
+
   // Promovează o persoană din așteptare în participanți + email de confirmare.
   const handlePromote = (row: AdminWaitlistEntry) => {
+    if (randuriOcupate.has(row.id)) return;
     const before = waitlistRef.current ?? [];
+    ocupa(row.id);
     setWaitlist(before.filter((w) => w.id !== row.id));
     promoteWaitlist(token, row.id)
       .then((newId) => {
@@ -349,24 +369,50 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         if (handleAuthError(err)) return;
         setWaitlist(before);
         showToast({ kind: 'error', msg: 'Promovarea nu a mers. Încearcă din nou.' });
-      });
+      })
+      .finally(() => elibereaza(row.id));
   };
 
   const handleDeleteWaitlist = (row: AdminWaitlistEntry) => {
+    if (randuriOcupate.has(row.id)) return;
     const before = waitlistRef.current ?? [];
+    ocupa(row.id);
     setWaitlist(before.filter((w) => w.id !== row.id));
     deleteWaitlist(token, row.id)
-      .then(() => showToast({ kind: 'error', msg: `${row.nume} a fost șters din așteptare.` }))
+      .then(() => {
+        showToast({
+          kind: 'error',
+          msg: `${row.nume} a fost șters din așteptare.`,
+          // Paritate cu ștergerea unei înscrieri, o funcție mai jos. Reversare,
+          // nu reinserare: același rând, deci același `created_at` și aceeași
+          // poziție în ordinea FIFO de promovare.
+          undo: () => {
+            undeleteWaitlist(token, row.id)
+              .then(() => {
+                refresh();
+                showToast({ kind: 'success', msg: `${row.nume} a fost readus pe listă.` });
+              })
+              .catch((err) => {
+                if (handleAuthError(err)) return;
+                refresh();
+                showToast({ kind: 'error', msg: motivUndoEsuat(err, row.nume) });
+              });
+          },
+        });
+      })
       .catch((err) => {
         if (handleAuthError(err)) return;
         setWaitlist(before);
         showToast({ kind: 'error', msg: 'Ștergerea nu a mers. Încearcă din nou.' });
-      });
+      })
+      .finally(() => elibereaza(row.id));
   };
 
   // Ștergerea efectivă — rulează doar după confirmarea din dialog.
   const handleDelete = (row: AdminRegistration) => {
+    if (randuriOcupate.has(row.id)) return;
     const before = rowsRef.current ?? [];
+    ocupa(row.id);
     setRows(before.filter((r) => r.id !== row.id));
     deleteRegistration(token, row.id)
       .then(() => {
@@ -395,7 +441,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         if (handleAuthError(err)) return;
         setRows(before);
         showToast({ kind: 'error', msg: 'Ștergerea nu a mers. Încearcă din nou.' });
-      });
+      })
+      .finally(() => elibereaza(row.id));
   };
 
   const handleAdd = () => {
@@ -726,6 +773,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                         type="button"
                         className="admin-btn-promote"
                         title="Editează înscrierea"
+                        disabled={randuriOcupate.has(r.id)}
                         onClick={() => startEdit(r)}
                       >
                         Editează
@@ -734,6 +782,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                         type="button"
                         className="admin-btn-delete"
                         title="Șterge înscrierea"
+                        disabled={randuriOcupate.has(r.id)}
                         onClick={() => setConfirmRow(r)}
                       >
                         Șterge
@@ -756,6 +805,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
         <AdminAsteptare
           waitAll={waitAll}
+          ocupate={randuriOcupate}
           waitlist={waitlist}
           TOTAL_SLOTS={TOTAL_SLOTS}
           arhiva={arhiva}

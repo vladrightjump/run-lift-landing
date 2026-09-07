@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toCsv } from '../lib/csv';
-import { sendBulkEmail, listEmailTemplates, InvalidTokenError } from '../lib/adminApi';
-import type { AdminEmailLogEntry, AdminRegistration } from '../lib/adminApi';
+import { sendBulkEmail, listEmailTemplates, replayEmail, InvalidTokenError } from '../lib/adminApi';
+import type { AdminEmailLogEntry, AdminRegistration, ReplayRefuz } from '../lib/adminApi';
 import { normalizeParticipant, fillTemplate } from './emailAudience';
 import { useEventConfig } from '../hooks/useEventConfig';
 import {
   motivEsec as motiv,
   ultimaIncercarePerCheie,
   emailuriRetrimisibile,
+  emailuriRejucabile,
+  motivNerejucabil,
   participantiFaraEmail,
   acoperire,
   COMUNICARI_EDITIE,
@@ -41,6 +43,7 @@ const MOD_LABELS: Record<string, string> = {
   promoted: 'Promovat din așteptare',
   info: 'Confirmare adresă',
   broadcast: 'Reminder / anunț',
+  alert: 'Alertă către operator',
 };
 
 export const AdminDeliveryTab = ({
@@ -99,7 +102,19 @@ export const AdminDeliveryTab = ({
    * Pentru astea reîncercarea corectă e din fluxul propriu, nu o retrimitere oarbă.
    */
   const retrimisibile = useMemo(() => emailuriRetrimisibile(nelivrate), [nelivrate]);
-  const nerezolvabile = nelivrate.length - retrimisibile.length;
+
+  /**
+   * Eșecurile care se pot REJUCA prin fluxul modului lor.
+   *
+   * Rejucarea nu contrazice motivele de mai sus — le respectă pe altă cale: nu
+   * reia textul din jurnal, ci reconstruiește mesajul din șablon și din starea
+   * de ACUM a destinatarului. Linkul de dezabonare se readaugă, `{link_renunt}`
+   * primește tokenul curent, iar cine s-a dezabonat între timp nu mai e
+   * destinatar (serverul refuză, cu motiv).
+   */
+  const rejucabile = useMemo(() => emailuriRejucabile(nelivrate), [nelivrate]);
+  const nerezolvabile = nelivrate.length - retrimisibile.length - rejucabile.length;
+  const [rejucatId, setRejucatId] = useState<string | null>(null);
 
   // Participanți care nu apar deloc în jurnal — n-au primit niciun email.
   const fataDeEmail = useMemo(
@@ -161,6 +176,50 @@ export const AdminDeliveryTab = ({
       });
     } finally {
       setRetrimit(false);
+    }
+  };
+
+  /** De ce serverul a refuzat rejucarea — în termeni de consecință, nu de cod. */
+  const MOTIVE_REFUZ: Record<ReplayRefuz, string> = {
+    dezabonat: 'S-a dezabonat între timp, deci nu mai e destinatar. Refuzul e corect.',
+    destinatar_lipsa:
+      'Adresa nu mai corespunde niciunei înscrieri active a ediției — ștearsă sau schimbată între timp.',
+    sablon_necunoscut: 'Nu se știe ce șablon a plecat, deci nu se poate reconstrui mesajul.',
+    mod_exclus: 'Modul ăsta nu se rejoacă — o reluare ar fi o cerere nouă, nu o reparație.',
+    jurnal_lipsa: 'Rândul de jurnal nu mai există.',
+  };
+
+  const rejoaca = async (e: AdminEmailLogEntry) => {
+    if (rejucatId || readOnly) return;
+    setRejucatId(e.id);
+    try {
+      const res = await replayEmail(token, e.id);
+      showToast({
+        kind: res.sent > 0 ? 'success' : 'error',
+        msg:
+          res.sent > 0
+            ? `Rejucat prin fluxul de ${MOD_LABELS[res.mod] ?? res.mod} către ${e.email}.`
+            : 'Tot eșuat. Vezi motivul în rând.',
+      });
+      onRefresh();
+    } catch (err) {
+      if (err instanceof InvalidTokenError) {
+        showToast({ kind: 'error', msg: 'Sesiune expirată — reautentifică-te.' });
+        return;
+      }
+      const text = err instanceof Error ? err.message : String(err);
+      const motivul = (Object.keys(MOTIVE_REFUZ) as ReplayRefuz[]).find((m) => text.includes(m));
+      showToast({
+        kind: 'error',
+        msg: motivul
+          ? MOTIVE_REFUZ[motivul]
+          : 'Rejucarea nu a mers. Încearcă din nou.',
+      });
+      // Un refuz e o informație despre starea de acum, nu un eșec de rețea:
+      // reîmprospătăm, ca rândul să reflecte ce a aflat serverul.
+      if (motivul) onRefresh();
+    } finally {
+      setRejucatId(null);
     }
   };
 
@@ -341,12 +400,12 @@ export const AdminDeliveryTab = ({
           <strong>
             {nerezolvabile}{' '}
             {nerezolvabile === 1 ? 'email nelivrat nu se poate' : 'emailuri nelivrate nu se pot'}{' '}
-            retrimite de aici.
+            repara de aici.
           </strong>{' '}
-          Sunt automate (confirmare, promovare, reminder, confirmare de adresă) și depind de
-          contextul lor — linkul de dezabonare, cooldown-ul anti-spam, filtrul de dezabonați. O
-          retrimitere oarbă le-ar ocoli. Le reîncerci din fluxul lor: reminderul din „Emailuri",
-          confirmarea prin re-înscriere.
+          Restul se rejoacă acum din rândul lor, prin fluxul modului: mesajul se reconstruiește din
+          șablon și din datele de acum ale destinatarului, deci linkul de dezabonare se readaugă și
+          cine s-a dezabonat între timp nu mai primește. Cele rămase își spun motivul în rând —
+          deschide-le.
         </div>
       )}
 
@@ -467,6 +526,31 @@ export const AdminDeliveryTab = ({
                         <strong>Motiv:</strong> {motiv(e)}
                         {e.provider_status !== null && ` (HTTP ${e.provider_status})`}
                       </p>
+                    )}
+                    {!readOnly && e.status === 'esuat' && (
+                      <div className="admin-livrare-rejucare">
+                        {motivNerejucabil(e) ? (
+                          // Rândul rămâne pe ecran, cu motivul scris. Ascuns, ar
+                          // părea rezolvat — și exact ăsta e ecranul din care
+                          // operatorul află ce NU s-a livrat.
+                          <p className="admin-livrare-nota">{motivNerejucabil(e)}</p>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="admin-btn-outline"
+                              onClick={() => rejoaca(e)}
+                              disabled={rejucatId !== null}
+                            >
+                              {rejucatId === e.id ? 'Se rejoacă…' : 'Rejoacă prin fluxul lui'}
+                            </button>
+                            <span className="admin-livrare-nota">
+                              Mesajul se reconstruiește din șablon și din datele de acum ale
+                              destinatarului — nu se reia textul de mai jos.
+                            </span>
+                          </>
+                        )}
+                      </div>
                     )}
                     <pre className="admin-livrare-text">{e.text_email || '(fără text)'}</pre>
                   </div>

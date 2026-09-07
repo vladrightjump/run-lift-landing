@@ -90,3 +90,46 @@ describe('installGlobalMonitoring', () => {
     spy.mockRestore();
   });
 });
+
+/**
+ * Pragul de escaladare, văzut dinspre client.
+ *
+ * `IDEI.md` pornea de la faptul că `monitoring.ts` prinde erorile de client —
+ * corect ca observație, greșit ca punct de plecare. Anomaliile care merită un
+ * email sunt evenimente de SERVER; un client care poate cere trimiterea unui
+ * email e un releu de spam deschis către oricine deschide pagina. În plus,
+ * erorile de client vin și de la extensii de browser și de la roboți: fără
+ * filtrare l-ai antrena pe operator să ignore exact canalul construit.
+ *
+ * Testul păzește granița în singura direcție care contează: nimic din monitoring
+ * nu părăsește clientul.
+ */
+describe('pragul de escaladare — clientul nu trimite nimic nicăieri', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('o eroare de JS de client nu produce nicio cerere de rețea', () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    logClientError('window-error', new Error('ceva a picat'));
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('o violare de CSP nu produce nicio cerere de rețea', () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    logClientError('csp-violation', new Error('blocat'), { blockedURI: 'https://x.example' });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('semnalul rămâne în consolă — acolo e, și acolo rămâne', () => {
+    logClientError('window-error', new Error('ceva a picat'));
+    expect(console.error).toHaveBeenCalled();
+  });
+});

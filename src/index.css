@@ -1016,6 +1016,13 @@
     overflow-wrap: anywhere;
   }
   .admin-livrare-eroare strong { color: var(--e3-danger); }
+  .admin-livrare-rejucare {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  }
+  .admin-livrare-nota {
+    margin: 0; flex: 1 1 220px; font-size: 12px; line-height: 1.5;
+    color: var(--e3-muted-dim); overflow-wrap: anywhere;
+  }
   .admin-livrare-text {
     margin: 0; padding: 12px 14px; max-height: 260px; overflow: auto;
     background: var(--e3-bg); border: 1px solid var(--e3-hairline);
@@ -1712,6 +1719,26 @@
   }
   .admin-confirm-cancel:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
 
+  /* Același dialog, dar pentru o acțiune care nu distruge nimic: crearea unei
+     ciorne. Roșul de ștergere ar cere o ezitare pe care nimic n-o justifică. */
+  .admin-confirm--neutru { border-color: var(--e3-border); max-width: 520px; }
+  .admin-confirm--neutru h3 { color: var(--e3-text); }
+
+  /* ---- Ce moștenește ciorna nouă ---- */
+  .admin-mostenire { margin: 0; display: grid; gap: 1px; background: var(--e3-border); border: 1px solid var(--e3-border); }
+  .admin-mostenire > div {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 8px 12px; background: var(--e3-surface);
+  }
+  .admin-mostenire dt { font-size: 12px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--e3-muted-dim); }
+  .admin-mostenire dd { margin: 0; font-size: 14px; color: var(--e3-text); text-align: right; overflow-wrap: anywhere; }
+  .admin-mostenire > div.recalculat dd { color: var(--e3-accent); }
+  .admin-mostenire-marca {
+    display: inline-block; margin-left: 8px; padding: 1px 6px;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    border: 1px solid var(--e3-accent); color: var(--e3-accent);
+  }
+
   /* ---- Toast (bottom-center, cu undo) ---- */
   .admin-toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -2399,6 +2426,27 @@
     border: 1px solid var(--e3-accent); color: var(--e3-accent); background: rgba(201,242,75,0.06);
   }
   .admin-tpl-msg.err { border-color: var(--e3-danger-strong); color: var(--e3-danger-strong); background: rgba(229,72,77,0.06); }
+
+  /* ---- Previzualizarea HTML a unui șablon ---- */
+  .admin-tpl-preview { margin-top: 16px; border: 1px solid var(--e3-border); }
+  .admin-tpl-preview-bar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--e3-border);
+  }
+  .admin-tpl-preview-bar label { display: flex; align-items: center; gap: 8px; }
+  .admin-tpl-preview-bar span {
+    font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--e3-muted-dim);
+  }
+  .admin-tpl-preview-meta {
+    margin: 0; padding: 10px 14px; font-size: 13px; color: var(--e3-muted); overflow-wrap: anywhere;
+  }
+  .admin-tpl-preview-meta strong { color: var(--e3-text); }
+  /* Fundalul e cel al emailului, nu al backoffice-ului: previzualizarea trebuie
+     să arate ce vede destinatarul, inclusiv unde se termină cadrul mesajului. */
+  .admin-tpl-preview-frame {
+    display: block; width: 100%; height: 620px; border: 0; border-top: 1px solid var(--e3-border);
+    background: #0d0f0b;
+  }
 
   /* ---- Pagina /confirmare ---- */
   .cf-icon {

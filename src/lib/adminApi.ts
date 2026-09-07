@@ -350,8 +350,19 @@ export const listWaitlist = (
     signal
   );
 
+/** Ștergere LOGICĂ — rândul rămâne, cu `deleted_at` setat. */
 export const deleteWaitlist = (token: string, id: string): Promise<void> =>
   rpc<void>('admin_delete_waitlist', { p_token: token, p_id: id });
+
+/**
+ * Reversarea ștergerii de pe listă: același rând, deci același `created_at` și
+ * aceeași poziție în ordinea FIFO de promovare. Refuză cu `waitlist_full` dacă
+ * plafonul s-a umplut între timp, cu `duplicate_email` dacă adresa a fost
+ * re-adăugată, și cu `not_found` dacă rândul a fost promovat — promovarea îl
+ * șterge fizic, deci nu mai e nimic de readus.
+ */
+export const undeleteWaitlist = (token: string, id: string, force = false): Promise<void> =>
+  rpc<void>('admin_undelete_waitlist', { p_token: token, p_id: id, p_force: force });
 
 /** Mută o persoană din așteptare în participanți. Întoarce id-ul nou (sau null
  * dacă emailul era deja înscris). */
@@ -368,8 +379,14 @@ export type AdminEmailLogEntry = {
   subiect: string;
   text_email: string;
   /** Cine a declanșat trimiterea. */
-  mod: 'admin' | 'confirm' | 'promoted' | 'info' | 'broadcast';
+  mod: 'admin' | 'confirm' | 'promoted' | 'info' | 'broadcast' | 'alert';
   audienta: 'participanti' | 'asteptare' | '';
+  /**
+   * Cheia șablonului cu care s-a randat mesajul; `null` pe rândurile de dinainte
+   * ca jurnalul s-o rețină. Fără ea, o difuzare nu se poate rejuca: orarul are
+   * două șabloane pentru aceeași audiență, iar ghicitul ar retrimite alt text.
+   */
+  sablon: string | null;
   status: 'trimis' | 'esuat';
   /** Codul HTTP de la Resend (200 la succes, 4xx/5xx la eșec). */
   provider_status: number | null;
@@ -453,4 +470,72 @@ export const sendBulkEmail = async (
     throw new SubmitHttpError(res.status, JSON.stringify(body));
   }
   return body as SendEmailResult;
+};
+
+export type EmailPreview = {
+  /** HTML-ul exact cum pleacă — randat de aceeași funcție ca trimiterile. */
+  html: string;
+  subiect: string;
+  /** Destinatarul real pentru care s-au completat variabilele. */
+  pentru: { email: string; nume: string };
+};
+
+/**
+ * HTML-ul randat al unui șablon, pentru un destinatar real al ediției.
+ *
+ * Nu trimite nimic și nu scrie în `email_log`. Fără `email`, serverul alege
+ * primul destinatar al ediției — previzualizarea are nevoie de o persoană
+ * concretă, altfel variabilele rămân acolade și exact ce trebuie verificat
+ * (linkurile) nu se poate verifica.
+ */
+export const previewEmailHtml = async (
+  token: string,
+  template: string,
+  email?: string,
+  signal?: AbortSignal
+): Promise<EmailPreview> => {
+  const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'preview', token, template, email }),
+    signal,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401) throw new InvalidTokenError();
+    throw new SubmitHttpError(res.status, JSON.stringify(body));
+  }
+  return body as EmailPreview;
+};
+
+/** Refuzul serverului la o rejucare, cu motivul din `admin_replay_lookup`. */
+export type ReplayRefuz =
+  | 'mod_exclus'
+  | 'sablon_necunoscut'
+  | 'destinatar_lipsa'
+  | 'dezabonat'
+  | 'jurnal_lipsa';
+
+/**
+ * Rejoacă o trimitere eșuată prin fluxul MODULUI ei.
+ *
+ * Nu reia textul din jurnal: serverul reconstruiește mesajul din șablon și din
+ * starea de acum a destinatarului. De aceea poate refuza — cine s-a dezabonat
+ * între timp nu mai e destinatar, iar o înscriere ștearsă n-are cui primi.
+ */
+export const replayEmail = async (
+  token: string,
+  logId: string
+): Promise<{ sent: number; failed: number; mod: string }> => {
+  const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'replay', token, log_id: logId }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401) throw new InvalidTokenError();
+    throw new SubmitHttpError(res.status, JSON.stringify(body));
+  }
+  return body as { sent: number; failed: number; mod: string };
 };

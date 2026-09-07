@@ -3,7 +3,7 @@
 Catalog al migrărilor care ating Run + Lift, cu granița clară față de aplicația vecină
 (gym-app + botul de Telegram) care împarte același proiect Supabase.
 
-Ultima actualizare: 27 august 2026.
+Ultima actualizare: 7 septembrie 2026.
 
 ---
 
@@ -56,6 +56,9 @@ prefix `runlift_`:
 | 20260827   | `runlift_reels_si_coming_soon` | runlift | `event_config_validate` acceptă cheia opțională `reels` (banda de clipuri Instagram: plafon 12, cod `^[A-Za-z0-9_-]{5,32}$` pentru că ajunge în `src`-ul unui iframe, `kind` din `(reel,p)`, fără duplicate) și secțiunea `reels` în `layout`. Plus `admin_set_coming_soon(token, show, launch_at, next_edition_at)`: petice exact trei chei pe rândul `published`, revalidează, și scrie un rând NOU (vechiul trece pe `superseded`), deci rămâne reversibil din „Versiuni anterioare". NU atinge `app_config` — niciunul din cele cinci scalare nu derivă din cheile astea. Vezi `supabase-migration-reels-si-coming-soon.sql` |
 | 20260904184209 | `runlift_remindere_si_renuntare` | runlift | **Remindere:** orarul devine `config.reminders` (listă în documentul de ediție, editabilă din /admin → „Eveniment"), validat de `event_config_validate` (plafon 5, avans întreg 1–720, fără avansuri duplicate, șablon din listă închisă) și copiat de `scrie_scalarele_editiei` în `app_config.reminder_schedule` — al ȘASELEA scalar. `maybe_send_reminder` parcurge orarul, cu cheie de idempotență per (ediție, avans) și fereastră de declanșare `[scadență, scadență + 2h]` în loc de `[start − avans, start]` întreagă; duce cheia șablonului în apelul de broadcast. Șablon nou `bulk_participant_reminder_final`. **Renunțare:** `token_renunt` + `renuntat_la` pe `registrations`, RPC public `decline_spot` (setează `deleted_at` → declanșează auto-promovarea existentă; refuză edițiile încheiate și cursele începute), jurnal `admin_events` cu tip `renuntare`. `edition2_recipients`, `admin_list_registrations` și `confirm_lookup` întorc `token_renunt` (pentru `{link_renunt}`). Șabloanele de reminder + promovare pierd „Check-in de la {ora_checkin}." și capătă linkul. Vezi `supabase-migration-remindere-si-renuntare.sql` |
 | 20260825   | `runlift_soft_delete_registrations` | runlift | Ștergere logică pe `registrations` (`deleted_at`) + undo real (`admin_undelete_registration`, păstrează `id`/`created_at`) + gardă de capacitate pe `admin_add_registration` + jurnal de scrieri în `admin_events` (feed neplafonat). Indexul de unicitate devine PARȚIAL (`where deleted_at is null`), auto-promovarea trece de pe `AFTER DELETE` pe `AFTER UPDATE OF deleted_at`, iar `registrations_backup_sync` propagă `deleted_at` și pe ramura UPDATE. Vezi `supabase-migration-soft-delete-registrations.sql` |
+| 20260907033347 | `runlift_undo_waitlist` | runlift | Ștergere logică pe `event_waitlist` (`deleted_at`) + `admin_undelete_waitlist` (reversare, păstrează `created_at` și poziția FIFO). Indexul de unicitate devine PARȚIAL. **`event_waitlist_cap()` numără doar rândurile active** — altfel cele șterse ar fi ocupat în continuare plafonul de 10, tăcut. Toți cei opt cititori ai tabelului sunt actualizați sau notați explicit ca neschimbați. Vezi `supabase-migration-undo-waitlist.sql` |
+| 20260907033437 | `runlift_rejucare` | runlift | `email_log.sablon` (fără el, rejucarea unei difuzări ar ghici între două șabloane ale aceleiași audiențe) + `admin_replay_lookup`, care spune ce mod / ce șablon / ce destinatar, sau de ce nu se poate. Destinatarul se rezolvă din starea de ACUM: `participanti` din `registrations`, **`asteptare` din `launch_notifications`** (acolo își ia destinatarii `waitlist_recipients()`). `admin_list_email_log` duce coloana mai departe. Vezi `supabase-migration-rejucare.sql` |
+| 20260907033532 | `runlift_escaladare` | runlift | `operator_email()` + `escaladeaza()` (dedup prin `broadcast_once`, tot corpul într-un bloc cu `exception` ca alerta să nu poată anula tranzacția care a chemat-o, ambele revocate de la `anon`/`authenticated`), escaladare din triggerul de auto-promovare, și trigger nou `registrations_locuri_epuizate_trg`. Cere precondiția `runlift_undo_waitlist`. **Inert până se scrie `app_config.operator_email`.** Vezi `supabase-migration-escaladare.sql` |
 
 **Migrări ale altei aplicații** (schema `public`, gym-app + bot — **hands-off**):
 `ironworks_initial_schema`, `monthly_summary_security_invoker`, `telegram_bot_phase1_attendance`,
@@ -98,6 +101,105 @@ Orarul din `/admin` → Eveniment → Remindere e deci configurat, dar inert, p�
 rulează fișierul de armare (o singură dată pe proiect). `pg_net` **e** instalat (0.20.3), deci
 auto-promovarea de pe lista de așteptare — care merge tot prin `net.http_post` — chiar
 funcționează; doar cron-ul lipsește.
+
+### `supabase-migration-undo-waitlist.sql` — APLICAT 7 septembrie 2026
+
+Ștergere logică pe `event_waitlist` + `admin_undelete_waitlist`, cu paritate față de
+`runlift_soft_delete_registrations`. Aplicat pe 7 septembrie 2026 ca `runlift_undo_waitlist` (`20260907033347`).
+
+Ce atinge, cu enumerarea completă a cititorilor — un cititor uitat nu dă eroare, dă un rezultat
+greșit în tăcere:
+
+- `deleted_at` + index parțial pe `(lower(email), editie)`, ca re-înscrierea aceleiași adrese să
+  nu pice pe un rând pe care nimeni nu-l mai vede;
+- **`event_waitlist_cap()`** — plafonul de 10 număra TOATE rândurile ediției. Fără corecție,
+  rândurile șterse ar fi continuat să ocupe plafonul: lista ar fi arătat 7 oameni în backoffice
+  și ar fi respins al optulea cu `waitlist_full`. Plafonul se extrage în `runlift.waitlist_cap()`,
+  citit acum din două locuri;
+- `admin_delete_waitlist` (devine logică, cu jurnal), `admin_undelete_waitlist` (nou, reversare
+  cu gărzi `waitlist_full` / `duplicate_email` / `not_found`);
+- cititorii care trebuie să ignore rândurile retrase: `admin_list_waitlist`,
+  `admin_promote_waitlist`, `auto_promote_from_waitlist`, `public_stats`, `admin_list_editions`.
+
+Ce **nu** se schimbă, notat ca să nu pară scăpat: `admin_create_edition` (`max(editie)` trebuie
+să vadă și rândurile șterse) și ștergerea FIZICĂ a rândului la promovare — manuală sau automată.
+Un soft-delete acolo ar face `admin_undelete_waitlist` să readucă pe listă pe cineva deja înscris;
+așa, undo-ul pe un rând promovat între timp întoarce `not_found`, iar backoffice-ul spune unde e
+persoana.
+
+### `supabase-migration-rejucare.sql` — APLICAT 7 septembrie 2026
+
+Rejucarea unei trimiteri eșuate prin fluxul modului ei. Aplicat pe 7 septembrie 2026 ca
+`runlift_rejucare` (`20260907033437`). Funcția Edge — modul `replay`, care depinde de RPC-ul de
+aici — **încă nu e deployată**: `supabase functions deploy send-email --no-verify-jwt`.
+
+- **`email_log.sablon`** — coloană nouă. Fără ea, rejucarea unui `broadcast` ar trebui să ghicească
+  șablonul din audiență, iar orarul de remindere are DOUĂ șabloane pentru aceeași audiență
+  (`bulk_participant_reminder` și `…_final`). Ghicitul ar retrimite tăcut alt text decât cel eșuat.
+  Rândurile vechi rămân cu `null`, iar ecranul spune de ce nu se pot rejuca.
+- `log_emails` și `admin_list_email_log` duc coloana mai departe.
+- **`admin_replay_lookup(token, log_id)`** — răspunde la „ce mod, ce șablon, ce destinatar, sau de
+  ce nu se poate". Nu trimite nimic: decizia stă într-un singur loc, ca ecranul și funcția Edge să
+  dea același verdict. Destinatarul se rezolvă din starea de ACUM, deci filtrul de dezabonare al
+  difuzării se aplică și la rejucare — exact ce sărea retrimiterea oarbă prin modul `admin`.
+  Atenție la audiențe: `participanti` se rezolvă din `registrations` (`lower(email)` + `editie`),
+  dar **`asteptare` se rezolvă din `launch_notifications`**, nu din `event_waitlist` — acolo își ia
+  destinatarii `waitlist_recipients()`, iar tabelul „de așteptare" al ediției e o populație
+  complet diferită.
+
+`info` rămâne exclus deliberat: cooldown-ul de 10 minute și `mark_confirmation_sent` fac din
+rejucare o cerere nouă, nu o reparație.
+
+### `supabase-migration-escaladare.sql` — APLICAT 7 septembrie 2026
+
+Anomaliile de flux ajung la operator fără să treacă printr-un login. Aplicat pe 7 septembrie 2026
+ca `runlift_escaladare` (`20260907033532`), DUPĂ celelalte două — precondiția din capul fișierului
+o impune. Funcția Edge — modul `alert` — **încă nu e deployată**:
+`supabase functions deploy send-email --no-verify-jwt`.
+
+**Cere un pas manual în plus.** Cheia `operator_email` din `app_config` NU e scrisă de migrare:
+
+```sql
+insert into runlift.app_config (key, value)
+values ('operator_email', 'adresa@exemplu.ro')
+on conflict (key) do update set value = excluded.value;
+```
+
+Până atunci `escaladeaza()` nu face nimic — deliberat. O migrare care ar inventa o adresă ar
+trimite alerte către nimeni, cu aerul că sistemul e armat.
+
+Cele trei anomalii, toate de server (o eroare de JS de client sau o violare de CSP **nu** produc
+niciun email — `monitoring.ts` rămâne neatins):
+
+- **confirmare / promovare eșuată** — din funcția Edge, unde eșuează. Confirmarea e
+  „fire-and-forget" din client, deci un eșec e azi invizibil pentru toată lumea;
+- **promovare automată** — din trigger, într-un apel `pg_net` PROPRIU, separat de cel care duce
+  emailul către persoană. Dacă acela pică, exact atunci contează cel mai mult ca operatorul să
+  afle; o escaladare atârnată de același apel ar tăcea fix în cazul pe care există ca să-l prindă;
+- **locuri epuizate** — trigger `AFTER INSERT` pe `registrations`. Din cele două praguri posibile
+  s-a ales momentul UMPLERII, nu prima intrare pe lista de așteptare: e momentul în care operatorul
+  mai poate face ceva (deschide locuri), și cade înainte ca cineva să fie întors.
+
+Garda de deduplicare pe `(ediție, tip, cheie)` refolosește `broadcast_once` — fără ea, o funcție
+care eșuează în buclă ar trimite un email la fiecare încercare și l-ar antrena pe operator să
+ignore canalul. Cheia se consumă la apel, nu la trimitere, deci **toate** gărzile (adresă, secret)
+stau înaintea ei; altfel o anomalie și-ar arde cheia fără să escaladeze și n-ar mai putea escalada
+niciodată. `escaladeaza()` și `operator_email()` sunt amândouă revocate de la `anon`/`authenticated`
+și acordate explicit lui `service_role`.
+
+Întregul corp al lui `escaladeaza()` stă într-un bloc cu `exception`, nu doar apelul HTTP: ambele
+apelante sunt triggere, deci o eroare din canalul de alertare ar urca prin trigger și ar anula
+tranzacția declanșatoare — o înscriere reală respinsă fiindcă n-a mers alerta despre ea.
+
+**Ordinea e obligatorie.** Fișierul începe cu o precondiție care crapă dacă
+`supabase-migration-undo-waitlist.sql` n-a rulat: `auto_promote_from_waitlist()` citește
+`event_waitlist.deleted_at`, iar Postgres nu verifică corpul unei funcții plpgsql la creare — în
+ordine greșită migrarea ar trece tăcut și ar exploda abia la prima renunțare reală, în tranzacția
+participantului.
+
+**Rămâne descoperit:** o promovare automată al cărei apel `pg_net` de escaladare pică el însuși.
+Prinderea ei cere o reconciliere periodică (`admin_events` vs. `email_log`), deci un ceas — adică
+U1 din plan.
 
 ---
 

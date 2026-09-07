@@ -10,6 +10,11 @@ type Props = {
   TOTAL_SLOTS: number;
   /** Ediție de arhivă: se poate citi, nu se mai poate promova sau șterge. */
   arhiva: boolean;
+  /**
+   * Rândurile cu o acțiune în zbor. Pe rând, nu global: un rând ocupat n-are de
+   * ce să înghețe restul tabelului.
+   */
+  ocupate: ReadonlySet<string>;
   onPromote: (w: AdminWaitlistEntry) => void;
   onDelete: (w: AdminWaitlistEntry) => void;
 };
@@ -26,6 +31,7 @@ export const AdminAsteptare = ({
   waitlist,
   TOTAL_SLOTS,
   arhiva,
+  ocupate,
   onPromote,
   onDelete,
 }: Props) => (
@@ -65,6 +71,7 @@ export const AdminAsteptare = ({
                     type="button"
                     className="admin-btn-promote"
                     title="Mută la participanți"
+                    disabled={ocupate.has(w.id)}
                     onClick={() => onPromote(w)}
                   >
                     Promovează
@@ -73,6 +80,7 @@ export const AdminAsteptare = ({
                     type="button"
                     className="admin-btn-delete"
                     title="Șterge din lista de așteptare"
+                    disabled={ocupate.has(w.id)}
                     onClick={() => onDelete(w)}
                   >
                     Șterge

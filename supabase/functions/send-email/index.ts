@@ -8,6 +8,12 @@
 //                  x-broadcast-secret). `payload.template` alege șablonul, ca un
 //                  orar cu mai multe remindere să poată trimite texte diferite
 //                  („cu 3 zile înainte" ≠ „azi alergăm") prin același mod.
+//  • "preview"   — randează un șablon prin `renderHtml()` și ÎNTOARCE HTML-ul,
+//                  fără să trimită și fără să scrie în jurnal; token de admin.
+//  • "replay"    — rejoacă o trimitere eșuată prin fluxul modului ei,
+//                  reconstruind mesajul din șablon, nu din jurnal; token de admin.
+//  • "alert"     — o anomalie de flux, către operator. Declanșat de
+//                  `runlift.escaladeaza()` prin pg_net; secret de difuzare.
 //
 // Fiecare încercare de trimitere, în orice mod, lasă un rând în `runlift.email_log`
 // (via RPC `log_emails`): adresă, subiect, text, status + răspunsul providerului la
@@ -65,6 +71,14 @@ type LogRow = {
   text_email: string;
   mod: string;
   audienta?: string;
+  /**
+   * Cheia din `email_templates` cu care s-a randat mesajul.
+   *
+   * Fără ea, rejucarea unui `broadcast` ar trebui să ghicească șablonul din
+   * audiență — iar orarul de remindere are DOUĂ șabloane pentru aceeași
+   * audiență. Ghicitul ar retrimite tăcut alt text decât cel eșuat.
+   */
+  sablon?: string;
   ok: boolean;
   provider_status?: number;
   eroare?: string;
@@ -94,6 +108,33 @@ async function logSends(rows: LogRow[]): Promise<void> {
     await rpc("log_emails", { p_rows: rows });
   } catch {
     // fără jurnal, dar fără să stricăm răspunsul
+  }
+}
+
+/**
+ * Anunță operatorul despre o anomalie, prin garda din SQL.
+ *
+ * Best-effort din construcție: fluxul care a produs anomalia nu are voie să
+ * cadă pentru că n-a plecat un email despre ea. Deduplicarea, pragul și adresa
+ * stau în `runlift.escaladeaza()` — aici nu se ia nicio decizie.
+ */
+async function escaladeaza(
+  tip: string,
+  cheie: string,
+  subiect: string,
+  detaliu: string,
+  editie?: number
+): Promise<void> {
+  try {
+    await rpc("escaladeaza", {
+      p_tip: tip,
+      p_cheie: cheie,
+      p_subiect: subiect,
+      p_detaliu: detaliu,
+      p_editie: editie ?? null,
+    });
+  } catch {
+    // fără alertă, dar fără să stricăm fluxul care a chemat-o
   }
 }
 
@@ -304,7 +345,6 @@ const PROMOTED_TEXT_FALLBACK =
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
-  if (!RESEND_API_KEY) return json(500, { error: "resend_not_configured" });
 
   let payload: Record<string, unknown>;
   try {
@@ -314,6 +354,221 @@ Deno.serve(async (req: Request) => {
   }
 
   const mode = payload.mode;
+
+  // Verificarea cheii de Resend s-a mutat AICI, sub citirea modului: `preview`
+  // nu trimite nimic, deci n-are de ce să depindă de provider. Toate celelalte
+  // moduri o trec exact ca înainte.
+  if (mode !== "preview" && !RESEND_API_KEY) {
+    return json(500, { error: "resend_not_configured" });
+  }
+
+  // ---- PREVIEW: HTML-ul exact cum pleacă, randat și ÎNTORS, fără trimitere ----
+  //
+  // De ce aici și nu în client: `renderHtml` e deja funcția unică prin care trec
+  // toate cele patru moduri de trimitere. Expusă o dată, acoperă permanent
+  // fiecare șablon existent și viitor din `email_templates`. O a doua
+  // implementare în client ar diverge la primul `fillVars` schimbat — și ar
+  // diverge tăcut, fiindcă nimic n-ar compara cele două randări.
+  //
+  // Se randează șablonul SALVAT, nu ciorna din formular: previzualizarea
+  // răspunde la „ce pleacă", iar ce pleacă e ce e în DB.
+  //
+  // Autentificare cu tokenul de sesiune al adminului, ca `mode: "admin"` — NU cu
+  // secretul de difuzare. Secretul există tocmai ca să nu ajungă în browser;
+  // apelantul aici e backoffice-ul, care are deja o sesiune verificată.
+  if (mode === "preview") {
+    const token = String(payload.token ?? "");
+    const valid = await rpc<boolean>("admin_check_token", { p_token: token });
+    if (valid !== true) return json(401, { error: "invalid_token" });
+
+    const cheie = String(payload.template ?? "");
+    if (!cheie) return json(400, { error: "missing_template" });
+    const tpl = await loadTemplate(cheie);
+    // Un șablon inexistent NU cade pe textul de rezervă: previzualizarea ar
+    // arăta atunci un email care nu există nicăieri, cu aerul că e cel real.
+    if (!tpl?.text_email) return json(404, { error: "unknown_template" });
+
+    // Un destinatar REAL al ediției: variabilele se completează cu numele și
+    // tokenurile lui, deci linkurile din previzualizare sunt cele adevărate.
+    // Acolo se strică lucrurile — linkuri rupte, variabile necompletate — nu în
+    // textul brut, care se vede oricum în câmpul de deasupra.
+    const recipients =
+      (await rpc<{ email: string; nume: string; token_unsub?: string; token_renunt?: string }[]>(
+        "edition2_recipients",
+        {}
+      )) ?? [];
+    const cerut = String(payload.email ?? "").trim().toLowerCase();
+    const row = cerut
+      ? recipients.find((r) => r.email.toLowerCase() === cerut)
+      : recipients[0];
+    // Două stări diferite, două coduri: lista poate fi goală, sau persoana
+    // aleasă poate să nu mai fie destinatar (s-a dezabonat între timp —
+    // selectul din backoffice listează participanții, care includ dezabonații,
+    // iar `edition2_recipients` nu). Un singur cod ar face ecranul să afirme
+    // ceva fals despre ediție și l-ar trimite pe operator să caute unde nu e.
+    if (!row) return json(404, { error: cerut ? "recipient_not_eligible" : "no_recipient" });
+
+    const badge = await loadBadge();
+    /**
+     * Șabloanele `confirmare` și `info` folosesc acolade DUBLE.
+     *
+     * Modul `info` le substituie cu `replaceAll("{{link}}", …)`; `fillVars`
+     * lucrează pe acolade simple, deci aplicat peste ele ar lăsa `{{link}}`
+     * literal și ar transforma `{{prenume}}` în `{Ana}`. Previzualizarea ar
+     * raporta atunci un email rupt exact acolo unde linkul e critic — și
+     * „reparația" evidentă (rescrierea în acolade simple) ar rupe pe bune
+     * confirmarea, fiindcă fluxul real nu substituie acolade simple acolo.
+     *
+     * Tokenul de confirmare e per-cerere și nu există în afara fluxului lui,
+     * deci în previzualizare linkul se arată cu o valoare-exemplu, marcată.
+     */
+    const acoladeDuble = cheie === "confirmare" || cheie === "info";
+    const text = acoladeDuble
+      ? tpl.text_email
+          .replaceAll("{{nume}}", row.nume)
+          .replaceAll("{{prenume}}", (row.nume || "atlet").split(/\s+/)[0])
+          .replaceAll("{{email}}", row.email)
+          .replaceAll("{{link}}", "https://parktraining.fit/confirmare?token=EXEMPLU")
+      : fillVars(tpl.text_email, row.nume, row.email, "", linkRenunt(row.token_renunt));
+    const unsubPage = row.token_unsub
+      ? `https://parktraining.fit/unsubscribe?token=${row.token_unsub}`
+      : undefined;
+
+    // Fără `sendOne`, fără `logSends`: o previzualizare care ar lăsa urmă în
+    // jurnalul de livrare ar strica exact instrumentul cu care se citește ce s-a
+    // trimis cu adevărat.
+    return json(200, {
+      html: renderHtml(tpl.subiect, text, badge, unsubPage),
+      subiect: tpl.subiect,
+      pentru: { email: row.email, nume: row.nume },
+    });
+  }
+
+  // ---- ALERT: o anomalie de flux, către operator ----
+  //
+  // Declanșat de `runlift.escaladeaza()` prin `pg_net`, niciodată din browser:
+  // garda de unicitate, pragul și adresa destinatarului stau toate în SQL, unde
+  // se produce anomalia. Modul ăsta doar duce mesajul mai departe.
+  //
+  // Protejat cu secretul de difuzare, ca `broadcast` — un endpoint care trimite
+  // email către o adresă citită din config, apelabil de oricine, ar fi un releu
+  // de spam cu o singură țintă.
+  if (mode === "alert") {
+    const provided = req.headers.get("x-broadcast-secret") ?? String(payload.secret ?? "");
+    const expected = await rpc<string>("broadcast_secret", {});
+    if (!expected || provided !== expected) return json(401, { error: "invalid_secret" });
+
+    const catre = await rpc<string>("operator_email", {});
+    if (!catre) return json(200, { sent: 0, skipped: true, note: "no_operator_email" });
+
+    const subject = String(payload.subject ?? "Anomalie Run + Lift");
+    const text = String(payload.text ?? "");
+    const editie = typeof payload.editie === "number" ? payload.editie : undefined;
+
+    const badge = await loadBadge();
+    const r = await sendOne({ to: catre, subject, text }, badge);
+    // Jurnalizat ca orice altă trimitere: „ce alerte au plecat" e o întrebare pe
+    // care operatorul o va pune exact din ecranul de livrare. `mod: alert` nu
+    // intră în fișa de acoperire — aceea numără comunicările DATORATE
+    // participanților, iar o alertă nu e una.
+    await logSends([
+      {
+        email: catre,
+        subiect: subject,
+        text_email: text,
+        mod: "alert",
+        ok: r.ok,
+        provider_status: r.status,
+        eroare: r.ok ? undefined : r.body,
+        editie,
+      },
+    ]);
+    return json(200, { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1 });
+  }
+
+  // ---- REPLAY: rejucarea unei trimiteri eșuate, prin fluxul ei ----
+  //
+  // Diferența față de retrimiterea prin modul `admin` — singura posibilă până
+  // acum — e că NU se reia textul din jurnal. Mesajul se reconstruiește din
+  // șablon și din starea de ACUM a destinatarului, deci:
+  //   • linkul de dezabonare se readaugă (modul `admin` nu-l pune deloc);
+  //   • `{link_renunt}` se completează cu tokenul curent, iar paragraful cade
+  //     pentru cine n-are un loc de eliberat, ca la difuzarea originală;
+  //   • cine s-a dezabonat între timp nu mai e destinatar.
+  //
+  // Cele patru motive scrise în `AdminDeliveryTab.tsx:87-99` rămân valide; asta
+  // nu le contrazice, le respectă pe altă cale. `info` rămâne exclus — pentru el
+  // rejucarea ar fi o CERERE nouă, nu o reparație — iar refuzul vine cu motiv,
+  // decis o singură dată, în `admin_replay_lookup`.
+  if (mode === "replay") {
+    const token = String(payload.token ?? "");
+    const valid = await rpc<boolean>("admin_check_token", { p_token: token });
+    if (valid !== true) return json(401, { error: "invalid_token" });
+
+    const logId = String(payload.log_id ?? "");
+    if (!logId) return json(400, { error: "missing_log_id" });
+
+    const found = await rpc<
+      {
+        ok: boolean;
+        motiv: string | null;
+        mod: string;
+        sablon: string;
+        audienta: string;
+        email: string;
+        nume: string;
+        token_renunt?: string;
+        token_unsub?: string;
+        editie: number;
+      }[]
+    >("admin_replay_lookup", { p_token: token, p_log_id: logId });
+    const plan = found && found[0];
+    if (!plan) return json(500, { error: "lookup_failed" });
+    if (!plan.ok) return json(409, { error: "not_replayable", motiv: plan.motiv });
+
+    const tpl = await loadTemplate(plan.sablon);
+    if (!tpl?.text_email) return json(404, { error: "unknown_template" });
+
+    const badge = await loadBadge();
+    const text = fillVars(tpl.text_email, plan.nume, plan.email, "", linkRenunt(plan.token_renunt));
+    // Difuzările poartă linkul de dezabonare; cele automate (confirmare,
+    // promovare) nu — sunt tranzacționale. Aceeași regulă ca la trimiterea
+    // originală, nu o alegere nouă făcută aici.
+    const unsubPage =
+      plan.mod === "broadcast" && plan.token_unsub
+        ? `https://parktraining.fit/unsubscribe?token=${plan.token_unsub}`
+        : undefined;
+    const unsubApi =
+      plan.mod === "broadcast" && plan.token_unsub
+        ? `${SUPABASE_URL}/functions/v1/unsubscribe?token=${plan.token_unsub}`
+        : undefined;
+
+    const r = await sendOne(
+      { to: plan.email, subject: tpl.subiect, text },
+      badge,
+      unsubPage,
+      unsubApi
+    );
+    // Se jurnalizează cu modul ORIGINAL, nu cu „replay": fișa de acoperire
+    // răspunde la „cui îi lipsește confirmarea", iar un mod nou ar scoate
+    // reparația din coloana pe care tocmai a reparat-o.
+    await logSends([
+      {
+        email: plan.email,
+        nume: plan.nume,
+        subiect: tpl.subiect,
+        text_email: text,
+        mod: plan.mod,
+        audienta: plan.audienta,
+        sablon: plan.sablon,
+        ok: r.ok,
+        provider_status: r.status,
+        eroare: r.ok ? undefined : r.body,
+        editie: plan.editie,
+      },
+    ]);
+    return json(200, { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1, mod: plan.mod });
+  }
 
   // ---- ADMIN: trimitere în masă, protejat cu token de sesiune ----
   if (mode === "admin") {
@@ -396,11 +651,24 @@ Deno.serve(async (req: Request) => {
         text_email: text,
         mod: "confirm",
         audienta: "participanti",
+        sablon: "bulk_participant_confirmare",
         ok: r.ok,
         provider_status: r.status,
         eroare: r.ok ? undefined : r.body,
       },
     ]);
+    // Confirmarea e „fire-and-forget" din client (`useRegistration.ts:206-207`):
+    // un eșec e azi invizibil pentru toată lumea. Persoana s-a înscris și nu
+    // primește nimic — cea mai proastă combinație posibilă.
+    if (!r.ok) {
+      await escaladeaza(
+        "confirmare_esuata",
+        row.email.toLowerCase(),
+        "Confirmarea de înscriere nu a plecat",
+        `Confirmarea către ${row.nume} (${row.email}) a eșuat: ${r.body || `HTTP ${r.status}`}. ` +
+          `Persoana e înscrisă, dar nu știe. Repar-o din /admin → Livrare, „Rejoacă prin fluxul lui".`
+      );
+    }
     return json(200, { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1 });
   }
 
@@ -440,11 +708,21 @@ Deno.serve(async (req: Request) => {
         text_email: text,
         mod: "promoted",
         audienta: "participanti",
+        sablon: "bulk_waitlist_promovare",
         ok: r.ok,
         provider_status: r.status,
         eroare: r.ok ? undefined : r.body,
       },
     ]);
+    if (!r.ok) {
+      await escaladeaza(
+        "promovare_esuata",
+        row.email.toLowerCase(),
+        "Emailul de promovare nu a plecat",
+        `${row.nume} (${row.email}) a urcat de pe lista de așteptare, dar emailul care i-o ` +
+          `spune a eșuat: ${r.body || `HTTP ${r.status}`}. Are loc și nu știe.`
+      );
+    }
     return json(200, { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1 });
   }
 
@@ -585,6 +863,7 @@ Deno.serve(async (req: Request) => {
         text_email: body,
         mod: "broadcast",
         audienta: audience,
+        sablon: tplKey,
         ok: res.ok,
         provider_status: res.status,
         eroare: res.ok ? undefined : res.body,

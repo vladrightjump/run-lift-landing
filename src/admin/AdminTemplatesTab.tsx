@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { listEmailTemplates, saveEmailTemplate } from '../lib/adminApi';
-import type { AdminEmailTemplate } from '../lib/adminApi';
+import {
+  listEmailTemplates,
+  listRegistrations,
+  previewEmailHtml,
+  saveEmailTemplate,
+} from '../lib/adminApi';
+import type { AdminEmailTemplate, EmailPreview } from '../lib/adminApi';
 import { useSesiuneAdmin } from './adminSession';
 import { useAdminResource } from './useAdminResource';
 
@@ -113,6 +118,67 @@ export const AdminTemplatesTab = () => {
     return !!d && (d.subiect !== t.subiect || d.text !== t.text_email);
   };
 
+  /**
+   * Previzualizarea deschisă, dacă e vreuna — HTML-ul randat de aceeași funcție
+   * prin care trec toate trimiterile.
+   *
+   * O previzualizare de TEXT exista deja (în tabul „Emailuri"); gaura era exact
+   * HTML-ul, adică locul unde se strică lucrurile: linkuri rupte și variabile
+   * necompletate nu se văd în textul brut cu `{prenume}` în el.
+   */
+  const [previzualizare, setPrevizualizare] = useState<
+    { cheie: string; date: EmailPreview | null; eroare: string | null } | null
+  >(null);
+  /** Destinatarul ales — variabilele se completează cu datele lui reale. */
+  const [destinatar, setDestinatar] = useState('');
+
+  // Lista de destinatari posibili. Aceleași rânduri ca tabul „Participanți";
+  // serverul alege oricum primul dacă nu se cere niciunul anume.
+  const { date: participanti } = useAdminResource(
+    useCallback((t: string, signal: AbortSignal) => listRegistrations(t, undefined, signal), []),
+    null
+  );
+
+  /**
+   * `pentru` se dă explicit, nu se citește din `destinatar`: schimbarea
+   * destinatarului cheamă randarea din același handler care setează starea, iar
+   * închiderea ar purta încă valoarea veche — previzualizarea ar rămâne cu un
+   * pas în urma selectului, tăcut.
+   */
+  /**
+   * Numărul cererii de previzualizare aflate în curs.
+   *
+   * Schimbarea destinatarului cheamă o randare nouă peste una încă în zbor.
+   * Fără număr de ordine, un răspuns mai lent al cererii ANTERIOARE ar ateriza
+   * ultimul și ar rămâne pe ecran: HTML-ul altcuiva, cu linkurile și tokenurile
+   * lui, sub un select care arată alt nume. Aceeași gardă pe care restul
+   * backoffice-ului o face cu `signal.aborted`.
+   */
+  const cerereaCurenta = useRef(0);
+
+  const previzualizeaza = async (cheie: string, pentru = destinatar) => {
+    const aMea = ++cerereaCurenta.current;
+    setPrevizualizare({ cheie, date: null, eroare: null });
+    try {
+      const date = await previewEmailHtml(token, cheie, pentru || undefined);
+      if (aMea !== cerereaCurenta.current) return;
+      setPrevizualizare({ cheie, date, eroare: null });
+    } catch (err) {
+      if (aMea !== cerereaCurenta.current) return;
+      if (onAuthError(err)) return;
+      const text = err instanceof Error ? err.message : String(err);
+      setPrevizualizare({
+        cheie,
+        date: null,
+        eroare: text.includes('recipient_not_eligible')
+          ? 'Persoana aleasă nu mai e destinatar al ediției — s-a dezabonat sau a fost ștearsă. Alege pe altcineva.'
+          : text.includes('no_recipient')
+            ? 'Ediția n-are niciun destinatar înscris, deci variabilele n-au cu ce fi completate.'
+            : 'Nu am putut randa previzualizarea.',
+      });
+    }
+  };
+
   return (
     <section className="admin-table-section">
       <div className="admin-table-head">
@@ -171,6 +237,22 @@ export const AdminTemplatesTab = () => {
               <button
                 type="button"
                 className="admin-btn-ghost"
+                // Randează șablonul SALVAT. Cu modificări nesalvate pe ecran,
+                // previzualizarea ar răspunde la altă întrebare decât cea pusă:
+                // ce pleacă e ce e în DB.
+                disabled={modificat(t)}
+                title={
+                  modificat(t)
+                    ? 'Salvează întâi — previzualizarea arată șablonul din baza de date'
+                    : 'Vezi HTML-ul exact cum pleacă'
+                }
+                onClick={() => previzualizeaza(t.cheie)}
+              >
+                Previzualizează
+              </button>
+              <button
+                type="button"
+                className="admin-btn-ghost"
                 disabled={!modificat(t) || saving === t.cheie}
                 onClick={() => setDraft((p) => ({ ...p, [t.cheie]: { subiect: t.subiect, text: t.text_email } }))}
               >
@@ -185,6 +267,63 @@ export const AdminTemplatesTab = () => {
                 {saving === t.cheie ? 'Se salvează…' : 'Salvează'}
               </button>
             </div>
+
+            {previzualizare?.cheie === t.cheie && (
+              <div className="admin-tpl-preview">
+                <div className="admin-tpl-preview-bar">
+                  <label>
+                    <span>Pentru</span>
+                    <select
+                      value={destinatar}
+                      onChange={(e) => {
+                        setDestinatar(e.target.value);
+                        void previzualizeaza(t.cheie, e.target.value);
+                      }}
+                    >
+                      <option value="">Primul înscris al ediției</option>
+                      {(participanti ?? []).map((p) => (
+                        <option key={p.id} value={p.email}>
+                          {p.nume} · {p.email}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="admin-btn-ghost"
+                    onClick={() => setPrevizualizare(null)}
+                  >
+                    Închide
+                  </button>
+                </div>
+
+                {previzualizare.eroare && (
+                  <p className="admin-tpl-msg err" role="status">
+                    {previzualizare.eroare}
+                  </p>
+                )}
+                {!previzualizare.eroare && !previzualizare.date && (
+                  <div className="admin-empty">Se randează…</div>
+                )}
+                {previzualizare.date && (
+                  <>
+                    <p className="admin-tpl-preview-meta">
+                      <strong>{previzualizare.date.subiect}</strong> — completat pentru{' '}
+                      {previzualizare.date.pentru.nume} ({previzualizare.date.pentru.email})
+                    </p>
+                    {/* `sandbox` gol: fără scripturi, fără forme, fără navigare.
+                        Emailul e HTML static, iar CSP-ul paginii de admin rămâne
+                        neatins — randarea nu se amestecă cu documentul gazdă. */}
+                    <iframe
+                      title={`Previzualizare ${eticheta?.titlu ?? t.cheie}`}
+                      className="admin-tpl-preview-frame"
+                      sandbox=""
+                      srcDoc={previzualizare.date.html}
+                    />
+                  </>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
