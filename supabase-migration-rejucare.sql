@@ -137,6 +137,9 @@ declare
   v_log    runlift.email_log;
   v_sablon text;
   v_r      runlift.registrations;
+  v_email  text;
+  v_nume   text;
+  v_unsub  uuid;
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
 
@@ -166,21 +169,37 @@ begin
     return;
   end if;
 
-  -- Lista de așteptare: destinatarul e din `event_waitlist`, care n-are
-  -- `token_renunt` (n-are încă un loc de eliberat) — variabila rămâne goală și
-  -- rândul pe care stă cade, exact ca la difuzarea originală.
+  -- Audiența „asteptare" a unei difuzări NU e `event_waitlist`.
+  --
+  -- `waitlist_recipients()` — funcția din care își ia destinatarii modul
+  -- `broadcast` cu `audience = 'asteptare'` — citește `launch_notifications`
+  -- (confirmați, nedezabonați): lista de lansare, nu lista de așteptare a
+  -- ediției. Sunt două tabele cu populații diferite, iar căutarea în cel greșit
+  -- ar refuza fiecare rejucare cu „destinatarul lipsește" despre cineva intact,
+  -- și — la o adresă aflată din întâmplare în amândouă — ar trece peste
+  -- filtrele de confirmare și dezabonare și ar trimite fără linkul de
+  -- dezabonare, fiindcă tokenul ar rămâne null.
+  --
+  -- `token_renunt` rămâne null aici: cine e pe lista de lansare n-are un loc de
+  -- eliberat, deci paragraful care poartă variabila cade — exact ca la
+  -- difuzarea originală.
   if v_log.mod = 'broadcast' and v_log.audienta = 'asteptare' then
-    if not exists (
-      select 1 from event_waitlist w
-       where w.editie = v_log.editie and lower(w.email) = lower(v_log.email)
-         and w.deleted_at is null
-    ) then
+    select l.email,
+           trim(coalesce(l.prenume, '') || ' ' || coalesce(l.nume, '')),
+           l.token_unsub
+      into v_email, v_nume, v_unsub
+      from launch_notifications l
+     where lower(l.email) = lower(v_log.email)
+       and l.confirmat_la is not null
+       and l.dezabonat_la is null
+     limit 1;
+    if v_email is null then
       return query select false, 'destinatar_lipsa', v_log.mod, v_sablon, v_log.audienta,
                           v_log.email, v_log.nume, null::uuid, null::uuid, v_log.editie;
       return;
     end if;
     return query select true, null::text, v_log.mod, v_sablon, v_log.audienta,
-                        lower(v_log.email), v_log.nume, null::uuid, null::uuid, v_log.editie;
+                        v_email, v_nume, null::uuid, v_unsub, v_log.editie;
     return;
   end if;
 

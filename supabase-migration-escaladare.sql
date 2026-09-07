@@ -25,6 +25,31 @@
 begin;
 
 -- ---------------------------------------------------------------------------
+-- 0. Precondiție: `supabase-migration-undo-waitlist.sql` a rulat deja.
+--
+--    `auto_promote_from_waitlist()` se rescrie mai jos citind
+--    `event_waitlist.deleted_at`, coloană adăugată de acea migrare. Postgres NU
+--    verifică corpul unei funcții plpgsql la `create or replace`, deci în
+--    ordine greșită migrarea ar TRECE fără nicio eroare, iar coloana lipsă ar
+--    exploda abia la prima ștergere logică reală — în aceeași tranzacție cu
+--    renunțarea unui participant, adică picând chiar acțiunea lui.
+--
+--    O eroare zgomotoasă acum, la aplicare, în locul uneia deferate și
+--    decuplate de cauză.
+-- ---------------------------------------------------------------------------
+do $precond$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'runlift' and table_name = 'event_waitlist'
+       and column_name = 'deleted_at'
+  ) then
+    raise exception 'aplică întâi supabase-migration-undo-waitlist.sql (lipsește runlift.event_waitlist.deleted_at)';
+  end if;
+end;
+$precond$;
+
+-- ---------------------------------------------------------------------------
 -- 1. Unde ajunge escaladarea.
 --
 --    Cheia se scrie manual, o dată; până atunci `escaladeaza()` nu face nimic
@@ -55,6 +80,19 @@ $function$;
 --    Best-effort din construcție: fluxul care a declanșat anomalia nu are voie
 --    să cadă pentru că n-a plecat un email despre ea. Un `raise` de aici ar
 --    anula o promovare reușită din cauza unei alerte eșuate.
+--
+--    De aceea ÎNTREGUL corp stă într-un bloc cu `exception`, nu doar apelul
+--    HTTP. Ambele apelante sunt triggere — `perform escaladeaza(...)` fără bloc
+--    propriu — deci orice eroare ridicată de citirea configului, de garda de
+--    unicitate sau de jurnalul de audit ar urca prin trigger și ar anula
+--    tranzacția declanșatoare: o înscriere reală respinsă fiindcă n-a mers
+--    alerta despre ea, sau o promovare deja aplicată desfăcută. Canalul lateral
+--    de alertare nu are voie să fie un punct de eșec pentru fluxul principal.
+--
+--    Ordinea gărzilor contează la fel de mult. Secretul se citește ÎNAINTE de
+--    `broadcast_once`: cheia de unicitate se consumă la apel, nu la trimitere,
+--    deci o gardă de după ea ar arde cheia fără să trimită, iar aceeași anomalie
+--    n-ar mai putea escalada niciodată — nici după ce secretul e configurat.
 -- ---------------------------------------------------------------------------
 create or replace function runlift.escaladeaza(
   p_tip text, p_cheie text, p_subiect text, p_detaliu text, p_editie smallint default null
@@ -65,17 +103,20 @@ security definer
 set search_path to 'runlift'
 as $function$
 declare
-  v_ed     smallint := coalesce(p_editie, current_event_edition());
-  v_catre  text     := operator_email();
+  v_ed     smallint;
+  v_catre  text;
   v_secret text;
 begin
+  v_ed    := coalesce(p_editie, current_event_edition());
+  v_catre := operator_email();
   if v_catre is null then return false; end if;
-  if not broadcast_once('alert_ed' || v_ed || '_' || p_tip || '_' || p_cheie) then
-    return false;
-  end if;
 
   select broadcast_secret() into v_secret;
   if v_secret is null then return false; end if;
+
+  if not broadcast_once('alert_ed' || v_ed || '_' || p_tip || '_' || p_cheie) then
+    return false;
+  end if;
 
   -- Jurnalul de audit primește rândul chiar dacă emailul pică: „am escaladat"
   -- e o informație despre sistem, nu despre provider.
@@ -83,23 +124,22 @@ begin
   values ('escaladare', jsonb_build_object(
     'tip', p_tip, 'cheie', p_cheie, 'subiect', p_subiect, 'editie', v_ed));
 
-  begin
-    perform net.http_post(
-      url := 'https://whyndrjcezmtajbykeil.supabase.co/functions/v1/send-email',
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        'apikey', 'sb_publishable_SR4wCG4ZsSZYAqobBjUF_g_Xx4pRbHh',
-        'x-broadcast-secret', v_secret
-      ),
-      body := jsonb_build_object(
-        'mode', 'alert', 'subject', p_subiect, 'text', p_detaliu, 'editie', v_ed
-      )
-    );
-  exception when others then
-    null;
-  end;
+  perform net.http_post(
+    url := 'https://whyndrjcezmtajbykeil.supabase.co/functions/v1/send-email',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'apikey', 'sb_publishable_SR4wCG4ZsSZYAqobBjUF_g_Xx4pRbHh',
+      'x-broadcast-secret', v_secret
+    ),
+    body := jsonb_build_object(
+      'mode', 'alert', 'subject', p_subiect, 'text', p_detaliu, 'editie', v_ed
+    )
+  );
 
   return true;
+exception when others then
+  -- Orice a eșuat aici — config, gardă, jurnal, HTTP — rămâne aici.
+  return false;
 end;
 $function$;
 
@@ -111,6 +151,12 @@ revoke execute on function runlift.escaladeaza(text, text, text, text, smallint)
 -- în ea (o confirmare care nu pleacă). Grantul e explicit tocmai pentru că
 -- `revoke ... from public` de mai sus i-ar fi luat-o odată cu restul.
 grant execute on function runlift.escaladeaza(text, text, text, text, smallint) to service_role;
+-- Aceeași revocare și pentru citirea adresei. Supabase acordă `execute` DIRECT
+-- lui anon/authenticated la fiecare funcție nouă (vezi nota din
+-- `supabase-migration-reminder-idempotent.sql`), deci fără linia asta oricine
+-- ar putea citi adresa operatorului cu cheia publicabilă — exact contactul pe
+-- care restul funcției e construită să nu-l expună.
+revoke execute on function runlift.operator_email() from public, anon, authenticated;
 grant execute on function runlift.operator_email() to service_role;
 
 -- ---------------------------------------------------------------------------

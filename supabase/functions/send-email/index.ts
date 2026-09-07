@@ -401,10 +401,35 @@ Deno.serve(async (req: Request) => {
     const row = cerut
       ? recipients.find((r) => r.email.toLowerCase() === cerut)
       : recipients[0];
-    if (!row) return json(404, { error: "no_recipient" });
+    // Două stări diferite, două coduri: lista poate fi goală, sau persoana
+    // aleasă poate să nu mai fie destinatar (s-a dezabonat între timp —
+    // selectul din backoffice listează participanții, care includ dezabonații,
+    // iar `edition2_recipients` nu). Un singur cod ar face ecranul să afirme
+    // ceva fals despre ediție și l-ar trimite pe operator să caute unde nu e.
+    if (!row) return json(404, { error: cerut ? "recipient_not_eligible" : "no_recipient" });
 
     const badge = await loadBadge();
-    const text = fillVars(tpl.text_email, row.nume, row.email, "", linkRenunt(row.token_renunt));
+    /**
+     * Șabloanele `confirmare` și `info` folosesc acolade DUBLE.
+     *
+     * Modul `info` le substituie cu `replaceAll("{{link}}", …)`; `fillVars`
+     * lucrează pe acolade simple, deci aplicat peste ele ar lăsa `{{link}}`
+     * literal și ar transforma `{{prenume}}` în `{Ana}`. Previzualizarea ar
+     * raporta atunci un email rupt exact acolo unde linkul e critic — și
+     * „reparația" evidentă (rescrierea în acolade simple) ar rupe pe bune
+     * confirmarea, fiindcă fluxul real nu substituie acolade simple acolo.
+     *
+     * Tokenul de confirmare e per-cerere și nu există în afara fluxului lui,
+     * deci în previzualizare linkul se arată cu o valoare-exemplu, marcată.
+     */
+    const acoladeDuble = cheie === "confirmare" || cheie === "info";
+    const text = acoladeDuble
+      ? tpl.text_email
+          .replaceAll("{{nume}}", row.nume)
+          .replaceAll("{{prenume}}", (row.nume || "atlet").split(/\s+/)[0])
+          .replaceAll("{{email}}", row.email)
+          .replaceAll("{{link}}", "https://parktraining.fit/confirmare?token=EXEMPLU")
+      : fillVars(tpl.text_email, row.nume, row.email, "", linkRenunt(row.token_renunt));
     const unsubPage = row.token_unsub
       ? `https://parktraining.fit/unsubscribe?token=${row.token_unsub}`
       : undefined;

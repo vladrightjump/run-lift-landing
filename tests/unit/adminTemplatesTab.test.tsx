@@ -173,3 +173,50 @@ describe('AdminTemplatesTab — previzualizarea HTML', () => {
     expect(cadru()).toBeNull();
   });
 });
+
+describe('AdminTemplatesTab — cursele previzualizării', () => {
+  it('un răspuns întârziat al unei cereri anterioare nu calcă peste cea curentă', async () => {
+    // Fără gardă de ordine, HTML-ul altcuiva — cu linkurile și tokenurile lui —
+    // ar rămâne pe ecran sub un select care arată alt nume.
+    const ALT = { ...PARTICIPANT, id: 'r2', nume: 'Radu Vasile', email: 'radu@exemplu.ro' };
+    listEmailTemplates.mockResolvedValue([SABLON]);
+    listRegistrations.mockResolvedValue([PARTICIPANT, ALT]);
+
+    let rezolvaPrima: ((v: typeof PREVIEW) => void) | null = null;
+    previewEmailHtml
+      .mockImplementationOnce(() => new Promise((res) => { rezolvaPrima = res; }))
+      .mockResolvedValue({ ...PREVIEW, pentru: { email: ALT.email, nume: ALT.nume } });
+
+    render(
+      <FurnizorSesiuneAdmin token="t" onAuthError={() => false} showToast={() => {}}>
+        <AdminTemplatesTab />
+      </FurnizorSesiuneAdmin>
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Previzualizează' }));
+    // A doua cerere pleacă și se rezolvă înaintea primei.
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: ALT.email } });
+    await screen.findByText(/Radu Vasile \(radu@exemplu\.ro\)/);
+
+    // Abia acum aterizează prima, cu alt destinatar.
+    rezolvaPrima!(PREVIEW);
+    await waitFor(() => expect(previewEmailHtml).toHaveBeenCalledTimes(2));
+    // Rândul „completat pentru …" e cel care spune ce s-a randat; `Radu Vasile`
+    // singur ar prinde și opțiunea din select.
+    expect(screen.getByText(/Radu Vasile \(radu@exemplu\.ro\)/)).toBeTruthy();
+    expect(screen.queryByText(/Ana Popescu \(ana@exemplu\.ro\)/)).toBeNull();
+  });
+
+  it('un destinatar dezabonat între timp e numit ca atare, nu pus în seama ediției', async () => {
+    // Selectul listează participanții (dezabonații incluși); serverul îi caută
+    // în `edition2_recipients`, care îi filtrează. Un singur mesaj pentru ambele
+    // stări ar afirma ceva fals despre ediție.
+    randeaza();
+    previewEmailHtml.mockRejectedValueOnce(
+      new Error('Supabase 404: {"error":"recipient_not_eligible"}')
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Previzualizează' }));
+
+    expect(await screen.findByText(/nu mai e destinatar al ediției/)).toBeTruthy();
+    expect(screen.queryByText(/niciun destinatar înscris/)).toBeNull();
+  });
+});

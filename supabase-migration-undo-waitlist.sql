@@ -19,7 +19,12 @@
 -- greșit în tăcere. Opt locuri ating `event_waitlist`; fiecare e tratat mai jos,
 -- inclusiv cele care NU se schimbă, ca să nu pară scăpate.
 --
--- Migrarea e re-rulabilă (idempotentă): proiectul nu are branch de staging.
+-- Migrarea e idempotentă, dar re-rulabilă DOAR ÎNAINTE de
+-- `supabase-migration-escaladare.sql`. Amândouă rescriu
+-- `auto_promote_from_waitlist()`, iar versiunea de aici n-are apelul de
+-- escaladare: re-rulată DUPĂ, ar scoate în tăcere alerta de promovare automată
+-- — chiar anomalia pentru care escaladarea există. Dacă trebuie re-rulată după,
+-- rulează imediat și `supabase-migration-escaladare.sql` din nou.
 
 begin;
 

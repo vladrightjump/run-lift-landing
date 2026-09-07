@@ -145,20 +145,36 @@ export const AdminTemplatesTab = () => {
    * închiderea ar purta încă valoarea veche — previzualizarea ar rămâne cu un
    * pas în urma selectului, tăcut.
    */
+  /**
+   * Numărul cererii de previzualizare aflate în curs.
+   *
+   * Schimbarea destinatarului cheamă o randare nouă peste una încă în zbor.
+   * Fără număr de ordine, un răspuns mai lent al cererii ANTERIOARE ar ateriza
+   * ultimul și ar rămâne pe ecran: HTML-ul altcuiva, cu linkurile și tokenurile
+   * lui, sub un select care arată alt nume. Aceeași gardă pe care restul
+   * backoffice-ului o face cu `signal.aborted`.
+   */
+  const cerereaCurenta = useRef(0);
+
   const previzualizeaza = async (cheie: string, pentru = destinatar) => {
+    const aMea = ++cerereaCurenta.current;
     setPrevizualizare({ cheie, date: null, eroare: null });
     try {
       const date = await previewEmailHtml(token, cheie, pentru || undefined);
+      if (aMea !== cerereaCurenta.current) return;
       setPrevizualizare({ cheie, date, eroare: null });
     } catch (err) {
+      if (aMea !== cerereaCurenta.current) return;
       if (onAuthError(err)) return;
       const text = err instanceof Error ? err.message : String(err);
       setPrevizualizare({
         cheie,
         date: null,
-        eroare: text.includes('no_recipient')
-          ? 'Ediția n-are niciun destinatar înscris, deci variabilele n-au cu ce fi completate.'
-          : 'Nu am putut randa previzualizarea.',
+        eroare: text.includes('recipient_not_eligible')
+          ? 'Persoana aleasă nu mai e destinatar al ediției — s-a dezabonat sau a fost ștearsă. Alege pe altcineva.'
+          : text.includes('no_recipient')
+            ? 'Ediția n-are niciun destinatar înscris, deci variabilele n-au cu ce fi completate.'
+            : 'Nu am putut randa previzualizarea.',
       });
     }
   };

@@ -138,9 +138,12 @@ funcția Edge depinde de RPC-ul de aici).
 - `log_emails` și `admin_list_email_log` duc coloana mai departe.
 - **`admin_replay_lookup(token, log_id)`** — răspunde la „ce mod, ce șablon, ce destinatar, sau de
   ce nu se poate". Nu trimite nimic: decizia stă într-un singur loc, ca ecranul și funcția Edge să
-  dea același verdict. Destinatarul se rezolvă din starea de ACUM (`lower(email)` + `editie`), deci
-  filtrul de dezabonare al difuzării se aplică și la rejucare — exact ce sărea retrimiterea oarbă
-  prin modul `admin`.
+  dea același verdict. Destinatarul se rezolvă din starea de ACUM, deci filtrul de dezabonare al
+  difuzării se aplică și la rejucare — exact ce sărea retrimiterea oarbă prin modul `admin`.
+  Atenție la audiențe: `participanti` se rezolvă din `registrations` (`lower(email)` + `editie`),
+  dar **`asteptare` se rezolvă din `launch_notifications`**, nu din `event_waitlist` — acolo își ia
+  destinatarii `waitlist_recipients()`, iar tabelul „de așteptare" al ediției e o populație
+  complet diferită.
 
 `info` rămâne exclus deliberat: cooldown-ul de 10 minute și `mark_confirmation_sent` fac din
 rejucare o cerere nouă, nu o reparație.
@@ -176,8 +179,20 @@ niciun email — `monitoring.ts` rămâne neatins):
 
 Garda de deduplicare pe `(ediție, tip, cheie)` refolosește `broadcast_once` — fără ea, o funcție
 care eșuează în buclă ar trimite un email la fiecare încercare și l-ar antrena pe operator să
-ignore canalul. `escaladeaza()` e revocată de la `anon`/`authenticated` și acordată explicit lui
-`service_role`.
+ignore canalul. Cheia se consumă la apel, nu la trimitere, deci **toate** gărzile (adresă, secret)
+stau înaintea ei; altfel o anomalie și-ar arde cheia fără să escaladeze și n-ar mai putea escalada
+niciodată. `escaladeaza()` și `operator_email()` sunt amândouă revocate de la `anon`/`authenticated`
+și acordate explicit lui `service_role`.
+
+Întregul corp al lui `escaladeaza()` stă într-un bloc cu `exception`, nu doar apelul HTTP: ambele
+apelante sunt triggere, deci o eroare din canalul de alertare ar urca prin trigger și ar anula
+tranzacția declanșatoare — o înscriere reală respinsă fiindcă n-a mers alerta despre ea.
+
+**Ordinea e obligatorie.** Fișierul începe cu o precondiție care crapă dacă
+`supabase-migration-undo-waitlist.sql` n-a rulat: `auto_promote_from_waitlist()` citește
+`event_waitlist.deleted_at`, iar Postgres nu verifică corpul unei funcții plpgsql la creare — în
+ordine greșită migrarea ar trece tăcut și ar exploda abia la prima renunțare reală, în tranzacția
+participantului.
 
 **Rămâne descoperit:** o promovare automată al cărei apel `pg_net` de escaladare pică el însuși.
 Prinderea ei cere o reconciliere periodică (`admin_events` vs. `email_log`), deci un ceas — adică
