@@ -21,9 +21,11 @@ import {
   DEFAULT_REMINDERS,
   MAX_REMINDERS,
   REMINDER_GRACE_HOURS,
+  REMINDER_TEMPLATE_KEYS,
   type EventConfig,
   type ReminderEntry,
 } from '../../src/content/eventConfig';
+import { ETICHETE_SABLOANE } from '../../src/admin/eventTab/ajutoare';
 
 /**
  * Orarul reminderelor: când pleacă fiecare, când NU mai pleacă, și ce spune
@@ -314,6 +316,57 @@ describe('validarea orarului oglindește event_config_validate', () => {
   it('șablon inexistent', () => {
     const gresit = [{ ...rem(24), template: 'inventat' }] as unknown as ReminderEntry[];
     expect(campuri(cuRemindere(gresit))).toContain('reminders.0.template');
+  });
+});
+
+/**
+ * Al treilea șablon de reminder: întrebarea binară de la 72 de ore.
+ *
+ * Nu reamintește, întreabă — iar singura acțiune e eliberarea locului, prin
+ * `{link_renunt}`. Rostul avansului mare: la 24 de ore un loc eliberat rămâne
+ * gol, la 72 apucă să-l ia cineva de pe lista de așteptare.
+ */
+describe('șablonul binar de la 72 de ore', () => {
+  const binar = (offsetHours: number): ReminderEntry => ({
+    offsetHours,
+    enabled: true,
+    template: 'bulk_participant_reminder_binar',
+  });
+
+  it('cheia e cunoscută de orar', () => {
+    expect(REMINDER_TEMPLATE_KEYS).toContain('bulk_participant_reminder_binar');
+  });
+
+  /**
+   * Exhaustiv pe tablou, nu enumerat de mână: altfel cheia următoare intră cu
+   * un selector care arată cheia brută din DB în loc de o etichetă.
+   */
+  it('fiecare cheie de reminder are etichetă în selector', () => {
+    for (const cheie of REMINDER_TEMPLATE_KEYS) {
+      expect(ETICHETE_SABLOANE[cheie]).toBeTruthy();
+    }
+  });
+
+  it('un rând la 72 de ore cu șablonul binar e valid', () => {
+    expect(validateEventConfig(cuRemindere([binar(72)]))).toEqual([]);
+  });
+
+  it('trece prin parsarea documentului venit de pe rețea', () => {
+    const { reminders: _, ...rest } = SNAPSHOT_CONFIG;
+    expect(parseEventConfig({ ...rest, reminders: [binar(72)] })?.reminders).toEqual([binar(72)]);
+  });
+
+  /**
+   * Cheia de idempotență din DB e (ediție, avans), nu (ediție, șablon): două
+   * rânduri la același avans rămân refuzate chiar dacă textele diferă.
+   */
+  it('nu scapă de regula avansului unic doar fiindcă e alt șablon', () => {
+    const campuri = validateEventConfig(cuRemindere([rem(72), binar(72)])).map((p) => p.camp);
+    expect(campuri).toContain('reminders');
+  });
+
+  it('se poate combina cu celelalte două într-un orar de trei rânduri', () => {
+    expect(validateEventConfig(cuRemindere([binar(72), rem(24), rem(3)]))).toEqual([]);
   });
 });
 

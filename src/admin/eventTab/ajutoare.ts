@@ -133,6 +133,7 @@ export const FUSURI: [string, string][] = [
 export const ETICHETE_SABLOANE: Record<ReminderTemplateKey, string> = {
   bulk_participant_reminder: 'Reminder („mâine alergăm")',
   bulk_participant_reminder_final: 'Reminder final („azi alergăm")',
+  bulk_participant_reminder_binar: 'Întrebare binară („mai vii?")',
 };
 
 /**

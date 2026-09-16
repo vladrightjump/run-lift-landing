@@ -88,6 +88,7 @@ export type ReminderEntry = {
 export const REMINDER_TEMPLATE_KEYS = [
   'bulk_participant_reminder',
   'bulk_participant_reminder_final',
+  'bulk_participant_reminder_binar',
 ] as const;
 
 export type ReminderTemplateKey = (typeof REMINDER_TEMPLATE_KEYS)[number];

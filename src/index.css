@@ -2415,6 +2415,15 @@
     transition: border-color 0.2s ease; resize: vertical;
   }
   .admin-tpl-field input:focus, .admin-tpl-field textarea:focus { border-color: var(--e3-accent); }
+  /* Un reminder fără {link_renunt}: pleacă, dar fără butonul care schimbă ceva. */
+  .admin-tpl-avertisment {
+    margin: 0; padding: 10px 13px; font-size: 13px; line-height: 1.6;
+    border-left: 3px solid var(--e3-danger); color: var(--e3-danger);
+    background: rgba(242,109,109,0.06);
+  }
+  .admin-tpl-avertisment code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  }
   .admin-tpl-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
   .admin-tpl-dirty {
     flex: 1; font-size: 12px; font-weight: 600; letter-spacing: 1px;

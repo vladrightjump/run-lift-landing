@@ -8,6 +8,10 @@ import {
 import type { AdminEmailTemplate, EmailPreview } from '../lib/adminApi';
 import { useSesiuneAdmin } from './adminSession';
 import { useAdminResource } from './useAdminResource';
+import {
+  REMINDER_TEMPLATE_KEYS,
+  type ReminderTemplateKey,
+} from '../content/eventConfig';
 
 /** Eticheta prietenoasă pentru fiecare șablon cunoscut. */
 const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
@@ -36,6 +40,11 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
     descriere:
       'Al doilea text pe care îl poate folosi un reminder din orar — cel pentru ultimele ore („azi alergăm"), unde contează ora și locul, nu explicațiile. Îl alegi pe rândul de reminder, în /admin → „Eveniment". Aceleași variabile ca reminderul obișnuit.',
   },
+  bulk_participant_reminder_binar: {
+    titlu: 'Automat · Întrebare binară „mai vii?" (participanți)',
+    descriere:
+      'Al treilea text pe care îl poate folosi un rând de orar, gândit pentru 72 de ore înainte. Nu reamintește — întreabă. Tăcerea înseamnă „vin"; singura acțiune e eliberarea locului, prin {link_renunt}. De aceea linkul e OBLIGATORIU aici: paragraful care îl poartă se filtrează pentru cine n-are token, deci fără el întrebarea pleacă fără buton. Rostul avansului mare: la 24 de ore un loc eliberat rămâne gol, la 72 apucă să-l ia cineva de pe lista de așteptare. Aceleași variabile ca reminderul obișnuit.',
+  },
   bulk_waitlist_anunt: {
     titlu: 'Trimitere în masă · Anunț eveniment (listă de așteptare)',
     descriere:
@@ -52,6 +61,21 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
       'Eticheta lime din capul fiecărui email. Contează doar câmpul „Text"; „Subiect" e ignorat, dar nu-l lăsa gol. Acceptă variabilele de eveniment — implicit „{numele_cursei} · {data_scurta}", ca să se alinieze singur la ediția publicată.',
   },
 };
+
+/**
+ * Un reminder fără `{link_renunt}` e o scăpare tăcută, nu o preferință.
+ *
+ * Paragraful care poartă variabila e FILTRAT pentru destinatarii fără token
+ * (vezi `faraLinkRenunt` din `emailAudience.ts`), deci textul pleacă oricum —
+ * doar fără butonul care schimbă ceva. Pe șablonul binar e mai rău decât
+ * cosmetic: pune o întrebare la care nu se poate răspunde.
+ *
+ * Avertisment, nu blocaj: șablonul rămâne salvabil. Operatorul poate avea un
+ * motiv, dar merită să-l aibă în mod deliberat.
+ */
+const lipsesteLinkRenunt = (cheie: string, text: string): boolean =>
+  REMINDER_TEMPLATE_KEYS.includes(cheie as ReminderTemplateKey) &&
+  !text.includes('{link_renunt}');
 
 export const AdminTemplatesTab = () => {
   const { token, onAuthError } = useSesiuneAdmin();
@@ -231,6 +255,14 @@ export const AdminTemplatesTab = () => {
                 }
               />
             </label>
+
+            {lipsesteLinkRenunt(t.cheie, d.text) && (
+              <p className="admin-tpl-avertisment" role="status">
+                Textul n-are <code>{'{link_renunt}'}</code>. Reminderul pleacă, dar fără butonul
+                prin care cineva își eliberează locul — iar locul rămas ocupat degeaba nu ajunge
+                la nimeni de pe lista de așteptare.
+              </p>
+            )}
 
             <div className="admin-tpl-actions">
               {modificat(t) && <span className="admin-tpl-dirty">Modificări nesalvate</span>}
