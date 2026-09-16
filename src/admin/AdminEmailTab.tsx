@@ -39,11 +39,23 @@ type Template = { nume: string; subiect: string; corp: string };
 // prietenos și de audiența în care apare.
 const TEMPLATE_LABELS: Record<string, string> = {
   bulk_participant_confirmare: 'Confirmare (automat)',
-  bulk_participant_reminder: 'Reminder eveniment',
   bulk_waitlist_anunt: 'Anunț eveniment nou',
 };
 
-const PARTICIPANT_KEYS = ['bulk_participant_confirmare', 'bulk_participant_reminder'] as const;
+/**
+ * Reminderele NU sunt aici, deși au șabloane.
+ *
+ * Ordinea contează, și e singurul motiv pentru care difuzarea manuală a
+ * reminderelor a plecat înainte ca `pg_cron` să fie armat: `broadcast_once`
+ * face `maybe_send_reminder` idempotentă față de ea însăși, dar nu față de un
+ * buton apăsat de om. Ceasul armat lângă butonul încă prezent e exact
+ * scenariul în care oamenii primesc același reminder de două ori.
+ *
+ * Orarul reminderelor se editează din „Eveniment" → Remindere, iar starea
+ * fiecăruia se citește din jurnalul de livrare. Difuzarea către celelalte
+ * audiențe rămâne neatinsă.
+ */
+const PARTICIPANT_KEYS = ['bulk_participant_confirmare'] as const;
 const WAITLIST_KEYS = ['bulk_waitlist_anunt'] as const;
 
 // „Mesaj liber" nu se salvează nicăieri — e mereu ultimul, gol.
