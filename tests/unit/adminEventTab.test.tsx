@@ -13,19 +13,26 @@ import type { AdminEventConfigRow } from '../../src/lib/adminApi';
  * până la „Publică", iar publicarea nu poate porni dintr-un config invalid.
  */
 
-const { listEventConfig, saveEventConfigDraft, publishEventConfig, restoreEventConfig } =
-  vi.hoisted(() => ({
-    listEventConfig: vi.fn(),
-    saveEventConfigDraft: vi.fn(),
-    publishEventConfig: vi.fn(),
-    restoreEventConfig: vi.fn(),
-  }));
+const {
+  listEventConfig,
+  saveEventConfigDraft,
+  publishEventConfig,
+  restoreEventConfig,
+  listEmailLog,
+} = vi.hoisted(() => ({
+  listEventConfig: vi.fn(),
+  saveEventConfigDraft: vi.fn(),
+  publishEventConfig: vi.fn(),
+  restoreEventConfig: vi.fn(),
+  listEmailLog: vi.fn(),
+}));
 
 vi.mock('../../src/lib/adminApi', () => ({
   listEventConfig,
   saveEventConfigDraft,
   publishEventConfig,
   restoreEventConfig,
+  listEmailLog,
 }));
 
 const rand = (over: Partial<AdminEventConfigRow> = {}): AdminEventConfigRow => ({
@@ -66,6 +73,9 @@ beforeEach(() => {
   saveEventConfigDraft.mockResolvedValue('draft-id');
   publishEventConfig.mockResolvedValue('pub-id');
   restoreEventConfig.mockResolvedValue('restored-id');
+  // Jurnal gol = „am citit și n-a plecat nimic", starea reală a proiectului:
+  // niciun rând `broadcast` n-a existat vreodată în `email_log`.
+  listEmailLog.mockResolvedValue([]);
 });
 
 afterEach(cleanup);

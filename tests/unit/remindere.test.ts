@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { remindereleProgramate, urmatorulReminder } from '../../src/admin/remindere';
+import {
+  remindereleProgramate,
+  urmatorulReminder,
+  nuMaiPleaca,
+  esteNereusit,
+  type LivrareReminder,
+  type StareReminder,
+} from '../../src/admin/remindere';
 import {
   adaugaReminder,
   stergeReminder,
@@ -104,6 +111,151 @@ describe('remindereleProgramate — regula din DB, tradusă în stare vizibilă'
   it('start stricat → listă goală, nu ore derivate din NaN', () => {
     const stricat = { ...cuRemindere([rem(24)]), start: 'mâine dimineață' };
     expect(remindereleProgramate(stricat, START)).toEqual([]);
+  });
+});
+
+/**
+ * A doua sursă de adevăr: jurnalul de livrare.
+ *
+ * Orarul spune ce ar TREBUI să plece; `email_log` spune ce A plecat. Până acum
+ * ecranul afirma doar prima parte, iar `pg_cron` n-a existat niciodată în
+ * proiect — deci „pleacă la următoarea verificare" era o promisiune fără ceas.
+ * Verificat pe 16 septembrie 2026: zero rânduri `mod = 'broadcast'` în tot
+ * jurnalul, pe nicio ediție.
+ *
+ * `livrari` e al treilea parametru din acelaşi motiv pentru care `acum` e al
+ * doilea: altfel nimic din asta n-ar fi testabil.
+ */
+describe('remindereleProgramate — starea vine și din jurnal, nu doar din orar', () => {
+  /** Momentul la care scadența celui de 24h a trecut cu o oră peste grație. */
+  const DUPA_GRATIE = START - 24 * ORA + (REMINDER_GRACE_HOURS + 1) * ORA;
+  /** În fereastra de potrivire a reminderului de 24h. */
+  const IN_FEREASTRA = START - 23 * ORA;
+
+  const livr = (
+    la: number,
+    status: 'trimis' | 'esuat' = 'trimis',
+    sablon: string | null = 'bulk_participant_reminder'
+  ): LivrareReminder => ({ sablon, status, la });
+
+  const stareaCu = (livrari: LivrareReminder[] | null, acum = DUPA_GRATIE, intrari = [rem(24)]) =>
+    remindereleProgramate(cuRemindere(intrari), acum, livrari)[0];
+
+  it('jurnal gol după grație: NEPLECAT — ceasul n-a existat, nu doar n-a apucat', () => {
+    const r = stareaCu([]);
+    expect(r.stare).toBe('neplecat');
+    expect(r.nota).toContain('runlift_reminder');
+  });
+
+  /**
+   * Distincția portantă a unității. `ratat` înseamnă „ceasul n-a apucat";
+   * `neplecat` înseamnă „ceasul n-a existat". Operatorul face altceva în
+   * fiecare caz: la primul micșorează avansul, la al doilea verifică jobul.
+   */
+  it('neplecat e distinct de ratat, nu un sinonim', () => {
+    expect(stareaCu([]).stare).not.toBe(stareaCu(null).stare);
+  });
+
+  it('jurnal indisponibil: cade pe comportamentul de azi, fără să afirme livrare', () => {
+    const r = stareaCu(null);
+    expect(r.stare).toBe('ratat');
+    expect(r.nota).toContain('NU mai pleacă');
+  });
+
+  it('jurnalul lipsă (`null`) nu e același lucru cu jurnalul gol (`[]`)', () => {
+    // Fără gardă, un RPC eșuat ar transforma fiecare reminder scadent în
+    // „neplecat" — o afirmație la fel de falsă, doar în cealaltă direcție.
+    expect(remindereleProgramate(cuRemindere([rem(24)]), DUPA_GRATIE)[0].stare).toBe('ratat');
+  });
+
+  it('o livrare reușită în fereastră: trimis', () => {
+    expect(stareaCu([livr(IN_FEREASTRA)]).stare).toBe('trimis');
+  });
+
+  it('doar livrări eșuate: esuat, nu trimis', () => {
+    const r = stareaCu([livr(IN_FEREASTRA, 'esuat')]);
+    expect(r.stare).toBe('esuat');
+    expect(r.nota).toBeTruthy();
+  });
+
+  it('eșec și reușită în aceeași fereastră: succesul domină', () => {
+    expect(stareaCu([livr(IN_FEREASTRA, 'esuat'), livr(IN_FEREASTRA)]).stare).toBe('trimis');
+  });
+
+  /**
+   * Potrivirea se face pe cheia șablonului, nu pe subiect: subiectul e
+   * editabil din tabul „Șabloane", iar o potrivire pe text s-ar rupe tăcut la
+   * prima reformulare.
+   */
+  it('livrare cu alt șablon, în aceeași fereastră: nepotrivită', () => {
+    expect(stareaCu([livr(IN_FEREASTRA, 'trimis', 'bulk_participant_reminder_final')]).stare).toBe(
+      'neplecat'
+    );
+  });
+
+  it('livrare fără șablon înregistrat: nepotrivită', () => {
+    expect(stareaCu([livr(IN_FEREASTRA, 'trimis', null)]).stare).toBe('neplecat');
+  });
+
+  it('livrare cu șablonul potrivit, dar în afara ferestrei: nepotrivită', () => {
+    expect(stareaCu([livr(DUPA_GRATIE)]).stare).toBe('neplecat');
+  });
+
+  it('două rânduri cu același șablon la avansuri diferite iau fiecare livrarea lui', () => {
+    const programate = remindereleProgramate(
+      cuRemindere([rem(72), rem(24)]),
+      DUPA_GRATIE,
+      [livr(START - 71 * ORA)]
+    );
+    // Sortate descrescător după avans: 72 primul.
+    expect(programate.map((r) => r.stare)).toEqual(['trimis', 'neplecat']);
+  });
+
+  it('o livrare reușită în grație scurtcircuitează „iminent" — a plecat deja', () => {
+    const inGratie = START - 24 * ORA + ORA;
+    expect(stareaCu([], inGratie).stare).toBe('iminent');
+    expect(stareaCu([livr(IN_FEREASTRA)], inGratie).stare).toBe('trimis');
+  });
+
+  it('un eșec în grație rămâne iminent — cron-ul mai are o rulare', () => {
+    const inGratie = START - 24 * ORA + ORA;
+    expect(stareaCu([livr(IN_FEREASTRA, 'esuat')], inGratie).stare).toBe('iminent');
+  });
+
+  it('înainte de scadență rămâne programat, indiferent de jurnal', () => {
+    expect(stareaCu([livr(IN_FEREASTRA)], START - 30 * ORA).stare).toBe('programat');
+  });
+
+  it('bifa scoasă: oprit, indiferent de jurnal', () => {
+    expect(stareaCu([livr(IN_FEREASTRA)], DUPA_GRATIE, [rem(24, false)]).stare).toBe('oprit');
+  });
+
+  /**
+   * Cazul întregului istoric real: edițiile 5 și 6 au startul în urmă și n-au
+   * niciun rând `broadcast` în jurnal, fiindcă reminderele lor au plecat ca
+   * difuzări manuale (`mod = 'admin'`). `trecut` scurtcircuitează înaintea
+   * oricărei verificări, deci nu se aprinde nimic retroactiv.
+   */
+  it('startul trecut: trecut, cu jurnal gol — istoricul nu se aprinde retroactiv', () => {
+    expect(stareaCu([], START + ORA).stare).toBe('trecut');
+  });
+});
+
+describe('clasificarea stărilor — o singură sursă pentru afișare', () => {
+  const stari = (...s: StareReminder[]): StareReminder[] => s;
+
+  it('nu mai pleacă nimic din stările terminale', () => {
+    expect(stari('trimis', 'esuat', 'ratat', 'neplecat', 'trecut').map(nuMaiPleaca)).toEqual([
+      true, true, true, true, true,
+    ]);
+    expect(stari('programat', 'iminent').map(nuMaiPleaca)).toEqual([false, false]);
+  });
+
+  it('nereușit înseamnă terminal FĂRĂ livrare — semnul de eroare din listă', () => {
+    expect(stari('esuat', 'ratat', 'neplecat').map(esteNereusit)).toEqual([true, true, true]);
+    expect(
+      stari('trimis', 'programat', 'iminent', 'oprit', 'trecut').map(esteNereusit)
+    ).toEqual([false, false, false, false, false]);
   });
 });
 
