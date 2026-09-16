@@ -4,8 +4,10 @@ import {
   saveEventConfigDraft,
   publishEventConfig,
   restoreEventConfig,
+  listEmailLog,
   type AdminEventConfigRow,
 } from '../lib/adminApi';
+import type { LivrareReminder } from './remindere';
 import {
   parseEventConfig,
   MAX_REELS,
@@ -127,6 +129,40 @@ export const AdminEventTab = () => {
     fetchBuildInfo(c.signal).then(setBuild);
     return () => c.abort();
   }, []);
+
+  /**
+   * Livrările ediției din ciornă, ca orarul de remindere să poată spune ce a
+   * plecat, nu doar ce ar trebui să plece.
+   *
+   * `null` = n-am putut citi jurnalul, și e diferit de `[]`: pe un jurnal
+   * indisponibil fiecare reminder scadent ar deveni „neplecat", o afirmație la
+   * fel de falsă ca aceea pe care o repară grupul.
+   */
+  const [livrari, setLivrari] = useState<LivrareReminder[] | null>(null);
+  const editieCiorna = ciorna?.number;
+
+  useEffect(() => {
+    if (editieCiorna === undefined) return;
+    const c = new AbortController();
+    // `cuText: false` — rezumatul n-are nevoie de corpul emailurilor, iar cu
+    // el ar căra sute de KB la fiecare încărcare.
+    listEmailLog(token, editieCiorna, false, c.signal)
+      .then((jurnal) =>
+        setLivrari(
+          jurnal
+            // Doar ce a plecat prin ceas. Difuzările manuale sunt `admin` și
+            // n-au orar față de care să fie potrivite.
+            .filter((r) => r.mod === 'broadcast')
+            .map((r) => ({ sablon: r.sablon, status: r.status, la: Date.parse(r.created_at) }))
+            .filter((l) => Number.isFinite(l.la))
+        )
+      )
+      .catch((err) => {
+        if (c.signal.aborted || onAuthError(err)) return;
+        setLivrari(null);
+      });
+    return () => c.abort();
+  }, [token, editieCiorna, onAuthError]);
 
   const publicat = useMemo(() => {
     const row = randuri?.find((r) => r.status === 'published');
@@ -534,6 +570,7 @@ export const AdminEventTab = () => {
             seteazaRemindere={seteazaRemindere}
             erori={erori}
             acum={acum}
+            livrari={livrari}
           />
 
           <GrupCeArata

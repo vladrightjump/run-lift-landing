@@ -27,10 +27,19 @@ vi.mock('../../src/lib/adminApi', async () => {
       }),
     ],
     templates: [
+      // Confirmarea, nu reminderul: reminderele nu mai sunt difuzabile manual
+      // (vezi PARTICIPANT_KEYS). Zăvorul testat aici nu depinde de care
+      // șablon e — doar de faptul că e oferit audienței „participanți".
       {
-        cheie: 'bulk_participant_reminder',
+        cheie: 'bulk_participant_confirmare',
         subiect: 'Detalii pentru sâmbătă',
         text_email: 'Ne vedem la 07:00.',
+        actualizat_la: '2026-08-19T10:00:00Z',
+      },
+      {
+        cheie: 'bulk_participant_reminder',
+        subiect: 'Mâine alergăm',
+        text_email: 'Ne vedem mâine la 07:00. {link_renunt}',
         actualizat_la: '2026-08-19T10:00:00Z',
       },
     ],
@@ -176,5 +185,42 @@ describe('AdminEmailTab — zăvor pe trimitere', () => {
     const { container } = monteaza([]);
     await screen.findByRole('button', { name: /Trimite email/ });
     expect(container.textContent).not.toContain('a plecat deja');
+  });
+});
+
+/**
+ * Difuzarea manuală a reminderelor se retrage ÎNAINTE de armarea `pg_cron`,
+ * nu după. `broadcast_once` face `maybe_send_reminder` idempotentă față de ea
+ * însăși, dar nu față de un buton apăsat de om: ceasul armat lângă butonul
+ * încă prezent e exact scenariul în care oamenii primesc reminderul de două
+ * ori.
+ */
+describe('AdminEmailTab — reminderele nu se mai difuzează de mână', () => {
+  const sabloaneOferite = async (): Promise<string[]> => {
+    const { container } = monteaza([]);
+    await screen.findByRole('button', { name: /Trimite email/ });
+    return Array.from(container.querySelectorAll('.admin-email-templates .admin-email-template'))
+      .map((b) => b.textContent?.trim() ?? '')
+      .filter(Boolean);
+  };
+
+  it('șablonul de reminder nu mai e oferit la difuzarea către participanți', async () => {
+    const oferite = await sabloaneOferite();
+    expect(oferite.join(' | ')).not.toContain('Reminder');
+  });
+
+  it('confirmarea și mesajul liber rămân oferite', async () => {
+    const oferite = await sabloaneOferite();
+    expect(oferite).toContain('Confirmare (automat)');
+    expect(oferite).toContain('Mesaj liber');
+  });
+
+  /**
+   * Retragerea e o ștergere din lista de chei, nu retragerea butonului:
+   * difuzarea deservește patru audiențe și rămâne pe toate.
+   */
+  it('butonul de difuzare rămâne, pentru celelalte audiențe', async () => {
+    monteaza([]);
+    expect(await screen.findByRole('button', { name: /Trimite email/ })).toBeTruthy();
   });
 });

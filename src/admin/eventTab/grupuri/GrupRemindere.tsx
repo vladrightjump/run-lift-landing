@@ -7,8 +7,42 @@ import {
   REMINDER_TEMPLATE_KEYS,
   type ReminderTemplateKey,
 } from '../../../content/eventConfig';
-import { remindereleProgramate, urmatorulReminder } from '../../remindere';
+import {
+  remindereleProgramate,
+  urmatorulReminder,
+  nuMaiPleaca,
+  esteNereusit,
+  type LivrareReminder,
+  type StareReminder,
+} from '../../remindere';
 import { ETICHETE_SABLOANE, areEroareIndexata } from '../ajutoare';
+
+/**
+ * Semnul din dreptul fiecărui rând.
+ *
+ * `Record` complet, nu ternare înlănțuite: ternarele aveau o ramură implicită,
+ * iar o stare nouă cădea tăcut pe „✓". Adică `neplecat` — starea inventată
+ * tocmai ca să arate că reminderul n-a plecat — s-ar fi randat cu bifă. Așa,
+ * TypeScript pică build-ul la starea următoare.
+ */
+const SEMNE: Record<StareReminder, string> = {
+  oprit: '—',
+  programat: '✓',
+  iminent: '✓',
+  trimis: '✓',
+  esuat: '!',
+  ratat: '!',
+  neplecat: '!',
+  trecut: '✓',
+};
+
+/**
+ * Timpul verbului din ecou. „pleacă joi, 6 august" pe un reminder care n-a
+ * plecat niciodată e chiar afirmația falsă pe care o repară unitatea, la
+ * nivel de rând.
+ */
+const verbul = (stare: StareReminder): string =>
+  stare === 'trimis' ? 'a plecat' : esteNereusit(stare) ? 'trebuia să plece' : 'pleacă';
 
 type Props = {
   ciorna: EventConfig;
@@ -16,16 +50,29 @@ type Props = {
   erori: Map<string, string>;
   /** Momentul curent — orarul se citește față de el. */
   acum: number;
+  /**
+   * Livrările ediției, din `email_log`. `null` = jurnalul n-a putut fi citit,
+   * caz în care nu se afirmă nimic despre livrare.
+   */
+  livrari: LivrareReminder[] | null;
 };
 
 /** „Remindere": orarul emailurilor care pleacă singure înainte de cursă. */
-export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum }: Props) => {
+export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }: Props) => {
   const ocupat = useContext(Blocat);
   // Derivate din ciornă, nu primite: grupul e singurul care le folosește, iar
   // ca prop-uri ar fi fost două valori în plus de ținut în sincron.
-  const programate = useMemo(() => remindereleProgramate(ciorna, acum), [ciorna, acum]);
+  const programate = useMemo(
+    () => remindereleProgramate(ciorna, acum, livrari),
+    [ciorna, acum, livrari]
+  );
   const urmatorul = useMemo(() => urmatorulReminder(programate), [programate]);
-  const active = useMemo(() => programate.filter((r) => r.intrare.enabled), [programate]);
+  // „Activ" înseamnă „mai are cum să plece", nu doar „are bifa pusă": un rând
+  // `neplecat` e bifat și nu pleacă niciodată.
+  const active = useMemo(
+    () => programate.filter((r) => r.intrare.enabled && !nuMaiPleaca(r.stare)),
+    [programate]
+  );
   return (
   <Grup
     titlu="Remindere"
@@ -59,9 +106,7 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum }: Props) 
         return (
           <li key={i} className={eroareAvans ? 'invalid' : ''}>
             <div className="admin-reels-rand">
-              <span className="admin-layout-nr">
-                {r.stare === 'oprit' ? '—' : r.stare === 'ratat' ? '!' : '✓'}
-              </span>
+              <span className="admin-layout-nr">{SEMNE[r.stare]}</span>
               <div className="admin-reels-campuri">
                 <label className="admin-config-eticheta" htmlFor={`rem-ore-${i}`}>
                   Cu câte ore înainte de start
@@ -91,7 +136,11 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum }: Props) 
                     {eroareAvans}
                   </span>
                 ) : (
-                  r.cand && <span className="admin-config-ecou">{`pleacă ${r.cand} · ${r.distanta}`}</span>
+                  r.cand && (
+                    <span className="admin-config-ecou">
+                      {`${verbul(r.stare)} ${r.cand} · ${r.distanta}`}
+                    </span>
+                  )
                 )}
                 {/*
                   Nota e sub ecou, nu în locul lui: „a trecut" fără ora la
@@ -100,9 +149,9 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum }: Props) 
                 {r.nota && (
                   <span
                     className={
-                      r.stare === 'ratat' ? 'admin-config-eroare' : 'admin-config-ecou'
+                      esteNereusit(r.stare) ? 'admin-config-eroare' : 'admin-config-ecou'
                     }
-                    role={r.stare === 'ratat' ? 'status' : undefined}
+                    role={esteNereusit(r.stare) ? 'status' : undefined}
                   >
                     {r.nota}
                   </span>
