@@ -28,7 +28,38 @@ export type AdminRegistration = {
    * inventarea unor UUID-uri care nu deschid nimic.
    */
   token_renunt?: string;
+  /**
+   * A venit la cursă. `null`/absent = încă nu se știe; `false` = s-a constatat
+   * că n-a venit.
+   *
+   * Distincția e tot rostul coloanei: o valoare implicită `false` ar afirma
+   * absența fiecărui înscris cu săptămâni înainte de cursă.
+   */
+  prezent?: boolean | null;
+  /** Numărul de concurs. Unic pe ediție între rândurile vii. */
+  numar?: number | null;
+  /** Timpul final, ca `HH:MM:SS` — serverul îl fixează la forma asta. */
+  timp_final?: string | null;
 };
+
+/** Cele trei câmpuri de prezență, așa cum se scriu împreună. */
+export type Prezenta = {
+  prezent: boolean | null;
+  numar: number | null;
+  timp_final: string | null;
+};
+
+/**
+ * Motivul refuzului la scrierea prezenței, tradus.
+ *
+ * `null` când serverul n-a răspuns în termeni pe care-i știm — de regulă
+ * fiindcă n-a răspuns deloc.
+ */
+export type RefuzPrezenta =
+  | 'not_found'
+  | 'timp_invalid'
+  | 'numar_invalid'
+  | 'numar_duplicat';
 
 export const getStoredToken = (): string | null => {
   try {
@@ -306,6 +337,35 @@ export const updateRegistration = (
     p_telefon: data.telefon,
     p_email: data.email,
   });
+
+/**
+ * Scrie cele trei câmpuri de prezență pe un rând.
+ *
+ * Se scriu ÎMPREUNĂ și `null` ȘTERGE — semantica e „starea de prezență a
+ * rândului e asta", nu „actualizează ce ți-am dat". Altfel un număr pus din
+ * greșeală n-ar mai putea fi scos niciodată.
+ */
+export const setPrezenta = (
+  token: string,
+  id: string,
+  date: Prezenta
+): Promise<void> =>
+  rpc<void>('admin_set_prezenta', {
+    p_token: token,
+    p_id: id,
+    p_prezent: date.prezent,
+    p_numar: date.numar,
+    p_timp_final: date.timp_final,
+  });
+
+/** Motivul recunoscut al serverului, sau `null` când nu-l știm traduce. */
+export const refuzPrezenta = (err: unknown): RefuzPrezenta | null => {
+  const text = err instanceof Error ? err.message : String(err);
+  for (const motiv of ['numar_duplicat', 'numar_invalid', 'timp_invalid', 'not_found'] as const) {
+    if (text.includes(motiv)) return motiv;
+  }
+  return null;
+};
 
 /* ---- Feed de audit (admin_events): promovări automate etc. ---- */
 

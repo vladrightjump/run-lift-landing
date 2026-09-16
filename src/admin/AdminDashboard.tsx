@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { toCsv } from '../lib/csv';
+import { toCsv, durataCsv } from '../lib/csv';
 import {
   addRegistration,
   updateRegistration,
@@ -16,6 +16,8 @@ import {
   createEdition,
   listEmailLog,
   listEventConfig,
+  setPrezenta,
+  refuzPrezenta,
   InvalidTokenError,
 } from '../lib/adminApi';
 import type {
@@ -24,6 +26,7 @@ import type {
   AdminEvent,
   AdminEdition,
   AdminEmailLogEntry,
+  Prezenta,
 } from '../lib/adminApi';
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
@@ -47,6 +50,7 @@ import { AdminActivitate } from './AdminActivitate';
 import { AdminAsteptare } from './AdminAsteptare';
 import { AdminCifre } from './AdminCifre';
 import { AdminRandAdaugare } from './AdminRandAdaugare';
+import { DialogPrezenta } from './DialogPrezenta';
 import { fazaSite, ETICHETA_FAZA, type TabAdmin } from './stareCurenta';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
@@ -92,6 +96,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
+  const [prezentaRow, setPrezentaRow] = useState<AdminRegistration | null>(null);
   const [tab, setTab] = useState<TabAdmin>('participanti');
   // Semnalele pentru panoul „Acum". Ciorna și amprenta de build trăiesc în
   // tabul „Eveniment"; aici le citim doar ca să putem spune, din prima pagină,
@@ -491,6 +496,34 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       .finally(() => setSaving(false));
   };
 
+  /** Motivele refuzului, traduse. Fiecare cere altceva de la operator. */
+  const MESAJ_PREZENTA: Record<NonNullable<ReturnType<typeof refuzPrezenta>>, string> = {
+    numar_duplicat: 'Numărul e deja dat altcuiva din ediția asta.',
+    numar_invalid: 'Numărul de concurs e un întreg pozitiv.',
+    timp_invalid: 'Timpul nu a fost înțeles. Scrie-l ca 32:15 sau 1:02:15.',
+    not_found: 'Înscrierea nu mai există — poate a fost ștearsă între timp.',
+  };
+
+  const handlePrezenta = (row: AdminRegistration, date: Prezenta) => {
+    if (randuriOcupate.has(row.id)) return;
+    ocupa(row.id);
+    setPrezenta(token, row.id, date)
+      .then(() => {
+        setPrezentaRow(null);
+        refresh();
+        showToast({ kind: 'success', msg: `Prezența pentru ${row.nume} a fost salvată.` });
+      })
+      .catch((err) => {
+        if (handleAuthError(err)) return;
+        const motiv = refuzPrezenta(err);
+        showToast({
+          kind: 'error',
+          msg: motiv ? MESAJ_PREZENTA[motiv] : 'Nu am putut salva. Încearcă din nou.',
+        });
+      })
+      .finally(() => elibereaza(row.id));
+  };
+
   const startEdit = (row: AdminRegistration) => {
     setEditId(row.id);
     setDraft({ nume: row.nume, telefon: row.telefon, email: row.email });
@@ -536,13 +569,30 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   };
 
   const exportCsv = () => {
-    const header = ['Nr', 'Nume', 'Telefon', 'Email', 'Data înscrierii'];
+    // Coloanele de prezență vin la coadă, ca ordinea existentă să nu se mute
+    // sub formulele cuiva care deja lucrează cu exportul.
+    const header = [
+      'Nr',
+      'Nume',
+      'Telefon',
+      'Email',
+      'Data înscrierii',
+      'Prezent',
+      'Număr',
+      'Timp final',
+    ];
     const lines = all.map((r, i) => [
       String(i + 1),
       r.nume,
       r.telefon,
       r.email,
       new Date(r.created_at).toLocaleString('ro-RO'),
+      // Necompletat rămâne CELULĂ GOALĂ, nu „false" și nu „nu": „încă nu se
+      // știe" și „n-a venit" sunt lucruri diferite, iar exportul e adesea
+      // singurul loc unde cineva le compară.
+      r.prezent === true ? 'da' : r.prezent === false ? 'nu' : '',
+      r.numar == null ? '' : String(r.numar),
+      durataCsv(r.timp_final),
     ]);
     const csv = toCsv([header, ...lines]);
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
@@ -780,6 +830,15 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                       </button>
                       <button
                         type="button"
+                        className="admin-btn-promote"
+                        title="Prezență, număr și timp final"
+                        disabled={randuriOcupate.has(r.id)}
+                        onClick={() => setPrezentaRow(r)}
+                      >
+                        Prezență
+                      </button>
+                      <button
+                        type="button"
                         className="admin-btn-delete"
                         title="Șterge înscrierea"
                         disabled={randuriOcupate.has(r.id)}
@@ -817,6 +876,15 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         </>
         )}
       </main>
+
+      {prezentaRow && (
+        <DialogPrezenta
+          rand={prezentaRow}
+          ocupat={randuriOcupate.has(prezentaRow.id)}
+          onSalveaza={(date) => handlePrezenta(prezentaRow, date)}
+          onInchide={() => setPrezentaRow(null)}
+        />
+      )}
 
       {confirmRow && (
         <div
