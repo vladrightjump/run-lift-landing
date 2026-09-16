@@ -102,6 +102,34 @@ rulează fișierul de armare (o singură dată pe proiect). `pg_net` **e** insta
 auto-promovarea de pe lista de așteptare — care merge tot prin `net.http_post` — chiar
 funcționează; doar cron-ul lipsește.
 
+**Reverificat pe 16 septembrie 2026:** neschimbat. `pg_cron` tot `installed_version: null`,
+tot zero chei `once_reminder_*`. În plus, `email_log` n-are **niciun** rând cu
+`mod = 'broadcast'`, pe nicio ediție — confirmarea independentă că ceasul n-a plecat niciodată.
+Reminderele edițiilor 5 și 6 apar ca `mod = 'admin'` (28 de rânduri pe ediția 6).
+
+Ecranul nu mai afirmă însă contrariul. PR #27 (fără migrare — doar client) derivă starea fiecărui
+reminder din `email_log`: un rând scadent fără urmă în jurnal se afișează `neplecat`, nu
+`programat`. Tot acolo, difuzarea manuală a reminderelor a fost retrasă din backoffice, ca
+armarea să nu se facă lângă un buton care trimite același text.
+
+**Fereastra de armare e deschisă acum:** `app_config.event_start` e `2026-09-05`, în trecut, deci
+nicio fereastră de reminder nu mai e deschisă și armarea nu poate trimite nimic. Se închide în
+clipa în care se publică ediția 7.
+
+### `supabase-migration-reminder-binar.sql` — NEAPLICAT
+
+Al treilea șablon de reminder, `bulk_participant_reminder_binar`: întrebarea de la 72 de ore
+(„mai vii?"), cu `{link_renunt}` ca singură acțiune. Nu adaugă schemă — un singur `insert` în
+`runlift.email_templates`, idempotent prin `on conflict (cheie) do nothing`, ca să nu suprascrie
+un text editat între timp din `/admin` → „Șabloane".
+
+Clientul îl cunoaște deja (`REMINDER_TEMPLATE_KEYS`, `ETICHETE_SABLOANE`, help-ul din tabul
+„Șabloane"), deci până la aplicare cheia apare în selectorul de orar fără să aibă text în DB.
+**Aplică migrarea înainte de a pune un rând de orar pe ea.**
+
+Rândul la `offsetHours: 72` nu vine din migrare — orarul e al operatorului și se scrie din
+`/admin` la configurarea ediției.
+
 ### `supabase-migration-undo-waitlist.sql` — APLICAT 7 septembrie 2026
 
 Ștergere logică pe `event_waitlist` + `admin_undelete_waitlist`, cu paritate față de

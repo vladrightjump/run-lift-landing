@@ -59,8 +59,8 @@ const PREVIEW = {
   pentru: { email: 'ana@exemplu.ro', nume: 'Ana Popescu' },
 };
 
-const randeaza = () => {
-  listEmailTemplates.mockResolvedValue([SABLON]);
+const randeaza = (sabloane: (typeof SABLON)[] = [SABLON]) => {
+  listEmailTemplates.mockResolvedValue(sabloane);
   listRegistrations.mockResolvedValue([PARTICIPANT]);
   previewEmailHtml.mockResolvedValue(PREVIEW);
   return render(
@@ -218,5 +218,64 @@ describe('AdminTemplatesTab — cursele previzualizării', () => {
 
     expect(await screen.findByText(/nu mai e destinatar al ediției/)).toBeTruthy();
     expect(screen.queryByText(/niciun destinatar înscris/)).toBeNull();
+  });
+});
+
+/**
+ * `{link_renunt}` e singura variabilă a cărei absență nu se vede nicăieri.
+ *
+ * Paragraful care o poartă e FILTRAT pentru destinatarii fără token (vezi
+ * `faraLinkRenunt`), deci un reminder fără ea pleacă normal — doar fără butonul
+ * care schimbă ceva. Pe șablonul binar de la 72 de ore e mai rău decât cosmetic:
+ * pune o întrebare la care nu se poate răspunde.
+ */
+describe('AdminTemplatesTab — reminderul fără {link_renunt}', () => {
+  const faraLink = (cheie: string) => ({
+    ...SABLON,
+    cheie,
+    text_email: 'Salut, {prenume}!\n\nNe vedem sâmbătă.',
+  });
+
+  // Pe clasă, nu pe text: descrierea șablonului conține ea însăși „n-are loc",
+  // iar un matcher pe text prindea help-ul în loc de avertisment.
+  const avertismentul = () => document.querySelector('.admin-tpl-avertisment');
+
+  it('e semnalat pe reminderul obișnuit', async () => {
+    randeaza([faraLink('bulk_participant_reminder')]);
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    expect(avertismentul()).toBeTruthy();
+  });
+
+  it('e semnalat pe șablonul binar — acolo întrebarea rămâne fără buton', async () => {
+    randeaza([faraLink('bulk_participant_reminder_binar')]);
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    expect(avertismentul()).toBeTruthy();
+  });
+
+  it('nu apare când linkul e în text', async () => {
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    expect(avertismentul()).toBeNull();
+  });
+
+  /**
+   * Doar reminderele. Confirmarea n-are ce face cu un link de renunțare —
+   * omul tocmai s-a înscris.
+   */
+  it('nu se aplică șabloanelor care nu sunt remindere', async () => {
+    randeaza([faraLink('bulk_participant_confirmare')]);
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    expect(avertismentul()).toBeNull();
+  });
+
+  it('apare în timp real, pe textul din ciornă, nu pe cel salvat', async () => {
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    expect(avertismentul()).toBeNull();
+
+    const textarea = document.querySelector('.admin-tpl-field textarea') as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'Ne vedem sâmbătă, fără link.' } });
+
+    expect(avertismentul()).toBeTruthy();
   });
 });
