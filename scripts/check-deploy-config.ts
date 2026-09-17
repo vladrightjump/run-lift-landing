@@ -20,13 +20,32 @@ const problems = checkDeployConfig({
 });
 
 if (problems.length > 0) {
-  console.error('\n✗ Config de deploy inconsistent (CSP connect-src ↔ SUPABASE.url):');
+  console.error('\n✗ Config de deploy inconsistent (CSP ↔ SUPABASE.url / Turnstile):');
   for (const p of problems) console.error(`  - ${p}`);
   console.error(
-    '\nActualizează `vercel.json` (headerul CSP, directiva connect-src) ca să corespundă\n' +
-      'cu `src/lib/backend.ts` (SUPABASE.url). Vezi src/lib/deployConfig.ts.\n'
+    '\nActualizează `vercel.json` (headerul CSP: connect-src / script-src / frame-src)\n' +
+      'ca să corespundă cu `src/lib/backend.ts` (SUPABASE.url) și cu Turnstile.\n' +
+      'Vezi src/lib/deployConfig.ts.\n'
   );
   process.exit(1);
 }
 
-console.log('✓ Config de deploy consistent (CSP connect-src ↔ SUPABASE.url).');
+/**
+ * Cheia publică Turnstile. Fără ea, `src/lib/turnstile.ts` se dezactivează
+ * singur — util în dev, dar în producție ar însemna captcha oprit fără ca nimeni
+ * să observe. De aceea build-ul de producție Vercel pică; local doar avertizează.
+ */
+const siteKey = process.env.VITE_TURNSTILE_SITE_KEY ?? '';
+if (!siteKey) {
+  if (process.env.VERCEL_ENV === 'production') {
+    console.error(
+      '\n✗ VITE_TURNSTILE_SITE_KEY lipsește la un build de PRODUCȚIE.\n' +
+        '  Fără ea, formularele s-ar trimite fără captcha. Adaug-o în Vercel →\n' +
+        '  Project Settings → Environment Variables.\n'
+    );
+    process.exit(1);
+  }
+  console.warn('⚠ VITE_TURNSTILE_SITE_KEY lipsește — Turnstile dezactivat în acest build.');
+}
+
+console.log('✓ Config de deploy consistent (CSP ↔ SUPABASE.url, Turnstile).');

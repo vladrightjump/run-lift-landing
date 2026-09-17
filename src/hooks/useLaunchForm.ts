@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   submitLaunchNotification,
-  sendInfoEmail,
   isDuplicateError,
   isTimeoutError,
   isAbortError,
+  isBotRejectedError,
 } from '../lib/supabase';
 import type { SursaInscriere } from '../lib/supabase';
 import { logClientError } from '../lib/monitoring';
+import { useAntiBot, antiBotErrorMessage, ANTIBOT_MESSAGES } from '../lib/antiBot';
+import { isTurnstileError } from '../lib/turnstile';
 import {
   EMPTY_LAUNCH_DRAFT,
   LAUNCH_MESSAGES,
@@ -39,6 +41,7 @@ export const useLaunchForm = (sursa: SursaInscriere = 'lansare') => {
   const [state, setState] = useState<LaunchFormState>('form');
   const abortRef = useRef<AbortController | null>(null);
   const submittingRef = useRef(false);
+  const antiBot = useAntiBot();
 
   // Oprește fetch-ul în curs la unmount.
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -57,6 +60,7 @@ export const useLaunchForm = (sursa: SursaInscriere = 'lansare') => {
     setDraft(EMPTY_LAUNCH_DRAFT);
     setErrors({});
     setState('form');
+    antiBot.restart();
   };
 
   const submit = async (): Promise<LaunchOutcome> => {
@@ -79,9 +83,10 @@ export const useLaunchForm = (sursa: SursaInscriere = 'lansare') => {
     const email = draft.email.trim();
 
     try {
-      await submitLaunchNotification(draft, controller.signal, sursa);
-      // Emailul de confirmare pleacă best-effort — nu blocăm succesul.
-      void sendInfoEmail(email);
+      // Token-ul Turnstile se cere ACUM, nu la montare: e de unică folosință și
+      // expiră în ~5 minute. Emailul de bun venit îl trimite funcția Edge.
+      const proofs = await antiBot.collect();
+      await submitLaunchNotification(draft, proofs, controller.signal, sursa);
       setState('success');
       return { kind: 'success', duplicate: false, email };
     } catch (err) {
@@ -93,6 +98,14 @@ export const useLaunchForm = (sursa: SursaInscriere = 'lansare') => {
       }
       logClientError(`launch-notification:${sursa}`, err);
       setState('form');
+      // Verificarea anti-bot a picat în client (script blocat) sau pe server
+      // (token invalid): mesaj propriu, altfel „verifică conexiunea" derutează.
+      if (isTurnstileError(err)) {
+        return { kind: 'error', message: antiBotErrorMessage(err) };
+      }
+      if (isBotRejectedError(err)) {
+        return { kind: 'error', message: ANTIBOT_MESSAGES.captcha };
+      }
       return {
         kind: 'error',
         message: isTimeoutError(err) ? LAUNCH_MESSAGES.timeout : LAUNCH_MESSAGES.generic,
@@ -102,5 +115,5 @@ export const useLaunchForm = (sursa: SursaInscriere = 'lansare') => {
     }
   };
 
-  return { draft, setField, errors, state, submit, reset };
+  return { draft, setField, errors, state, submit, reset, hpProps: antiBot.hpProps };
 };

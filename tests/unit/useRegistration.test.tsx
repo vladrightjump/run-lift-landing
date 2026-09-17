@@ -138,10 +138,20 @@ describe('useRegistration — drumul fericit', () => {
     expect(submitRegistration).toHaveBeenCalledTimes(1);
   });
 
-  it('trimite emailul de confirmare cu id-ul întors de înscriere', async () => {
+  /**
+   * Confirmarea NU mai pleacă din client.
+   *
+   * După lockdown, `anon` n-are drept de INSERT, deci înscrierea trece prin
+   * funcția Edge `submit-form` — iar aceasta trimite confirmarea imediat după
+   * insert, best-effort. Un al doilea apel din browser ar fi fost un al doilea
+   * email pentru aceeași înscriere, iar id-ul pe care l-ar fi purtat nici nu
+   * mai ajunge în client: `Prefer: return=minimal`.
+   */
+  it('nu mai trimite confirmarea din client — o trimite funcția Edge', async () => {
     randeaza();
     await trimiteSiAsteapta();
-    expect(sendConfirmationEmail).toHaveBeenCalledWith('id-nou');
+    expect(submitRegistration).toHaveBeenCalledTimes(1);
+    expect(sendConfirmationEmail).not.toHaveBeenCalled();
   });
 
   it('ține minte înscrierea local și cere restatisticarea', async () => {

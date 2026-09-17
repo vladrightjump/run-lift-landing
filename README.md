@@ -50,14 +50,16 @@ botul de Telegram. Run + Lift trăiește în schema **`runlift`** (rutată prin 
 `Accept-Profile` / `Content-Profile`). Detalii + granițe: **`MIGRATIONS.md`**.
 
 - **`registrations`** — înscrieri (nume, telefon, email, dată naștere, ediție). Email unic pe
-  (email, ediție). RLS: cheia publică poate doar **INSERT** (cu `acord = true`); citirea datelor
-  personale — doar din backoffice.
+  (email, ediție). Citirea datelor personale — doar din backoffice.
+- **Scrierea publică trece prin funcția edge `submit-form`**, care verifică un token
+  **Cloudflare Turnstile** înainte de a insera. Cheia publică **nu mai poate insera direct**:
+  altfel un bot ar putea ocoli captcha cu un simplu `curl`. Vezi **`ANTI-BOT.md`**.
 - **RPC `public_stats`** — GET public, doar date ne-personale (`count`, prenume mascat, `waitlist`).
   Alimentează bara „Locuri rămase".
 - **Emailuri (Resend)** — funcția edge `send-email`. Conținutul (confirmare, reminder, anunț,
   badge) NU e hardcodat: vine din `email_templates` și e **editabil din `/admin`**.
 - **Config client** — `src/lib/backend.ts` (`SUPABASE`). Cheia e publică prin design; protecția
-  vine din RLS.
+  vine din RLS + verificarea Turnstile din `submit-form`.
 
 ## Ediție nouă (pe scurt)
 
@@ -85,7 +87,8 @@ ora lor cu `?preview=leaderboard` și `?preview=next`. Detalii + pașii de după
 
 Git-connected: push pe `main` (GitHub `vladrightjump/run-lift-landing`) → Vercel rulează
 `npm run build` și publică. Domeniu: **parktraining.fit**. CSP-ul (`vercel.json`) trebuie să
-permită originul Supabase curent — există test care păzește asta.
+permită originul Supabase curent **și `challenges.cloudflare.com`** (Turnstile) — există teste
+care păzesc ambele. `VITE_TURNSTILE_SITE_KEY` e obligatorie la build-ul de producție.
 
 ## Teste
 
@@ -129,6 +132,7 @@ delegarea de fullscreen. Există teste care păzesc ambele.
 - **`TASK-FOR-CLAUDE.md`** — context/handoff (arhitectură + decizii + capcane + Live URLs).
 - **`GHID-EDITIE-NOUA.md`** — runbook pas cu pas pentru o ediție nouă.
 - **`MIGRATIONS.md`** — migrările DB + granița față de gym-app/bot.
+- **`ANTI-BOT.md`** — Turnstile + lockdown RLS: cum funcționează, configurare, runbook de deploy.
 - **`ERROR-HANDLING.md`** — tratarea erorilor, monitoring și garda CSP↔config la build.
 - **`CI-CD.md`** — pipeline-ul de testare + deploy Vercel verificat pe live.
 - **`BACKLOG.md`** — lucruri deschise (GDPR, FAQ, rezultate, Turnstile, creștere…).

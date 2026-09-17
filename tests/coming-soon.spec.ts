@@ -15,7 +15,9 @@ const { LAUNCH_EDITION_ORDINAL } = deriveEventStrings(SNAPSHOT_CONFIG);
  * Testele mock-uiesc endpointul Supabase, deci nu scriu în baza de date reală.
  */
 
-const INSERT_ROUTE = '**/rest/v1/launch_notifications';
+// Formularul trece prin funcția Edge `submit-form`, care verifică Turnstile
+// înainte de a scrie — browserul nu mai inserează direct în PostgREST.
+const INSERT_ROUTE = '**/functions/v1/submit-form';
 
 // Ceas fixat înainte de lansare (22 iulie 18:00) dar care AVANSEAZĂ în timp real
 // — altfel, dacă rulăm testele după ora lansării, countdown-ul e „done" și
@@ -168,7 +170,7 @@ test.describe('Coming Soon — formular „Anunță-mă la lansare"', () => {
   });
 
   test('submit valid (mock 201) → ecran de succes', async ({ page }) => {
-    await page.route(INSERT_ROUTE, (route) => route.fulfill({ status: 201, body: '' }));
+    await page.route(INSERT_ROUTE, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
 
     const modal = await openModal(page);
     await fillValid(modal);
@@ -217,7 +219,7 @@ test.describe('Coming Soon — formular „Anunță-mă la lansare"', () => {
       const fixed = new Date('2026-08-04T18:00:01+03:00').getTime();
       Date.now = () => fixed;
     });
-    await page.route(INSERT_ROUTE, (route) => route.fulfill({ status: 201, body: '' }));
+    await page.route(INSERT_ROUTE, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
 
     const modal = await openModal(page);
     await fillValid(modal);
