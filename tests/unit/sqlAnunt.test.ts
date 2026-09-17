@@ -73,7 +73,8 @@ const SCHEMA = `
   );
 `;
 
-const migratie = (fisier: string) => readFileSync(resolve(__dirname, '../..', fisier), 'utf8');
+const migratie = (fisier: string) =>
+  readFileSync(resolve(__dirname, '../../supabase/sql', fisier), 'utf8');
 const ISTORIC = migratie('supabase-migration-anunt-istoric.sql');
 const REJUCARE = migratie('supabase-migration-anunt-rejucare.sql');
 
