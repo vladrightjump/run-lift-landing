@@ -58,6 +58,7 @@ const rec = (over: Partial<Recipient>): Recipient => ({
   telefon: '',
   created_at: '',
   dezabonat: false,
+  tokenRenunt: '',
   ...over,
 });
 
@@ -132,5 +133,67 @@ describe('emailAudience', () => {
 
   it('fillTemplate înlocuiește toate aparițiile aceleiași variabile', () => {
     expect(fillTemplate('{nume}-{nume}', rec({ nume: 'X' }), '')).toBe('X-X');
+  });
+});
+
+describe('fillTemplate leagă și variabilele evenimentului', () => {
+  it('rezolvă într-un singur pas și persoana, și evenimentul', async () => {
+    const { SNAPSHOT_CONFIG } = await import('../../src/content/eventConfig');
+    const out = fillTemplate(
+      'Salut, {prenume}! Ne vedem {data_cursei}, ora {ora_start}, la {locul}.',
+      rec({ nume: 'Ana Pop', prenume: 'Ana' }),
+      '1 ianuarie',
+      SNAPSHOT_CONFIG
+    );
+    expect(out).toContain('Ana');
+    expect(out).toContain(SNAPSHOT_CONFIG.venue.name);
+    expect(out).not.toMatch(/\{[a-z_]+\}/);
+  });
+
+  it('fără config, doar variabilele de persoană se rezolvă', () => {
+    // Garda pentru cablare: dacă cineva uită să paseze configul dintr-un tab,
+    // emailul pleacă vizibil stricat, nu cu o dată greșită.
+    const out = fillTemplate('{prenume} — {data_cursei}', rec({ prenume: 'Ana' }), '');
+    expect(out).toBe('Ana — {data_cursei}');
+  });
+});
+
+/**
+ * `{link_renunt}` e singura variabilă care poate lipsi LEGITIM: doar
+ * participanții au un loc de eliberat. Ce se testează aici e comportamentul la
+ * lipsă — un „{link_renunt}" literal plecat într-un email e o promisiune pe care
+ * omul o vede ruptă, iar un „eliberează-ți locul aici:" urmat de nimic e și mai
+ * derutant decât absența întreagă. De aceea cade PARAGRAFUL, nu rândul:
+ * introducerea stă, în șabloanele reale, pe rândul de deasupra linkului.
+ */
+describe('fillTemplate — linkul de renunțare', () => {
+  // Structura șablonului real din DB: introducerea și linkul, același paragraf.
+  const SABLON =
+    'Salut, {prenume}!\n\nDacă nu mai poți veni, eliberează locul:\n{link_renunt}\n\nNe vedem!';
+
+  it('cu token, linkul poartă exact tokenul destinatarului', () => {
+    const out = fillTemplate(SABLON, rec({ tokenRenunt: 'abc-123' }), '');
+    expect(out).toContain('https://parktraining.fit/renunt?token=abc-123');
+  });
+
+  it('fără token, cade tot paragraful — nu rămâne o frază care trimite spre nimic', () => {
+    const out = fillTemplate(SABLON, rec({ tokenRenunt: '' }), '');
+    expect(out).not.toContain('{link_renunt}');
+    expect(out).not.toContain('eliberează locul');
+    expect(out).toBe('Salut, X!\n\nNe vedem!');
+  });
+
+  it('cade fiecare paragraf care o poartă, nu doar primul', () => {
+    const out = fillTemplate(
+      'a\n\n{link_renunt}\n\nb\n\nvezi {link_renunt}\n\nc',
+      rec({ tokenRenunt: '' }),
+      ''
+    );
+    expect(out).toBe('a\n\nb\n\nc');
+  });
+
+  it('restul textului rămâne neatins, inclusiv rândurile simple din paragraf', () => {
+    const out = fillTemplate('unu\ndoi\n\n{link_renunt}', rec({ tokenRenunt: '' }), '');
+    expect(out).toBe('unu\ndoi');
   });
 });

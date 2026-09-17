@@ -19,7 +19,13 @@ import type { AntiBot, PublicStats } from '../lib/supabase';
 import { logClientError } from '../lib/monitoring';
 import { useAntiBot, antiBotErrorMessage, ANTIBOT_MESSAGES } from '../lib/antiBot';
 import { isTurnstileError } from '../lib/turnstile';
-import { validate, errorMessage, firstErrorField, dataNasteriiError } from '../lib/validation';
+import {
+  validate,
+  errorMessage,
+  firstErrorField,
+  dataNasteriiError,
+  numeComplet,
+} from '../lib/validation';
 import type { FieldName, FieldErrors, FormData } from '../lib/validation';
 import { rememberMySignup } from '../lib/mySignups';
 import type { ToastKind } from './useToast';
@@ -143,6 +149,7 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
     const fd = new window.FormData(e.currentTarget);
     const data: FormData = {
       nume: String(fd.get('nume') ?? '').trim(),
+      prenume: String(fd.get('prenume') ?? '').trim(),
       telefon: String(fd.get('telefon') ?? '').trim(),
       email: String(fd.get('email') ?? '').trim(),
       dataNasterii: String(fd.get('dataNasterii') ?? '').trim(),
@@ -166,7 +173,11 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
     setErrors({});
     setPhase('loading');
     submittingRef.current = true;
-    const firstName = data.nume.split(/\s+/)[0] || 'atlet';
+    // Prenumele e acum un câmp, nu primul cuvânt dintr-un „nume complet".
+    // Ghicitul de dinainte dădea „Salut, Popescu" pentru oricine își scria
+    // numele de familie primul, și numele întreg pentru cine scria doar un
+    // cuvânt.
+    const firstName = data.prenume || 'atlet';
     const startedAt = Date.now();
 
     const enforceMin = async () => {
@@ -179,7 +190,7 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
       setSubmittedAsWaitlist(wasWaitlist);
       if (!wasWaitlist) {
         setSessionSignups((n) => n + 1);
-        rememberMySignup(data.nume);
+        rememberMySignup(numeComplet(data));
       }
       if (isBackendConfigured()) refresh();
       setPhase('success');

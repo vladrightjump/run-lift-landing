@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { toCsv } from '../lib/csv';
+import { toCsv, durataCsv } from '../lib/csv';
 import {
   addRegistration,
   updateRegistration,
@@ -9,12 +9,15 @@ import {
   listRegistrations,
   listWaitlist,
   deleteWaitlist,
+  undeleteWaitlist,
   promoteWaitlist,
   listAdminEvents,
   listEditions,
   createEdition,
   listEmailLog,
   listEventConfig,
+  setPrezenta,
+  refuzPrezenta,
   InvalidTokenError,
 } from '../lib/adminApi';
 import type {
@@ -23,6 +26,7 @@ import type {
   AdminEvent,
   AdminEdition,
   AdminEmailLogEntry,
+  Prezenta,
 } from '../lib/adminApi';
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
@@ -32,24 +36,27 @@ import { AdminNav } from './AdminNav';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
-import { emailuriNelivrate, acoperire, COMUNICARI_EDITIE } from './deliveryLog';
+import { emailuriNelivrate, acoperire } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
 import { useAdminPolling } from './useAdminPolling';
-import {
-  isDuplicateError,
-  isTimeoutError,
-  isNetworkOrCspError,
-  sendConfirmationEmail,
-} from '../lib/supabase';
+import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../lib/validation';
 import { useCountdown } from '../hooks/useCountdown';
 import { useNow } from '../hooks/useNow';
 import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
-import { AdminSkeleton, AdminFeedSkeleton } from './AdminSkeleton';
+import { AdminSkeleton } from './AdminSkeleton';
 import { AdminAcum } from './AdminAcum';
+import { AdminActivitate } from './AdminActivitate';
+import { AdminAsteptare } from './AdminAsteptare';
+import { AdminCifre } from './AdminCifre';
+import { AdminRandAdaugare } from './AdminRandAdaugare';
+import { DialogPrezenta } from './DialogPrezenta';
 import { fazaSite, ETICHETA_FAZA, type TabAdmin } from './stareCurenta';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
+import { ziSiLuna } from '../lib/formatare';
+import { FurnizorSesiuneAdmin } from './adminSession';
+import { rezumaAcoperire, motivUndoEsuat } from './dashboardRezumate';
 
 type Props = {
   token: string;
@@ -71,73 +78,6 @@ type AdminToast = {
  */
 // Gruparea taburilor stă în `adminNavigatie.ts`, ca modul pur.
 
-const dateFmt = new Intl.DateTimeFormat('ro-RO', { day: 'numeric', month: 'short' });
-const formatDate = (iso: string): string => dateFmt.format(new Date(iso)).replace('.', '');
-
-const eventFmt = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-});
-const formatEventTime = (iso: string): string => eventFmt.format(new Date(iso));
-
-/**
- * Insigna din tabelul de participanți — cea mai PROASTĂ stare dintre comunicările
- * datorate, nu cea mai recentă trimitere. Un eșec rămâne vizibil chiar dacă altă
- * comunicare a plecat cu bine după el.
- */
-const rezumaAcoperire = (
-  celule: Record<string, StareCelula>
-): { clasa: string; eticheta: string; detaliu: string } => {
-  const stari = COMUNICARI_EDITIE.map((c) => ({ com: c, stare: celule[c.cheie] ?? 'lipsa' }));
-  const detaliu = stari.map(({ com, stare }) => `${com.eticheta}: ${STARE_TEXT[stare]}`).join(' · ');
-  const esuate = stari.filter((s) => s.stare === 'esuat');
-  if (esuate.length) {
-    return {
-      clasa: 'esuat',
-      eticheta: `✕ ${esuate.map((s) => s.com.eticheta.toLowerCase()).join(', ')}`,
-      detaliu,
-    };
-  }
-  const lipsa = stari.filter((s) => s.stare === 'lipsa');
-  if (lipsa.length === stari.length) return { clasa: 'niciunul', eticheta: '— niciunul', detaliu };
-  if (lipsa.length) {
-    return {
-      clasa: 'partial',
-      eticheta: `${stari.length - lipsa.length}/${stari.length}`,
-      detaliu,
-    };
-  }
-  return { clasa: 'trimis', eticheta: '✓ complet', detaliu };
-};
-
-/**
- * De ce n-a mers reversarea. Ambele cauze sunt reale și au apărut exact în
- * fereastra dintre ștergere și undo: locul poate fi luat de auto-promovare, iar
- * adresa poate fi re-înscrisă. Înainte, undo-ul trecea peste amândouă în tăcere.
- */
-const motivUndoEsuat = (err: unknown, nume: string): string => {
-  // `SubmitHttpError.message` poartă corpul răspunsului, deci și numele excepției
-  // ridicate de RPC (`event_full`, `duplicate_email`).
-  const text = err instanceof Error ? err.message : String(err);
-  if (text.includes('event_full')) {
-    return `Locul lui ${nume} a fost ocupat între timp — ediția e plină. Șterge pe altcineva sau adaugă-l manual peste capacitate.`;
-  }
-  if (text.includes('duplicate_email')) {
-    return `Adresa lui ${nume} a fost re-înscrisă între timp, deci nu se mai poate readuce rândul vechi.`;
-  }
-  if (isTimeoutError(err)) return 'Serverul răspunde greu. Verifică lista și încearcă din nou.';
-  if (isNetworkOrCspError(err)) return 'Conexiune blocată sau indisponibilă. Reîncearcă.';
-  return 'Nu am putut anula ștergerea.';
-};
-
-const STARE_TEXT: Record<StareCelula, string> = {
-  trimis: 'trimis',
-  esuat: 'eșuat',
-  lipsa: 'lipsă',
-};
 
 export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [rows, setRows] = useState<AdminRegistration[] | null>(null);
@@ -156,6 +96,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
+  const [prezentaRow, setPrezentaRow] = useState<AdminRegistration | null>(null);
   const [tab, setTab] = useState<TabAdmin>('participanti');
   // Semnalele pentru panoul „Acum". Ciorna și amprenta de build trăiesc în
   // tabul „Eveniment"; aici le citim doar ca să putem spune, din prima pagină,
@@ -345,8 +286,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const filtered = all.filter(
     (r) => !q || `${r.nume} ${r.telefon} ${r.email}`.toLowerCase().includes(q)
   );
-  const remaining = Math.max(0, TOTAL_SLOTS - all.length);
-  const percent = Math.round((all.length / TOTAL_SLOTS) * 100);
   const waitAll = waitlist ?? [];
 
   // Acoperirea per participant — pentru indicatorul din tabel.
@@ -402,9 +341,28 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       .finally(() => setCreatingEdition(false));
   };
 
+  /**
+   * Rândurile cu o acțiune în zbor.
+   *
+   * Pe rând, nu global: un rând ocupat n-are de ce să înghețe restul tabelului,
+   * iar organizatorul lucrează pe mai multe rânduri în aceeași fereastră de
+   * câteva secunde. Butoanele se randau fără `disabled` cât ținea dus-întorsul,
+   * deci al doilea clic pleca la server ca și primul.
+   */
+  const [randuriOcupate, setRanduriOcupate] = useState<ReadonlySet<string>>(new Set());
+  const elibereaza = (id: string) =>
+    setRanduriOcupate((s) => {
+      const fara = new Set(s);
+      fara.delete(id);
+      return fara;
+    });
+  const ocupa = (id: string) => setRanduriOcupate((s) => new Set(s).add(id));
+
   // Promovează o persoană din așteptare în participanți + email de confirmare.
   const handlePromote = (row: AdminWaitlistEntry) => {
+    if (randuriOcupate.has(row.id)) return;
     const before = waitlistRef.current ?? [];
+    ocupa(row.id);
     setWaitlist(before.filter((w) => w.id !== row.id));
     promoteWaitlist(token, row.id)
       .then((newId) => {
@@ -416,24 +374,50 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         if (handleAuthError(err)) return;
         setWaitlist(before);
         showToast({ kind: 'error', msg: 'Promovarea nu a mers. Încearcă din nou.' });
-      });
+      })
+      .finally(() => elibereaza(row.id));
   };
 
   const handleDeleteWaitlist = (row: AdminWaitlistEntry) => {
+    if (randuriOcupate.has(row.id)) return;
     const before = waitlistRef.current ?? [];
+    ocupa(row.id);
     setWaitlist(before.filter((w) => w.id !== row.id));
     deleteWaitlist(token, row.id)
-      .then(() => showToast({ kind: 'error', msg: `${row.nume} a fost șters din așteptare.` }))
+      .then(() => {
+        showToast({
+          kind: 'error',
+          msg: `${row.nume} a fost șters din așteptare.`,
+          // Paritate cu ștergerea unei înscrieri, o funcție mai jos. Reversare,
+          // nu reinserare: același rând, deci același `created_at` și aceeași
+          // poziție în ordinea FIFO de promovare.
+          undo: () => {
+            undeleteWaitlist(token, row.id)
+              .then(() => {
+                refresh();
+                showToast({ kind: 'success', msg: `${row.nume} a fost readus pe listă.` });
+              })
+              .catch((err) => {
+                if (handleAuthError(err)) return;
+                refresh();
+                showToast({ kind: 'error', msg: motivUndoEsuat(err, row.nume) });
+              });
+          },
+        });
+      })
       .catch((err) => {
         if (handleAuthError(err)) return;
         setWaitlist(before);
         showToast({ kind: 'error', msg: 'Ștergerea nu a mers. Încearcă din nou.' });
-      });
+      })
+      .finally(() => elibereaza(row.id));
   };
 
   // Ștergerea efectivă — rulează doar după confirmarea din dialog.
   const handleDelete = (row: AdminRegistration) => {
+    if (randuriOcupate.has(row.id)) return;
     const before = rowsRef.current ?? [];
+    ocupa(row.id);
     setRows(before.filter((r) => r.id !== row.id));
     deleteRegistration(token, row.id)
       .then(() => {
@@ -462,7 +446,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         if (handleAuthError(err)) return;
         setRows(before);
         showToast({ kind: 'error', msg: 'Ștergerea nu a mers. Încearcă din nou.' });
-      });
+      })
+      .finally(() => elibereaza(row.id));
   };
 
   const handleAdd = () => {
@@ -511,6 +496,34 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       .finally(() => setSaving(false));
   };
 
+  /** Motivele refuzului, traduse. Fiecare cere altceva de la operator. */
+  const MESAJ_PREZENTA: Record<NonNullable<ReturnType<typeof refuzPrezenta>>, string> = {
+    numar_duplicat: 'Numărul e deja dat altcuiva din ediția asta.',
+    numar_invalid: 'Numărul de concurs e un întreg pozitiv.',
+    timp_invalid: 'Timpul nu a fost înțeles. Scrie-l ca 32:15 sau 1:02:15.',
+    not_found: 'Înscrierea nu mai există — poate a fost ștearsă între timp.',
+  };
+
+  const handlePrezenta = (row: AdminRegistration, date: Prezenta) => {
+    if (randuriOcupate.has(row.id)) return;
+    ocupa(row.id);
+    setPrezenta(token, row.id, date)
+      .then(() => {
+        setPrezentaRow(null);
+        refresh();
+        showToast({ kind: 'success', msg: `Prezența pentru ${row.nume} a fost salvată.` });
+      })
+      .catch((err) => {
+        if (handleAuthError(err)) return;
+        const motiv = refuzPrezenta(err);
+        showToast({
+          kind: 'error',
+          msg: motiv ? MESAJ_PREZENTA[motiv] : 'Nu am putut salva. Încearcă din nou.',
+        });
+      })
+      .finally(() => elibereaza(row.id));
+  };
+
   const startEdit = (row: AdminRegistration) => {
     setEditId(row.id);
     setDraft({ nume: row.nume, telefon: row.telefon, email: row.email });
@@ -556,13 +569,30 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   };
 
   const exportCsv = () => {
-    const header = ['Nr', 'Nume', 'Telefon', 'Email', 'Data înscrierii'];
+    // Coloanele de prezență vin la coadă, ca ordinea existentă să nu se mute
+    // sub formulele cuiva care deja lucrează cu exportul.
+    const header = [
+      'Nr',
+      'Nume',
+      'Telefon',
+      'Email',
+      'Data înscrierii',
+      'Prezent',
+      'Număr',
+      'Timp final',
+    ];
     const lines = all.map((r, i) => [
       String(i + 1),
       r.nume,
       r.telefon,
       r.email,
       new Date(r.created_at).toLocaleString('ro-RO'),
+      // Necompletat rămâne CELULĂ GOALĂ, nu „false" și nu „nu": „încă nu se
+      // știe" și „n-a venit" sunt lucruri diferite, iar exportul e adesea
+      // singurul loc unde cineva le compară.
+      r.prezent === true ? 'da' : r.prezent === false ? 'nu' : '',
+      r.numar == null ? '' : String(r.numar),
+      durataCsv(r.timp_final),
     ]);
     const csv = toCsv([header, ...lines]);
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
@@ -574,7 +604,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   };
 
   return (
-    <>
+    <FurnizorSesiuneAdmin token={token} onAuthError={handleAuthError} showToast={showToast}>
       <header className="admin-topbar">
         <div className="brand">
           <span className="admin-logo">
@@ -644,53 +674,42 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         <AdminNav tab={tab} onTab={setTab} contorTab={contorTab} nelivrate={nelivrate} />
 
         {tab === 'sabloane' && (
-          <AdminTemplatesTab token={token} onAuthError={handleAuthError} />
+          <AdminTemplatesTab />
         )}
 
         {tab === 'email' && (
           <AdminEmailTab
-            token={token}
             rows={all}
             waitlist={waitAll}
             editie={editie ?? CURRENT_EDITION}
             emailLog={emailLog ?? []}
             readOnly={arhiva}
-            formatDate={formatDate}
-            showToast={showToast}
           />
         )}
 
         {tab === 'livrare' && (
           <AdminDeliveryTab
-            token={token}
             editie={editie ?? CURRENT_EDITION}
             log={emailLog}
             participanti={all}
             readOnly={arhiva}
             onRefresh={refresh}
-            showToast={showToast}
           />
         )}
 
         {tab === 'eveniment' && (
           <AdminEventTab
-            token={token}
-            onAuthError={handleAuthError}
-            showToast={showToast}
           />
         )}
 
         {tab === 'coming-soon' && (
           <AdminComingSoonTab
-            token={token}
-            onAuthError={handleAuthError}
-            showToast={showToast}
           />
         )}
 
         {tab === 'lansare' && (
           <div className="admin-launch">
-            <AdminLaunchTab token={token} formatDate={formatDate} onAuthError={handleAuthError} />
+            <AdminLaunchTab />
           </div>
         )}
 
@@ -698,60 +717,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         <>
         {/* Capacitatea (TOTAL_SLOTS) e a ediției CURENTE — pe arhivă ar minți
             (ediția 1 a avut 30 de locuri, nu 20), deci acolo arătăm doar cifrele reale. */}
-        <section className="admin-stats">
-          <div className="admin-stat">
-            <span className="admin-stat-label">Înscriși</span>
-            <span className="admin-stat-value" key={all.length}>
-              {all.length}
-              {!arhiva && <span className="admin-stat-total"> / {TOTAL_SLOTS}</span>}
-            </span>
-          </div>
-          {!arhiva && (
-            <>
-              <div className="admin-stat">
-                <span className="admin-stat-label">Locuri rămase</span>
-                <span className={`admin-stat-value${remaining <= 3 ? ' low' : ''}`} key={remaining}>
-                  {remaining}
-                </span>
-              </div>
-              <div className="admin-stat">
-                <span className="admin-stat-label">Grad de ocupare</span>
-                <span className="admin-stat-value accent" key={percent}>
-                  {percent}%
-                </span>
-              </div>
-            </>
-          )}
-          <div className="admin-stat">
-            <span className="admin-stat-label">În așteptare</span>
-            <span className="admin-stat-value" key={waitAll.length}>
-              {waitAll.length}
-              {!arhiva && <span className="admin-stat-total"> / {WAITLIST_SLOTS}</span>}
-            </span>
-          </div>
-          <div className="admin-stat">
-            <span className="admin-stat-label">Emailuri nelivrate</span>
-            <span className={`admin-stat-value${nelivrate > 0 ? ' low' : ''}`} key={nelivrate}>
-              {nelivrate}
-            </span>
-          </div>
-        </section>
-
-        {!arhiva && (
-          <section className="admin-occupancy">
-            <div className="slots-head">
-              <span className="slots-label">Ocupare locuri</span>
-              <span className="admin-occupancy-count">
-                {all.length} din {TOTAL_SLOTS} locuri ocupate
-              </span>
-            </div>
-            <div className="slots-grid">
-              {Array.from({ length: TOTAL_SLOTS }, (_, i) => (
-                <div key={i} className={`slot admin-slot${i < all.length ? ' filled' : ''}`} />
-              ))}
-            </div>
-          </section>
-        )}
+        <AdminCifre
+          inscrisi={all.length}
+          peAsteptare={waitAll.length}
+          TOTAL_SLOTS={TOTAL_SLOTS}
+          WAITLIST_SLOTS={WAITLIST_SLOTS}
+          nelivrate={nelivrate}
+          arhiva={arhiva}
+        />
 
         <section className="admin-table-section">
           <div className="admin-table-head admin-participanti-head">
@@ -796,56 +769,19 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             </div>
           </div>
 
-          {addOpen && !arhiva && (
-            <div className="admin-add-row">
-              <label className="admin-add-field grow">
-                <span>Nume</span>
-                <input
-                  type="text"
-                  placeholder="Ana Popescu"
-                  value={draft.nume}
-                  onChange={(e) => setDraft((d) => ({ ...d, nume: e.target.value }))}
-                />
-              </label>
-              <label className="admin-add-field">
-                <span>Telefon</span>
-                <input
-                  type="tel"
-                  placeholder="069 xxx xxx"
-                  value={draft.telefon}
-                  onChange={(e) => setDraft((d) => ({ ...d, telefon: e.target.value }))}
-                />
-              </label>
-              <label className="admin-add-field grow">
-                <span>Email</span>
-                <input
-                  type="email"
-                  placeholder="ana@email.md"
-                  value={draft.email}
-                  onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
-                />
-              </label>
-              <button
-                type="button"
-                className="admin-btn-accent"
-                onClick={editId ? handleUpdate : handleAdd}
-                disabled={saving}
-              >
-                {saving ? 'Se salvează…' : editId ? 'Salvează modificările' : 'Salvează'}
-              </button>
-              <button
-                type="button"
-                className="admin-add-cancel"
-                onClick={() => {
-                  setAddOpen(false);
-                  setEditId(null);
-                }}
-              >
-                Anulează
-              </button>
-            </div>
-          )}
-
+          <AdminRandAdaugare
+            deschis={addOpen}
+            arhiva={arhiva}
+            ciorna={draft}
+            setCiorna={setDraft}
+            editId={editId}
+            saving={saving}
+            onSalveaza={editId ? handleUpdate : handleAdd}
+            onRenunta={() => {
+              setAddOpen(false);
+              setEditId(null);
+            }}
+          />
           <div className="admin-table-wrap">
             <div className={`admin-table admin-participanti${arhiva ? ' arhiva' : ''}`}>
               <div className="admin-row admin-row-head">
@@ -870,7 +806,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                   <a className="admin-cell-link ellipsis" href={`mailto:${r.email}`}>
                     {r.email}
                   </a>
-                  <span className="admin-cell-date">{formatDate(r.created_at)}</span>
+                  <span className="admin-cell-date">{ziSiLuna(r.created_at)}</span>
                   <span>
                     <button
                       type="button"
@@ -887,14 +823,25 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                         type="button"
                         className="admin-btn-promote"
                         title="Editează înscrierea"
+                        disabled={randuriOcupate.has(r.id)}
                         onClick={() => startEdit(r)}
                       >
                         Editează
                       </button>
                       <button
                         type="button"
+                        className="admin-btn-promote"
+                        title="Prezență, număr și timp final"
+                        disabled={randuriOcupate.has(r.id)}
+                        onClick={() => setPrezentaRow(r)}
+                      >
+                        Prezență
+                      </button>
+                      <button
+                        type="button"
                         className="admin-btn-delete"
                         title="Șterge înscrierea"
+                        disabled={randuriOcupate.has(r.id)}
                         onClick={() => setConfirmRow(r)}
                       >
                         Șterge
@@ -915,126 +862,29 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </div>
         </section>
 
-        <section className="admin-table-section">
-          <div className="admin-table-head admin-wait-head">
-            <h2>
-              Lista de așteptare <span className="admin-wait-count">{waitAll.length}</span>
-            </h2>
-            <span className="admin-wait-note">
-              Se completează automat când locurile sunt pline — promovează când se eliberează un loc.
-            </span>
-          </div>
-          <div className="admin-table-wrap">
-            <div className={`admin-table admin-wait${arhiva ? ' arhiva' : ''}`}>
-              <div className="admin-row admin-row-head">
-                <span>#</span>
-                <span>Nume</span>
-                <span>Telefon</span>
-                <span>Email</span>
-                <span>Înscris</span>
-                {!arhiva && <span className="right">Acțiuni</span>}
-              </div>
-              {waitAll.map((w, i) => (
-                <div key={w.id} className="admin-row" style={{ '--i': i } as CSSProperties}>
-                  <span className="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="admin-cell-name">{w.nume}</span>
-                  <a className="admin-cell-link" href={`tel:${w.telefon}`}>
-                    {w.telefon}
-                  </a>
-                  <a className="admin-cell-link ellipsis" href={`mailto:${w.email}`}>
-                    {w.email}
-                  </a>
-                  <span className="admin-cell-date">{formatDate(w.created_at)}</span>
-                  {!arhiva && (
-                    <div className="admin-cell-actions">
-                      <button
-                        type="button"
-                        className="admin-btn-promote"
-                        title="Mută la participanți"
-                        onClick={() => handlePromote(w)}
-                      >
-                        Promovează
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-btn-delete"
-                        title="Șterge din lista de așteptare"
-                        onClick={() => handleDeleteWaitlist(w)}
-                      >
-                        Șterge
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {waitlist === null && <AdminSkeleton cols={arhiva ? 5 : 6} rows={3} />}
-              {waitlist !== null && waitAll.length === 0 && (
-                <div className="admin-empty">
-                  Nicio persoană în așteptare. Lista se completează automat când toate cele{' '}
-                  {TOTAL_SLOTS} locuri sunt ocupate.
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+        <AdminAsteptare
+          waitAll={waitAll}
+          ocupate={randuriOcupate}
+          waitlist={waitlist}
+          TOTAL_SLOTS={TOTAL_SLOTS}
+          arhiva={arhiva}
+          onPromote={handlePromote}
+          onDelete={handleDeleteWaitlist}
+        />
 
-        <section className="admin-table-section">
-          <div className="admin-table-head admin-wait-head">
-            <h2>
-              Activitate recentă{' '}
-              <span className="admin-wait-count">{(events ?? []).length}</span>
-            </h2>
-            <span className="admin-wait-note">
-              Promovări automate din lista de așteptare (când ștergi un participant, locul se
-              umple singur) și deschiderea edițiilor noi. Feed-ul e comun tuturor edițiilor.
-            </span>
-          </div>
-          <div className="admin-activity">
-            {(events ?? [])
-              .filter((e) => e.tip === 'auto_promote' || e.tip === 'editie_noua')
-              .map((e) => {
-                if (e.tip === 'editie_noua') {
-                  const ed = e.detaliu?.editie;
-                  return (
-                    <div key={e.id} className="admin-activity-item">
-                      <span className="admin-activity-dot" />
-                      <span className="admin-activity-text">
-                        S-a deschis <strong>ediția {typeof ed === 'number' ? ed : '?'}</strong> —
-                        înscrierile noi intră aici
-                      </span>
-                      <span className="admin-activity-time">{formatEventTime(e.created_at)}</span>
-                    </div>
-                  );
-                }
-                const nume = typeof e.detaliu?.nume === 'string' ? e.detaliu.nume : 'Cineva';
-                const email = typeof e.detaliu?.email === 'string' ? e.detaliu.email : '';
-                const emailed = e.detaliu?.email_queued === true;
-                return (
-                  <div key={e.id} className="admin-activity-item">
-                    <span className="admin-activity-dot" />
-                    <span className="admin-activity-text">
-                      <strong>{nume}</strong> promovat automat din așteptare
-                      {email && <span className="admin-activity-email"> · {email}</span>}
-                    </span>
-                    <span
-                      className={`admin-activity-mail${emailed ? ' ok' : ''}`}
-                      title={emailed ? 'Email de confirmare trimis' : 'Emailul nu a plecat'}
-                    >
-                      {emailed ? '✉ trimis' : '✉ eșuat'}
-                    </span>
-                    <span className="admin-activity-time">{formatEventTime(e.created_at)}</span>
-                  </div>
-                );
-              })}
-            {events === null && <AdminFeedSkeleton />}
-            {events !== null &&
-              (events ?? []).filter((e) => e.tip === 'auto_promote' || e.tip === 'editie_noua')
-                .length === 0 && <div className="admin-empty">Nicio activitate încă.</div>}
-          </div>
-        </section>
+        <AdminActivitate events={events} />
         </>
         )}
       </main>
+
+      {prezentaRow && (
+        <DialogPrezenta
+          rand={prezentaRow}
+          ocupat={randuriOcupate.has(prezentaRow.id)}
+          onSalveaza={(date) => handlePrezenta(prezentaRow, date)}
+          onInchide={() => setPrezentaRow(null)}
+        />
+      )}
 
       {confirmRow && (
         <div
@@ -1086,6 +936,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           )}
         </div>
       )}
-    </>
+    </FurnizorSesiuneAdmin>
   );
 };

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { label, inputStyle as inputComun } from './shared';
 
 /**
  * Data nașterii într-un SINGUR câmp scris: `zz.ll.aaaa`, tastatură numerică pe
@@ -11,24 +12,14 @@ import type { CSSProperties } from 'react';
  * ce citește `validate()` din `lib/validation.ts`.
  */
 
-const label: CSSProperties = {
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: 2,
-  textTransform: 'uppercase',
-  color: 'var(--e3-muted)',
-};
+/**
+ * Câmpul de dată se scrie cifră cu cifră, deci are două lucruri în plus față de
+ * inputurile obișnuite: cifrele au lățime egală (`tabular-nums`), ca punctele
+ * puse automat să nu miște textul sub deget, și sunt puțin răsfirate.
+ */
 const inputStyle: CSSProperties = {
-  background: 'var(--e3-bg)',
-  border: '1px solid var(--e3-border)',
-  color: 'var(--e3-text)',
-  fontFamily: 'Archivo, sans-serif',
-  fontSize: 16, // 16px = iOS nu mai face zoom la focus
+  ...inputComun,
   letterSpacing: 1,
-  padding: '13px 14px',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
   fontVariantNumeric: 'tabular-nums',
 };
 

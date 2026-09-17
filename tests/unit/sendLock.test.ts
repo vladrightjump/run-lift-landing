@@ -10,6 +10,7 @@ const log = (over: Partial<AdminEmailLogEntry> = {}): AdminEmailLogEntry => ({
   subiect: 'Detalii pentru sâmbătă',
   text_email: 'text',
   mod: 'admin',
+  sablon: null,
   audienta: 'participanti',
   status: 'trimis',
   provider_status: 200,

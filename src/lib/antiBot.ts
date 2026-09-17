@@ -34,7 +34,9 @@ export const ANTIBOT_MESSAGES = {
  */
 export const useAntiBot = () => {
   const [hp, setHp] = useState('');
-  const mountedAt = useRef(Date.now());
+  // 0, nu `Date.now()`: efectul de mai jos îl pune la montare, iar un apel
+  // impur în timpul randării e exact ce interzice regula de puritate.
+  const mountedAt = useRef(0);
 
   // Formularul poate fi reafișat („înscrie altă persoană") fără remount: repornim
   // cronometrul la fiecare golire a capcanei, ca a doua înscriere să nu pară

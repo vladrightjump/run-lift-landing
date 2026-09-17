@@ -158,7 +158,7 @@ export const Inscriere = () => {
             Înscrie-te
           </h1>
           <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
-            {EVENT_META} · ora {EVENT_START_TIME}. Completezi 4 câmpuri și primești confirmarea pe email.
+            {EVENT_META} · ora {EVENT_START_TIME}. Completezi 5 câmpuri și primești confirmarea pe email.
           </p>
         </div>
 

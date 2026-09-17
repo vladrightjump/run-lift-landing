@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   listEventConfig,
   saveEventConfigDraft,
   publishEventConfig,
   restoreEventConfig,
+  listEmailLog,
   type AdminEventConfigRow,
 } from '../lib/adminApi';
+import type { LivrareReminder } from './remindere';
 import {
   parseEventConfig,
   MAX_REELS,
@@ -19,7 +20,6 @@ import {
   mutaSectiune,
   comutaVizibilitatea,
   layoutComplet,
-  cioarnaPentruEditiaUrmatoare,
   parseInstagramUrl,
   adaugaReel,
   stergeReel,
@@ -27,21 +27,25 @@ import {
   seteazaReel,
   type CampInvalid,
 } from './eventConfigForm';
+import { useSesiuneAdmin } from './adminSession';
+import { Blocat } from './eventTab/primitive';
+import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
+import { refuzCuPas, type Pas } from './eventTab/ajutoare';
+import { GrupCeArata } from './eventTab/grupuri/GrupCeArata';
+import { GrupLocuri } from './eventTab/grupuri/GrupLocuri';
+import { GrupUnde } from './eventTab/grupuri/GrupUnde';
+import { GrupEditia } from './eventTab/grupuri/GrupEditia';
+import { GrupRemindere } from './eventTab/grupuri/GrupRemindere';
+import { GrupInstagram } from './eventTab/grupuri/GrupInstagram';
+import { GrupCand } from './eventTab/grupuri/GrupCand';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
+import { descrieMoment, problemePeCamp } from './eventConfigFields';
 import {
-  laDatetimeLocal,
-  dinDatetimeLocal,
-  descrieMoment,
-  problemePeCamp,
-  linkHarta,
-} from './eventConfigFields';
+  reperele,
+  mutaReperele,
+  reperiiCareSeMuta,
+} from './reperele';
 import { useNow } from '../hooks/useNow';
-
-type Props = {
-  token: string;
-  onAuthError: (err: unknown) => boolean;
-  showToast: (t: { kind: 'error' | 'success'; msg: string }) => void;
-};
 
 const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
   format: 'Formatul',
@@ -50,6 +54,7 @@ const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
   participants: 'Cine vine',
   reels: 'Instagram',
 };
+
 
 /**
  * Valorile din listele formularului.
@@ -63,45 +68,35 @@ const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
  * ca opțiune dacă nu e printre ele, altfel un document scris manual în DB ar
  * părea că are altă valoare decât are.
  */
-const DURATE = [1, 1.5, 2, 2.5, 3, 4, 5, 6] as const;
-
-/** Sferturi de oră între 05:00 și 12:00 — fereastra în care începe o cursă. */
-const ORE_CHECKIN: string[] = Array.from({ length: (12 - 5) * 4 + 1 }, (_, i) => {
-  const minuteTotale = 5 * 60 + i * 15;
-  const h = String(Math.floor(minuteTotale / 60)).padStart(2, '0');
-  const m = String(minuteTotale % 60).padStart(2, '0');
-  return `${h}:${m}`;
-});
-
-/** Doar fusurile Moldovei; restul n-au ce căuta într-o cursă din Chișinău. */
-const FUSURI: [string, string][] = [
-  ['+03:00', '+03:00 · Chișinău vara (EEST)'],
-  ['+02:00', '+02:00 · Chișinău iarna (EET)'],
-];
-
-/** Traduce refuzurile serverului în ceva citibil, fără să le reformuleze regula. */
-const mesajRefuz = (err: unknown): string => {
-  const text = err instanceof Error ? err.message : String(err);
-  if (text.includes('registration_hidden_while_open')) {
-    return 'Nu poți ascunde secțiunea de înscriere cât timp înscrierile sunt deschise. Mută deadline-ul sau lasă secțiunea vizibilă.';
-  }
-  if (text.includes('no_draft')) return 'Nu există nicio ciornă de publicat.';
-  if (text.includes('config_invalid')) {
-    const m = /config_invalid: ([^"\\}]+)/.exec(text);
-    return `Serverul a respins configul: ${m?.[1]?.trim() ?? 'document invalid'}.`;
-  }
-  return 'Nu am putut salva. Încearcă din nou.';
-};
-
-export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
+export const AdminEventTab = () => {
+  const { token, onAuthError, showToast } = useSesiuneAdmin();
   const [randuri, setRanduri] = useState<AdminEventConfigRow[] | null>(null);
   const [ciorna, setCiorna] = useState<EventConfig | null>(null);
   const [salveaza, setSalveaza] = useState(false);
   const [publica, setPublica] = useState(false);
   const [confirmPublicare, setConfirmPublicare] = useState(false);
+  const [dialogEditieNoua, setDialogEditieNoua] = useState(false);
+  /**
+   * Ultimul refuz, până la următoarea încercare.
+   *
+   * Toastul a pornit și n-a fost văzut: 3,2 secunde, peste bara pe care tocmai
+   * ai apăsat, fix când se închide dialogul. Rămâne — e semnalul „tocmai s-a
+   * întâmplat" — dar mesajul stă și în bară, unde e „încă e adevărat".
+   */
+  const [refuz, setRefuz] = useState<string | null>(null);
   // Ciorna nu se rescrie sub degetele organizatorului la fiecare poll.
   const atinsa = useRef(false);
   const [build, setBuild] = useState<BuildInfo | null>(null);
+  /**
+   * Startul de la care s-a plecat — reperul față de care se măsoară o mutare.
+   *
+   * NU e „valoarea anterioară a câmpului": un `datetime-local` trimite `change`
+   * la fiecare componentă parcursă (ziua, apoi luna, apoi ora), deci un delta
+   * calculat din ultima valoare ar fi trei mutări mărunte în loc de una. Ancora
+   * stă pe loc până când mutarea e acceptată sau refuzată explicit, iar oferta
+   * spune atunci cât s-a mutat startul cu totul.
+   */
+  const [ancoraStart, setAncoraStart] = useState<string | null>(null);
 
   const incarca = useCallback(
     (signal?: AbortSignal) => {
@@ -110,7 +105,11 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           setRanduri(rows);
           if (atinsa.current) return;
           const draft = rows.find((r) => r.status === 'draft');
-          if (draft) setCiorna(parseEventConfig(draft.config));
+          if (draft) {
+            const cfg = parseEventConfig(draft.config);
+            setCiorna(cfg);
+            setAncoraStart(cfg?.start ?? null);
+          }
         })
         .catch((err) => {
           if (signal?.aborted || onAuthError(err)) return;
@@ -131,6 +130,40 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
     return () => c.abort();
   }, []);
 
+  /**
+   * Livrările ediției din ciornă, ca orarul de remindere să poată spune ce a
+   * plecat, nu doar ce ar trebui să plece.
+   *
+   * `null` = n-am putut citi jurnalul, și e diferit de `[]`: pe un jurnal
+   * indisponibil fiecare reminder scadent ar deveni „neplecat", o afirmație la
+   * fel de falsă ca aceea pe care o repară grupul.
+   */
+  const [livrari, setLivrari] = useState<LivrareReminder[] | null>(null);
+  const editieCiorna = ciorna?.number;
+
+  useEffect(() => {
+    if (editieCiorna === undefined) return;
+    const c = new AbortController();
+    // `cuText: false` — rezumatul n-are nevoie de corpul emailurilor, iar cu
+    // el ar căra sute de KB la fiecare încărcare.
+    listEmailLog(token, editieCiorna, false, c.signal)
+      .then((jurnal) =>
+        setLivrari(
+          jurnal
+            // Doar ce a plecat prin ceas. Difuzările manuale sunt `admin` și
+            // n-au orar față de care să fie potrivite.
+            .filter((r) => r.mod === 'broadcast')
+            .map((r) => ({ sablon: r.sablon, status: r.status, la: Date.parse(r.created_at) }))
+            .filter((l) => Number.isFinite(l.la))
+        )
+      )
+      .catch((err) => {
+        if (c.signal.aborted || onAuthError(err)) return;
+        setLivrari(null);
+      });
+    return () => c.abort();
+  }, [token, editieCiorna, onAuthError]);
+
   const publicat = useMemo(() => {
     const row = randuri?.find((r) => r.status === 'published');
     return row ? parseEventConfig(row.config) : null;
@@ -148,6 +181,17 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   // următorul deploy. Notificare, nu blocaj.
   const campuriVechi = build && publicat ? campuriVechiInBuild(build, publicat) : [];
 
+  /**
+   * O scriere e în zbor — formularul și toate butoanele care ating serverul
+   * sunt inerte.
+   *
+   * Salvarea contează la fel de mult ca publicarea: și ea ține documentul pe
+   * care l-a capturat, iar la succes resetează `atinsa` și cheamă `incarca()`,
+   * care rescrie ciorna din server. Ce s-a tastat în timpul dus-întorsului
+   * dispărea fără urmă.
+   */
+  const ocupat = salveaza || publica;
+
   const probleme: CampInvalid[] = ciorna ? validateEventConfig(ciorna) : [];
   const avertismente = ciorna ? avertismenteEventConfig(ciorna) : [];
   const poatePublica = ciorna !== null && probleme.length === 0;
@@ -156,7 +200,47 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
   // Doar pentru „peste 3 luni” de sub datele calendaristice. Un minut e destul:
   // nimeni nu se uită la ecoul ăsta ca la un cronometru.
   const acum = useNow(60_000);
-  const hartaUrl = ciorna ? linkHarta(ciorna.venue.mapQuery) : null;
+
+  // Desfășurarea ediției, în ordine. Lista e goală cât timp un format e stricat
+  // — validarea spune deja care câmp, iar o linie de timp desenată din `NaN`
+  // ar fi o afirmație falsă despre document.
+  const repere = useMemo(() => (ciorna ? reperele(ciorna, acum) : []), [ciorna, acum]);
+
+  // Orarul reminderelor, tradus în momente concrete. Rândurile se afișează în
+  // ordinea în care pleacă emailurile, dar se editează prin `index`, care e
+  // poziția din DOCUMENT — resortarea nu trebuie să rescrie alt rând decât cel
+  // atins. `acum` se împrospătează la un minut, deci „peste 2 zile" nu îmbătrânește.
+
+  /**
+   * Startul s-a mutat — și odată cu el ar trebui să se mute și ce atârnă de el.
+   *
+   * Oferit, nu aplicat: un formular care rescrie patru câmpuri pe care nu le-ai
+   * atins e un formular în care nu mai știi ce ai setat tu. Dar netratat deloc
+   * înseamnă ce se întâmpla până acum — ciorna ediției următoare pornește de la
+   * cea publicată, deci moștenește momentul de anunț al ediției TRECUTE, iar
+   * nimic nu-l semnala până pe site.
+   *
+   * Deltele absurde (câmp golit, an tastat pe jumătate) nu produc ofertă: sub
+   * un minut n-are ce muta, peste doi ani e o stare de trecere, nu o decizie.
+   */
+  const mutareOferita = useMemo(() => {
+    if (!ciorna || ancoraStart === null || ancoraStart === ciorna.start) return null;
+    const delta =
+      new Date(`${ciorna.start}${ciorna.tz}`).getTime() -
+      new Date(`${ancoraStart}${ciorna.tz}`).getTime();
+    if (!Number.isFinite(delta) || Math.abs(delta) < 60_000 || Math.abs(delta) > 730 * 86_400_000) {
+      return null;
+    }
+    const nume = reperiiCareSeMuta({ ...ciorna, start: ancoraStart }, ciorna.start);
+    return nume.length > 0 ? { delta, nume } : null;
+  }, [ciorna, ancoraStart]);
+
+  const mutaTot = () => {
+    if (!ciorna || ancoraStart === null) return;
+    atinsa.current = true;
+    setCiorna(mutaReperele({ ...ciorna, start: ancoraStart }, ciorna.start));
+    setAncoraStart(ciorna.start);
+  };
 
   /**
    * Are vreunul dintre câmpurile grupului o problemă?
@@ -193,21 +277,42 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
     });
   };
 
-  const porneste = () => {
-    const baza = publicat;
-    if (!baza) return;
+  const seteazaRemindere = (reminders: EventConfig['reminders']) => {
+    setCiorna((c) => {
+      atinsa.current = true;
+      return c ? { ...c, reminders } : c;
+    });
+  };
+
+  /**
+   * Ciorna venită din dialogul rapid — reperele îi sunt deja recalculate.
+   *
+   * Ancora se așază pe startul NOU, nu pe cel publicat: mutarea s-a produs
+   * deja, iar o ancoră pe startul vechi ar face formularul să ofere imediat o
+   * a doua mutare, peste una aplicată.
+   *
+   * Un refuz descrie documentul care l-a produs. Când se schimbă ciorna
+   * deschisă, reproșul nu mai are despre ce să fie.
+   */
+  const creeazaDinDialog = (noua: EventConfig) => {
     atinsa.current = true;
-    setCiorna(cioarnaPentruEditiaUrmatoare(baza));
+    setRefuz(null);
+    setDialogEditieNoua(false);
+    setCiorna(noua);
+    setAncoraStart(noua.start);
   };
 
   const porneteDinPublicat = () => {
     if (!publicat) return;
     atinsa.current = true;
+    setRefuz(null);
     setCiorna({ ...publicat, layout: layoutComplet(publicat.layout) });
+    setAncoraStart(publicat.start);
   };
 
   const salveazaCiorna = async () => {
     if (!ciorna || probleme.length > 0) return;
+    setRefuz(null);
     setSalveaza(true);
     try {
       await saveEventConfigDraft(token, ciorna.number, ciorna);
@@ -218,17 +323,43 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       atinsa.current = false;
       incarca();
     } catch (err) {
-      if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuz(err) });
+      if (!onAuthError(err)) {
+        const msg = refuzCuPas('salvare', err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
     } finally {
       setSalveaza(false);
     }
   };
 
+  /**
+   * „Publică" salvează întâi ce e pe ecran, apoi publică.
+   *
+   * `admin_publish_event_config` primește doar `p_editie`: publică rândul
+   * `draft` de pe server, nu documentul din câmpuri. Fără salvarea asta,
+   * apăsarea pe „Publică" fără „Salvează" înainte n-avea ce publica
+   * (`no_draft`) — iar cu o ciornă VECHE pe server publica documentul vechi
+   * și raporta succes. Al doilea e mai rău: nimic nu te trimite să verifici.
+   *
+   * Cele două apeluri nu sînt o tranzacție. Dacă salvarea trece și publicarea
+   * e refuzată, rămîi cu ciorna salvată și cu site-ul pe configul vechi — o
+   * stare din care poți relua, și exact ce obții azi apăsînd „Salvează" și
+   * eșuînd apoi la „Publică".
+   */
   const publicaCiorna = async () => {
-    if (!ciorna) return;
+    // Aceeași gardă ca la salvare: butonul dezactivat nu e o gardă, iar
+    // dialogul nu prinde focusul în capcană.
+    if (!ciorna || probleme.length > 0) return;
     setConfirmPublicare(false);
+    setRefuz(null);
     setPublica(true);
+    // Care apel a picat — singurul lucru care spune dacă editările au ajuns
+    // sau nu pe server. Motivul serverului nu-l poate spune.
+    let pas: Pas = 'salvare';
     try {
+      await saveEventConfigDraft(token, ciorna.number, ciorna);
+      pas = 'publicare';
       await publishEventConfig(token, ciorna.number);
       showToast({
         kind: 'success',
@@ -237,13 +368,18 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       atinsa.current = false;
       incarca();
     } catch (err) {
-      if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuz(err) });
+      if (!onAuthError(err)) {
+        const msg = refuzCuPas(pas, err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
     } finally {
       setPublica(false);
     }
   };
 
   const revino = async (id: string, editie: number) => {
+    setRefuz(null);
     try {
       await restoreEventConfig(token, id);
       showToast({
@@ -253,7 +389,14 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       atinsa.current = false;
       incarca();
     } catch (err) {
-      if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuz(err) });
+      if (!onAuthError(err)) {
+        // Republicarea e singurul buton care schimbă site-ul dintr-un click.
+        // Refuzul ei merită aceeași bară ca al celorlalte două scrieri, nu doar
+        // toastul de 3,2 secunde.
+        const msg = refuzCuPas('revenire', err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
     }
   };
 
@@ -275,7 +418,12 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               <button type="button" className="admin-btn-ghost" onClick={porneteDinPublicat}>
                 Editează ediția {publicat?.number ?? ''}
               </button>
-              <button type="button" className="admin-btn-accent" onClick={porneste}>
+              <button
+                type="button"
+                className="admin-btn-accent"
+                disabled={!publicat}
+                onClick={() => setDialogEditieNoua(true)}
+              >
                 + Ciornă pentru ediția {(publicat?.number ?? 0) + 1}
               </button>
             </>
@@ -284,9 +432,14 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               <button
                 type="button"
                 className="admin-btn-ghost"
+                // Abandonul demontează bara, deci un refuz apărut după el n-ar
+                // avea unde să se afișeze — exact garanția pe care o dăm.
+                disabled={ocupat}
                 onClick={() => {
                   atinsa.current = false;
+                  setRefuz(null);
                   setCiorna(null);
+                  setAncoraStart(null);
                 }}
               >
                 Renunță
@@ -345,11 +498,22 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       )}
 
       {ciorna === null ? (
-        <div className="admin-empty">
-          Nicio ciornă deschisă. Pornește una ca să schimbi ediția — nimic nu ajunge pe site până nu
-          apeși „Publică”.
-        </div>
+        <>
+          {/* Fără ciornă deschisă bara nu se randează, iar „Revino la asta" e
+              tocmai butonul care se apasă de aici. Refuzul lui are nevoie de un
+              loc al lui, altfel rămâne doar pe toast. */}
+          {refuz && (
+            <div className="admin-banner warn" role="status">
+              {refuz}
+            </div>
+          )}
+          <div className="admin-empty">
+            Nicio ciornă deschisă. Pornește una ca să schimbi ediția — nimic nu ajunge pe site până
+            nu apeși „Publică”.
+          </div>
+        </>
       ) : (
+        <Blocat.Provider value={ocupat}>
         <div className="admin-config-form">
           {probleme.length > 0 && (
             <div className="admin-banner warn" role="status">
@@ -368,399 +532,57 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             </div>
           ))}
 
-          <Grup
-            titlu="Ediția"
-            ajutor="Cum se numește și a câta e."
-            deschisImplicit
-            areEroare={areEroare(['number', 'launchNumber', 'eventName', 'concept'])}
-            rezumat={`Ediția ${ciorna.number} · ${ciorna.eventName}`}
-          >
-            <Camp
-              eticheta="Numărul ediției"
-              ajutor="Ediția la care se înscrie lumea acum."
-              eroare={erori.get('number')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  type="number"
-                  min={1}
-                  value={ciorna.number}
-                  onChange={(e) => seteaza('number', Number(e.target.value))}
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Ediția de lansare"
-              ajutor="Numărul din emailuri și din paginile /confirmare și /unsubscribe. De obicei același cu cel de sus — bumpează-l DUPĂ cursă."
-              eroare={erori.get('launchNumber')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  type="number"
-                  min={1}
-                  value={ciorna.launchNumber}
-                  onChange={(e) => seteaza('launchNumber', Number(e.target.value))}
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Numele evenimentului"
-              ajutor="Apare în titlul paginii și în emailuri."
-              eroare={erori.get('eventName')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  value={ciorna.eventName}
-                  onChange={(e) => seteaza('eventName', e.target.value)}
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Concept"
-              ajutor="Linia scurtă de sub titlu — ex. „outdoor adaptive”."
-              eroare={erori.get('concept')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  value={ciorna.concept}
-                  onChange={(e) => seteaza('concept', e.target.value)}
-                />
-              )}
-            </Camp>
-          </Grup>
+          <GrupEditia
+            ciorna={ciorna}
+            seteaza={seteaza}
+            erori={erori}
+            areEroare={areEroare}
+          />
 
-          <Grup
-            titlu="Când"
-            ajutor="Toate orele sunt locale, în fusul de mai jos. Sub fiecare dată scrie ce înseamnă — verifică mai ales ziua săptămânii."
-            areEroare={areEroare([
-              'start',
-              'durationHours',
-              'checkinFrom',
-              'registrationDeadline',
-              'launchAt',
-              'nextEditionAt',
-              'leaderboardLeadHours',
-              'tz',
-            ])}
-            rezumat={descrieMoment(ciorna.start, ciorna.tz, acum) || ciorna.start}
-          >
-            <Camp
-              eticheta="Startul cursei"
-              eroare={erori.get('start')}
-              ecou={descrieMoment(ciorna.start, ciorna.tz, acum)}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  type="datetime-local"
-                  value={laDatetimeLocal(ciorna.start)}
-                  onChange={(e) => seteaza('start', dinDatetimeLocal(e.target.value))}
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Durata"
-              ajutor="Ore. După start + durată, pagina trece pe countdown-ul următorului antrenament."
-              eroare={erori.get('durationHours')}
-            >
-              {(p) => (
-                <select
-                  {...p}
-                  value={String(ciorna.durationHours)}
-                  onChange={(e) => seteaza('durationHours', Number(e.target.value))}
-                >
-                  {DURATE.map((h) => (
-                    <option key={h} value={h}>
-                      {h === 1 ? '1 oră' : `${String(h).replace('.', ',')} ore`}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Camp>
-            <Camp
-              eticheta="Check-in de la"
-              ajutor="Doar ora, în ziua cursei."
-              eroare={erori.get('checkinFrom')}
-            >
-              {(p) => (
-                <select
-                  {...p}
-                  value={ciorna.checkinFrom}
-                  onChange={(e) => seteaza('checkinFrom', e.target.value)}
-                >
-                  {/* O valoare scrisa de mana care nu e in lista ramane vizibila,
-                      altfel selectul ar arata alta ora decat cea din document. */}
-                  {!ORE_CHECKIN.includes(ciorna.checkinFrom) && (
-                    <option value={ciorna.checkinFrom}>{ciorna.checkinFrom}</option>
-                  )}
-                  {ORE_CHECKIN.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Camp>
-            <Camp
-              eticheta="Se închid înscrierile"
-              ajutor="Nu poate fi după start."
-              eroare={erori.get('registrationDeadline')}
-              ecou={descrieMoment(ciorna.registrationDeadline, ciorna.tz, acum)}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  type="datetime-local"
-                  value={laDatetimeLocal(ciorna.registrationDeadline)}
-                  onChange={(e) =>
-                    seteaza('registrationDeadline', dinDatetimeLocal(e.target.value))
-                  }
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Se anunță ediția"
-              ajutor="Până atunci homepage-ul poate sta pe Coming Soon, cu numărătoarea inversă spre momentul ăsta."
-              eroare={erori.get('launchAt')}
-              ecou={descrieMoment(ciorna.launchAt, ciorna.tz, acum)}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  type="datetime-local"
-                  value={laDatetimeLocal(ciorna.launchAt)}
-                  onChange={(e) => seteaza('launchAt', dinDatetimeLocal(e.target.value))}
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Următorul antrenament"
-              ajutor="După ce se termină cursa, pagina numără invers spre data asta. Trebuie să fie după finalul cursei."
-              eroare={erori.get('nextEditionAt')}
-              ecou={descrieMoment(ciorna.nextEditionAt, ciorna.tz, acum)}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  type="datetime-local"
-                  value={laDatetimeLocal(ciorna.nextEditionAt)}
-                  onChange={(e) => seteaza('nextEditionAt', dinDatetimeLocal(e.target.value))}
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta={'„Cine vine” apare cu'}
-              ajutor="Ore înainte de start. Atunci pagina scoate formularul și urcă lista de participanți sub hero."
-              eroare={erori.get('leaderboardLeadHours')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  type="number"
-                  min={0}
-                  value={ciorna.leaderboardLeadHours}
-                  onChange={(e) => seteaza('leaderboardLeadHours', Number(e.target.value))}
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Fusul orar"
-              ajutor="Decalajul față de UTC, scris ca „+03:00”. Moldova: +03:00 vara, +02:00 iarna."
-              eroare={erori.get('tz')}
-            >
-              {(p) => (
-                <select {...p} value={ciorna.tz} onChange={(e) => seteaza('tz', e.target.value)}>
-                  {!FUSURI.some(([v]) => v === ciorna.tz) && (
-                    <option value={ciorna.tz}>{ciorna.tz}</option>
-                  )}
-                  {FUSURI.map(([valoare, eticheta]) => (
-                    <option key={valoare} value={valoare}>
-                      {eticheta}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Camp>
-          </Grup>
+          <GrupCand
+            ciorna={ciorna}
+            seteaza={seteaza}
+            erori={erori}
+            areEroare={areEroare}
+            acum={acum}
+            repere={repere}
+            mutareOferita={mutareOferita}
+            onMutaTot={mutaTot}
+            onAncoreaza={setAncoraStart}
+          />
 
-          <Grup
-            titlu="Unde"
-            ajutor="Ce scrie în secțiunea „Locația” și ce se vede pe hartă."
-            areEroare={areEroare(['venue.name', 'venue.city', 'venue.mapQuery', 'venue.zoom'])}
-            rezumat={`${ciorna.venue.name}, ${ciorna.venue.city}`}
-          >
-            <Camp
-              eticheta="Numele locului"
-              ajutor="Ex. „Scările de Granit”."
-              eroare={erori.get('venue.name')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  value={ciorna.venue.name}
-                  onChange={(e) => seteaza('venue', { ...ciorna.venue, name: e.target.value })}
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Orașul sau zona"
-              ajutor="Ex. „Valea Morilor, Chișinău”."
-              eroare={erori.get('venue.city')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  value={ciorna.venue.city}
-                  onChange={(e) => seteaza('venue', { ...ciorna.venue, city: e.target.value })}
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Coordonatele"
-              ajutor="Punct exact, „lat,lng” — nu text căutat pe hartă. Le iei din Google Maps: click dreapta pe punct → prima linie din meniu le copiază."
-              eroare={erori.get('venue.mapQuery')}
-              ecou={
-                // Verificarea cu un click: harta e singurul câmp în care o
-                // greșeală nu se vede în admin, ci abia pe pagina publică.
-                hartaUrl ? (
-                  <a href={hartaUrl} target="_blank" rel="noopener noreferrer">
-                    Verifică punctul pe Google Maps ↗
-                  </a>
-                ) : undefined
-              }
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  value={ciorna.venue.mapQuery}
-                  placeholder="47.0182357,28.8213041"
-                  onChange={(e) =>
-                    seteaza('venue', {
-                      ...ciorna.venue,
-                      mapQuery: e.target.value,
-                    })
-                  }
-                />
-              )}
-            </Camp>
-          </Grup>
+          <GrupUnde
+            ciorna={ciorna}
+            seteaza={seteaza}
+            erori={erori}
+            areEroare={areEroare}
+          />
 
-          <Grup
-            titlu="Locuri"
-            ajutor="Câți încap și ce se întâmplă când se umple."
-            areEroare={areEroare(['slots.total', 'slots.waitlist'])}
-            rezumat={`${ciorna.slots.total} locuri · ${ciorna.slots.waitlist} pe lista de așteptare`}
-          >
-            <Camp
-              eticheta="Locuri disponibile"
-              ajutor="Bara de pe pagină are exact atâtea segmente."
-              eroare={erori.get('slots.total')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  type="number"
-                  min={1}
-                  value={ciorna.slots.total}
-                  onChange={(e) =>
-                    seteaza('slots', {
-                      ...ciorna.slots,
-                      total: Number(e.target.value),
-                    })
-                  }
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Locuri pe lista de așteptare"
-              ajutor="După ce se umplu locurile, formularul înscrie pe listă. Când se eliberează un loc, primul de pe listă urcă automat."
-              eroare={erori.get('slots.waitlist')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  type="number"
-                  min={0}
-                  value={ciorna.slots.waitlist}
-                  onChange={(e) =>
-                    seteaza('slots', {
-                      ...ciorna.slots,
-                      waitlist: Number(e.target.value),
-                    })
-                  }
-                />
-              )}
-            </Camp>
-          </Grup>
+          <GrupLocuri
+            ciorna={ciorna}
+            seteaza={seteaza}
+            erori={erori}
+            areEroare={areEroare}
+          />
 
-          <Grup
-            titlu="Ce arată pagina"
-            ajutor="Ecranul de pornire și ordinea secțiunilor."
-            rezumat={`${ciorna.showComingSoon ? 'Coming Soon' : 'Landing'} · ${
-              ciorna.layout.filter((x) => x.visible).length
-            } secțiuni vizibile`}
-          >
-            <Camp
-              eticheta="Homepage-ul arată"
-              ajutor="„Coming Soon” ține pagina pe numărătoarea inversă spre momentul anunțului, fără formular."
-            >
-              {(p) => (
-                <select
-                  {...p}
-                  value={ciorna.showComingSoon ? 'soon' : 'landing'}
-                  onChange={(e) => seteaza('showComingSoon', e.target.value === 'soon')}
-                >
-                  <option value="landing">Landing, cu înscrieri</option>
-                  <option value="soon">Coming Soon</option>
-                </select>
-              )}
-            </Camp>
-          </Grup>
+          <GrupRemindere
+            ciorna={ciorna}
+            seteazaRemindere={seteazaRemindere}
+            erori={erori}
+            acum={acum}
+            livrari={livrari}
+          />
 
-          <Grup
-            titlu="Instagram"
-            ajutor="Clipurile din bandă. Lipești linkul din Instagram — codul se extrage singur."
-            areEroare={probleme.some((x) => x.camp.startsWith('reels'))}
-            rezumat={
-              ciorna.reels.items.length === 0
-                ? 'Niciun clip · secțiunea nu apare pe pagină'
-                : `${ciorna.reels.items.length} ${
-                    ciorna.reels.items.length === 1 ? 'clip' : 'clipuri'
-                  }`
-            }
-          >
-            <Camp
-              eticheta="Titlul secțiunii"
-              eroare={erori.get('reels.headline')}
-            >
-              {(p) => (
-                <input
-                  {...p}
-                  value={ciorna.reels.headline}
-                  onChange={(e) =>
-                    seteaza('reels', { ...ciorna.reels, headline: e.target.value })
-                  }
-                />
-              )}
-            </Camp>
-            <Camp
-              eticheta="Textul de lângă bandă"
-              ajutor="Două rânduri. Ce vede cineva care nu ne-a văzut niciodată alergând."
-            >
-              {(p) => (
-                <textarea
-                  {...p}
-                  rows={3}
-                  value={ciorna.reels.body}
-                  onChange={(e) => seteaza('reels', { ...ciorna.reels, body: e.target.value })}
-                />
-              )}
-            </Camp>
-          </Grup>
+          <GrupCeArata
+            ciorna={ciorna}
+            seteaza={seteaza}
+          />
+
+          <GrupInstagram
+            ciorna={ciorna}
+            seteaza={seteaza}
+            erori={erori}
+          />
 
           <h3>Clipurile din bandă</h3>
           <p className="admin-config-hint">
@@ -786,6 +608,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <input
                         id={`reel-link-${i}`}
                         autoComplete="off"
+                        disabled={ocupat}
                         aria-invalid={eroareCod ? true : undefined}
                         placeholder="https://www.instagram.com/reel/ABC12345/"
                         // Textul brut cât timp se scrie; URL-ul canonic recompus
@@ -834,6 +657,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <input
                         id={`reel-poster-${i}`}
                         autoComplete="off"
+                        disabled={ocupat}
                         placeholder="/reels/marti.jpg"
                         value={r.poster}
                         onChange={(e) =>
@@ -847,6 +671,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <input
                         id={`reel-caption-${i}`}
                         autoComplete="off"
+                        disabled={ocupat}
                         placeholder="Marți dimineața, Râșcani"
                         value={r.caption}
                         onChange={(e) =>
@@ -858,7 +683,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <button
                         type="button"
                         className="admin-btn-ghost"
-                        disabled={i === 0}
+                        disabled={ocupat || i === 0}
                         aria-label={`Mută clipul ${i + 1} mai devreme`}
                         onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, -1), true)}
                       >
@@ -867,7 +692,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <button
                         type="button"
                         className="admin-btn-ghost"
-                        disabled={i === ciorna.reels.items.length - 1}
+                        disabled={ocupat || i === ciorna.reels.items.length - 1}
                         aria-label={`Mută clipul ${i + 1} mai târziu`}
                         onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, 1), true)}
                       >
@@ -876,6 +701,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                       <button
                         type="button"
                         className="admin-btn-ghost"
+                        disabled={ocupat}
                         aria-label={`Șterge clipul ${i + 1}`}
                         onClick={() => seteazaReels(stergeReel(ciorna.reels.items, i), true)}
                       >
@@ -890,7 +716,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           <button
             type="button"
             className="admin-btn-ghost"
-            disabled={ciorna.reels.items.length >= MAX_REELS}
+            disabled={ocupat || ciorna.reels.items.length >= MAX_REELS}
             onClick={() => seteazaReels(adaugaReel(ciorna.reels.items), true)}
           >
             + Adaugă clip
@@ -917,7 +743,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   type="button"
                   className="admin-btn-ghost"
                   onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, -1))}
-                  disabled={i === 0}
+                  disabled={ocupat || i === 0}
                   aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai sus`}
                 >
                   ↑
@@ -926,7 +752,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   type="button"
                   className="admin-btn-ghost"
                   onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, 1))}
-                  disabled={i === ciorna.layout.length - 1}
+                  disabled={ocupat || i === ciorna.layout.length - 1}
                   aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai jos`}
                 >
                   ↓
@@ -935,6 +761,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   type="button"
                   className="admin-btn-ghost"
                   onClick={() => seteaza('layout', comutaVizibilitatea(ciorna.layout, s.key))}
+                  disabled={ocupat}
                 >
                   {s.visible ? 'Ascunde' : 'Arată'}
                 </button>
@@ -942,6 +769,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             ))}
           </ol>
         </div>
+        </Blocat.Provider>
       )}
 
       {/* Bara lipita jos.
@@ -952,12 +780,16 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
       {ciorna !== null && (
         <div className="admin-bara-actiuni" role="status">
           <span className="admin-bara-stare">
+            {/* Problemele de validare au întâietate: ele dezactivează „Publică",
+                deci un refuz vechi n-are ce concura cu ele. */}
             {probleme.length > 0 ? (
               <span className="admin-bara-problema">
                 {probleme.length === 1
                   ? '1 câmp de reparat'
                   : `${probleme.length} câmpuri de reparat`}
               </span>
+            ) : refuz ? (
+              <span className="admin-bara-problema">{refuz}</span>
             ) : (
               <>
                 <strong>Ediția {ciorna.number}</strong>
@@ -980,7 +812,9 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               type="button"
               className="admin-btn-ghost"
               onClick={salveazaCiorna}
-              disabled={salveaza || !poatePublica}
+              // `publica` la fel de mult ca `salveaza`: publicarea salvează ea
+              // însăși, deci un al doilea „Salvează" din zbor ar scrie peste.
+              disabled={ocupat || !poatePublica}
             >
               {salveaza ? 'Se salvează…' : 'Salvează'}
             </button>
@@ -988,7 +822,7 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
               type="button"
               className="admin-btn-accent"
               onClick={() => setConfirmPublicare(true)}
-              disabled={publica || !poatePublica}
+              disabled={ocupat || !poatePublica}
             >
               {publica ? 'Se publică…' : 'Publică'}
             </button>
@@ -1010,6 +844,9 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
                   <button
                     type="button"
                     className="admin-btn-ghost"
+                    // Republicare imediată — n-are ce căuta în paralel cu o
+                    // salvare sau o publicare pe același rând.
+                    disabled={ocupat}
                     onClick={() => revino(v.id, v.editie)}
                   >
                     Revino la asta
@@ -1019,6 +856,14 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
             </div>
           </div>
         </>
+      )}
+
+      {dialogEditieNoua && publicat && (
+        <DialogEditieNoua
+          publicat={publicat}
+          onCreeaza={creeazaDinDialog}
+          onAnuleaza={() => setDialogEditieNoua(false)}
+        />
       )}
 
       {confirmPublicare && ciorna && (
@@ -1031,7 +876,8 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
           <div className="admin-confirm" role="alertdialog" aria-modal="true">
             <h3>Publici ediția {ciorna.number}?</h3>
             <p>
-              Site-ul public trece pe configul ăsta imediat, fără deploy. Vizitatorii vor vedea{' '}
+              Se <strong>salvează ciorna așa cum arată acum</strong>, apoi se publică. Site-ul
+              public trece pe configul ăsta imediat, fără deploy. Vizitatorii vor vedea{' '}
               <strong>{ciorna.showComingSoon ? 'Coming Soon' : 'landing-ul cu înscrieri'}</strong>.
             </p>
             <p className="admin-confirm-note">
@@ -1065,132 +911,3 @@ export const AdminEventTab = ({ token, onAuthError, showToast }: Props) => {
  * în care apar în tipul TypeScript — o ordine care are sens pentru cod, nu
  * pentru omul care deschide pagina ca să mute ora cursei.
  */
-/**
- * O secțiune a formularului, pliabilă, cu rezumat pe capac.
- *
- * De ce pliabilă: cele șase grupuri însemnau douăzeci de câmpuri deschise
- * simultan, pe două ecrane și jumătate. Organizatorul vine însă să schimbe un
- * lucru — ora, locul, capacitatea — nu douăzeci. Cu grupurile închise, tot
- * documentul încape într-un ecran, iar cel deschis e cel la care lucrezi.
- *
- * `rezumat` e ce ține locul câmpurilor când grupul e închis. Fără el, plierea
- * ar ascunde informația în loc s-o comprime, iar organizatorul ar fi nevoit să
- * deschidă fiecare grup ca să verifice ce a pus.
- *
- * Un grup cu erori se deschide singur și rămâne deschis: o problemă ascunsă
- * sub un capac e o problemă pe care „Publică" o raportează fără să arate unde.
- */
-const Grup = ({
-  titlu,
-  ajutor,
-  rezumat,
-  areEroare = false,
-  deschisImplicit = false,
-  children,
-}: {
-  titlu: string;
-  ajutor?: string;
-  rezumat?: ReactNode;
-  areEroare?: boolean;
-  deschisImplicit?: boolean;
-  children: ReactNode;
-}) => {
-  const [deschisManual, setDeschisManual] = useState(deschisImplicit);
-  const deschis = deschisManual || areEroare;
-  const idCorp = useId();
-
-  return (
-    <section className={`admin-config-grup${deschis ? ' deschis' : ''}${areEroare ? ' invalid' : ''}`}>
-      <button
-        type="button"
-        className="admin-config-grup-cap"
-        aria-expanded={deschis}
-        // `aria-expanded` singur spune „e deschis" fără să spună CE e deschis.
-        aria-controls={idCorp}
-        onClick={() => setDeschisManual((v) => !v)}
-      >
-        <span className="admin-config-grup-sageata" aria-hidden="true">
-          {deschis ? '▾' : '▸'}
-        </span>
-        <span className="admin-config-grup-titlu">{titlu}</span>
-        {!deschis && rezumat && <span className="admin-config-grup-rezumat">{rezumat}</span>}
-        {areEroare && <span className="admin-tab-alert">!</span>}
-      </button>
-      {deschis && (
-        <div className="admin-config-grup-corp" id={idCorp}>
-          {ajutor && <p className="admin-config-hint">{ajutor}</p>}
-          <div className="admin-config-grup-campuri">{children}</div>
-        </div>
-      )}
-    </section>
-  );
-};
-
-/** Ce primește controlul din interiorul unui `Camp`, gata de împrăștiat pe el. */
-type ControlCamp = {
-  id: string;
-  'aria-describedby'?: string;
-  'aria-invalid'?: true;
-  autoComplete: 'off';
-};
-
-/**
- * Un câmp: etichetă, control, și — sub el — explicația, ecoul sau eroarea.
- *
- * `ecou` e confirmarea a ceea ce tocmai s-a ales, scrisă cu litere („sâmbătă,
- * 22 august 2026 · peste 3 luni”). Eroarea îl înlocuiește: cât timp valoarea e
- * invalidă, n-are ce confirma.
- *
- * Controlul vine ca funcție, nu ca element: eticheta e legată prin `htmlFor`,
- * iar ajutorul și eroarea prin `aria-describedby`. Un `<label>` care le-ar
- * înveli pe toate ar lipi și explicația de NUMELE accesibil al inputului —
- * cititorul de ecran ar anunța „Numărul ediției Ediția la care se înscrie lumea
- * acum" în loc de „Numărul ediției", iar `getByLabelText` n-ar mai găsi câmpul.
- */
-const Camp = ({
-  eticheta,
-  ajutor,
-  eroare,
-  ecou,
-  children,
-}: {
-  eticheta: string;
-  ajutor?: string;
-  eroare?: string;
-  ecou?: ReactNode;
-  children: (control: ControlCamp) => ReactNode;
-}) => {
-  const id = useId();
-  const idAjutor = `${id}-ajutor`;
-  const idEroare = `${id}-eroare`;
-  // Eroarea prima: e cea care cere o acțiune acum.
-  const descrieri = [eroare && idEroare, ajutor && idAjutor].filter(Boolean).join(' ');
-
-  return (
-    <div className={`admin-config-camp${eroare ? ' invalid' : ''}`}>
-      <label className="admin-config-eticheta" htmlFor={id}>
-        {eticheta}
-      </label>
-      {children({
-        id,
-        'aria-describedby': descrieri || undefined,
-        'aria-invalid': eroare ? true : undefined,
-        // Niciun câmp de aici nu e dată personală. Autocompletarea browserului
-        // n-are ce oferi, dar poate acoperi valoarea reală cu una veche.
-        autoComplete: 'off',
-      })}
-      {eroare ? (
-        <span id={idEroare} className="admin-config-eroare" role="alert">
-          {eroare}
-        </span>
-      ) : (
-        ecou && <span className="admin-config-ecou">{ecou}</span>
-      )}
-      {ajutor && (
-        <span id={idAjutor} className="admin-config-ajutor">
-          {ajutor}
-        </span>
-      )}
-    </div>
-  );
-};

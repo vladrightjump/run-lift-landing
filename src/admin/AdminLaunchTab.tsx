@@ -1,43 +1,18 @@
-import { useCallback, useRef, useState } from 'react';
+import { useState } from 'react';
 import { toCsv } from '../lib/csv';
 import { listLaunchNotifications } from '../lib/adminApi';
-import type { AdminLaunchSignup } from '../lib/adminApi';
 import { useEventConfig } from '../hooks/useEventConfig';
-import { useAdminPolling } from './useAdminPolling';
+import { useAdminResource } from './useAdminResource';
+import { ziSiLuna } from '../lib/formatare';
 
-type Props = {
-  token: string;
-  formatDate: (iso: string) => string;
-  onAuthError: (err: unknown) => boolean;
-};
-
-export const AdminLaunchTab = ({ token, formatDate, onAuthError }: Props) => {
+export const AdminLaunchTab = () => {
   // Din configul publicat, nu din bundle — vezi nota din AdminDashboard.
   const CURRENT_LAUNCH_EDITION = useEventConfig().launchNumber;
-  const [rows, setRows] = useState<AdminLaunchSignup[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
   const [query, setQuery] = useState('');
   const [showAllEditions, setShowAllEditions] = useState(false);
   const [sursa, setSursa] = useState<'toate' | 'lansare' | 'despre-noi'>('toate');
-  const rowsRef = useRef<AdminLaunchSignup[] | null>(null);
-  rowsRef.current = rows;
 
-  const fetchRows = useCallback(
-    (signal: AbortSignal) => {
-      listLaunchNotifications(token, signal)
-        .then((data) => {
-          setRows(data);
-          setLoadError(false);
-        })
-        .catch((err) => {
-          if (signal.aborted || onAuthError(err)) return;
-          setLoadError((prev) => prev || rowsRef.current === null);
-        });
-    },
-    [token, onAuthError]
-  );
-
-  useAdminPolling(fetchRows);
+  const { date: rows, eroare: loadError } = useAdminResource(listLaunchNotifications);
 
   const rowsAll = rows ?? [];
   // Lista e per-ediție: implicit arătăm doar ediția curentă, dar arhiva
@@ -184,7 +159,7 @@ export const AdminLaunchTab = ({ token, formatDate, onAuthError }: Props) => {
               <a className="admin-cell-link ellipsis" href={`mailto:${r.email}`}>
                 {r.email}
               </a>
-              <span className="admin-cell-date">{formatDate(r.created_at)}</span>
+              <span className="admin-cell-date">{ziSiLuna(r.created_at)}</span>
               <span
                 className={`admin-conf${r.confirmat_la ? ' da' : ''}`}
                 title={

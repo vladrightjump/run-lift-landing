@@ -12,7 +12,7 @@
  * ediție: trăiește în `src/lib/backend.ts` și se re-exportă de aici.
  */
 import { EDITION } from '../content/edition';
-import { SNAPSHOT_CONFIG, type EventConfig } from '../content/eventConfig';
+import { type EventConfig } from '../content/eventConfig';
 
 // Re-export backend (Supabase) — configurare de mediu, nu de ediție.
 export { SUPABASE, isBackendConfigured } from './backend';
@@ -61,4 +61,3 @@ export const deriveEditionDates = (config: EventConfig): EditionDates => {
  * (injectată în HTML la build) și testele. O componentă care ajunge aici în loc
  * de `useEditionDates()` va îngheța pe ediția deployată — folosește hook-ul.
  */
-export const SNAPSHOT_DATES = deriveEditionDates(SNAPSHOT_CONFIG);

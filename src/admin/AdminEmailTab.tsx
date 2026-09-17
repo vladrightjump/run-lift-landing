@@ -15,9 +15,11 @@ import type {
 import { cheieDifuzare, ultimaDifuzare, audienteAmbigue } from './sendLock';
 import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
 import type { Audience, Recipient } from './emailAudience';
+import { useEventConfig } from '../hooks/useEventConfig';
+import { ziLunaOra, ziSiLuna } from '../lib/formatare';
+import { useSesiuneAdmin } from './adminSession';
 
 type Props = {
-  token: string;
   rows: AdminRegistration[];
   /** Lista de așteptare a evenimentului (event_waitlist) a ediției deschise. */
   waitlist: AdminWaitlistEntry[];
@@ -27,8 +29,6 @@ type Props = {
   emailLog: AdminEmailLogEntry[];
   /** Ediție de arhivă: nu mai trimitem emailuri în numele ei. */
   readOnly: boolean;
-  formatDate: (iso: string) => string;
-  showToast: (toast: { kind: 'error' | 'success'; msg: string }) => void;
 };
 
 type Template = { nume: string; subiect: string; corp: string };
@@ -39,36 +39,61 @@ type Template = { nume: string; subiect: string; corp: string };
 // prietenos și de audiența în care apare.
 const TEMPLATE_LABELS: Record<string, string> = {
   bulk_participant_confirmare: 'Confirmare (automat)',
-  bulk_participant_reminder: 'Reminder eveniment',
   bulk_waitlist_anunt: 'Anunț eveniment nou',
 };
 
-const PARTICIPANT_KEYS = ['bulk_participant_confirmare', 'bulk_participant_reminder'] as const;
+/**
+ * Reminderele NU sunt aici, deși au șabloane.
+ *
+ * Ordinea contează, și e singurul motiv pentru care difuzarea manuală a
+ * reminderelor a plecat înainte ca `pg_cron` să fie armat: `broadcast_once`
+ * face `maybe_send_reminder` idempotentă față de ea însăși, dar nu față de un
+ * buton apăsat de om. Ceasul armat lângă butonul încă prezent e exact
+ * scenariul în care oamenii primesc același reminder de două ori.
+ *
+ * Orarul reminderelor se editează din „Eveniment" → Remindere, iar starea
+ * fiecăruia se citește din jurnalul de livrare. Difuzarea către celelalte
+ * audiențe rămâne neatinsă.
+ */
+const PARTICIPANT_KEYS = ['bulk_participant_confirmare'] as const;
 const WAITLIST_KEYS = ['bulk_waitlist_anunt'] as const;
 
 // „Mesaj liber" nu se salvează nicăieri — e mereu ultimul, gol.
 const FREE_TEMPLATE: Template = { nume: 'Mesaj liber', subiect: '', corp: '' };
 
-const VARIABLES = ['{nume}', '{prenume}', '{telefon}', '{email}', '{data_inscrierii}'] as const;
-
-const timpDifuzare = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Europe/Chisinau',
-});
+/**
+ * Câmpurile inserabile. Primele cinci descriu PERSOANA, restul EVENIMENTUL —
+ * derivate din configul publicat, deci o ediție nouă le schimbă singură. Înainte
+ * data și locul se tastau de mână și rămâneau pe ediția trecută.
+ */
+const VARIABLES = [
+  '{nume}',
+  '{prenume}',
+  '{telefon}',
+  '{email}',
+  '{data_inscrierii}',
+  '{data_cursei}',
+  '{data_scurta}',
+  '{ora_start}',
+  '{ora_checkin}',
+  '{locul}',
+  '{numele_cursei}',
+  '{editia}',
+  // Per destinatar, ca `{nume}`: poartă tokenul lui. Doar participanții au unul
+  // — la ceilalți cade tot rândul pe care e scrisă (vezi `fillTemplate`).
+  '{link_renunt}',
+] as const;
 
 export const AdminEmailTab = ({
-  token,
   rows,
   waitlist,
   editie,
   emailLog,
   readOnly,
-  formatDate,
-  showToast,
 }: Props) => {
+  const { token, showToast } = useSesiuneAdmin();
+  // Configul publicat — sursa variabilelor de eveniment din șabloane.
+  const configPublicat = useEventConfig();
   const [audience, setAudience] = useState<Audience>('participanti');
   const [launchRows, setLaunchRows] = useState<AdminLaunchSignup[]>([]);
   const [dbTemplates, setDbTemplates] = useState<AdminEmailTemplate[]>([]);
@@ -174,8 +199,10 @@ export const AdminEmailTab = ({
       ? 'lista „Anunță-mă la lansare"'
       : 'toți (participanți + liste de așteptare)';
 
+  // Previzualizarea trece prin aceeași substituție ca trimiterea — altfel ai
+  // verifica alt text decât cel care pleacă.
   const fill = (text: string, r: Recipient): string =>
-    fillTemplate(text, r, formatDate(r.created_at));
+    fillTemplate(text, r, ziSiLuna(r.created_at), configPublicat);
 
   const switchAudience = (a: Audience) => {
     if (a === audience) return;
@@ -469,7 +496,7 @@ export const AdminEmailTab = ({
         {anterioara && !readOnly && (
           <div className="admin-banner warn" role="status">
             <strong>
-              Aceeași difuzare a plecat deja pe {timpDifuzare.format(new Date(anterioara.cand))},
+              Aceeași difuzare a plecat deja pe {ziLunaOra(anterioara.cand)},
               către {anterioara.catreCati}{' '}
               {anterioara.catreCati === 1 ? 'destinatar' : 'destinatari'}.
             </strong>{' '}

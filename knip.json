@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/admin-preview.tsx",
+    "scripts/*.{ts,mjs}",
+    "tests/**/*.spec.ts",
+    "tests/**/*.test.{ts,tsx}"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "scripts/**/*.{ts,mjs}",
+    "tests/**/*.{ts,tsx}"
+  ]
+}

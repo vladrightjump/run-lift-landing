@@ -40,12 +40,50 @@ export const emailuriNelivrate = (intrari: AdminEmailLogEntry[]): AdminEmailLogE
   [...ultimaIncercarePerCheie(intrari).values()].filter((e) => e.status === 'esuat');
 
 /**
- * Dintre nelivrate, cele care se pot RETRIMITE din backoffice: doar modul `admin`.
- * Restul (confirm/promoted/info/broadcast) depind de contextul fluxului lor și se
- * reîncearcă de acolo, nu printr-o retrimitere oarbă.
+ * Dintre nelivrate, cele care se pot RETRIMITE în lot: doar modul `admin`.
+ *
+ * Retrimiterea în lot reia textul din jurnal, ceea ce e corect DOAR pentru
+ * emailurile compuse manual în backoffice — acolo textul din jurnal chiar e
+ * mesajul. Celelalte moduri se repară una câte una, prin `rejucabil` de mai jos,
+ * care reconstruiește mesajul din șablon.
  */
 export const emailuriRetrimisibile = (nelivrate: AdminEmailLogEntry[]): AdminEmailLogEntry[] =>
   nelivrate.filter((e) => e.mod === 'admin');
+
+/**
+ * De ce un eșec nu se poate rejuca — sau `null` dacă se poate.
+ *
+ * Verdictul final e al serverului (`admin_replay_lookup`): doar el știe dacă
+ * destinatarul mai există, dacă s-a dezabonat între timp sau dacă înscrierea a
+ * fost ștearsă. Aici stă doar ce se poate decide din rândul de jurnal, ca
+ * ecranul să nu ofere un buton care va fi refuzat oricum — și, mai important, ca
+ * rândul refuzat să spună DE CE în loc să dispară.
+ */
+export const motivNerejucabil = (e: AdminEmailLogEntry): string | null => {
+  if (e.mod === 'admin') {
+    return 'Trimis manual din backoffice — se retrimite din butonul de sus.';
+  }
+  if (e.mod === 'alert') {
+    // O alertă către operator descrie o anomalie de ATUNCI. Rejucată, ar
+    // reafirma o stare care poate fi între timp reparată.
+    return 'Alertă către operator — descrie o anomalie de atunci, nu o stare de reafirmat.';
+  }
+  if (e.mod === 'info') {
+    // Cooldown-ul de 10 minute și `mark_confirmation_sent` fac din rejucare o
+    // cerere nouă, nu o reparație. Ascuns, rândul ar părea rezolvat.
+    return 'Confirmare de adresă (double opt-in) — o rejucare ar fi o cerere nouă, nu o reparație. Persoana o poate cere din nou de pe site.';
+  }
+  if (e.mod === 'broadcast' && !e.sablon) {
+    // Orarul are DOUĂ șabloane pentru aceeași audiență; ghicitul ar retrimite
+    // alt text decât cel eșuat.
+    return 'Difuzare de dinainte ca jurnalul să rețină șablonul — nu se poate ști ce text a plecat.';
+  }
+  return null;
+};
+
+/** Eșecurile care se pot rejuca prin fluxul modului lor. */
+export const emailuriRejucabile = (nelivrate: AdminEmailLogEntry[]): AdminEmailLogEntry[] =>
+  nelivrate.filter((e) => motivNerejucabil(e) === null);
 
 /* ---- Fișa de acoperire: cine n-a primit ce ---- */
 

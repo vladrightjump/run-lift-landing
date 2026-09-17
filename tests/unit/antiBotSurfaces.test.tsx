@@ -30,11 +30,19 @@ import { DespreNoi } from '../../src/components/DespreNoi';
  * `{...hpProps}` pe un `<input>` din interiorul `<form>`-ului.
  */
 
+/**
+ * Momentul citit de formular, ținut în afara randării: `Date.now()` în corpul
+ * componentei e impur. Se umple în `beforeEach`, DUPĂ `setSystemTime` — la
+ * încărcarea modulului ceasul fals nu există încă, iar ora reală e după
+ * deadline-ul ediției, deci n-ar exista niciun `<form>` de verificat.
+ */
+let acum = 0;
+
 /** Formularul de înscriere are nevoie de `useRegistration`; îl dăm printr-un wrapper. */
 const CuInscriere = ({ variant }: { variant: 'sectiune' | 'formular' }) => {
   const reg = useRegistration({
     stats: null,
-    now: Date.now(),
+    now: acum,
     refresh: () => {},
     showToast: () => {},
   });
@@ -110,6 +118,7 @@ describe('capcana anti-bot e pe toate formularele publice', () => {
     // după închidere `showForm` e false și n-ar exista niciun `<form>` de verificat.
     vi.useFakeTimers();
     vi.setSystemTime(new Date(SNAPSHOT_CONFIG.start).getTime() - 7 * 24 * 3600 * 1000);
+    acum = Date.now();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
     // jsdom n-are `matchMedia`; `heroVideoSrc` și efectele de mișcare îl cer.
     vi.stubGlobal(

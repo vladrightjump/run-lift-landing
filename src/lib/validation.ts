@@ -1,14 +1,32 @@
 
 export type FormData = {
+  /** Numele de familie. */
   nume: string;
+  prenume: string;
   telefon: string;
   email: string;
   dataNasterii: string; // ISO yyyy-mm-dd din <input type="date">
   acord: boolean;
 };
 
-export type FieldName = 'nume' | 'telefon' | 'email' | 'dataNasterii' | 'acord';
+export type FieldName = 'nume' | 'prenume' | 'telefon' | 'email' | 'dataNasterii' | 'acord';
 export type FieldErrors = Partial<Record<FieldName, boolean>>;
+
+/**
+ * Numele așa cum ajunge în baza de date: „Andrei Popescu".
+ *
+ * Formularul cere numele pe două câmpuri, coloana rămâne una singură. Ordinea
+ * NU e o preferință de stil: `public_stats` maschează numele luând primul
+ * cuvânt plus inițiala ultimului („Andrei P."), iar emailul de confirmare se
+ * adresează pe primul cuvânt. Scris „Popescu Andrei", lista publică ar arăta
+ * „Popescu A." și confirmarea ar începe cu „Salut, Popescu".
+ *
+ * Un singur loc pentru compunere, folosit de ambele căi de trimitere
+ * (înscriere și listă de așteptare) — două implementări s-ar putea despărți,
+ * iar despărțirea s-ar vedea abia în lista publică.
+ */
+export const numeComplet = (data: Pick<FormData, 'nume' | 'prenume'>): string =>
+  `${data.prenume.trim()} ${data.nume.trim()}`.trim();
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // Se aplică pe numărul normalizat (fără spații, paranteze, liniuțe, puncte).
@@ -86,7 +104,11 @@ export const dataNasteriiError = (isoBirth: string, startLocal: string): string 
 
 export const validate = (data: FormData, startLocal: string): FieldErrors => {
   const errors: FieldErrors = {};
-  if (data.nume.length < 3) errors.nume = true;
+  // Două caractere per câmp, ca la „anunță-mă la lansare" (`validateLaunchDraft`).
+  // Pragul vechi de 3 era pentru un singur câmp „nume complet"; aplicat acum pe
+  // fiecare bucată ar respinge nume reale scurte („Ana Pop").
+  if (data.nume.trim().length < 2) errors.nume = true;
+  if (data.prenume.trim().length < 2) errors.prenume = true;
   if (!PHONE_RE.test(normalizePhone(data.telefon))) errors.telefon = true;
   if (!EMAIL_RE.test(data.email)) errors.email = true;
   if (dataNasteriiError(data.dataNasterii, startLocal) !== null) errors.dataNasterii = true;
@@ -95,7 +117,8 @@ export const validate = (data: FormData, startLocal: string): FieldErrors => {
 };
 
 export const firstErrorField = (errors: FieldErrors): FieldName | undefined => {
-  return (['nume', 'telefon', 'email', 'dataNasterii'] as const).find((n) => errors[n]);
+  // Ordinea e cea din formular: focusul cade pe primul câmp greșit de sus în jos.
+  return (['nume', 'prenume', 'telefon', 'email', 'dataNasterii'] as const).find((n) => errors[n]);
 };
 
 export const errorMessage = (errors: FieldErrors): string => {

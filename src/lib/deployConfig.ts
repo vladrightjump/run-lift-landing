@@ -31,7 +31,7 @@ export const extractDirective = (vercel: VercelJson, name: string): string => {
   return match[1];
 };
 
-export const extractConnectSrc = (vercel: VercelJson): string =>
+const extractConnectSrc = (vercel: VercelJson): string =>
   extractDirective(vercel, 'connect-src');
 
 /** Originul de la care se încarcă widgetul Turnstile și se face challenge-ul. */

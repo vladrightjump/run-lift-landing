@@ -22,5 +22,8 @@ form-*.png
 cs-*.png
 prod-*.png
 
-# Supabase CLI (artefacte locale)
+# Rapoartele de acoperire (se generează la fiecare rulare).
+coverage/
+
+# Starea locală a CLI-ului Supabase (versiunea descărcată la ultima rulare).
 supabase/.temp/

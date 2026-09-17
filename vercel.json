@@ -6,26 +6,12 @@
     }
   },
   "rewrites": [
-    {
-      "source": "/admin",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/despre-noi",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/confirmare",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/inscriere",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/unsubscribe",
-      "destination": "/index.html"
-    }
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/despre-noi", "destination": "/index.html" },
+    { "source": "/confirmare", "destination": "/index.html" },
+    { "source": "/inscriere", "destination": "/index.html" },
+    { "source": "/unsubscribe", "destination": "/index.html" },
+    { "source": "/renunt", "destination": "/index.html" }
   ],
   "headers": [
     {

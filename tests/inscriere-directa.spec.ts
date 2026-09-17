@@ -50,7 +50,8 @@ const mockEmail = (page: Page) =>
 const dateField = (page: Page) => page.getByPlaceholder('zz.ll.aaaa');
 
 const fillValid = async (page: Page) => {
-  await page.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
+  await page.getByPlaceholder('Popescu').fill('Filip');
+  await page.getByPlaceholder('Ana', { exact: true }).fill('Vladislav');
   await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
   await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
   await dateField(page).fill('15.05.1994');
@@ -67,8 +68,8 @@ test.describe('/inscriere — pagina cu link direct', () => {
 
     await expect(page.getByRole('heading', { name: /înscrie-te/i })).toBeVisible();
     await expect(submitBtn(page)).toBeEnabled();
-    // Fără scroll și fără căutat: cursorul e deja în „Nume complet".
-    await expect(page.getByPlaceholder('Ana Popescu')).toBeFocused();
+    // Fără scroll și fără căutat: cursorul e deja în primul câmp, „Nume".
+    await expect(page.getByPlaceholder('Popescu')).toBeFocused();
   });
 
   test('submit valid → aceleași date ca de pe landing', async ({ page }) => {
@@ -112,7 +113,8 @@ test.describe('/inscriere — pagina cu link direct', () => {
     });
 
     await page.goto('/inscriere');
-    await page.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
+    await page.getByPlaceholder('Popescu').fill('Filip');
+  await page.getByPlaceholder('Ana', { exact: true }).fill('Vladislav');
     await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
     await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
     await dateField(page).fill('15.05.2020');
@@ -133,7 +135,8 @@ test.describe('/inscriere — pagina cu link direct', () => {
     });
 
     await page.goto('/inscriere');
-    await page.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
+    await page.getByPlaceholder('Popescu').fill('Filip');
+  await page.getByPlaceholder('Ana', { exact: true }).fill('Vladislav');
     await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
     await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
     await dateField(page).fill('15.05');
@@ -225,7 +228,8 @@ test.describe('overlay-ul de pe landing', () => {
     await page.getByRole('link', { name: /înscrie-te/i }).first().click();
 
     const overlay = page.getByRole('dialog', { name: /înscriere/i });
-    await overlay.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
+    await overlay.getByPlaceholder('Popescu').fill('Filip');
+    await overlay.getByPlaceholder('Ana', { exact: true }).fill('Vladislav');
     await overlay.getByPlaceholder('07xx xxx xxx').fill('069509949');
     await overlay.getByPlaceholder('ana@email.ro').fill('pw@example.com');
     await overlay.getByPlaceholder('zz.ll.aaaa').fill('15.05.1994');
@@ -250,7 +254,8 @@ test.describe('overlay-ul de pe landing', () => {
     await page.getByRole('link', { name: /înscrie-te/i }).first().click();
 
     const overlay = page.getByRole('dialog', { name: /înscriere/i });
-    await overlay.getByPlaceholder('Ana Popescu').fill('Vladislav Filip');
+    await overlay.getByPlaceholder('Popescu').fill('Filip');
+    await overlay.getByPlaceholder('Ana', { exact: true }).fill('Vladislav');
     await overlay.getByPlaceholder('07xx xxx xxx').fill('069509949');
     await overlay.getByPlaceholder('ana@email.ro').fill('pw@example.com');
     await overlay.getByPlaceholder('zz.ll.aaaa').fill('15.05.1994');

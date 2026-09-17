@@ -6,6 +6,8 @@ import {
   comutaVizibilitatea,
   layoutComplet,
   cioarnaPentruEditiaUrmatoare,
+  cioarnaEditieNoua,
+  rezumatCiornaNoua,
   parseInstagramUrl,
   adaugaReel,
   stergeReel,
@@ -29,30 +31,48 @@ describe('documentul valid trece', () => {
   });
 });
 
+/**
+ * Momentele se exprimă în ore FAȚĂ DE START, nu ca date scrise de mână. Scrise
+ * de mână, țineau doar cât timp instantaneul rămânea pe ediția care le-a
+ * inspirat: la prima aliniere pe ediția publicată ajungeau de partea greșită a
+ * graniței și testul pica fără ca vreo regulă să se fi schimbat.
+ */
+const fataDeStart = (ore: number): string => {
+  const d = new Date(`${SNAPSHOT_CONFIG.start}Z`);
+  d.setUTCMinutes(d.getUTCMinutes() + Math.round(ore * 60));
+  return d.toISOString().slice(0, 19);
+};
+
 describe('reguli de relație între repere', () => {
   it('deadline după start e respins', () => {
-    expect(campuri(cu({ registrationDeadline: '2026-08-22T09:00:00' }))).toContain(
+    expect(campuri(cu({ registrationDeadline: fataDeStart(2) }))).toContain(
       'registrationDeadline'
     );
   });
 
-  it('deadline egal cu startul e acceptat — e chiar cazul ediției curente', () => {
+  it('deadline egal cu startul e acceptat', () => {
     expect(campuri(cu({ registrationDeadline: SNAPSHOT_CONFIG.start }))).not.toContain(
       'registrationDeadline'
     );
   });
 
   it('următorul antrenament înainte de finalul cursei e respins', () => {
-    // Start 07:00 + 2h = 09:00; ținta la 08:00 e în timpul cursei.
-    expect(campuri(cu({ nextEditionAt: '2026-08-22T08:00:00' }))).toContain('nextEditionAt');
+    // Finalul e start + `durationHours`; ținta la jumătatea cursei e înăuntru.
+    expect(campuri(cu({ nextEditionAt: fataDeStart(SNAPSHOT_CONFIG.durationHours / 2) }))).toContain(
+      'nextEditionAt'
+    );
   });
 
   it('următorul antrenament fix la finalul cursei e respins (trebuie strict după)', () => {
-    expect(campuri(cu({ nextEditionAt: '2026-08-22T09:00:00' }))).toContain('nextEditionAt');
+    expect(campuri(cu({ nextEditionAt: fataDeStart(SNAPSHOT_CONFIG.durationHours) }))).toContain(
+      'nextEditionAt'
+    );
   });
 
   it('durata mai lungă mută granița, deci și verdictul', () => {
-    const c = cu({ durationHours: 24, nextEditionAt: '2026-08-22T20:00:00' });
+    // Aceeași țintă, acceptabilă la durata reală, cade în interiorul unei curse
+    // de 24h — granița e a duratei, nu a datei.
+    const c = cu({ durationHours: 24, nextEditionAt: fataDeStart(13) });
     expect(campuri(c)).toContain('nextEditionAt');
   });
 });
@@ -281,5 +301,119 @@ describe('validarea clipurilor oglindește serverul', () => {
     // Un avertisment care pornește aprins e un avertisment pe care nimeni nu-l
     // mai citește. Pagina ascunde secțiunea singură.
     expect(avertismenteEventConfig(SNAPSHOT_CONFIG)).toEqual([]);
+  });
+});
+
+/**
+ * Ciorna ediției noi, din trei câmpuri.
+ *
+ * Contractul păzit aici e unul negativ: după dialogul rapid, `launchAt` NU mai
+ * poate rămâne în urmă. `cioarnaPentruEditiaUrmatoare` îl copiază — de aceea
+ * există și testul care arată diferența dintre cele două, nu doar cel care
+ * verifică valoarea nouă.
+ */
+describe('cioarnaEditieNoua — reperele se recalculează, nu se copiază', () => {
+  // Ediția din instantaneu: start 2026-09-05T07:00, check-in 06:45, anunț
+  // 2026-09-03T12:00, deadline 2026-09-05T06:00, următorul 2026-09-12T07:00.
+  const START_NOU = '2026-10-03T09:00:00';
+
+  it('check-inul păstrează avansul, nu ora — 07:00→09:00 mută 06:45 la 08:45', () => {
+    expect(cioarnaEditieNoua(SNAPSHOT_CONFIG, START_NOU, 30).checkinFrom).toBe('08:45');
+  });
+
+  it('anunțul ediției se mută odată cu startul, deci nu rămâne un moment consumat', () => {
+    const noua = cioarnaEditieNoua(SNAPSHOT_CONFIG, START_NOU, 30);
+    // Startul s-a mutat cu 28 de zile și 2 ore; anunțul face același drum.
+    expect(noua.launchAt).toBe('2026-10-01T14:00:00');
+    // Exact ce NU face calea veche — de aici venea capcana.
+    expect(cioarnaPentruEditiaUrmatoare(SNAPSHOT_CONFIG).launchAt).toBe(SNAPSHOT_CONFIG.launchAt);
+  });
+
+  it('anunțul unei ediții mutate în viitor e în viitor', () => {
+    const noua = cioarnaEditieNoua(SNAPSHOT_CONFIG, START_NOU, 30);
+    const acum = new Date('2026-09-06T12:00:00+03:00').getTime();
+    expect(new Date(`${noua.launchAt}${noua.tz}`).getTime()).toBeGreaterThan(acum);
+  });
+
+  it('închiderea înscrierilor și următorul antrenament păstrează distanțele față de start', () => {
+    const noua = cioarnaEditieNoua(SNAPSHOT_CONFIG, START_NOU, 30);
+    const distanta = (c: EventConfig, camp: 'registrationDeadline' | 'nextEditionAt'): number =>
+      new Date(`${c[camp]}${c.tz}`).getTime() - new Date(`${c.start}${c.tz}`).getTime();
+    expect(distanta(noua, 'registrationDeadline')).toBe(
+      distanta(SNAPSHOT_CONFIG, 'registrationDeadline')
+    );
+    expect(distanta(noua, 'nextEditionAt')).toBe(distanta(SNAPSHOT_CONFIG, 'nextEditionAt'));
+  });
+
+  it('numărul ediției urcă cu unul, iar `launchNumber` rămâne o decizie separată', () => {
+    const noua = cioarnaEditieNoua(SNAPSHOT_CONFIG, START_NOU, 30);
+    expect(noua.number).toBe(SNAPSHOT_CONFIG.number + 1);
+    expect(noua.launchNumber).toBe(SNAPSHOT_CONFIG.launchNumber);
+  });
+
+  it('numărul de locuri vine din câmp, restul capacității se moștenește', () => {
+    const noua = cioarnaEditieNoua(SNAPSHOT_CONFIG, START_NOU, 42);
+    expect(noua.slots.total).toBe(42);
+    expect(noua.slots.waitlist).toBe(SNAPSHOT_CONFIG.slots.waitlist);
+  });
+
+  it('locația și formatul trec neatinse', () => {
+    const noua = cioarnaEditieNoua(SNAPSHOT_CONFIG, START_NOU, 30);
+    expect(noua.venue).toEqual(SNAPSHOT_CONFIG.venue);
+    expect(noua.durationHours).toBe(SNAPSHOT_CONFIG.durationHours);
+  });
+
+  it('un start malformat nu inventează repere — validarea îl refuză', () => {
+    const noua = cioarnaEditieNoua(SNAPSHOT_CONFIG, '2026-10-03', 30);
+    expect(noua.start).toBe('2026-10-03');
+    expect(campuri(noua)).toContain('start');
+  });
+
+  it('un start identic cu cel publicat nu mută nimic', () => {
+    const noua = cioarnaEditieNoua(SNAPSHOT_CONFIG, SNAPSHOT_CONFIG.start, 30);
+    expect(noua.launchAt).toBe(SNAPSHOT_CONFIG.launchAt);
+    expect(noua.checkinFrom).toBe(SNAPSHOT_CONFIG.checkinFrom);
+  });
+});
+
+describe('rezumatCiornaNoua — ce s-a moștenit, câmp cu câmp', () => {
+  const START_NOU = '2026-10-03T09:00:00';
+  const rezumat = (startNou = START_NOU, locuri = 30) =>
+    rezumatCiornaNoua(SNAPSHOT_CONFIG, cioarnaEditieNoua(SNAPSHOT_CONFIG, startNou, locuri));
+  const etichete = (...args: Parameters<typeof rezumat>): string[] =>
+    rezumat(...args).map((c) => c.eticheta);
+
+  it('enumeră locația moștenită, cu valoarea ei', () => {
+    const locatia = rezumat().find((c) => c.eticheta === 'Locația');
+    expect(locatia?.valoare).toContain(SNAPSHOT_CONFIG.venue.name);
+    expect(locatia?.recalculat).toBeUndefined();
+  });
+
+  it('enumeră capacitatea, cu numărul de locuri ales', () => {
+    expect(rezumat(START_NOU, 42).find((c) => c.eticheta === 'Capacitate')?.valoare).toContain(
+      '42 locuri'
+    );
+  });
+
+  it('momentele mutate apar cu valoarea NOUĂ, marcate ca recalculate', () => {
+    const checkin = rezumat().find((c) => c.eticheta === 'Check-in de la');
+    expect(checkin).toEqual({ eticheta: 'Check-in de la', valoare: '08:45', recalculat: true });
+    expect(rezumat().find((c) => c.eticheta === 'Se anunță ediția')?.recalculat).toBe(true);
+  });
+
+  it('un start identic nu raportează niciun câmp ca recalculat', () => {
+    expect(rezumat(SNAPSHOT_CONFIG.start).some((c) => c.recalculat)).toBe(false);
+    // Dar moștenirea se arată în continuare — asta e jumătatea care contează.
+    expect(etichete(SNAPSHOT_CONFIG.start)).toContain('Locația');
+  });
+
+  it('ocupatele de rezervă se raportează doar când nu sunt zero', () => {
+    expect(etichete()).not.toContain('Ocupate (valoare de rezervă)');
+    const cuOcupate = { ...SNAPSHOT_CONFIG, slots: { ...SNAPSHOT_CONFIG.slots, occupiedFallback: 7 } };
+    expect(
+      rezumatCiornaNoua(cuOcupate, cioarnaEditieNoua(cuOcupate, START_NOU, 30)).find(
+        (c) => c.eticheta === 'Ocupate (valoare de rezervă)'
+      )?.valoare
+    ).toBe('7');
   });
 });

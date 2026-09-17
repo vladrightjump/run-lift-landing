@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
+import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { AdminComingSoonTab } from '../../src/admin/AdminComingSoonTab';
 import { EventConfigProvider } from '../../src/hooks/useEventConfig';
 import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig';
@@ -33,7 +34,9 @@ const PUBLICAT: EventConfig = {
 const randeaza = (config: EventConfig = PUBLICAT) =>
   render(
     <EventConfigProvider override={config}>
-      <AdminComingSoonTab token="t" onAuthError={onAuthError} showToast={showToast} />
+      <FurnizorSesiuneAdmin token="t" onAuthError={onAuthError} showToast={showToast}>
+        <AdminComingSoonTab />
+      </FurnizorSesiuneAdmin>
     </EventConfigProvider>
   );
 

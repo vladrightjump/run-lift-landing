@@ -123,7 +123,11 @@ test.describe('Landing — lista de participanți (din public_stats)', () => {
 
     await expect(page.getByText('Vlad F.')).toBeVisible();
     await expect(page.getByText('Ana P.')).toBeVisible();
-    await expect(page.getByText(`2 / ${TOTAL_SLOTS}`)).toBeVisible();
+    // `exact`, altfel „2 / 16" se potrivește și cu „12 / 16" din contorul
+    // „Locuri rămase" de alături, iar testul pică pe potrivire dublă ori de
+    // câte ori rămân exact 12 locuri. Se vedea sub `npm run verify`, unde
+    // build-ul de dinainte încarcă mașina destul cât să se schimbe cursa.
+    await expect(page.getByText(`2 / ${TOTAL_SLOTS}`, { exact: true })).toBeVisible();
   });
 
   test('gol → mesajul „fii primul"', async ({ page }) => {

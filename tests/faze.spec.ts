@@ -16,8 +16,15 @@ const { LEADERBOARD_DATE, EVENT_DATE, EVENT_END_DATE, NEXT_EDITION_DATE } =
  */
 
 const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
+const CONFIG_ROUTE = '**/rest/v1/rpc/public_config';
 
 const PARTICIPANTI = [{ nume: 'Andrei P.' }, { nume: 'Maria C.' }, { nume: 'Ion V.' }];
+
+/** Randează un document impus în locul celui publicat. */
+const mockConfig = (page: Page, doc: unknown) =>
+  page.route(CONFIG_ROUTE, (route: Route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(doc) })
+  );
 
 const fixClock = (page: Page, moment: number) =>
   page.addInitScript((fixed) => {
@@ -144,6 +151,13 @@ test.describe('/inscriere — pe deadline-ul real, nu pe faza homepage-ului', ()
   test('în fereastra de dinaintea startului linkul direct încă servește formularul', async ({
     page,
   }) => {
+    // Fereastra asta există doar cât timp deadline-ul de înscriere e DUPĂ
+    // momentul în care homepage-ul ascunde formularul. Ediția publicată le
+    // poate avea egale (deadline pus fix pe `leaderboardLeadHours`), și atunci
+    // fereastra e goală, iar testul n-ar verifica regula, ci calendarul lunii.
+    // Deci documentul e impus, cu deadline-ul pe start: regula rămâne testată
+    // indiferent ce ediție e publicată.
+    await mockConfig(page, { ...SNAPSHOT_CONFIG, registrationDeadline: SNAPSHOT_CONFIG.start });
     await fixClock(page, IN_FEREASTRA);
     await page.goto('/inscriere');
     // Exact același moment în care homepage-ul a ascuns deja înscrierea.
@@ -210,8 +224,6 @@ test.describe('?preview bate ceasul', () => {
  * cere („verifică-le seara dinainte"). Testele de aici păzesc compunerea.
  */
 test.describe('previzualizarea ciornei se compune cu fazele zilei', () => {
-  const CONFIG_ROUTE = '**/rest/v1/rpc/public_config';
-
   test('fără token, ?config=draft e inert — se vede tot configul publicat', async ({ page }) => {
     let cerutPublic = false;
     await page.route(CONFIG_ROUTE, (route: Route) => {

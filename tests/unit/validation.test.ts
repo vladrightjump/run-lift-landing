@@ -9,7 +9,9 @@ import {
   validate,
   firstErrorField,
   errorMessage,
+  numeComplet,
 } from '../../src/lib/validation';
+import { maskName } from '../../src/lib/mySignups';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 
 // Startul ediției e acum argument, nu import: validarea de vârstă îl primește
@@ -19,7 +21,8 @@ import type { FormData } from '../../src/lib/validation';
 
 /** Formular complet valid — punctul de plecare pentru testele pe câmp. */
 const valid: FormData = {
-  nume: 'Ana Popescu',
+  nume: 'Popescu',
+  prenume: 'Ana',
   telefon: '069123456',
   email: 'ana@email.ro',
   dataNasterii: '1994-05-20',
@@ -225,30 +228,40 @@ describe('validate (formularul de înscriere)', () => {
   });
 
   it('semnalează fiecare câmp independent', () => {
-    expect(validate({ ...valid, nume: 'An' }, START)).toEqual({ nume: true });
+    expect(validate({ ...valid, nume: 'P' }, START)).toEqual({ nume: true });
+    expect(validate({ ...valid, prenume: 'A' }, START)).toEqual({ prenume: true });
     expect(validate({ ...valid, telefon: 'abc' }, START)).toEqual({ telefon: true });
     expect(validate({ ...valid, email: 'nu-e-email' }, START)).toEqual({ email: true });
     expect(validate({ ...valid, dataNasterii: '' }, START)).toEqual({ dataNasterii: true });
     expect(validate({ ...valid, acord: false }, START)).toEqual({ acord: true });
   });
 
-  it('numele cere minim 3 caractere', () => {
-    expect(validate({ ...valid, nume: 'An' }, START).nume).toBe(true);
-    expect(validate({ ...valid, nume: 'Ana' }, START).nume).toBeUndefined();
+  // Pragul e 2, nu 3: 3 era pentru un singur câmp „nume complet". Aplicat pe
+  // fiecare bucată, ar respinge nume reale („Ana Pop"). Aceeași regulă ca la
+  // formularul de lansare (`validateLaunchDraft`).
+  it('numele și prenumele cer minim 2 caractere fiecare', () => {
+    expect(validate({ ...valid, nume: 'P' }, START).nume).toBe(true);
+    expect(validate({ ...valid, nume: 'Po' }, START).nume).toBeUndefined();
+    expect(validate({ ...valid, prenume: 'A' }, START).prenume).toBe(true);
+    expect(validate({ ...valid, prenume: 'An' }, START).prenume).toBeUndefined();
   });
 
   it('adună toate erorile deodată, nu doar prima', () => {
-    const errs = validate({ nume: '', telefon: '', email: '', dataNasterii: '', acord: false }, START);
+    const errs = validate(
+      { nume: '', prenume: '', telefon: '', email: '', dataNasterii: '', acord: false },
+      START
+    );
     expect(Object.keys(errs).sort()).toEqual(
-      ['acord', 'dataNasterii', 'email', 'nume', 'telefon'].sort()
+      ['acord', 'dataNasterii', 'email', 'nume', 'prenume', 'telefon'].sort()
     );
   });
 
-  it('primește input deja curățat de spații (contractul cu formularul)', () => {
-    // Componenta face .trim() înainte de validate. Documentăm dependența:
-    // dacă cineva scoate trim-ul din formular, un nume din spații ar trece.
-    expect(validate({ ...valid, nume: '   ' }, START).nume).toBeUndefined();
-    expect(validate({ ...valid, nume: '   '.trim() }, START).nume).toBe(true);
+  it('un nume din spații e respins, chiar dacă formularul n-a curățat', () => {
+    // Validarea face singură .trim(), nu se bazează pe apelant. Înainte se
+    // baza: scoteai trim-ul din formular și un nume din spații trecea, apoi
+    // ajungea în lista publică drept rând gol.
+    expect(validate({ ...valid, nume: '   ' }, START).nume).toBe(true);
+    expect(validate({ ...valid, prenume: '  ' }, START).prenume).toBe(true);
   });
 
   it('acceptă telefon scris cu spații și prefix internațional', () => {
@@ -259,8 +272,12 @@ describe('validate (formularul de înscriere)', () => {
 
 describe('firstErrorField (unde sare focusul)', () => {
   it('respectă ordinea vizuală a câmpurilor', () => {
-    const toate = validate({ nume: '', telefon: '', email: '', dataNasterii: '', acord: false }, START);
+    const toate = validate(
+      { nume: '', prenume: '', telefon: '', email: '', dataNasterii: '', acord: false },
+      START
+    );
     expect(firstErrorField(toate)).toBe('nume');
+    expect(firstErrorField({ prenume: true, telefon: true })).toBe('prenume');
     expect(firstErrorField({ telefon: true, email: true })).toBe('telefon');
     expect(firstErrorField({ email: true, dataNasterii: true })).toBe('email');
     expect(firstErrorField({ dataNasterii: true })).toBe('dataNasterii');
@@ -283,5 +300,32 @@ describe('errorMessage (textul din toast)', () => {
   it('mesaj generic când sunt mai multe probleme', () => {
     expect(errorMessage({ acord: true, email: true })).toMatch(/câmpurile marcate/i);
     expect(errorMessage({ email: true })).toMatch(/câmpurile marcate/i);
+  });
+});
+
+/**
+ * Formularul cere numele pe două câmpuri, coloana din baza de date rămâne una.
+ * Ordinea compunerii nu e cosmetică: masca din `public_stats` („primul cuvânt +
+ * inițiala ultimului") și adresarea din emailul de confirmare depind de ea.
+ */
+describe('numeComplet (cele două câmpuri → coloana `nume`)', () => {
+  it('prenumele primul, ca în „Ana Popescu"', () => {
+    expect(numeComplet({ nume: 'Popescu', prenume: 'Ana' })).toBe('Ana Popescu');
+  });
+
+  it('curăță spațiile din jur și nu lasă spațiu dublu la mijloc', () => {
+    expect(numeComplet({ nume: '  Popescu  ', prenume: '  Ana ' })).toBe('Ana Popescu');
+  });
+
+  it('nume compuse rămân întregi', () => {
+    expect(numeComplet({ nume: 'Popescu Ionescu', prenume: 'Ana Maria' })).toBe(
+      'Ana Maria Popescu Ionescu'
+    );
+  });
+
+  // Regresia pe care ordinea inversă ar produce-o: lista publică de participanți
+  // ar arăta „Popescu A." în loc de „Ana P.".
+  it('rezultatul se maschează în „Ana P.", nu în „Popescu A."', () => {
+    expect(maskName(numeComplet({ nume: 'Popescu', prenume: 'Ana' }))).toBe('Ana P.');
   });
 });

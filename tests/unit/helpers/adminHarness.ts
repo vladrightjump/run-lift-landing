@@ -39,6 +39,7 @@ export const logEntry = (
   text_email: '',
   mod: 'admin',
   audienta: 'participanti',
+  sablon: null,
   status: 'trimis',
   provider_status: 200,
   eroare: null,
@@ -46,7 +47,7 @@ export const logEntry = (
   ...over,
 });
 
-export const editie = (over: Partial<AdminEdition> = {}): AdminEdition => ({
+const editie = (over: Partial<AdminEdition> = {}): AdminEdition => ({
   editie: 5,
   participanti: 2,
   asteptare: 0,
@@ -152,6 +153,7 @@ export const adminApiMock = (
       async (_token: string, _id: string, _force?: boolean) => undefined
     ),
     deleteWaitlist: vi.fn(async (_token: string, _id: string) => undefined),
+    undeleteWaitlist: vi.fn(async (_token: string, _id: string, _force?: boolean) => undefined),
     promoteWaitlist: vi.fn(async (_token: string, _id: string) => 'id-promovat'),
     createEdition: vi.fn(async (_token: string) => 6),
     saveEmailTemplate: vi.fn(
@@ -167,3 +169,4 @@ export const adminApiMock = (
     ),
   };
 };
+

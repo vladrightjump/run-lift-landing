@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** Unde aterizează cineva după înscriere (ancora secțiunii „Cine vine"). */
-export const REDIRECT_TO = '/#participanti';
+const REDIRECT_TO = '/#participanti';
 
 /** Câte secunde stă mesajul de confirmare înainte de redirect. */
-export const REDIRECT_SECONDS = 3;
+const REDIRECT_SECONDS = 3;
 
 type Options = {
   /** `true` cât timp e afișată confirmarea (phase === 'success'). */

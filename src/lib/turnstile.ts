@@ -180,11 +180,3 @@ export const getTurnstileToken = async (): Promise<string> => {
   });
 };
 
-/** Doar pentru teste — repune modulul în starea inițială. */
-export const __resetTurnstileForTests = (): void => {
-  scriptPromise = null;
-  widgetId = null;
-  container?.remove();
-  container = null;
-  pending = null;
-};

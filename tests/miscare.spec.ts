@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
 
 /**
  * Mișcarea de pe landing — efectele legate de scroll, hover și reduced-motion.
@@ -211,7 +212,9 @@ test.describe('Mișcare — reduced motion', () => {
     // ramura aia livrează valoarea corectă — nu că lipsește animația (un contor
     // animat ar ajunge tot la 7). Absența mișcării o acoperă aserțiunile CSS
     // de mai sus, care chiar discriminează.
-    await expect(page.getByText('7 / 40')).toBeVisible({ timeout: 2000 });
+    await expect(page.getByText(`7 / ${SNAPSHOT_CONFIG.slots.total}`)).toBeVisible({
+      timeout: 2000,
+    });
   });
 
   test('fără mișcare: banda rulantă stă pe loc, dar textul rămâne', async ({ page }) => {

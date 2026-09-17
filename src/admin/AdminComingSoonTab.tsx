@@ -4,14 +4,9 @@ import type { AdminEventConfigRow } from '../lib/adminApi';
 import { parseEventConfig, type EventConfig } from '../content/eventConfig';
 import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
 import { useNow } from '../hooks/useNow';
+import { useSesiuneAdmin } from './adminSession';
 import { fazaSite } from './stareCurenta';
 import { laDatetimeLocal, dinDatetimeLocal, descrieMoment } from './eventConfigFields';
-
-type Props = {
-  token: string;
-  onAuthError: (err: unknown) => boolean;
-  showToast: (t: { kind: 'error' | 'success'; msg: string }) => void;
-};
 
 /** „2026-08-19T12:00:00" — local, fără fus. Aceeași formă ca în document. */
 const LOCAL_ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
@@ -76,7 +71,8 @@ const mesajRefuz = (err: unknown): string => {
  * peticit prin aceeași poartă ca publicarea, și scrie un rând nou, deci
  * „Versiuni anterioare" din tabul „Eveniment" poate întoarce orice apăsare.
  */
-export const AdminComingSoonTab = ({ token, onAuthError, showToast }: Props) => {
+export const AdminComingSoonTab = () => {
+  const { token, onAuthError, showToast } = useSesiuneAdmin();
   const publicat = useEventConfig();
   const dates = useEditionDates();
   const acum = useNow(30_000);
