@@ -20,7 +20,7 @@ import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig
 
 const cu = (patch: Partial<EventConfig>): EventConfig => ({ ...SNAPSHOT_CONFIG, ...patch });
 
-/** Un moment cu mult înaintea ediției din instantaneu (start: 2026-09-05). */
+/** Un moment cu mult înaintea ediției din instantaneu (start: 2026-09-19). */
 const INAINTE = new Date('2026-08-01T00:00:00+03:00').getTime();
 
 describe('durataRo — o durată scrisă ca o decizie, nu ca milisecunde', () => {
@@ -54,7 +54,7 @@ describe('momentul check-inului', () => {
     // Documentul ține doar „06:45". Singurul lucru care-l face verificabil e
     // ziua startului: aceeași oră e la fel de plauzibilă pentru o cursă de
     // dimineață ca pentru una de seară.
-    expect(momentulCheckinului(SNAPSHOT_CONFIG)).toBe('2026-09-05T06:45:00');
+    expect(momentulCheckinului(SNAPSHOT_CONFIG)).toBe('2026-09-19T06:45:00');
   });
 
   it('un start stricat nu produce un moment inventat', () => {
@@ -80,14 +80,14 @@ describe('cronologia — momentele în ordinea în care se întâmplă', () => {
     // `start + durata` e reperul care comută homepage-ul pe countdown. Era
     // complet invizibil în admin.
     const final = reperele(SNAPSHOT_CONFIG, INAINTE).find((x) => x.cheie === 'final')!;
-    expect(final.moment).toBe('2026-09-05T08:00:00');
+    expect(final.moment).toBe('2026-09-19T08:00:00');
     expect(final.fataDeStart).toBe('la o oră după start');
   });
 
   it('sortează după momentul real, nu după ordinea câmpurilor', () => {
     // Anunțul mutat după deadline nu mai apare primul: sare din locul lui, și
     // asta e tot semnalul de care e nevoie.
-    const r = reperele(cu({ launchAt: '2026-09-05T06:30:00' }), INAINTE);
+    const r = reperele(cu({ launchAt: '2026-09-19T06:30:00' }), INAINTE);
     expect(r[0].cheie).toBe('registrationDeadline');
     expect(r.findIndex((x) => x.cheie === 'launchAt')).toBe(1);
   });
@@ -108,7 +108,7 @@ describe('cronologia — momentele în ordinea în care se întâmplă', () => {
   it('marchează ce a trecut deja, fără să-l scoată din listă', () => {
     // O ediție în desfășurare are repere consumate — e normal, nu greșit. Scoase
     // din listă, ordinea pe care o arătăm s-ar rupe.
-    const dupaAnunt = new Date('2026-09-04T00:00:00+03:00').getTime();
+    const dupaAnunt = new Date('2026-09-18T00:00:00+03:00').getTime();
     const r = reperele(SNAPSHOT_CONFIG, dupaAnunt);
     expect(r.find((x) => x.cheie === 'launchAt')!.trecut).toBe(true);
     expect(r.find((x) => x.cheie === 'start')!.trecut).toBe(false);
@@ -123,14 +123,14 @@ describe('semnalele — consecința, nu regula', () => {
     // Regresia care a motivat modulul: ciorna ediției următoare pornește de la
     // cea publicată, deci moștenește anunțul ediției TRECUTE. Documentul e
     // perfect valid; homepage-ul pur și simplu nu va sta pe Coming Soon.
-    const dupaAnunt = new Date('2026-09-04T00:00:00+03:00').getTime();
+    const dupaAnunt = new Date('2026-09-18T00:00:00+03:00').getTime();
     expect(problema(SNAPSHOT_CONFIG, 'launchAt', dupaAnunt)).toMatch(/Coming Soon/);
   });
 
   it('anunțul trecut NU e semnalat dacă a trecut și cursa', () => {
     // Atunci toată ediția e în trecut, iar „anunțul a trecut" n-ar fi un
     // reproș, ci o descriere.
-    const dupaCursa = new Date('2026-09-20T00:00:00+03:00').getTime();
+    const dupaCursa = new Date('2026-10-04T00:00:00+03:00').getTime();
     expect(problema(SNAPSHOT_CONFIG, 'launchAt', dupaCursa)).toBeUndefined();
   });
 
@@ -149,7 +149,7 @@ describe('semnalele — consecința, nu regula', () => {
   it('semnalul e scurt, consecința e pe larg — două straturi, două locuri', () => {
     // Linia de timp se parcurge dintr-o privire: o propoziție întreagă pe un
     // rând o transformă în paragraf. Explicația stă pe câmp, unde se repară.
-    const dupaAnunt = new Date('2026-09-04T00:00:00+03:00').getTime();
+    const dupaAnunt = new Date('2026-09-18T00:00:00+03:00').getTime();
     const r = reperele(SNAPSHOT_CONFIG, dupaAnunt).find((x) => x.cheie === 'launchAt')!;
     expect(r.semnal).toBe('anunțul a trecut deja');
     expect(r.problema!.length).toBeGreaterThan(r.semnal!.length);
@@ -161,7 +161,7 @@ describe('semnalele — consecința, nu regula', () => {
     const cazuri = [
       cu({ checkinFrom: '08:00' }),
       cu({ checkinFrom: '02:00' }),
-      cu({ launchAt: '2026-09-06T12:00:00' }),
+      cu({ launchAt: '2026-09-20T12:00:00' }),
     ];
     for (const c of cazuri) {
       for (const r of reperele(c, INAINTE)) {
@@ -172,14 +172,14 @@ describe('semnalele — consecința, nu regula', () => {
 });
 
 describe('mutarea în bloc — startul trage după el ce atârnă de el', () => {
-  const CU_O_SAPTAMANA = '2026-09-12T07:00:00';
+  const CU_O_SAPTAMANA = '2026-09-26T07:00:00';
 
   it('duce datele calendaristice cu același decalaj, păstrând distanțele alese', () => {
     const dupa = mutaReperele(SNAPSHOT_CONFIG, CU_O_SAPTAMANA);
     expect(dupa.start).toBe(CU_O_SAPTAMANA);
-    expect(dupa.registrationDeadline).toBe('2026-09-12T06:00:00');
-    expect(dupa.launchAt).toBe('2026-09-10T12:00:00');
-    expect(dupa.nextEditionAt).toBe('2026-09-19T07:00:00');
+    expect(dupa.registrationDeadline).toBe('2026-09-26T06:00:00');
+    expect(dupa.launchAt).toBe('2026-09-24T12:00:00');
+    expect(dupa.nextEditionAt).toBe('2026-10-03T07:00:00');
   });
 
   it('relațiile dintre repere sunt exact cele dinainte', () => {
@@ -190,7 +190,7 @@ describe('mutarea în bloc — startul trage după el ce atârnă de el', () => 
 
   it('check-inul păstrează AVANSUL față de start, nu ora', () => {
     // O cursă mutată de la 07:00 la 09:00 are check-in la 08:45, nu la 06:45.
-    const dupa = mutaReperele(SNAPSHOT_CONFIG, '2026-09-05T09:00:00');
+    const dupa = mutaReperele(SNAPSHOT_CONFIG, '2026-09-19T09:00:00');
     expect(dupa.checkinFrom).toBe('08:45');
   });
 
@@ -216,7 +216,7 @@ describe('mutarea în bloc — startul trage după el ce atârnă de el', () => 
 
 describe('ce s-ar muta — oferta nu se face când n-are ce oferi', () => {
   it('numește reperele afectate, în limbajul formularului', () => {
-    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, '2026-09-12T07:00:00')).toEqual([
+    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, '2026-09-26T07:00:00')).toEqual([
       'închiderea înscrierilor',
       'anunțul ediției',
       'următorul antrenament',
@@ -226,10 +226,10 @@ describe('ce s-ar muta — oferta nu se face când n-are ce oferi', () => {
   it('ora de check-in intră în listă doar când startul își schimbă ORA', () => {
     // Mutat cu o săptămână, la aceeași oră, check-inul rămâne 06:45 — un buton
     // care nu schimbă nimic e mai rău decât unul lipsă.
-    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, '2026-09-12T07:00:00')).not.toContain(
+    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, '2026-09-26T07:00:00')).not.toContain(
       'ora de check-in'
     );
-    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, '2026-09-05T09:00:00')).toContain('ora de check-in');
+    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, '2026-09-19T09:00:00')).toContain('ora de check-in');
   });
 
   it('start neschimbat — nimic de mutat', () => {
