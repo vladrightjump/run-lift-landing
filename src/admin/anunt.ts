@@ -76,6 +76,9 @@ const NESUPORTATE = ['{data_inscrierii}', '{telefon}', '{link_renunt}'] as const
 export const variabileNesuportate = (...texte: string[]): string[] =>
   NESUPORTATE.filter((v) => texte.some((t) => t.includes(v)));
 
+/** Între două rânduri ale aceluiași anunț trec secunde; între două anunțuri, ore. */
+const PAUZA_INTRE_LOTURI_MS = 10 * 60_000;
+
 /**
  * Ultimul anunț plecat în ediția asta, oricare i-ar fi fost subiectul.
  *
@@ -91,14 +94,23 @@ export const ultimulAnunt = (
   intrari: AdminEmailLogEntry[],
   editie: number
 ): DifuzareAnterioara | null => {
-  const ale = intrari.filter((e) => e.mod === 'anunt' && e.editie === editie);
+  const ale = intrari
+    .filter((e) => e.mod === 'anunt' && e.editie === editie)
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   if (ale.length === 0) return null;
-  const ultima = ale.reduce((a, b) => (a.created_at >= b.created_at ? a : b));
-  // Aceeași minută = același lot (`logSends` le scrie împreună, la final).
-  const lot = ale.filter((e) => e.created_at.slice(0, 16) === ultima.created_at.slice(0, 16));
+  // Lotul = rândurile legate de ultimul fără o pauză mai mare decât `PAUZA_INTRE_LOTURI_MS`.
+  // Nu „aceeași minută": jurnalul se scrie pe parcurs, iar un anunț de 40 s
+  // trece aproape sigur peste granița unui minut.
+  let capat = 1;
+  while (
+    capat < ale.length &&
+    Date.parse(ale[capat - 1].created_at) - Date.parse(ale[capat].created_at) <= PAUZA_INTRE_LOTURI_MS
+  ) {
+    capat++;
+  }
   return {
-    cand: ultima.created_at,
-    catreCati: new Set(lot.map((e) => cheieAdresa(e.email))).size,
+    cand: ale[0].created_at,
+    catreCati: new Set(ale.slice(0, capat).map((e) => cheieAdresa(e.email))).size,
   };
 };
 

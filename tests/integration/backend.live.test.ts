@@ -435,6 +435,59 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
   });
 
   /**
+   * Anunțul către toți participanții de până acum — pe baza REALĂ, doar citiri.
+   *
+   * Regulile sunt testate pe PGlite (`tests/unit/sqlAnunt.test.ts`), din fișierul
+   * de migrare. Ce nu se poate vedea acolo: dacă migrarea chiar e aplicată în
+   * producție, identic, cu drepturile revocate.
+   */
+  it('anunt_recipients nu e apelabilă cu cheia publică — poartă tokenuri de dezabonare', async () => {
+    const res = await fetch(`${BASE}/rest/v1/rpc/anunt_recipients`, {
+      method: 'POST',
+      headers: anonHeaders({ 'Content-Profile': SCHEMA }),
+      body: '{}',
+    });
+    expect([401, 403, 404]).toContain(res.status);
+  });
+
+  it('anunt_recipients: o persoană o dată, fără înscrișii ediției curente și fără dezabonați', async () => {
+    const res = await fetch(`${BASE}/rest/v1/rpc/anunt_recipients`, {
+      method: 'POST',
+      headers: serviceHeaders({ 'Content-Profile': SCHEMA }),
+      body: '{}',
+    });
+    expect(res.status).toBe(200);
+    const lista = (await res.json()) as Array<{ email: string; token_unsub: string }>;
+    const cheie = (e: string) => e.trim().toLowerCase();
+    const adrese = lista.map((d) => cheie(d.email));
+    expect(new Set(adrese).size).toBe(adrese.length);
+    expect(lista.every((d) => typeof d.token_unsub === 'string' && d.token_unsub.length > 0)).toBe(true);
+
+    const cfg = (await (
+      await fetch(`${BASE}/rest/v1/rpc/public_config`, {
+        method: 'POST',
+        headers: serviceHeaders({ 'Content-Profile': SCHEMA }),
+        body: '{}',
+      })
+    ).json()) as { number: number };
+    const citeste = async (url: string) =>
+      ((await (await fetch(url, { headers: serviceHeaders({ 'Accept-Profile': SCHEMA }) })).json()) as Array<{
+        email: string;
+      }>).map((r) => cheie(r.email));
+
+    const inscrisiAcum = await citeste(
+      `${BASE}/rest/v1/registrations?select=email&editie=eq.${cfg.number}&deleted_at=is.null`
+    );
+    const dezabonati = [
+      ...(await citeste(`${BASE}/rest/v1/registrations?select=email&dezabonat_la=not.is.null`)),
+      ...(await citeste(`${BASE}/rest/v1/launch_notifications?select=email&dezabonat_la=not.is.null`)),
+    ];
+    const inLista = new Set(adrese);
+    expect(inscrisiAcum.filter((e) => inLista.has(e))).toEqual([]);
+    expect(dezabonati.filter((e) => inLista.has(e))).toEqual([]);
+  });
+
+  /**
    * Instantaneul de build NU mai trebuie să fie egal cu ediția publicată — asta e
    * chiar libertatea pe care o cumpără mutarea configului în DB. Ce rămâne
    * obligatoriu e ca documentul publicat să existe și să fie randabil.
