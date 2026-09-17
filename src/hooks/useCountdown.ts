@@ -43,12 +43,12 @@ const computeCountdown = (target: Date): Countdown => {
  */
 export const useCountdown = (target: Date): Countdown => {
   const ts = target.getTime();
-  const [cd, setCd] = useState<Countdown>(() => computeCountdown(target));
+  const [cd, setCd] = useState(() => ({ ts, value: computeCountdown(target) }));
 
   useEffect(() => {
     const tinta = new Date(ts);
     const proaspat = computeCountdown(tinta);
-    setCd(proaspat);
+    setCd({ ts, value: proaspat });
     if (proaspat.done) return;
 
     // Intervalul se oprește singur la zero. Înainte asta o făcea dependența
@@ -56,11 +56,14 @@ export const useCountdown = (target: Date): Countdown => {
     // o dată pe secundă, la nesfârșit.
     const id = setInterval(() => {
       const next = computeCountdown(tinta);
-      setCd(next);
+      setCd({ ts, value: next });
       if (next.done) clearInterval(id);
     }, 1000);
     return () => clearInterval(id);
   }, [ts]);
 
-  return cd;
+  // În randarea în care ținta tocmai s-a mutat, starea e încă a țintei vechi, iar
+  // efectul de mai sus o reface abia după commit. Efectele din același commit
+  // (redirectul din `/inscriere`) ar vedea `done` de la ediția trecută.
+  return cd.ts === ts ? cd.value : computeCountdown(target);
 };

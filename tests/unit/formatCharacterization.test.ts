@@ -7,7 +7,7 @@ import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
  * funcții de configurare (U2).
  *
  * Valorile de mai jos sunt CAPTURATE din codul de dinaintea mutării, rescrise la
- * fiecare aliniere a instantaneului pe ediția publicată (acum ediția 6).
+ * fiecare aliniere a instantaneului pe ediția publicată (acum ediția 7).
  * Nu sunt „valorile corecte" în vreun sens abstract — sunt exact ce randa pagina
  * înainte. Testul are o singură treabă: dacă mutarea schimbă vreun string vizibil,
  * pică aici, nu în producție.
@@ -17,32 +17,32 @@ import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
  * odată cu el, deliberat, nu din greșeală.
  */
 
-const CAPTURAT_EDITIA_6 = {
-  EDITION_ORDINAL: 'a șasea',
-  LAUNCH_EDITION_ORDINAL: 'a șasea',
-  EVENT_META: '5 septembrie 2026 · Terenul de Basketball',
+const CAPTURAT_EDITIA_7 = {
+  EDITION_ORDINAL: 'a șaptea',
+  LAUNCH_EDITION_ORDINAL: 'a șaptea',
+  EVENT_META: '19 septembrie 2026 · Stadionul „Dinamo”',
   HERO_KICKER:
-    'Sâmbătă, 5 septembrie 2026 · Terenul de Basketball, Parcul La Izvor · Outdoor Adaptive',
-  EVENT_WHEN: 'Sâmbătă, 5 septembrie 2026',
-  EVENT_WHERE: 'Terenul de Basketball, Parcul La Izvor',
+    'Sâmbătă, 19 septembrie 2026 · Stadionul „Dinamo”, Stadionul „Dinamo” · Outdoor Adaptive',
+  EVENT_WHEN: 'Sâmbătă, 19 septembrie 2026',
+  EVENT_WHERE: 'Stadionul „Dinamo”, Stadionul „Dinamo”',
   EVENT_START_TIME: '07:00',
   EVENT_SUMMARY_LINE:
-    'Sâmbătă, 5 septembrie 2026, ora 07:00 — Terenul de Basketball, Parcul La Izvor',
-  SUCCESS_SEE_YOU: 'Ne vedem pe 5 septembrie la start, ora 07:00.',
-  EVENT_BADGE: 'Hyrox Trial · 5 septembrie',
-  MAP_EMBED_SRC: 'https://maps.google.com/maps?q=47.0465504,28.7854741&z=16&hl=ro&output=embed',
-  MAP_DIRECTIONS_URL: 'https://www.google.com/maps/search/?api=1&query=47.0465504,28.7854741',
+    'Sâmbătă, 19 septembrie 2026, ora 07:00 — Stadionul „Dinamo”, Stadionul „Dinamo”',
+  SUCCESS_SEE_YOU: 'Ne vedem pe 19 septembrie la start, ora 07:00.',
+  EVENT_BADGE: 'Hyrox Trial · 19 septembrie',
+  MAP_EMBED_SRC: 'https://maps.google.com/maps?q=47.0264549,28.8185762&z=16&hl=ro&output=embed',
+  MAP_DIRECTIONS_URL: 'https://www.google.com/maps/search/?api=1&query=47.0264549,28.8185762',
 } as const;
 
 describe('derivările din instantaneu rămân identice după mutarea pe config', () => {
   const derivat = deriveEventStrings(SNAPSHOT_CONFIG);
 
-  it.each(Object.entries(CAPTURAT_EDITIA_6))('%s', (cheie, asteptat) => {
-    expect(derivat[cheie as keyof typeof CAPTURAT_EDITIA_6]).toBe(asteptat);
+  it.each(Object.entries(CAPTURAT_EDITIA_7))('%s', (cheie, asteptat) => {
+    expect(derivat[cheie as keyof typeof CAPTURAT_EDITIA_7]).toBe(asteptat);
   });
 
   it('acoperă fiecare string derivat, ca unul nou să nu scape necaracterizat', () => {
-    expect(Object.keys(derivat).sort()).toEqual(Object.keys(CAPTURAT_EDITIA_6).sort());
+    expect(Object.keys(derivat).sort()).toEqual(Object.keys(CAPTURAT_EDITIA_7).sort());
   });
 });
 

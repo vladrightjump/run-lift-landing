@@ -50,9 +50,9 @@ export type Place = {
 
 export const EDITION = {
   /** Ediția evenimentului (coloana `editie` + `public_stats`). */
-  number: 6,
+  number: 7,
   /** Ediția pentru „Anunță-mă la lansare" (de regulă egală cu `number`). */
-  launchNumber: 6,
+  launchNumber: 7,
 
   /** Branding. `ordinal(number)` derivă „a cincea" în `content/format.ts`. */
   brand: 'Run + Lift',
@@ -64,15 +64,15 @@ export const EDITION = {
   /** Fusul orar al evenimentului (Chișinău, UTC+3 vara). */
   tz: '+03:00',
   /** Startul cursei — local, fără offset. */
-  start: '2026-09-05T07:00:00',
+  start: '2026-09-19T07:00:00',
   /** Durata (h) — pentru EVENT_END_DATE (start + durată). */
   durationHours: 1,
   /** Ora de check-in (afișată în emailuri/landing). */
   checkinFrom: '06:45',
   /** Până când se poate înscrie cineva — local, fără offset. */
-  registrationDeadline: '2026-09-05T06:00:00',
+  registrationDeadline: '2026-09-19T06:00:00',
   /** Momentul anunțului de lansare (comutarea Coming Soon → landing) — local. */
-  launchAt: '2026-09-03T12:00:00',
+  launchAt: '2026-09-17T12:00:00',
   /** `true` → homepage-ul arată Coming Soon; `false` → landing (înscrieri deschise). */
   showComingSoon: false,
 
@@ -84,7 +84,7 @@ export const EDITION = {
   /** Cu câte ore înainte de start dispare înscrierea de pe homepage. */
   leaderboardLeadHours: 1,
   /** Următorul antrenament — ținta countdown-ului de după cursă, local. */
-  nextEditionAt: '2026-09-12T07:00:00',
+  nextEditionAt: '2026-09-26T07:00:00',
 
   /**
    * Locul CURSEI — se schimbă de la o ediție la alta (evenimentele sunt
@@ -93,12 +93,11 @@ export const EDITION = {
    * greșit, deci ține-le separate.
    */
   venue: {
-    name: 'Terenul de Basketball',
-    city: 'Parcul La Izvor',
-    // Terenul de basket din Parcul La Izvor. Coordonate exacte, ca embed-ul și
-    // direcțiile să cadă fix pe teren: parcul e destul de mare cât să ratezi
-    // startul căutându-l după nume.
-    mapQuery: '47.0465504,28.7854741',
+    name: 'Stadionul „Dinamo”',
+    city: 'Stadionul „Dinamo”',
+    // Coordonate exacte, nu căutare text, ca embed-ul și direcțiile să cadă fix
+    // pe locul de start.
+    mapQuery: '47.0264549,28.8185762',
     zoom: 16,
   } satisfies Place,
 
@@ -140,9 +139,7 @@ export const EDITION = {
    */
   reels: {
     headline: 'Instagram',
-    body:
-      'Antrenamentele, cursele și oamenii, filmate pe teren. Dacă vrei să vezi ' +
-      'cum arată un Run + Lift înainte să vii, aici e.',
+    body: '',
     items: [] as { code: string; kind: 'reel' | 'p'; poster: string; caption: string }[],
   },
 

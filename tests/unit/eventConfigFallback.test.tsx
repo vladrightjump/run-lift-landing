@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StrictMode } from 'react';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
-import { EventConfigProvider, useEventConfig } from '../../src/hooks/useEventConfig';
+import {
+  EventConfigProvider,
+  useEventConfig,
+  useEventConfigSettled,
+} from '../../src/hooks/useEventConfig';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 
 /**
@@ -101,5 +105,62 @@ describe('StrictMode nu strica reconcilierea', () => {
     );
     await waitFor(() => expect(screen.getByTestId('ed').textContent).toBe('42'));
     expect(logClientError).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Semnalul „configul live a răspuns". Regresie: `/inscriere` redirecta pe
+ * instantaneul de build rămas pe ediția trecută, înainte ca `public_config()` să
+ * apuce să spună că cursa nouă abia urmează.
+ */
+describe('useEventConfigSettled', () => {
+  const Stare = () => <span data-testid="settled">{String(useEventConfigSettled())}</span>;
+  const randeazaStare = (props: { override?: typeof SNAPSHOT_CONFIG } = {}) =>
+    render(
+      <EventConfigProvider {...props}>
+        <Stare />
+      </EventConfigProvider>
+    );
+
+  it('e `false` cât timp fetch-ul e în zbor', () => {
+    fetchPublicConfig.mockReturnValue(new Promise(() => {}));
+    randeazaStare();
+    expect(screen.getByTestId('settled').textContent).toBe('false');
+  });
+
+  it('devine `true` la răspuns', async () => {
+    fetchPublicConfig.mockResolvedValue({ ...SNAPSHOT_CONFIG, number: 42 });
+    randeazaStare();
+    await waitFor(() => expect(screen.getByTestId('settled').textContent).toBe('true'));
+  });
+
+  it('devine `true` și la document nerandabil', async () => {
+    fetchPublicConfig.mockResolvedValue(null);
+    randeazaStare();
+    await waitFor(() => expect(screen.getByTestId('settled').textContent).toBe('true'));
+  });
+
+  it('devine `true` și când backendul cade — altfel redirectul n-ar mai veni niciodată', async () => {
+    fetchPublicConfig.mockRejectedValue(new TypeError('Failed to fetch'));
+    randeazaStare();
+    await waitFor(() => expect(screen.getByTestId('settled').textContent).toBe('true'));
+  });
+
+  it('un abort NU îl marchează', async () => {
+    fetchPublicConfig.mockRejectedValue(new DOMException('aborted', 'AbortError'));
+    randeazaStare();
+    await waitFor(() => expect(fetchPublicConfig).toHaveBeenCalled());
+    expect(screen.getByTestId('settled').textContent).toBe('false');
+  });
+
+  it('cu override e `true` de la primul cadru', () => {
+    randeazaStare({ override: SNAPSHOT_CONFIG });
+    expect(screen.getByTestId('settled').textContent).toBe('true');
+    expect(fetchPublicConfig).not.toHaveBeenCalled();
+  });
+
+  it('fără provider e `true`', () => {
+    render(<Stare />);
+    expect(screen.getByTestId('settled').textContent).toBe('true');
   });
 });

@@ -1,6 +1,11 @@
 import '../edition3.css';
 import { useEffect, useRef, useState } from 'react';
-import { useEventConfig, useEditionStrings, useEditionDates } from '../hooks/useEventConfig';
+import {
+  useEventConfig,
+  useEditionStrings,
+  useEditionDates,
+  useEventConfigSettled,
+} from '../hooks/useEventConfig';
 import { useCountdown } from '../hooks/useCountdown';
 import { usePagePhase } from '../hooks/usePagePhase';
 import { useStats } from '../hooks/useStats';
@@ -51,7 +56,11 @@ export const Inscriere = () => {
   // real (07:00) — e linkul de dat la fața locului. Îl închide `useRegistration`,
   // pe deadline, nu faza.
   const dupaCursa = phase === 'next';
-  const redirect = comingSoon || dupaCursa;
+  // Redirectul e ireversibil, deci așteaptă configul live: un instantaneu de build
+  // rămas pe ediția trecută ar vedea „după cursă" și ar trimite pe toți acasă.
+  const settled = useEventConfigSettled();
+  const deRedirectat = comingSoon || dupaCursa;
+  const redirect = deRedirectat && settled;
   useEffect(() => {
     if (redirect) window.location.replace('/');
   }, [redirect]);
@@ -69,7 +78,8 @@ export const Inscriere = () => {
 
   // Ieșirea stă DUPĂ toate hookurile, ca ordinea lor să nu se schimbe între
   // randări (regulile hookurilor). Redirectul de mai sus face restul.
-  if (redirect) return null;
+  // Nici formularul nu apare cât timp verdictul e în așteptare: s-ar putea să fie închis.
+  if (deRedirectat) return null;
 
   return (
     <div className="e3-root">
