@@ -10,7 +10,7 @@ import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
  * politicile testate aici sunt exact cele care rulează live.
  *
  * Ce nu poate veni din instantaneu, fiindcă ține de infrastructura Supabase:
- *  • rolurile `anon` / `authenticated` / `service_role`;
+ *  • rolurile `anon` / `authenticated` / `service_role` (ultimul cu `bypassrls`);
  *  • `pgcrypto` în schema `extensions` (`admin_login` cheamă `crypt`);
  *  • `net.http_post` (pg_net), prin care triggerele cheamă funcțiile Edge. Aici
  *    e un dublu care ÎNREGISTREAZĂ apelurile, deci testele pot verifica faptul
@@ -25,7 +25,9 @@ const SCHEMA_SQL = readFileSync(
 const INFRASTRUCTURA = `
   create role anon nologin;
   create role authenticated nologin;
-  create role service_role nologin;
+  -- bypassrls, ca in Supabase: cheia de service ocoleste RLS, iar functiile
+  -- Edge se bazeaza pe asta ca sa scrie dupa lockdown-ul anti-bot.
+  create role service_role nologin bypassrls;
   create schema extensions;
   create extension pgcrypto schema extensions;
   create schema runlift;

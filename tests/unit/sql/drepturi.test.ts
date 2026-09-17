@@ -231,6 +231,52 @@ describe('citirea directă a tabelelor', () => {
     expect(r.rows).toHaveLength(1);
   });
 
+  /**
+   * Lockdown-ul anti-bot (`supabase-migration-turnstile-lockdown.sql`, aplicată
+   * pe 17 septembrie 2026). Cheia publishable e în bundle, deci dacă `anon` ar
+   * putea insera, un bot ar ocoli Turnstile cu un `curl` — captcha ar fi decor.
+   * Singura cale de scriere publică e funcția Edge `submit-form`.
+   */
+  it.each(['registrations', 'event_waitlist', 'launch_notifications'])(
+    '`anon` NU poate insera în %s — ar ocoli captcha',
+    async (tabel) => {
+      const coloane =
+        tabel === 'launch_notifications'
+          ? `(nume, prenume, email, telefon) values ('Bot', 'Test', 'bot@test.md', '069000000')`
+          : `(nume, telefon, email, acord) values ('Bot Test', '069000000', 'bot@test.md', true)`;
+      await expect(
+        caRol(db, 'anon', () => db.query(`insert into runlift.${tabel} ${coloane}`))
+      ).rejects.toThrow(/permission denied/);
+    }
+  );
+
+  it('nicio politică nu mai lasă `anon` să scrie, în niciun tabel', async () => {
+    const r = await db.query<{ relname: string }>(
+      `select c.relname
+         from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'runlift' and c.relkind = 'r'
+          and has_table_privilege('anon', c.oid, 'insert')
+          and (not c.relrowsecurity
+               or exists (select 1 from pg_policies p
+                           where p.schemaname = 'runlift' and p.tablename = c.relname
+                             and p.cmd = 'INSERT' and p.roles::text like '%anon%'))`
+    );
+    expect(r.rows.map((x) => x.relname)).toEqual([]);
+  });
+
+  it('funcția Edge, cu cheia de service, scrie în continuare', async () => {
+    await caRol(db, 'service_role', () =>
+      db.query(
+        `insert into runlift.registrations (nume, telefon, email, acord, editie)
+         values ('Ana Popescu', '069000000', 'prin-functie@x.ro', true, 7)`
+      )
+    );
+    const r = await db.query('select 1 from runlift.registrations where email = $1', [
+      'prin-functie@x.ro',
+    ]);
+    expect(r.rows).toHaveLength(1);
+  });
+
   it('RLS e pornit pe toate tabelele', async () => {
     const r = await db.query<{ relname: string }>(
       `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace

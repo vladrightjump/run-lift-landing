@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 17 septembrie 2026 (după `runlift_reminder_orar_robust`).
+-- Ultima regenerare: 17 septembrie 2026 (după `runlift_turnstile_lockdown`).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -2140,7 +2140,6 @@ grant delete on table runlift.event_config to service_role;
 alter table runlift.event_config enable row level security;
 revoke all on table runlift.event_waitlist from public, anon, authenticated, service_role;
 grant select on table runlift.event_waitlist to anon;
-grant insert on table runlift.event_waitlist to anon;
 grant update on table runlift.event_waitlist to anon;
 grant delete on table runlift.event_waitlist to anon;
 grant select on table runlift.event_waitlist to authenticated;
@@ -2154,7 +2153,6 @@ grant delete on table runlift.event_waitlist to service_role;
 alter table runlift.event_waitlist enable row level security;
 revoke all on table runlift.launch_notifications from public, anon, authenticated, service_role;
 grant select on table runlift.launch_notifications to anon;
-grant insert on table runlift.launch_notifications to anon;
 grant update on table runlift.launch_notifications to anon;
 grant delete on table runlift.launch_notifications to anon;
 grant select on table runlift.launch_notifications to authenticated;
@@ -2182,7 +2180,6 @@ grant delete on table runlift.launch_notifications_backup_20260718 to service_ro
 alter table runlift.launch_notifications_backup_20260718 enable row level security;
 revoke all on table runlift.registrations from public, anon, authenticated, service_role;
 grant select on table runlift.registrations to anon;
-grant insert on table runlift.registrations to anon;
 grant update on table runlift.registrations to anon;
 grant delete on table runlift.registrations to anon;
 grant select on table runlift.registrations to authenticated;
@@ -2209,6 +2206,4 @@ grant update on table runlift.registrations_backup to service_role;
 grant delete on table runlift.registrations_backup to service_role;
 alter table runlift.registrations_backup enable row level security;
 
-create policy "anon insert waitlist" on runlift.event_waitlist as PERMISSIVE for INSERT to anon with check (((acord = true) AND (editie = runlift.current_event_edition())));
-create policy "anon can subscribe" on runlift.launch_notifications as PERMISSIVE for INSERT to anon with check (((char_length(TRIM(BOTH FROM nume)) > 0) AND (char_length(TRIM(BOTH FROM prenume)) > 0) AND (POSITION(('@'::text) IN (email)) > 1) AND (char_length(TRIM(BOTH FROM email)) >= 5) AND (char_length(TRIM(BOTH FROM telefon)) >= 6) AND (editie = runlift.current_launch_edition()) AND (sursa = ANY (ARRAY['lansare'::text, 'despre-noi'::text]))));
-create policy "anon can register" on runlift.registrations as PERMISSIVE for INSERT to anon with check ((acord AND (editie = runlift.current_event_edition())));
+-- (nicio politică: după lockdown-ul anti-bot, nimeni nu scrie direct din browser)

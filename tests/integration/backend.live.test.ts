@@ -48,18 +48,10 @@ const SCHEMA = process.env.DB_SCHEMA ?? 'runlift';
 const ready = LIVE && !!BASE && !!ANON && !!SERVICE;
 
 /**
- * Două porți pentru etapele deploy-ului anti-bot (vezi `ANTI-BOT.md`).
- *
- * Fără ele suita nu poate fi verde nici înainte, nici după: testele care lovesc
- * `submit-form` dau 404 până când funcția e deployată (U7 pasul 2), iar testul de
- * lockdown TREBUIE să pice până când migrarea e aplicată (U7 pasul 5) — altfel
- * n-ar măsura nimic. Le pornești pe rând, pe măsură ce deploy-ul avansează:
- *
- *   RUNLIFT_SUBMIT_FORM_DEPLOYED=1   după `supabase functions deploy submit-form`
- *   RUNLIFT_LOCKDOWN_APPLIED=1       după `runlift_turnstile_lockdown`
+ * `submit-form` și lockdown-ul anti-bot sunt AMBELE în producție de pe 17
+ * septembrie 2026, deci porțile care le țineau oprite au dispărut: testele de
+ * mai jos rulează de fiecare dată când suita live rulează.
  */
-const submitFormDeployed = ready && process.env.RUNLIFT_SUBMIT_FORM_DEPLOYED === '1';
-const lockdownApplied = ready && process.env.RUNLIFT_LOCKDOWN_APPLIED === '1';
 
 // Ediții de test — mari (dar sub limita `smallint` = 32767, tipul coloanei `editie`),
 // ca să nu coincidă niciodată cu o ediție reală. `PROMO_EDITION` e separată, ca testul
@@ -102,7 +94,7 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
   // în bundle-ul JS, deci oricine o poate lua. Dacă vreuna dintre cererile de mai
   // jos reușește, un bot poate insera fără să treacă prin captcha, iar Turnstile
   // devine decorativ. Vezi `supabase-migration-turnstile-lockdown.sql`.
-  it.skipIf(!lockdownApplied)('lockdown: cheia publishable NU mai poate insera direct în niciun tabel public', async () => {
+  it('lockdown: cheia publishable NU mai poate insera direct în niciun tabel public', async () => {
     const tabele: Array<[string, Record<string, unknown>]> = [
       [
         'registrations',
@@ -130,9 +122,14 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
         headers: anonHeaders({ 'Content-Profile': SCHEMA, Prefer: 'return=minimal' }),
         body: JSON.stringify(rand),
       });
-      expect([401, 403], `${tabel} a acceptat un insert anon (status ${res.status})`).toContain(
-        res.status
-      );
+      // Verdictul se citește din CODUL PostgREST, nu din status: refuzul de
+      // drepturi vine azi ca 400 cu `42501`, iar o listă de statusuri ar fi
+      // trecut drept „respins" și un 400 de validare, adică altceva.
+      const corp = (await res.json().catch(() => ({}))) as { code?: string };
+      expect(
+        corp.code,
+        `${tabel} nu a refuzat insert-ul anon (status ${res.status})`
+      ).toBe('42501');
     }
   });
 
@@ -168,7 +165,7 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     expect(typeof rows[0].editie).toBe('number');
   });
 
-  it.skipIf(!submitFormDeployed)('submit-form respinge capcana completată, fără să scrie nimic', async () => {
+  it('submit-form respinge capcana completată, fără să scrie nimic', async () => {
     // Filtru ieftin, înaintea apelului la Cloudflare. Nu depinde de configurarea
     // Turnstile, deci e sigur de rulat pe orice mediu.
     const email = emailFor('honeypot');
@@ -192,7 +189,7 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
     expect(await check.json()).toHaveLength(0);
   });
 
-  it.skipIf(!submitFormDeployed)('submit-form respinge submit-ul instantaneu (sub 3 secunde pe formular)', async () => {
+  it('submit-form respinge submit-ul instantaneu (sub 3 secunde pe formular)', async () => {
     const res = await fetch(`${BASE}/functions/v1/submit-form`, {
       method: 'POST',
       headers: anonHeaders(),
@@ -441,6 +438,17 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
    * de migrare. Ce nu se poate vedea acolo: dacă migrarea chiar e aplicată în
    * producție, identic, cu drepturile revocate.
    */
+  it('escaladările au unde ajunge — fără adresă de operator, alertele sunt inerte', async () => {
+    // `escaladeaza()` iese tăcut pe prima ramură dacă adresa lipsește, deci o
+    // confirmare eșuată sau locurile epuizate n-ar anunța pe nimeni.
+    const res = await fetch(`${BASE}/rest/v1/app_config?select=value&key=eq.operator_email`, {
+      headers: serviceHeaders({ 'Accept-Profile': SCHEMA }),
+    });
+    const randuri = (await res.json()) as Array<{ value: string }>;
+    expect(randuri).toHaveLength(1);
+    expect(randuri[0].value).toMatch(/@/);
+  });
+
   it('anunt_recipients nu e apelabilă cu cheia publică — poartă tokenuri de dezabonare', async () => {
     const res = await fetch(`${BASE}/rest/v1/rpc/anunt_recipients`, {
       method: 'POST',
