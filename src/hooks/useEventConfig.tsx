@@ -41,6 +41,8 @@ const configParam = (): string | null =>
   new URLSearchParams(window.location.search).get('config');
 
 const EventConfigContext = createContext<EventConfig>(SNAPSHOT_CONFIG);
+// Fără provider nu există reconciliere de așteptat, deci valoarea implicită e `true`.
+const ConfigSettledContext = createContext(true);
 
 type Props = {
   children: ReactNode;
@@ -73,11 +75,13 @@ const sursaConfig = async (signal: AbortSignal): Promise<EventConfig | null> => 
 
 export const EventConfigProvider = ({ children, override = null }: Props) => {
   const [config, setConfig] = useState<EventConfig>(override ?? SNAPSHOT_CONFIG);
+  const [settled, setSettled] = useState(override !== null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (override) {
       setConfig(override);
+      setSettled(true);
       setMonitoringEdition(override.number);
       return;
     }
@@ -88,6 +92,7 @@ export const EventConfigProvider = ({ children, override = null }: Props) => {
       abortRef.current = controller;
       sursaConfig(controller.signal)
         .then((live) => {
+          setSettled(true);
           // `null` = document nerandabil. Rămânem pe ce aveam; o pagină ciuntită
           // e mai rea decât o ediție cu o publicare întârziere.
           if (!live) return;
@@ -100,7 +105,10 @@ export const EventConfigProvider = ({ children, override = null }: Props) => {
         .catch((err) => {
           // Abort la refresh/unmount e normal. Restul lasă o urmă, dar pagina
           // rămâne pe ultima valoare bună — exact ca `useStats`.
-          if (!isAbortError(err)) logClientError('fetch-public-config', err);
+          if (isAbortError(err)) return;
+          // Backendul căzut: instantaneul e tot ce vom avea, deci e „definitiv".
+          setSettled(true);
+          logClientError('fetch-public-config', err);
         });
     };
 
@@ -117,11 +125,22 @@ export const EventConfigProvider = ({ children, override = null }: Props) => {
     };
   }, [override]);
 
-  return <EventConfigContext.Provider value={config}>{children}</EventConfigContext.Provider>;
+  return (
+    <EventConfigContext.Provider value={config}>
+      <ConfigSettledContext.Provider value={settled}>{children}</ConfigSettledContext.Provider>
+    </EventConfigContext.Provider>
+  );
 };
 
 /** Configul activ. */
 export const useEventConfig = (): EventConfig => useContext(EventConfigContext);
+
+/**
+ * `true` după primul răspuns al backendului (sau eșecul lui). Până atunci configul
+ * e instantaneul de build, care poate fi o ediție veche — deci nicio acțiune
+ * ireversibilă (un redirect) nu are voie să se bazeze pe el.
+ */
+export const useEventConfigSettled = (): boolean => useContext(ConfigSettledContext);
 
 /** String-urile dependente de ediție, derivate din configul activ. */
 export const useEditionStrings = (): EventStrings => {

@@ -166,10 +166,32 @@ test.describe('/inscriere — pe deadline-ul real, nu pe faza homepage-ului', ()
   });
 
   test('după finalul cursei linkul direct duce la homepage', async ({ page }) => {
+    await mockConfig(page, SNAPSHOT_CONFIG);
     await fixClock(page, DUPA_CURSA);
     await page.goto('/inscriere');
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator('.cs-root')).toBeVisible();
+  });
+
+  // Regresie: build-ul rămăsese pe ediția trecută, iar redirectul se lua pe
+  // instantaneu, înainte ca `public_config()` să spună că ediția nouă abia urmează.
+  test('un instantaneu de build rămas în urmă nu trimite acasă o ediție publicată care urmează', async ({
+    page,
+  }) => {
+    const oSaptamanaMaiTarziu = (local: string) =>
+      new Date(Date.parse(`${local}Z`) + 7 * 86_400_000).toISOString().slice(0, 19);
+    await mockConfig(page, {
+      ...SNAPSHOT_CONFIG,
+      number: SNAPSHOT_CONFIG.number + 1,
+      start: oSaptamanaMaiTarziu(SNAPSHOT_CONFIG.start),
+      registrationDeadline: oSaptamanaMaiTarziu(SNAPSHOT_CONFIG.registrationDeadline),
+      launchAt: oSaptamanaMaiTarziu(SNAPSHOT_CONFIG.launchAt),
+      nextEditionAt: oSaptamanaMaiTarziu(SNAPSHOT_CONFIG.nextEditionAt),
+    });
+    await fixClock(page, DUPA_CURSA);
+    await page.goto('/inscriere');
+    await expect(page.getByRole('heading', { name: 'Înscrie-te' })).toBeVisible();
+    await expect(page).toHaveURL(/\/inscriere$/);
   });
 });
 

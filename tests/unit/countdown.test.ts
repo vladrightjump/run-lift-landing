@@ -92,6 +92,25 @@ describe('useCountdown — ținta se schimbă din mers', () => {
     expect(result.current.ore).toBe('03');
   });
 
+  it('chiar în randarea în care ținta se mută, nu abia după efect', () => {
+    // Regresie: `/inscriere` redirecta din efectul acelui commit, pe `done`-ul
+    // ediției trecute, deși reperele noi sosiseră deja.
+    const vazute: boolean[] = [];
+    const { rerender } = renderHook(
+      ({ tinta }) => {
+        const cd = useCountdown(tinta);
+        vazute.push(cd.done);
+        return cd;
+      },
+      { initialProps: { tinta: new Date(Date.now() - 1000) } }
+    );
+    vazute.length = 0;
+
+    rerender({ tinta: inViitor(3 * 3_600_000) });
+
+    expect(vazute).not.toContain(true);
+  });
+
   it('după schimbare numără mai departe, o dată pe secundă', () => {
     vi.useFakeTimers();
     const { result, rerender } = renderHook(({ tinta }) => useCountdown(tinta), {
