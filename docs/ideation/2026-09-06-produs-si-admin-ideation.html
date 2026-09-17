@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ideation: Produsul și pagina de admin</title>
+<style>
+  :root{
+    --bg:#fbfaf8; --surface:#ffffff; --surface-2:#f4f2ee;
+    --ink:#1c1a17; --ink-2:#4a463f; --muted:#736d62;
+    --line:#e2ddd4; --line-2:#cfc8bc;
+    --accent:#a8420d; --accent-soft:#fbeee6; --accent-line:#e8c6b0;
+    --ok:#2f6b3d; --ok-soft:#eaf3ec; --ok-line:#c3ddc9;
+    --warn:#8a5a06; --warn-soft:#fdf2df; --warn-line:#ecd6a8;
+    --cut:#8a2c2c; --cut-soft:#fbeceb; --cut-line:#e8c2be;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#16150f; --surface:#1e1c16; --surface-2:#26241c;
+      --ink:#eeeade; --ink-2:#c8c2b3; --muted:#948d7e;
+      --line:#333026; --line-2:#454135;
+      --accent:#e8875a; --accent-soft:#2c1f16; --accent-line:#4a3020;
+      --ok:#7cc08c; --ok-soft:#18251b; --ok-line:#2c4433;
+      --warn:#d9a548; --warn-soft:#2a2213; --warn-line:#4a3c1e;
+      --cut:#e08d86; --cut-soft:#2a1817; --cut-line:#4a2725;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--sans); font-size:15.5px; line-height:1.62;
+    font-feature-settings:"kern" 1;
+  }
+  .page{max-width:60rem; margin-inline:auto; padding:3.5rem 1.5rem 5rem}
+  p,li{max-width:70ch}
+  a{color:var(--accent); text-underline-offset:2px}
+  code{font-family:var(--mono); font-size:.88em; background:var(--surface-2);
+       padding:.1em .34em; border-radius:3px; border:1px solid var(--line)}
+
+  .eyebrow{font-size:.7rem; letter-spacing:.14em; text-transform:uppercase;
+           color:var(--muted); font-weight:600; margin:0 0 .55rem}
+  h1{font-size:2.1rem; line-height:1.18; margin:0 0 1rem; letter-spacing:-.018em; font-weight:680}
+  h2{font-size:1.32rem; margin:3.2rem 0 1rem; letter-spacing:-.01em; font-weight:660;
+     padding-bottom:.5rem; border-bottom:1px solid var(--line)}
+  h3{font-size:1.06rem; margin:0 0 .2rem; letter-spacing:-.005em; font-weight:650}
+
+  .meta{display:flex; flex-wrap:wrap; gap:.45rem; margin:1.3rem 0 0}
+  .meta span{font-size:.76rem; padding:.26rem .62rem; border-radius:999px;
+    border:1px solid var(--line-2); background:var(--surface); color:var(--ink-2)}
+  .lede{font-size:1.02rem; color:var(--ink-2); margin-top:1.6rem}
+
+  .jump{background:var(--surface); border:1px solid var(--line);
+        border-radius:9px; padding:1rem 1.2rem; margin:1.4rem 0 2rem}
+  .jump ol{margin:0; padding-left:1.3rem}
+  .jump li{margin:.3rem 0; font-size:.93rem}
+  .jump a{text-decoration:none}
+  .jump a:hover{text-decoration:underline}
+  .jump .ax{color:var(--muted); font-size:.85em}
+
+  .idea{background:var(--surface); border:1px solid var(--line); border-radius:10px;
+        padding:1.5rem 1.6rem; margin:0 0 1.5rem}
+  .idea-head{display:flex; gap:.75rem; align-items:baseline; flex-wrap:wrap; margin-bottom:.9rem}
+  .rank{font-family:var(--mono); font-size:.78rem; font-weight:700; color:var(--accent);
+        background:var(--accent-soft); border:1px solid var(--accent-line);
+        padding:.18rem .5rem; border-radius:999px; flex:none}
+  .chips{display:flex; gap:.4rem; flex-wrap:wrap; margin:.7rem 0 1rem}
+  .chip{font-size:.72rem; padding:.2rem .55rem; border-radius:999px;
+        border:1px solid var(--line-2); background:var(--surface-2); color:var(--ink-2)}
+  .chip.axis{background:var(--accent-soft); border-color:var(--accent-line); color:var(--accent)}
+  .field{margin:.85rem 0}
+  .field > .lbl{font-size:.7rem; letter-spacing:.1em; text-transform:uppercase;
+      color:var(--muted); font-weight:650; display:block; margin-bottom:.22rem}
+  .field p{margin:0}
+  .basis{background:var(--surface-2); border:1px solid var(--line);
+         border-left:3px solid var(--line-2); border-radius:6px; padding:.75rem .9rem; margin:.85rem 0}
+  .basis .tag{font-family:var(--mono); font-size:.72rem; font-weight:700; color:var(--accent)}
+  .basis p{margin:.3rem 0 0; font-size:.93rem; color:var(--ink-2)}
+  .down{color:var(--ink-2); font-size:.95rem}
+
+  figure{margin:1.4rem 0; padding:0}
+  figure svg{display:block; width:100%; height:auto; max-width:100%}
+  figcaption{font-size:.82rem; color:var(--muted); margin-top:.5rem; text-align:center}
+  .svg-wrap{background:var(--surface-2); border:1px solid var(--line);
+            border-radius:8px; padding:1rem; overflow-x:auto}
+
+  table{border-collapse:collapse; width:100%; font-size:.9rem; margin:1rem 0}
+  th,td{text-align:left; padding:.6rem .7rem; border-bottom:1px solid var(--line); vertical-align:top}
+  th{font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:650}
+  tbody tr:last-child td{border-bottom:none}
+  .tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:9px; background:var(--surface)}
+  .cutname{font-weight:600}
+
+  .note{background:var(--warn-soft); border:1px solid var(--warn-line);
+        border-radius:8px; padding:.9rem 1.1rem; margin:1.2rem 0; font-size:.93rem; color:var(--ink-2)}
+  .note strong{color:var(--warn)}
+  .ground{background:var(--surface); border:1px solid var(--line);
+          border-radius:10px; padding:1.3rem 1.5rem}
+  .ground h4{margin:1.1rem 0 .35rem; font-size:.95rem; font-weight:650}
+  .ground h4:first-child{margin-top:0}
+  .ground ul{margin:.3rem 0; padding-left:1.15rem}
+  .ground li{margin:.28rem 0; font-size:.93rem; color:var(--ink-2)}
+  .axes{list-style:none; padding:0; margin:1rem 0}
+  .axes li{background:var(--surface); border:1px solid var(--line); border-radius:8px;
+           padding:.7rem .95rem; margin:.5rem 0; font-size:.95rem}
+  .axes b{color:var(--accent); font-family:var(--mono); font-size:.85em; margin-right:.45rem}
+
+  footer.composition-signal{margin-top:4rem; padding-top:1.2rem; border-top:1px solid var(--line);
+    font-size:.8rem; color:var(--muted)}
+  @media (max-width:640px){ .page{padding:2.2rem 1.1rem 3.5rem} h1{font-size:1.65rem} }
+</style>
+</head>
+<body>
+<div class="page">
+
+<p class="eyebrow">Ideation · repo-grounded</p>
+<h1>Produsul Run + Lift și pagina de admin</h1>
+<div class="meta">
+  <span><time datetime="2026-09-06">2026-09-06</time></span>
+  <span>topic: produs-si-admin</span>
+  <span>focus: „improve my product and my admin page”</span>
+  <span>mod: repo-grounded</span>
+</div>
+
+<p class="lede">41 de idei brute din șase lentile, comasate în 15 candidate, verificate de un critic cu context proaspăt care a citit codul — și tăiate la 7. Trei candidate au picat pentru că premisa lor nu mai e adevărată: codul s-a mișcat de când a fost scris <code>BACKLOG.md</code>.</p>
+
+<h2 id="grounding">Context din cod</h2>
+<div class="ground">
+  <h4>Forma proiectului</h4>
+  <ul>
+    <li>Landing public + backoffice <code>/admin</code> cu 7 taburi, operat de <em>o singură</em> persoană. React 19 + Vite + TS, Supabase (schema <code>runlift</code>), Resend printr-o funcție edge, deploy pe Vercel.</li>
+    <li>Fazele paginii se schimbă singure dintr-un countdown (<code>usePagePhase</code>: <code>'pre' | 'leaderboard' | 'next'</code>) — fără redeploy.</li>
+    <li>Sursa de adevăr a ediției e rândul <code>published</code> din <code>runlift.event_config</code>; <code>src/content/edition.ts</code> e doar instantaneul de build.</li>
+    <li>~6.300 linii în <code>src/admin</code>, ~5.200 în <code>src/components</code>. Teste: ~48 e2e Playwright + unit vitest, cu praguri de acoperire în CI.</li>
+  </ul>
+  <h4>Puncte de durere găsite în cod</h4>
+  <ul>
+    <li><strong>pg_cron nu e instalat</strong> (<code>MIGRATIONS.md</code>, notă din 4 sept. 2026: <code>installed_version: null</code>). <code>maybe_send_reminder()</code> n-a rulat niciodată, la nicio ediție. Toate reminderele trimise până acum au fost difuzări manuale.</li>
+    <li>Caseta de acord îi pune pe oameni să accepte „regulamentul evenimentului” — un document care nu are rută nicăieri în repo. Nici politică de confidențialitate nu există, deși se colectează nume, telefon și dată de naștere.</li>
+    <li><code>AdminRegistration</code> n-are niciun câmp de prezență, număr de concurs sau timp. Exportul CSV e <code>Nr, Nume, Telefon, Email, Data înscrierii</code> — singurul artefact care ajunge la fața locului.</li>
+    <li><code>registrations.editie</code> există, dar nu există nicio interogare între ediții. Nimic din sistem nu știe că cineva a mai alergat.</li>
+    <li>Un înscris n-are nicio cale să-și vadă sau să-și corecteze înscrierea. Singurele afordanțe de autoservire sunt moduri de a pleca (<code>token_unsub</code>, <code>token_renunt</code>).</li>
+    <li>Emailul de confirmare se trimite „fire-and-forget” (<code>useRegistration.ts:206-207</code>) — dacă pică, omul vede succes și nu află nimeni.</li>
+    <li>Nu există nicăieri o previzualizare a emailului randat înainte de trimitere. Reîncercarea din jurnalul de livrare merge doar pentru trimiterile în mod <code>admin</code>.</li>
+    <li><code>monitoring.ts</code> scrie doar în consola browserului — niciun semnal nu pleacă de la client.</li>
+    <li><code>reperele.ts:14-18</code> documentează capcana: ciorna ediției următoare moștenește <code>launchAt</code> din ediția <em>trecută</em>, un moment deja consumat — „Nimic nu-l semnala.”</li>
+  </ul>
+  <h4>Context extern</h4>
+  <ul>
+    <li>RunSignup acoperă tot fluxul dar cere 40+ pași de configurare — citat explicit ca fiind derutant pentru curse mici. Race Roster câștigă pe check-in și comunicare automată.</li>
+    <li>Semnale de conversie cu citări independente repetate: un singur CTA focalizat, un countdown real legat de un termen adevărat, dovadă socială concretă. Countdown-urile care se resetează la fiecare vizită sunt citate ca distrugătoare de credibilitate — al nostru e onest.</li>
+    <li>Pentru consolele cu un singur operator: <em>undo</em> bate <em>confirmare</em>; dialogul blocant se păstrează doar pentru ce e ireversibil, cum e o difuzare programată.</li>
+    <li>Livrabilitate Resend: trimite de pe un subdomeniu, nu de pe domeniul rădăcină; ține domeniul din linkuri identic cu cel de trimitere.</li>
+  </ul>
+</div>
+
+<h2 id="axes">Axele temei</h2>
+<ol class="axes">
+  <li><b>1</b> Decizia de a te înscrie — tot ce se întâmplă înainte de a apăsa trimite.</li>
+  <li><b>2</b> Golul dintre înscriere și prezentare — săptămânile dintre formular și dimineața cursei.</li>
+  <li><b>3</b> Ziua cursei și după — check-in, cursa, rezultate, poze, coada către ediția următoare.</li>
+  <li><b>4</b> Tura de unul singur a operatorului — ergonomia muncii în <code>/admin</code>, sub presiune de timp.</li>
+  <li><b>5</b> Încrederea că mașina a făcut ce i-ai spus — de la o acțiune în admin până la site și emailuri, și cum îți dai seama.</li>
+</ol>
+
+<h2 id="idei">Idei clasate</h2>
+
+<div class="jump">
+  <ol>
+    <li><a href="#i1">Reminderele care chiar pleacă</a> <span class="ax">· axa 2</span></li>
+    <li><a href="#i2">Prezența, timpul și persoana</a> <span class="ax">· axa 3</span></li>
+    <li><a href="#i3">Un link de stare pentru fiecare înscris</a> <span class="ax">· axa 2</span></li>
+    <li><a href="#i4">Regulamentul, politica de confidențialitate și faptele</a> <span class="ax">· axa 1</span></li>
+    <li><a href="#i5">Ediție nouă în 60 de secunde</a> <span class="ax">· axa 4</span></li>
+    <li><a href="#i6">Niciun email fără previzualizare reală</a> <span class="ax">· axa 5</span></li>
+    <li><a href="#i7">Erorile ajung la operator</a> <span class="ax">· axa 5</span></li>
+  </ol>
+</div>
+
+<!-- IDEA 1 -->
+<article class="idea" id="i1">
+  <div class="idea-head"><span class="rank">1</span><h3>Reminderele care chiar pleacă</h3></div>
+  <div class="chips">
+    <span class="chip axis">axa 2 · între înscriere și prezentare</span>
+    <span class="chip">Încredere 95%</span>
+    <span class="chip">Complexitate: medie</span>
+  </div>
+
+  <div class="field"><span class="lbl">Descriere</span>
+  <p>Mecanismul de remindere e construit complet și corect — <code>maybe_send_reminder()</code>, idempotent pe (ediție, avans), cu fereastră de declanșare <code>[scadență, scadență + 2h]</code>, alimentat dintr-un <code>reminder_schedule</code> editabil din admin. Nu i-a lipsit niciodată decât ceasul. Alegerea reală de făcut: instalezi <code>pg_cron</code> în proiectul Supabase, sau muți declanșatorul pe Vercel Cron (Vercel e deja ținta de deploy) sau pe o acțiune GitHub. Până se ia decizia, admin-ul trebuie să nu mai afirme „programat” pentru ceva ce nu rulează — starea afișată să se deducă din jurnalul de livrare, nu din intenție.</p>
+  <p style="margin-top:.6rem">Odată pornit ceasul, aceeași mașinărie livrează și restul emailurilor cronologice din backlog fără infrastructură nouă — doar rânduri noi de program. Cel mai valoros conținut de pus pe el nu e încă o reamintire, ci <strong>o întrebare binară cu 72 de ore înainte: „vin” / „nu mai vin”</strong>. Renunțarea e azi un act pur altruist, fără niciun moment în care sistemul să întrebe; adăugarea întrebării transformă abandonul tăcut în locuri recuperate, prin RPC-ul <code>decline_spot</code> și trigger-ul de promovare care sunt deja livrate.</p>
+  </div>
+
+  <figure>
+    <div class="svg-wrap">
+    <svg viewBox="0 0 860 250" role="img" aria-label="Lanțul intenționat al reminderelor, cu veriga pg_cron lipsă și ocolirea manuală">
+      <defs>
+        <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+          <path d="M0,0 L8,3.2 L0,6.4 Z" fill="currentColor"/>
+        </marker>
+        <marker id="arw" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+          <path d="M0,0 L8,3.2 L0,6.4 Z" fill="#8a5a06"/>
+        </marker>
+      </defs>
+      <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12.5" fill="currentColor">
+
+        <rect x="8" y="60" width="140" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="78" y="82" text-anchor="middle" font-weight="600">Admin</text>
+        <text x="78" y="99" text-anchor="middle" font-size="11" opacity=".72">reminder_schedule</text>
+
+        <line x1="150" y1="86" x2="196" y2="86" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar)"/>
+
+        <rect x="200" y="60" width="140" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="270" y="82" text-anchor="middle" font-weight="600">DB · program</text>
+        <text x="270" y="99" text-anchor="middle" font-size="11" opacity=".72">salvat, valid</text>
+
+        <line x1="342" y1="86" x2="388" y2="86" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar)"/>
+
+        <rect x="392" y="56" width="146" height="60" rx="7" fill="#fbeceb" stroke="#8a2c2c" stroke-width="1.6" stroke-dasharray="5 4"/>
+        <text x="465" y="80" text-anchor="middle" font-weight="700" fill="#8a2c2c">pg_cron</text>
+        <text x="465" y="97" text-anchor="middle" font-size="11" fill="#8a2c2c">installed_version: null</text>
+        <text x="465" y="136" text-anchor="middle" font-size="11.5" font-weight="600" fill="#8a2c2c">veriga lipsă</text>
+
+        <line x1="540" y1="86" x2="586" y2="86" stroke="#8a2c2c" stroke-width="1.3" stroke-dasharray="4 4" opacity=".55"/>
+
+        <rect x="590" y="60" width="150" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".45"/>
+        <text x="665" y="82" text-anchor="middle" font-weight="600" opacity=".6">maybe_send_reminder</text>
+        <text x="665" y="99" text-anchor="middle" font-size="11" opacity=".5">n-a rulat niciodată</text>
+
+        <line x1="742" y1="86" x2="788" y2="86" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 4" opacity=".35"/>
+        <rect x="792" y="60" width="60" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".45"/>
+        <text x="822" y="90" text-anchor="middle" font-weight="600" opacity=".6">Resend</text>
+
+        <path d="M78 118 C 78 200, 500 208, 812 130" fill="none" stroke="#8a5a06" stroke-width="1.6" marker-end="url(#arw)"/>
+        <text x="430" y="228" text-anchor="middle" font-size="12" font-weight="600" fill="#8a5a06"
+              paint-order="stroke" stroke="#f4f2ee" stroke-width="3.5">ocolirea de azi: difuzare manuală, de fiecare dată</text>
+
+        <text x="78" y="36" text-anchor="middle" font-size="11.5" font-weight="600" opacity=".8">UI-ul spune „programat”</text>
+        <line x1="78" y1="42" x2="78" y2="56" stroke="currentColor" stroke-width="1" opacity=".4"/>
+      </g>
+    </svg>
+    </div>
+    <figcaption>Lanțul e complet construit în afară de ceas; operatorul îl ocolește manual la fiecare ediție.</figcaption>
+  </figure>
+
+  <div class="basis">
+    <span class="tag">direct:</span>
+    <p><code>MIGRATIONS.md</code> (notă datată 4 sept. 2026): pg_cron <code>installed_version: null</code>, „<em>maybe_send_reminder() n-a rulat niciodată</em>” — nicio cheie <code>once_reminder_*</code> n-a fost vreodată scrisă în <code>app_config</code>. În paralel, <code>GrupRemindere.tsx</code> afișează un rezumat de forma „N active · următorul în X zile”. RPC-ul <code>decline_spot</code> și trigger-ul de auto-promovare sunt deja livrate în migrarea <code>runlift_remindere_si_renuntare</code>.</p>
+  </div>
+
+  <div class="field"><span class="lbl">De ce contează</span>
+  <p>Nu e o funcționalitate lipsă — e o funcționalitate pe care operatorul o crede pornită și care nu e. Interfața afirmă activ o stare falsă a sistemului, ceea ce e exact eșecul pe care axa 5 îl numește, doar că manifestat pe axa 2. Și e dependența care face ca întrebarea de la 72 de ore să merite construită.</p></div>
+
+  <div class="field"><span class="lbl">Compromisuri</span>
+  <p class="down">Instalarea <code>pg_cron</code> atinge un proiect Supabase <em>partajat</em> cu gym-app și cu botul de Telegram — nu e o decizie izolată. Vercel Cron evită asta, dar mută logica de scadență în afara bazei, unde garanțiile de idempotență sunt deja scrise în SQL. Iar dacă pornești ceasul fără să scoți întâi difuzarea manuală, primul risc real e ca oamenii să primească reminderul de două ori.</p></div>
+</article>
+
+<!-- IDEA 2 -->
+<article class="idea" id="i2">
+  <div class="idea-head"><span class="rank">2</span><h3>Prezența, timpul și persoana</h3></div>
+  <div class="chips">
+    <span class="chip axis">axa 3 · ziua cursei și după</span>
+    <span class="chip">Încredere 85%</span>
+    <span class="chip">Complexitate: medie</span>
+  </div>
+
+  <div class="field"><span class="lbl">Descriere</span>
+  <p>Trei coloane pe <code>registrations</code> — <code>prezent</code>, <code>numar</code>, <code>timp_final</code> — plus o vedere derivată <code>persoane</code>, cheiată pe emailul normalizat (cu telefonul ca rezervă). Coloanele transformă exportul CSV dintr-o listă statică într-un catalog de check-in și dau paginii <code>/rezultate</code> ce să afișeze. Vederea e un simplu <code>group by</code> peste rânduri care există deja: nicio colectare nouă de date, dar de aici încolo sistemul știe că omul din fața ta e la a treia ediție.</p>
+  <p style="margin-top:.6rem">Cine apasă butonul e o bifurcație reală de proiectare: operatorul bifează 30 de nume pe telefon exact în minutele în care n-are niciun minut, sau fiecare participant deschide linkul lui la sosire și operatorul se uită doar la un contor. A doua variantă costă zero efort de operator și refolosește tiparul de token care există deja de două ori în cod.</p>
+  </div>
+
+  <figure>
+    <div class="svg-wrap">
+    <svg viewBox="0 0 800 232" role="img" aria-label="Cercul care leagă prezența de identitate, de rata publicată și de înscrieri">
+      <defs>
+        <marker id="ar2" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+          <path d="M0,0 L8,3.2 L0,6.4 Z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12.5" fill="currentColor">
+        <rect x="20" y="86" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="95" y="110" text-anchor="middle" font-weight="600">prezent + timp</text>
+        <text x="95" y="127" text-anchor="middle" font-size="11" opacity=".72">2 coloane</text>
+
+        <line x1="172" y1="115" x2="216" y2="115" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"/>
+
+        <rect x="220" y="86" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="295" y="110" text-anchor="middle" font-weight="600">persoana</text>
+        <text x="295" y="127" text-anchor="middle" font-size="11" opacity=".72">peste ediții</text>
+
+        <line x1="372" y1="115" x2="416" y2="115" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"/>
+
+        <rect x="420" y="86" width="160" height="58" rx="8" fill="#fbeee6" stroke="#a8420d" stroke-width="1.5"/>
+        <text x="500" y="110" text-anchor="middle" font-weight="600" fill="#a8420d">rata de finalizare</text>
+        <text x="500" y="127" text-anchor="middle" font-size="11" fill="#a8420d">publicată, onestă</text>
+
+        <line x1="582" y1="115" x2="626" y2="115" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"/>
+
+        <rect x="630" y="86" width="150" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="705" y="110" text-anchor="middle" font-weight="600">mai mulți înscriși</text>
+        <text x="705" y="127" text-anchor="middle" font-size="11" opacity=".72">ediția următoare</text>
+
+        <path d="M705 148 C 705 200, 95 200, 95 150" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)" opacity=".65"/>
+        <text x="400" y="216" text-anchor="middle" font-size="11.5" opacity=".72"
+              paint-order="stroke" stroke="#f4f2ee" stroke-width="3.5">fiecare ediție alimentează dovada următoarei</text>
+
+        <text x="400" y="42" text-anchor="middle" font-size="11.5" font-weight="600" opacity=".8">azi lanțul se rupe aici ↓</text>
+        <line x1="95" y1="50" x2="95" y2="82" stroke="#8a2c2c" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <text x="95" y="66" text-anchor="middle" font-size="11" font-weight="600" fill="#8a2c2c"
+              paint-order="stroke" stroke="#f4f2ee" stroke-width="3.5">✕</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>Fără prima verigă, nimic din lanțul de retenție nu poate porni — inclusiv singurul număr care ar convinge un ezitant.</figcaption>
+  </figure>
+
+  <div class="basis">
+    <span class="tag">direct:</span>
+    <p><code>src/lib/adminApi.ts:12-31</code> — <code>AdminRegistration</code> nu are niciun câmp de prezență, număr sau timp (are un <code>echipa</code> nefolosit). Exportul CSV e <code>Nr, Nume, Telefon, Email, Data înscrierii</code>. Nu există rută <code>/rezultate</code> în <code>src/main.tsx</code>. <code>docs/plans/2026-08-21-faze-zi-eveniment.md:158-165</code> a scos explicit rezultatele din scop; <code>BACKLOG.md</code> le numește totuși „motivul nr. 1 de revenire la HYROX”. Singura date între ediții care există azi sunt agregate (<code>editie, participanti, asteptare…</code>) — numărători, niciodată identități.</p>
+  </div>
+
+  <div class="field"><span class="lbl">De ce contează</span>
+  <p>Patru elemente din backlog — pagina de rezultate, emailul de după eveniment, istoricul personal și reînscrierea prioritară — sunt toate blocate pe aceleași coloane lipsă. Aterizarea schemei o dată, chiar înainte de orice interfață, le deblochează independent, în orice ordine, când apare timp de operator. Și e singurul lucru care transformă o serie de evenimente de 30 de oameni într-o cohortă cu istorie.</p></div>
+
+  <div class="field"><span class="lbl">Compromisuri</span>
+  <p class="down">Cheia pe email normalizat greșește în ambele sensuri: doi frați cu un singur email devin o persoană, iar cine își schimbă emailul între ediții devine două. La 30 de locuri poți corecta manual, dar regula trebuie scrisă undeva, nu dedusă. În plus, o schemă adăugată acum și lăsată necompletată la prima ediție e mai rea decât una absentă — dacă nu bifezi prezența măcar o dată, ai plătit migrarea degeaba.</p></div>
+</article>
+
+<!-- IDEA 3 -->
+<article class="idea" id="i3">
+  <div class="idea-head"><span class="rank">3</span><h3>Un link de stare pentru fiecare înscris</h3></div>
+  <div class="chips">
+    <span class="chip axis">axa 2 · între înscriere și prezentare</span>
+    <span class="chip">Încredere 80%</span>
+    <span class="chip">Complexitate: medie</span>
+  </div>
+
+  <div class="field"><span class="lbl">Descriere</span>
+  <p>Sistemul modelează deja participantul ca pe cineva care poate acționa asupra propriei înscrieri — dar numai în negativ: <code>token_unsub</code> oprește emailurile, <code>token_renunt</code> eliberează locul. Un al treilea token, în direcția pozitivă, dă o pagină care arată: confirmat sau pe listă și <em>pe ce poziție</em>, ora de check-in, „adaugă în calendar”, și corectarea unui telefon sau email tastat greșit. Se refolosește ad-litteram garda anti-scanere din <code>Renunt.tsx:7-19</code> — nicio scriere nu se declanșează pe GET.</p>
+  <p style="margin-top:.6rem">Felia minimă, dacă vrei rezultat înainte de pagină: atașează <code>.ics</code>-ul la emailul de promovare de pe lista de așteptare. Butoanele de calendar și distribuire sunt azi ascunse deliberat celor de pe listă („n-ai ce pune în calendar până nu se eliberează un loc”) — corect ca principiu, dar momentul în care devine adevărat e chiar emailul de promovare, iar acela nu duce niciun atașament.</p>
+  </div>
+
+  <div class="basis">
+    <span class="tag">direct:</span>
+    <p><code>registrationStates.tsx:250-253</code> — <code>ActiuniSucces</code> e închis pentru lista de așteptare; emailul <code>mode="promoted"</code> din <code>supabase/functions/send-email/index.ts:407-449</code> nu poartă niciun <code>.ics</code>. Promovarea automată trimite prin <code>pg_net</code> „best-effort”, iar un eșec nu blochează ștergerea (<code>supabase-migration-waitlist-autopromote.sql:95-107</code>) — deci cineva poate fi promovat în tăcere. Confirmarea inițială e „fire-and-forget” (<code>useRegistration.ts:206-207</code>): un email tastat greșit e azi invizibil și nerecuperabil.</p>
+  </div>
+
+  <div class="field"><span class="lbl">De ce contează</span>
+  <p>O singură pagină închide patru găuri deodată — promovarea tăcută, lipsa calendarului pentru cei promovați, imposibilitatea de a-ți corecta datele, și invizibilitatea poziției pe listă — și circulă pe infrastructură care există deja și e deja testată împotriva scanerelor de linkuri ale providerilor. Deviază totodată canalul de suport care e azi „îi scrii organizatorului pe WhatsApp”.</p></div>
+
+  <div class="field"><span class="lbl">Compromisuri</span>
+  <p class="down">Trei tokenuri pe înscriere e o suprafață reală de întreținut, și fiecare e un URL care circulă prin inboxuri la nesfârșit — inclusiv după ce ediția s-a încheiat. Dacă pagina capătă și acțiuni de scriere, ai nevoie de expirare și de o poveste despre ce se întâmplă când cineva redeschide linkul peste un an. Varianta doar-citire în v1 evită asta, dar atunci nu rezolvă corectarea emailului, care e jumătate din motivul construirii ei.</p></div>
+</article>
+
+<!-- IDEA 4 -->
+<article class="idea" id="i4">
+  <div class="idea-head"><span class="rank">4</span><h3>Regulamentul, politica de confidențialitate și faptele pe care pagina nu le spune</h3></div>
+  <div class="chips">
+    <span class="chip axis">axa 1 · decizia de a te înscrie</span>
+    <span class="chip">Încredere 90%</span>
+    <span class="chip">Complexitate: mică–medie</span>
+  </div>
+
+  <div class="field"><span class="lbl">Descriere</span>
+  <p>Două documente care lipsesc și un bloc de fapte care lipsește. <code>/regulament</code> — pentru că oamenii bifează azi că îl acceptă. O politică de confidențialitate — pentru că se colectează nume, telefon și dată de naștere, de la participanți care pot avea 14 ani. Și o fișă scurtă cu ce nu scrie nicăieri pe pagină: preț, ce primești, cât durează, unde parchezi, dacă pot veni spectatori, ce se întâmplă dacă plouă.</p>
+  <p style="margin-top:.6rem">Modelul din camerele de evadare merită împrumutat aici: felul în care vinzi o experiență fizică necunoscută unor străini e o fișă standardizată — durată, dificultate, vârstă minimă — al cărei element portant e <em>rata de reușită publicată</em>. Numărul care sună a descurajare e cel mai puternic instrument de conversie, pentru că schimbă întrebarea din „o să mă fac de râs?” într-o așteptare calibrată. Caseta de acord nu poate însemna nimic azi: nimeni nu poate atesta că e apt pentru un efort a cărui formă nu i-a fost arătată niciodată.</p>
+  </div>
+
+  <div class="note"><strong>De corectat la pachet:</strong> <code>VenueSection.tsx:69</code> spune „vino cu 30 de minute înainte”, iar <code>edition.ts</code> setează <code>checkinFrom: '06:45'</code> pentru un start la 07:00 — adică 15. Cineva ajunge târziu la o cursă care începe la fix din cauza asta.</div>
+
+  <div class="basis">
+    <span class="tag">direct:</span>
+    <p><code>registrationStates.tsx:30-31</code> — <code>TEXT_ACORD</code> îi pune să confirme că sunt „apt din punct de vedere medical pentru efort fizic intens” și că acceptă „regulamentul evenimentului”; nu există nicio rută <code>/regulament</code> în <code>src/main.tsx</code>. <code>BACKLOG.md</code> listează el însuși „Politică de confidențialitate (GDPR) — colectezi nume, telefon, dată naștere. Necesară legal” ca nerezolvată. Preț, parcare, spectatori și condiții de anulare nu apar nicăieri în <code>src/components/landing/</code>.</p>
+  </div>
+
+  <div class="field"><span class="lbl">De ce contează</span>
+  <p>E singura idee din set cu expunere legală, nu doar cu cost de oportunitate — și e purtată de un operator singur, personal. În același timp, e și cea mai mare gaură de conversie: fișa cu fapte și rata de finalizare sunt exact ce caută un ezitant, iar rata nu poate exista până nu se înregistrează cineva că a terminat, ceea ce leagă ideea asta de idea 2.</p></div>
+
+  <div class="field"><span class="lbl">Compromisuri</span>
+  <p class="down">Un regulament scris de mână va devia de la configul ediției exact cum a deviat deja ora de check-in — dar generarea lui din <code>event_config</code> presupune modelarea unor câmpuri care azi nu există (politica de anulare, vârsta minimă), ceea ce e o discuție de schemă înainte de a fi una de conținut. Și textul legal e singurul lucru din listă pe care agentul nu-l poate scrie în locul tău: cere o decizie omenească despre ce te angajezi.</p></div>
+</article>
+
+<!-- IDEA 5 -->
+<article class="idea" id="i5">
+  <div class="idea-head"><span class="rank">5</span><h3>Ediție nouă în 60 de secunde</h3></div>
+  <div class="chips">
+    <span class="chip axis">axa 4 · tura de unul singur</span>
+    <span class="chip">Încredere 85%</span>
+    <span class="chip">Complexitate: mică</span>
+  </div>
+
+  <div class="field"><span class="lbl">Descriere</span>
+  <p>Dacă evenimentul ar rula săptămânal, un formular de 855 de linii cu 50+ câmpuri ar fi evident inutilizabil — ai clona și ai schimba trei lucruri. Fă din asta calea principală: un dialog cu data, ora și numărul de locuri, tot restul moștenit din ediția publicată, și <strong>fiecare reper recalculat față de noul start</strong>, nu copiat. Formularul complet rămâne ca „editează tot”, nu ca ușă de intrare.</p>
+  </div>
+
+  <figure>
+    <div class="svg-wrap">
+    <svg viewBox="0 0 760 250" role="img" aria-label="Comparație între formularul de 50+ câmpuri și dialogul de trei câmpuri cu repere recalculate">
+      <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12.5" fill="currentColor">
+        <text x="12" y="22" font-size="11" font-weight="650" opacity=".72">AZI</text>
+        <rect x="12" y="32" width="300" height="200" rx="8" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="162" y="53" text-anchor="middle" font-size="11.5" opacity=".7">AdminEventTab · 855 linii</text>
+        <g opacity=".38">
+          <rect x="30" y="66" width="264" height="9" rx="2" fill="currentColor"/>
+          <rect x="30" y="82" width="264" height="9" rx="2" fill="currentColor"/>
+          <rect x="30" y="114" width="264" height="9" rx="2" fill="currentColor"/>
+          <rect x="30" y="130" width="264" height="9" rx="2" fill="currentColor"/>
+          <rect x="30" y="146" width="264" height="9" rx="2" fill="currentColor"/>
+          <rect x="30" y="162" width="264" height="9" rx="2" fill="currentColor"/>
+          <rect x="30" y="178" width="264" height="9" rx="2" fill="currentColor"/>
+          <rect x="30" y="194" width="264" height="9" rx="2" fill="currentColor"/>
+          <rect x="30" y="210" width="264" height="9" rx="2" fill="currentColor"/>
+        </g>
+        <rect x="30" y="96" width="264" height="11" rx="2" fill="#fbeceb" stroke="#8a2c2c" stroke-width="1.2"/>
+        <text x="322" y="105" font-size="11" font-weight="600" fill="#8a2c2c">launchAt</text>
+        <text x="322" y="120" font-size="10.5" fill="#8a2c2c">moștenit din ediția</text>
+        <text x="322" y="133" font-size="10.5" fill="#8a2c2c">trecută — deja consumat</text>
+        <text x="322" y="152" font-size="10.5" fill="#8a2c2c" font-style="italic">„Nimic nu-l semnala.”</text>
+
+        <text x="470" y="22" font-size="11" font-weight="650" opacity=".72">PROPUS</text>
+        <rect x="470" y="32" width="278" height="200" rx="8" fill="none" stroke="#a8420d" stroke-width="1.5"/>
+        <text x="609" y="53" text-anchor="middle" font-size="11.5" fill="#a8420d">ediție nouă</text>
+        <rect x="490" y="68" width="238" height="20" rx="4" fill="none" stroke="currentColor" stroke-width="1.1"/>
+        <text x="500" y="82" font-size="11">data</text>
+        <rect x="490" y="94" width="238" height="20" rx="4" fill="none" stroke="currentColor" stroke-width="1.1"/>
+        <text x="500" y="108" font-size="11">ora de start</text>
+        <rect x="490" y="120" width="238" height="20" rx="4" fill="none" stroke="currentColor" stroke-width="1.1"/>
+        <text x="500" y="134" font-size="11">locuri</text>
+        <rect x="490" y="154" width="238" height="58" rx="6" fill="#fbeee6" stroke="#a8420d" stroke-width="1.3"/>
+        <text x="609" y="176" text-anchor="middle" font-size="11.5" font-weight="600" fill="#a8420d">toate reperele recalculate</text>
+        <text x="609" y="193" text-anchor="middle" font-size="11" fill="#a8420d">mutaReperele() — deja există</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>Aceeași schimbare rezolvă și oboseala formularului, și capcana documentată în cod.</figcaption>
+  </figure>
+
+  <div class="basis">
+    <span class="tag">direct:</span>
+    <p><code>src/admin/reperele.ts:14-18</code>, verificat cuvânt cu cuvânt: „Ciorna ediției următoare pornește de la cea publicată […] deci moștenește momentul de anunț al ediției TRECUTE — un moment deja consumat. Nimic nu-l semnala: validarea nu-l leagă de nimic, iar consecința […] se descoperă abia pe site.” Funcția pură <code>mutaReperele</code> există deja și mută întregul grup odată cu startul. <code>AdminEventTab.tsx</code> are exact 855 de linii.</p>
+  </div>
+
+  <div class="field"><span class="lbl">De ce contează</span>
+  <p>Cel mai prost bug cunoscut din configurarea unei ediții e un bug de <em>copiere</em>, iar funcția care îl repară e deja scrisă. Făcând din calea rapidă comportamentul implicit, bug-ul devine structural inaccesibil, nu doar documentat într-un comentariu. E cea mai ieftină idee din set raportat la ce elimină.</p></div>
+
+  <div class="field"><span class="lbl">Compromisuri</span>
+  <p class="down">Moștenirea tăcută rămâne moștenire tăcută: dacă locația sau prețul s-au schimbat și dialogul nu le arată, le vei publica greșit cu și mai multă încredere decât azi, fiindcă ai avut senzația că ai verificat. Calea rapidă are nevoie de un rezumat al ce s-a moștenit — altfel muți capcana de la <code>launchAt</code> la orice alt câmp.</p></div>
+</article>
+
+<!-- IDEA 6 -->
+<article class="idea" id="i6">
+  <div class="idea-head"><span class="rank">6</span><h3>Niciun email fără previzualizare reală</h3></div>
+  <div class="chips">
+    <span class="chip axis">axa 5 · încrederea în mașină</span>
+    <span class="chip">Încredere 75%</span>
+    <span class="chip">Complexitate: mică</span>
+  </div>
+
+  <div class="field"><span class="lbl">Descriere</span>
+  <p>Funcția <code>renderHtml()</code> e deja centralizată și toate cele patru moduri de trimitere trec prin ea. Expunerea ei o singură dată, ca endpoint de previzualizare, acoperă permanent fiecare șablon existent și fiecare șablon viitor din <code>email_templates</code> — un singur punct de pârghie în loc de N. Previzualizarea trebuie să fie HTML-ul chiar așa cum pleacă, cu variabilele completate pentru un destinatar real, nu textul brut cu <code>{prenume}</code> în el.</p>
+  <p style="margin-top:.6rem">La pachet, reîncercarea: azi merge doar pentru trimiterile în mod <code>admin</code>. Celelalte patru moduri sunt excluse din motive bune, scrise în cod — o reîncercare oarbă ar sări peste filtrele de dezabonare sau ar omite linkuri pe care modul original le adaugă. Soluția nu e reîncercarea oarbă, ci rejucarea prin funcția reală a fiecărui mod.</p>
+  </div>
+
+  <div class="basis">
+    <span class="tag">direct:</span>
+    <p><code>supabase/functions/send-email/index.ts</code> definește <code>renderHtml()</code> ca funcție unică folosită de modurile confirm / promoted / info / broadcast. <code>AdminDeliveryTab.tsx:87-99</code> restrânge reîncercarea la modul <code>admin</code>, cu motivul scris în comentariu: celelalte „se re-declanșează din fluxul lor, nu de aici”. Nicio căutare după <code>dry-run</code>, <code>preview.*email</code> sau <code>mock.*email</code> nu returnează ceva în repo.</p>
+  </div>
+
+  <div class="field"><span class="lbl">De ce contează</span>
+  <p>Un operator singur n-are a doua pereche de ochi. Jurnalul de livrare demonstrează deja că poate <em>afla</em> ce a eșuat — matricea de acoperire e muncă bună, deja în loc — dar nu poate repara trei din patru tipuri de eșec din același ecran, și nu poate vedea niciodată cum arată un email înainte să plece. E jumătatea lipsă a unei funcționalități care există deja pe jumătate.</p></div>
+
+  <div class="field"><span class="lbl">Compromisuri</span>
+  <p class="down">Verificatorul a atras atenția că o previzualizare de <em>text</em> există deja — gaura reală e mai îngustă decât pare: HTML-ul randat nu e arătat. Asta reduce câștigul, deși nu-l anulează, fiindcă exact acolo se strică lucrurile (linkuri rupte, variabile necompletate). Iar o fereastră de anulare cu numărătoare inversă, tentantă pe hârtie, e mașinărie grea pentru trimiteri către 30 de destinatari care sunt deja păzite de o confirmare cu numărătoare și de o gardă anti-dublare.</p></div>
+</article>
+
+<!-- IDEA 7 -->
+<article class="idea" id="i7">
+  <div class="idea-head"><span class="rank">7</span><h3>Erorile ajung la operator</h3></div>
+  <div class="chips">
+    <span class="chip axis">axa 5 · încrederea în mașină</span>
+    <span class="chip">Încredere 70%</span>
+    <span class="chip">Complexitate: mică</span>
+  </div>
+
+  <div class="field"><span class="lbl">Descriere</span>
+  <p><code>monitoring.ts</code> prinde deja erorile de client și violările de CSP, cu ediția și URL-ul atașate — și le scrie în consola browserului vizitatorului, unde nu le vede nimeni niciodată. Trimite-le undeva. Cel mai ieftin drum trece prin infrastructura Resend deja desfășurată și deja de încredere: un email către operator la anomalii — un email de confirmare eșuat, o promovare de pe listă, locurile epuizate.</p>
+  </div>
+
+  <div class="basis">
+    <span class="tag">direct:</span>
+    <p><code>src/lib/monitoring.ts:33-50</code> — <code>logClientError(context, err, meta)</code> loghează ediția, url-ul și marca de timp în <code>console</code>; <code>:60-70</code> ascultă <code>securitypolicyviolation</code> și loghează <code>blockedURI</code> cu sugestia „connect-src pare desincronizat”. Nimic nu părăsește clientul. Confirmarea e „fire-and-forget” (<code>useRegistration.ts:206-207</code>), deci un eșec de trimitere nu ajunge azi la nimeni.</p>
+  </div>
+
+  <div class="field"><span class="lbl">De ce contează</span>
+  <p>Un produs cu un singur operator, în care toată observabilitatea stă în spatele unui login pe care operatorul îl vizitează ocazional, n-are în practică observabilitate. Semnalul e deja capturat și structurat — lipsește doar ultimul pas.</p></div>
+
+  <div class="field"><span class="lbl">Compromisuri</span>
+  <p class="down">Un rezumat zilnic pe care nu-l citește nimeni e mai rău decât nimic, iar pragul de escaladare e singurul lucru care decide valoarea ideii — asta o face mai greu de nimerit decât de construit. Erorile de client vin și de la extensii de browser și de la roboți, deci fără filtrare vei antrena operatorul să ignore exact canalul pe care l-ai construit. Varianta îngustă — doar anomaliile de flux, nu toate erorile de JS — e mai probabil să supraviețuiască.</p></div>
+</article>
+
+<h2 id="respinse">Ce a fost tăiat</h2>
+<p>Trei candidate au fost respinse pentru că verificatorul le-a demontat premisa citind codul. Merită citite ca informație în sine: codul a avansat dincolo de ce mai descrie <code>BACKLOG.md</code>.</p>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th style="width:26%">Idee</th><th>Motivul respingerii</th></tr></thead>
+  <tbody>
+    <tr><td class="cutname">Renunță la ștergere — stare + motiv, o primitivă reversibilă</td><td><strong>Premisă demontată.</strong> Ștergerea unei înscrieri e deja soft-delete cu undo de fidelitate completă (<code>deleteRegistration</code>/<code>undeleteRegistration</code>, migrarea <code>runlift_soft_delete_registrations</code>). Ce rămâne e paritatea pentru lista de așteptare — o corecție de câteva linii, nu o primitivă.</td></tr>
+    <tr><td class="cutname">Publicare atomică într-un singur RPC</td><td><strong>Premisă demontată.</strong> Comentariul din <code>AdminEventTab.tsx:301-304</code> continuă dincolo de fraza citată și argumentează că starea parțială e „o stare din care poți relua”. Autorul a adjudecat deja întrebarea.</td></tr>
+    <tr><td class="cutname">Numărul de telefon: folosește-l sau scoate-l</td><td><strong>Premisă demontată.</strong> <code>telefon</code> are deja linkuri <code>tel:</code> în patru vederi de admin și e variabilă activă de șablon. Canalul de reparație „lipsă” există.</td></tr>
+    <tr><td class="cutname">Consola ca linie de timp (caietul de regie)</td><td>Faptele sunt corecte, dar e absorbită de ideile 1 și 5 la o fracțiune din cost — rearhitecturarea formularului nu e necesară ca să dispară „programat”-ul mincinos și capcana <code>launchAt</code>.</td></tr>
+    <tr><td class="cutname">Întrebarea binară „vin / nu mai vin” la 72 de ore</td><td>Nu e independentă — e sub-decizia de conținut a ideii 1. Pliată acolo, ca payload-ul ei cel mai valoros.</td></tr>
+    <tr><td class="cutname">Identitatea persoanei peste ediții, separat</td><td>Comasată în ideea 2: prezența fără cheia de persoană nu compune, iar cheia fără prezență n-are ce raporta.</td></tr>
+    <tr><td class="cutname">Landing care știe că te-ai mai înscris (precompletare)</td><td>Argument pur inferențial, fără nicio durere citată din cod; infrastructură de token semnat, disproporționată pentru un eveniment ocazional de 30 de locuri.</td></tr>
+    <tr><td class="cutname">Ritm, nu stoc — semnalul de raritate</td><td>Cere și o modificare de RPC (<code>public_stats</code> nu expune <code>created_at</code>), pentru un câștig marginal la o raritate care e deja autentică la 30 de locuri.</td></tr>
+    <tr><td class="cutname">Consolă de check-in cu scanare de coduri QR</td><td>Prea scump raportat la valoare la scara asta: 30 de oameni nu justifică echipament nou când un link personal atinge același semnal.</td></tr>
+    <tr><td class="cutname">Regulament versionat, editabil din DB, cu ștampilă de consimțământ</td><td>Restrâns în ideea 4. Mașinăria de versionare e disproporționată pentru un document editat de câteva ori pe an.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note" style="margin-top:1.4rem"><strong>Două corecții</strong> care au ieșit la verificare și care contrazic <code>BACKLOG.md</code>: <code>durationHours: 1</code> <em>nu</em> e nefolosit — alimentează <code>EVENT_END_DATE</code>, citit de <code>stareCurenta.ts</code>, <code>usePagePhase</code>, <code>useRegistration</code> și <code>calendar.ts</code>. Iar „add to calendar” din backlog e livrat: <code>lib/calendar.ts</code> generează <code>.ics</code> și e legat în <code>ActiuniSucces</code> — doar că nu pentru lista de așteptare (vezi ideea 3).</div>
+
+<p style="margin-top:1.6rem; font-size:.93rem; color:var(--muted)">Acoperirea axelor: toate cele cinci au cel puțin un supraviețuitor — axa 1 (idea 4), axa 2 (ideile 1 și 3), axa 3 (idea 2), axa 4 (idea 5), axa 5 (ideile 6 și 7). Bugetul de verificare e per agent, nu per idee: ideile din lentilele de analogie și de răsturnare a constrângerilor au fost verificate mai puțin adânc decât cele născute din durere directă.</p>
+
+<footer class="composition-signal">
+  Compus 2026-09-06 de ce-ideate · 41 de idei brute din 6 lentile → 15 candidate → 7 supraviețuitori, filtrate de un verificator de bază cu context proaspăt.
+</footer>
+
+</div>
+</body>
+</html>
