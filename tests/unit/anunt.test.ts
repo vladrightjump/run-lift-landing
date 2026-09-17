@@ -138,6 +138,45 @@ describe('ultimulAnunt — a mai fost anunțată ediția?', () => {
     expect(r?.catreCati).toBe(2);
     expect(r?.cand).toBe('2026-09-17T10:00:30Z');
   });
+
+  /**
+   * Regresie, pe datele reale ale anunțului ediției 7: 58 de oameni, jurnalul
+   * scris pe parcurs în loturi de câte 10, 30 de rânduri la 12:49 și 28 la
+   * 12:50. Gruparea pe minut raporta „către 28".
+   */
+  it('un anunț care trece peste granița unui minut e tot un singur lot', () => {
+    const intrari = Array.from({ length: 58 }, (_, i) =>
+      log({
+        email: `om${i}@exemplu.ro`,
+        created_at: new Date(Date.UTC(2026, 8, 17, 12, 49, 48) + i * 385).toISOString(),
+      })
+    );
+    const minute = new Set(intrari.map((e) => e.created_at.slice(0, 16)));
+    expect(minute.size).toBe(2);
+    expect(ultimulAnunt(intrari, 7)?.catreCati).toBe(58);
+  });
+
+  it('un lot lung, de peste zece minute, nu se rupe în bucăți', () => {
+    const intrari = Array.from({ length: 300 }, (_, i) =>
+      log({
+        email: `om${i}@exemplu.ro`,
+        created_at: new Date(Date.UTC(2026, 8, 17, 12, 0, 0) + i * 3_000).toISOString(),
+      })
+    );
+    expect(ultimulAnunt(intrari, 7)?.catreCati).toBe(300);
+  });
+
+  it('ordinea rândurilor din jurnal nu contează', () => {
+    const r = ultimulAnunt(
+      [
+        log({ email: 'vio@exemplu.ro', created_at: '2026-09-16T09:00:00Z' }),
+        log({ email: 'ion@exemplu.ro', created_at: '2026-09-17T10:00:59Z' }),
+        log({ email: 'ana@exemplu.ro', created_at: '2026-09-17T10:01:05Z' }),
+      ],
+      7
+    );
+    expect(r).toEqual({ cand: '2026-09-17T10:01:05Z', catreCati: 2 });
+  });
 });
 
 describe('motivEroareAnunt — problemele de deploy au nume proprii', () => {
