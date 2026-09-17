@@ -94,7 +94,7 @@ export const EDITION = {
    */
   venue: {
     name: 'Stadionul „Dinamo”',
-    city: 'Stadionul „Dinamo”',
+    city: 'Chișinău',
     // Coordonate exacte, nu căutare text, ca embed-ul și direcțiile să cadă fix
     // pe locul de start.
     mapQuery: '47.0264549,28.8185762',

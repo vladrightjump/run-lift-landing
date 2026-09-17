@@ -223,8 +223,11 @@ curl -s -o /dev/null -w '%{http_code}\n' \
   -d '{"nume":"Bot Test","telefon":"069000000","email":"bot@test.md","acord":true}'
 ```
 
-Dacă dă 201, lockdown-ul nu s-a aplicat și captcha e decorativ. (Și dacă dă 201, șterge
-rândul `bot@test.md` — altfel ocupă un loc din cele 40.)
+**Aplicat pe 17 septembrie 2026.** Răspunsul de azi e `400` cu corpul
+`{"code":"42501","message":"permission denied for table registrations"}` — PostgREST
+raportează refuzul de drepturi ca 400, nu ca 401/403, deci verdictul se citește din `code`,
+nu din status. Dacă dă 201, lockdown-ul a fost dat înapoi și captcha e decorativ. (Și dacă
+dă 201, șterge rândul `bot@test.md` — altfel ocupă un loc din cele 30.)
 
 Apoi o înscriere reală de pe site, cap-coadă, plus verificarea că emailul de confirmare a
 plecat (`/admin` → „Livrare").
@@ -266,14 +269,15 @@ RUNLIFT_LIVE=1 SUPABASE_URL=… SUPABASE_ANON_KEY=… SUPABASE_SERVICE_ROLE_KEY=
   npm run test:integration
 ```
 
-Două teste din suita live au **porți de mediu**, fiindcă altfel suita nu poate fi verde nici
-înainte, nici după deploy — cele care lovesc `submit-form` dau 404 până la pasul 2, iar cel
-de lockdown TREBUIE să pice până la pasul 5, altfel nu măsoară nimic:
+Porțile de mediu (`RUNLIFT_SUBMIT_FORM_DEPLOYED`, `RUNLIFT_LOCKDOWN_APPLIED`) au dispărut pe
+17 septembrie 2026: ambele etape sunt în producție, deci testele rulează necondiționat.
 
-```bash
-RUNLIFT_SUBMIT_FORM_DEPLOYED=1   # după pasul 2
-RUNLIFT_LOCKDOWN_APPLIED=1       # după pasul 5
-```
+Calea lui `submit-form` are acum și 59 de teste care nu ating rețeaua — încarcă fișierul
+real cu `Deno` și `fetch` înlocuite (`tests/unit/edge/submitForm.test.ts`). Acolo se verifică
+ce nu se poate verifica live fără un token Turnstile valid: fail-open DOAR pe pana
+Cloudflare, respingerea pe 4xx, plafonul de 2048 de caractere al tokenului, capcana,
+validările mutate din RLS și faptul că `editie` din client nu ajunge niciodată în rândul
+scris.
 
 ## Rămas deschis
 
