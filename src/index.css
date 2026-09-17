@@ -2415,6 +2415,23 @@
     transition: border-color 0.2s ease; resize: vertical;
   }
   .admin-tpl-field input:focus, .admin-tpl-field textarea:focus { border-color: var(--e3-accent); }
+  /* ---- Dialogul de prezență (prezent / număr / timp final) ---- */
+  .admin-prezenta { display: grid; gap: 14px; text-align: left; }
+  .admin-prezenta-grup {
+    display: grid; gap: 8px; margin: 0; padding: 12px 14px;
+    border: 1px solid var(--e3-border);
+  }
+  .admin-prezenta-grup legend {
+    padding: 0 6px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+  .admin-prezenta-optiune {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 14px; color: var(--e3-text); cursor: pointer;
+  }
+  .admin-prezenta-optiune input { accent-color: var(--e3-accent); cursor: pointer; }
+  .admin-prezenta .admin-config-hint { margin: -6px 0 0; }
+
   /* Un reminder fără {link_renunt}: pleacă, dar fără butonul care schimbă ceva. */
   .admin-tpl-avertisment {
     margin: 0; padding: 10px 13px; font-size: 13px; line-height: 1.6;
