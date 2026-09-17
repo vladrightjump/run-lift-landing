@@ -57,7 +57,9 @@ begin
     from anunt_recipients('{}') a
    where lower(btrim(a.email)) = lower(btrim(v_log.email));
 
-  if v_dest.email is null then
+  -- `found`, nu `v_dest.email is null`: câmpurile unui `record` neatribuit nu se
+  -- citesc sigur, iar o eroare aici ar fi arătat ca „rejucare eșuată".
+  if not found then
     -- Două motive posibile, cu consecințe diferite pentru operator: dezabonarea
     -- e o cerere de respectat; înscrierea la ediția curentă e o veste bună.
     if exists (

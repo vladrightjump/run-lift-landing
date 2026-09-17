@@ -345,6 +345,9 @@ const pauza = (ms: number) => new Promise((r) => setTimeout(r, ms));
  */
 const PAUZA_ANUNT_MS = 250;
 
+/** La câte trimiteri se scrie jurnalul, pe parcursul unui anunț. */
+const LOT_JURNAL = 10;
+
 /**
  * `sendOne` cu o singură reîncercare pe `429`.
  *
@@ -799,6 +802,10 @@ Deno.serve(async (req: Request) => {
         eroare: r.ok ? undefined : r.body,
         editie,
       });
+      // Jurnalul se scrie pe parcurs, nu doar la final. Zăvorul e deja consumat:
+      // dacă invocarea moare la jumătatea listei, fără urme scrise nu s-ar mai
+      // putea afla cine a primit anunțul și cine nu — iar reluarea ar fi blocată.
+      if (logs.length >= LOT_JURNAL) await logSends(logs.splice(0));
     }
     await logSends(logs);
     return json(200, { sent, failed: errors.length, errors });

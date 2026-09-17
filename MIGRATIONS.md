@@ -131,6 +131,31 @@ Clientul îl cunoaște deja (`REMINDER_TEMPLATE_KEYS`, `ETICHETE_SABLOANE`, help
 Rândul la `offsetHours: 72` nu vine din migrare — orarul e al operatorului și se scrie din
 `/admin` la configurarea ediției.
 
+### `supabase-migration-anunt-istoric.sql` — NEAPLICAT
+
+Anunțul de ediție nouă către toți participanții de până acum. Trei piese: `unsubscribe()` se
+aplică persoanei (toate rândurile aceleiași adrese, în ambele tabele), `anunt_recipients()`
+(nechemabilă cu cheia publică) și șablonul `bulk_participant_anunt`.
+
+**Precondiție de producție, NU de schemă:** funcția Edge `send-email` deployată e din
+4 septembrie 2026 — fără modurile `preview`, `replay`, `alert` (valul 5) și fără scrierea
+`sablon` în jurnal. Redeploy-ul ei din `main` se face și se verifică ÎNAINTE (U0 din
+`docs/plans/2026-09-17-1517-feat-anunt-catre-toti-participantii-plan.md`), apoi migrarea,
+apoi deploy-ul cu modul `anunt`.
+
+Pe 17 septembrie 2026, interogarea de control (fără funcție) dă **68** de destinatari. La
+aplicare, compară `select count(*) from runlift.anunt_recipients()` cu ea și notează valoarea.
+
+⚠️ Rescrie `unsubscribe()`, folosită de linkul din fiecare email deja trimis. Verifică
+dezabonarea pe o adresă de test înainte să consideri migrarea aplicată (pașii sunt în coada
+fișierului).
+
+### `supabase-migration-anunt-rejucare.sql` — NEAPLICAT
+
+`admin_replay_anunt_lookup()` — rejucarea unui anunț eșuat, reluând subiectul și textul din
+jurnal (operatorul își editează anunțul, deci șablonul ar retrimite alt mesaj).
+**Precondiție:** `supabase-migration-anunt-istoric.sql`, fiindcă citește `anunt_recipients()`.
+
 ### `supabase-migration-undo-waitlist.sql` — APLICAT 7 septembrie 2026
 
 Ștergere logică pe `event_waitlist` + `admin_undelete_waitlist`, cu paritate față de
