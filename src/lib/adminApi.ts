@@ -439,8 +439,9 @@ export type AdminEmailLogEntry = {
   subiect: string;
   text_email: string;
   /** Cine a declanșat trimiterea. */
-  mod: 'admin' | 'confirm' | 'promoted' | 'info' | 'broadcast' | 'alert';
-  audienta: 'participanti' | 'asteptare' | '';
+  mod: 'admin' | 'confirm' | 'promoted' | 'info' | 'broadcast' | 'alert' | 'anunt' | 'anunt_test';
+  /** `istoric` = anunțul către toți participanții de până acum. */
+  audienta: 'participanti' | 'asteptare' | 'istoric' | '';
   /**
    * Cheia șablonului cu care s-a randat mesajul; `null` pe rândurile de dinainte
    * ca jurnalul s-o rețină. Fără ea, o difuzare nu se poate rejuca: orarul are
@@ -568,13 +569,86 @@ export const previewEmailHtml = async (
   return body as EmailPreview;
 };
 
+/* ---- Anunțul către toți participanții de până acum (`send-email` → `anunt`) ---- */
+
+/**
+ * Un om care primește anunțul. FĂRĂ tokenul de dezabonare: lista o rezolvă
+ * serverul (`anunt_recipients`), iar clientul are nevoie doar să vadă cine e.
+ */
+export type DestinatarAnunt = {
+  email: string;
+  nume: string;
+  /** Ultima ediție la care a fost înscris. */
+  ultima_editie: number;
+};
+
+/** Refuzul funcției, cu codul ei — `motivEroareAnunt` îl traduce. */
+export class AnuntError extends Error {
+  constructor(
+    readonly status: number,
+    readonly cod: string
+  ) {
+    super(cod);
+  }
+}
+
+const postAnunt = async <T>(token: string, corp: Record<string, unknown>): Promise<T> => {
+  const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'anunt', token, ...corp }),
+  });
+  const body = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) {
+    if (res.status === 401) throw new InvalidTokenError();
+    throw new AnuntError(res.status, body.error ?? `http_${res.status}`);
+  }
+  return body as T;
+};
+
+/** Cine ar primi anunțul acum. Nu trimite și nu scrie nimic. */
+export const previewAnunt = (
+  token: string
+): Promise<{ total: number; destinatari: DestinatarAnunt[] }> =>
+  postAnunt(token, { dry_run: true });
+
+/** Un singur email, la operator, randat ca pentru primul om din listă. */
+export const trimiteTestAnunt = (
+  token: string,
+  date: { catre: string; subiect: string; text: string; sablon?: string }
+): Promise<SendEmailResult> =>
+  postAnunt(token, {
+    test_to: date.catre,
+    subject: date.subiect,
+    text: date.text,
+    sablon: date.sablon,
+  });
+
+/**
+ * Anunțul propriu-zis. `exclude` doar SCOATE oameni — serverul recalculează
+ * lista la trimitere, deci un tab vechi nu poate trimite cuiva din afara ei.
+ */
+export const trimiteAnunt = (
+  token: string,
+  date: { subiect: string; text: string; exclude: string[]; onceKey: string; sablon?: string }
+): Promise<SendEmailResult> =>
+  postAnunt(token, {
+    subject: date.subiect,
+    text: date.text,
+    exclude: date.exclude,
+    once_key: date.onceKey,
+    sablon: date.sablon,
+  });
+
 /** Refuzul serverului la o rejucare, cu motivul din `admin_replay_lookup`. */
 export type ReplayRefuz =
   | 'mod_exclus'
   | 'sablon_necunoscut'
   | 'destinatar_lipsa'
   | 'dezabonat'
-  | 'jurnal_lipsa';
+  | 'jurnal_lipsa'
+  /** Anunț: între timp s-a înscris la ediția curentă, deci nu mai e în audiență. */
+  | 'nu_mai_e_in_audienta';
 
 /**
  * Rejoacă o trimitere eșuată prin fluxul MODULUI ei.

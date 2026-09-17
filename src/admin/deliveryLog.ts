@@ -73,6 +73,11 @@ export const motivNerejucabil = (e: AdminEmailLogEntry): string | null => {
     // cerere nouă, nu o reparație. Ascuns, rândul ar părea rezolvat.
     return 'Confirmare de adresă (double opt-in) — o rejucare ar fi o cerere nouă, nu o reparație. Persoana o poate cere din nou de pe site.';
   }
+  if (e.mod === 'anunt_test') {
+    // Un test către operator și-a făcut treaba dacă a arătat cum arată
+    // emailul. Retrimis, ar fi doar încă un test.
+    return 'Email de test către operator — nu se rejoacă; trimite un test nou din tabul „Emailuri".';
+  }
   if (e.mod === 'broadcast' && !e.sablon) {
     // Orarul are DOUĂ șabloane pentru aceeași audiență; ghicitul ar retrimite
     // alt text decât cel eșuat.

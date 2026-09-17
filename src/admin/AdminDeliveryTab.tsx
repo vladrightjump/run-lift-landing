@@ -187,6 +187,8 @@ export const AdminDeliveryTab = ({
     sablon_necunoscut: 'Nu se știe ce șablon a plecat, deci nu se poate reconstrui mesajul.',
     mod_exclus: 'Modul ăsta nu se rejoacă — o reluare ar fi o cerere nouă, nu o reparație.',
     jurnal_lipsa: 'Rândul de jurnal nu mai există.',
+    nu_mai_e_in_audienta:
+      'S-a înscris între timp la ediția curentă, deci anunțul nu-i mai e util. Refuzul e corect.',
   };
 
   const rejoaca = async (e: AdminEmailLogEntry) => {

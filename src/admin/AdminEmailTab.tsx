@@ -18,6 +18,7 @@ import type { Audience, Recipient } from './emailAudience';
 import { useEventConfig } from '../hooks/useEventConfig';
 import { ziLunaOra, ziSiLuna } from '../lib/formatare';
 import { useSesiuneAdmin } from './adminSession';
+import { AnuntIstoric } from './AnuntIstoric';
 
 type Props = {
   rows: AdminRegistration[];
@@ -309,6 +310,60 @@ export const AdminEmailTab = ({
     }
   };
 
+  const butoaneAudienta = (
+    <div className="admin-email-audience">
+      <button
+        type="button"
+        className={`admin-email-template${audience === 'participanti' ? ' active' : ''}`}
+        onClick={() => switchAudience('participanti')}
+      >
+        Participanți ({rows.length})
+      </button>
+      <button
+        type="button"
+        className={`admin-email-template${audience === 'eveniment' ? ' active' : ''}`}
+        onClick={() => switchAudience('eveniment')}
+      >
+        Listă de așteptare ({waitlist.length})
+      </button>
+      <button
+        type="button"
+        className={`admin-email-template${audience === 'lansare' ? ' active' : ''}`}
+        onClick={() => switchAudience('lansare')}
+      >
+        Anunță-mă la lansare ({launchRows.length})
+      </button>
+      <button
+        type="button"
+        className={`admin-email-template${audience === 'toti' ? ' active' : ''}`}
+        onClick={() => switchAudience('toti')}
+      >
+        Toți ({totiRecipients.length})
+      </button>
+      <button
+        type="button"
+        className={`admin-email-template${audience === 'istoric' ? ' active' : ''}`}
+        onClick={() => switchAudience('istoric')}
+        title="Toți cei înscriși vreodată la o ediție, o dată pe persoană — pentru anunțul unei ediții noi"
+      >
+        Toți de până acum
+      </button>
+    </div>
+  );
+
+  // Anunțul către toți participanții de până acum are alt flux: lista vine de
+  // la server, nu din rândurile ediției deschise. Vezi `AnuntIstoric`.
+  if (audience === 'istoric') {
+    return (
+      <AnuntIstoric
+        editie={editie}
+        emailLog={emailLog}
+        readOnly={readOnly}
+        audiente={butoaneAudienta}
+      />
+    );
+  }
+
   return (
     <section className="admin-email">
       <div className="admin-email-recipients">
@@ -317,36 +372,7 @@ export const AdminEmailTab = ({
           <span className="admin-email-count">{recipients.length} selectați</span>
         </div>
 
-        <div className="admin-email-audience">
-          <button
-            type="button"
-            className={`admin-email-template${audience === 'participanti' ? ' active' : ''}`}
-            onClick={() => switchAudience('participanti')}
-          >
-            Participanți ({rows.length})
-          </button>
-          <button
-            type="button"
-            className={`admin-email-template${audience === 'eveniment' ? ' active' : ''}`}
-            onClick={() => switchAudience('eveniment')}
-          >
-            Listă de așteptare ({waitlist.length})
-          </button>
-          <button
-            type="button"
-            className={`admin-email-template${audience === 'lansare' ? ' active' : ''}`}
-            onClick={() => switchAudience('lansare')}
-          >
-            Anunță-mă la lansare ({launchRows.length})
-          </button>
-          <button
-            type="button"
-            className={`admin-email-template${audience === 'toti' ? ' active' : ''}`}
-            onClick={() => switchAudience('toti')}
-          >
-            Toți ({totiRecipients.length})
-          </button>
-        </div>
+        {butoaneAudienta}
 
         <label className="admin-email-recipient all">
           <input

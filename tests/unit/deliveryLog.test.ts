@@ -248,3 +248,31 @@ describe('alertele către operator în jurnal', () => {
     expect(COMUNICARI_EDITIE.some((c) => c.recunoaste(e))).toBe(false);
   });
 });
+
+describe('anunțul către toți participanții de până acum, în jurnal', () => {
+  /**
+   * Un anunț eșuat se rejoacă — dar prin căutarea lui dedicată, care reia textul
+   * din jurnal, nu din șablon: operatorul își editează anunțul înainte de trimitere.
+   */
+  it('un anunț eșuat se poate rejuca', () => {
+    expect(motivNerejucabil(log({ mod: 'anunt', audienta: 'istoric' }))).toBeNull();
+  });
+
+  it('un test către operator nu se rejoacă — spune de unde se trimite altul', () => {
+    expect(motivNerejucabil(log({ mod: 'anunt_test', audienta: 'istoric' }))).toMatch(/test nou/);
+  });
+
+  it('nu intră în retrimiterea în lot, care e doar pentru modul `admin`', () => {
+    expect(emailuriRetrimisibile([log({ mod: 'anunt', status: 'esuat' })])).toEqual([]);
+  });
+
+  /**
+   * Fișa numără ce le DATOREAZĂ ediția participanților ei. Un anunț pleacă tocmai
+   * la cei care NU sunt încă participanți, deci nu are ce căuta acolo.
+   */
+  it('nu intră în fișa de acoperire', () => {
+    const p = { email: 'ana@exemplu.ro' } as AdminRegistration;
+    const [rand] = acoperire([p], [log({ mod: 'anunt', email: 'ana@exemplu.ro' })]);
+    expect(Object.values(rand.celule)).toEqual(['lipsa', 'lipsa']);
+  });
+});
