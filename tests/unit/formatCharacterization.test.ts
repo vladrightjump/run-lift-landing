@@ -22,12 +22,12 @@ const CAPTURAT_EDITIA_7 = {
   LAUNCH_EDITION_ORDINAL: 'a șaptea',
   EVENT_META: '19 septembrie 2026 · Stadionul „Dinamo”',
   HERO_KICKER:
-    'Sâmbătă, 19 septembrie 2026 · Stadionul „Dinamo”, Stadionul „Dinamo” · Outdoor Adaptive',
+    'Sâmbătă, 19 septembrie 2026 · Stadionul „Dinamo”, Chișinău · Outdoor Adaptive',
   EVENT_WHEN: 'Sâmbătă, 19 septembrie 2026',
-  EVENT_WHERE: 'Stadionul „Dinamo”, Stadionul „Dinamo”',
+  EVENT_WHERE: 'Stadionul „Dinamo”, Chișinău',
   EVENT_START_TIME: '07:00',
   EVENT_SUMMARY_LINE:
-    'Sâmbătă, 19 septembrie 2026, ora 07:00 — Stadionul „Dinamo”, Stadionul „Dinamo”',
+    'Sâmbătă, 19 septembrie 2026, ora 07:00 — Stadionul „Dinamo”, Chișinău',
   SUCCESS_SEE_YOU: 'Ne vedem pe 19 septembrie la start, ora 07:00.',
   EVENT_BADGE: 'Hyrox Trial · 19 septembrie',
   MAP_EMBED_SRC: 'https://maps.google.com/maps?q=47.0264549,28.8185762&z=16&hl=ro&output=embed',

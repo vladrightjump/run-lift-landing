@@ -48,7 +48,7 @@ describe('câmpuri rămase în urmă', () => {
   it('o mutare de locație raportează ambele câmpuri ale locului', () => {
     const vechi = campuriVechiInBuild(build(), {
       ...SNAPSHOT_CONFIG,
-      venue: { ...SNAPSHOT_CONFIG.venue, name: 'Sala Polivalentă', city: 'Chișinău' },
+      venue: { ...SNAPSHOT_CONFIG.venue, name: 'Sala Polivalentă', city: 'Bălți' },
     });
     expect(vechi.map((c) => c.camp)).toEqual(['numele locului', 'orașul/zona']);
   });
