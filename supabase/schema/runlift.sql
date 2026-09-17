@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 17 septembrie 2026 (după `runlift_waitlist_cap_din_config`).
+-- Ultima regenerare: 17 septembrie 2026 (după `runlift_reminder_orar_robust`).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -1345,7 +1345,13 @@ begin
 
   if now() > v_start then return; end if;
 
-  select value::jsonb into v_orar from app_config where key = 'reminder_schedule';
+  -- Conversia stă în blocul ei: un text care nu e JSON nu trebuie să oprească
+  -- reminderul, ci să cadă pe orarul implicit de mai jos.
+  begin
+    select value::jsonb into v_orar from app_config where key = 'reminder_schedule';
+  exception when others then
+    v_orar := null;
+  end;
 
   if v_orar is null or jsonb_typeof(v_orar) <> 'array' then
     v_orar := jsonb_build_array(jsonb_build_object(
