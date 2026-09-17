@@ -28,10 +28,10 @@ export default defineConfig({
       // `docs/plans/2026-09-06-1604-feat-idei-produs-si-admin-plan.md`:
       // linii 70,36 · instrucțiuni 69,06 · funcții 65,4 · ramuri 61,7.
       thresholds: {
-        lines: 70,
-        statements: 69,
-        functions: 65,
-        branches: 61,
+        lines: 72,
+        statements: 71,
+        functions: 67,
+        branches: 64,
       },
     },
   },

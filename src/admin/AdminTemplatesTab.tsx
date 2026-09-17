@@ -45,6 +45,11 @@ const ETICHETE: Record<string, { titlu: string; descriere: string }> = {
     descriere:
       'Al treilea text pe care îl poate folosi un rând de orar, gândit pentru 72 de ore înainte. Nu reamintește — întreabă. Tăcerea înseamnă „vin"; singura acțiune e eliberarea locului, prin {link_renunt}. De aceea linkul e OBLIGATORIU aici: paragraful care îl poartă se filtrează pentru cine n-are token, deci fără el întrebarea pleacă fără buton. Rostul avansului mare: la 24 de ore un loc eliberat rămâne gol, la 72 apucă să-l ia cineva de pe lista de așteptare. Aceleași variabile ca reminderul obișnuit.',
   },
+  bulk_participant_anunt: {
+    titlu: 'Anunț ediție nouă · Toți participanții de până acum',
+    descriere:
+      'Punctul de plecare pentru tabul „Emailuri" → „Toți de până acum": anunțul unei ediții noi către toți cei care s-au înscris vreodată, o dată pe persoană. Poți edita textul și acolo, înainte de trimitere. Linkul de dezabonare se adaugă automat. Variabile despre persoană: DOAR {prenume}, {nume}, {email} — serverul nu știe telefonul sau data înscrierii. Despre eveniment: {numele_cursei}, {data_cursei}, {data_scurta}, {ora_start}, {ora_checkin}, {locul}, {editia}. Fără {link_renunt}: nimeni din audiență n-are loc la ediția anunțată.',
+  },
   bulk_waitlist_anunt: {
     titlu: 'Trimitere în masă · Anunț eveniment (listă de așteptare)',
     descriere:

@@ -6,7 +6,12 @@ import type { AdminRegistration, AdminLaunchSignup, AdminWaitlistEntry } from '.
 import { fillEventVars } from '../content/format';
 import type { EventConfig } from '../content/eventConfig';
 
-export type Audience = 'participanti' | 'eveniment' | 'lansare' | 'toti';
+/**
+ * `istoric` = toți participanții de până acum. Singura audiență a cărei listă NU
+ * se construiește aici: o rezolvă serverul (vezi `anunt.ts`), deci
+ * `recipientsFor` întoarce o listă goală pentru ea.
+ */
+export type Audience = 'participanti' | 'eveniment' | 'lansare' | 'toti' | 'istoric';
 
 /** Destinatar normalizat — comun pentru toate sursele (participanți / așteptare / lansare). */
 export type Recipient = {
@@ -102,6 +107,8 @@ export const recipientsFor = (audience: Audience, src: AudienceSources): Recipie
   if (audience === 'participanti') return participants;
   if (audience === 'eveniment') return eventWait;
   if (audience === 'lansare') return launch;
+  // Lista istorică vine de la server; clientul n-are rândurile altor ediții.
+  if (audience === 'istoric') return [];
   return dedupeByEmail([...participants, ...eventWait, ...launch]); // 'toti'
 };
 
