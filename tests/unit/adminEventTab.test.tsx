@@ -1765,3 +1765,29 @@ describe('clipurile și secțiunile stau în grupurile lor', () => {
     expect(cap.getAttribute('aria-expanded')).toBe('true');
   });
 });
+
+/**
+ * Undo-ul unei ștergeri rulează din toast, deci mai târziu decât randarea care
+ * l-a produs: dacă ar fi scris `{...ciorna.reels, items}` cu ciorna prinsă
+ * atunci, ar fi revenit și titlul secțiunii editat între timp.
+ */
+describe('undo-ul unui clip nu revine peste editările de după', () => {
+  it('titlul secțiunii editat după ștergere rămâne', async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
+    fireEvent.change(screen.getByLabelText('Linkul clipului'), {
+      target: { value: 'https://www.instagram.com/reel/ABC12345/' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Șterge clipul 1' }));
+    const toast = showToast.mock.calls.at(-1)?.[0];
+
+    fireEvent.change(camp('Titlul secțiunii'), { target: { value: 'Din teren' } });
+    act(() => toast.undo());
+
+    expect(camp('Titlul secțiunii').value).toBe('Din teren');
+    expect((screen.getByLabelText('Linkul clipului') as HTMLInputElement).value).toContain(
+      'ABC12345'
+    );
+  });
+});

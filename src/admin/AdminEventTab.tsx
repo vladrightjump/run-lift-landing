@@ -292,15 +292,6 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
   };
 
   /**
-   * Întrebarea pusă înainte de orice plecare care ar pierde ciorna.
-   *
-   * `window.confirm`, nu un dialog al nostru: e singura întrebare care poate fi
-   * pusă SINCRON, dintr-un handler care trebuie să răspundă „da sau nu" pe loc
-   * (schimbarea tabului), și e aceeași voce cu avertismentul nativ de la
-   * închiderea paginii. Un dialog React ar fi cerut o mașinărie de intenție
-   * amânată pentru o întrebare de o linie.
-   */
-  /**
    * Duce la primul câmp invalid: îl deschide, îl aduce în ecran, îl focusează.
    *
    * „3 câmpuri de reparat" era text inert — spunea CÂTE, niciodată CARE, iar
@@ -321,6 +312,15 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
     control?.focus();
   };
 
+  /**
+   * Întrebarea pusă înainte de orice plecare care ar pierde ciorna.
+   *
+   * `window.confirm`, nu un dialog al nostru: e singura întrebare care poate fi
+   * pusă SINCRON, dintr-un handler care trebuie să răspundă „da sau nu" pe loc
+   * (schimbarea tabului), și e aceeași voce cu avertismentul nativ de la
+   * închiderea paginii. Un dialog React ar fi cerut o mașinărie de intenție
+   * amânată pentru o întrebare de o linie.
+   */
   const potPleca = (): boolean =>
     !nesalvat ||
     window.confirm(
@@ -366,6 +366,21 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
   const seteaza = <K extends keyof EventConfig>(cheie: K, valoare: EventConfig[K]) => {
     atinsa.current = true;
     setCiorna((c) => (c ? { ...c, [cheie]: valoare } : c));
+  };
+
+  /**
+   * Clipurile, scrise din starea CURENTĂ a ciornei.
+   *
+   * Funcțional, nu `seteaza('reels', {...ciorna.reels, items})`: undo-ul unei
+   * ștergeri pleacă din toast, deci rulează mai târziu, cu `ciorna` prinsă la
+   * randarea în care s-a apăsat „Șterge". Un titlu de secțiune editat între
+   * timp ar fi fost revenit odată cu clipul.
+   */
+  const seteazaReels = (items: EventConfig['reels']['items']) => {
+    setCiorna((c) => {
+      atinsa.current = true;
+      return c ? { ...c, reels: { ...c.reels, items } } : c;
+    });
   };
 
   const seteazaRemindere = (reminders: EventConfig['reminders']) => {
@@ -449,6 +464,7 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
     try {
       await saveEventConfigDraft(token, ciorna.number, ciorna);
       setSalvat(ciorna);
+      setEditieIncarcata(ciorna.number);
       atinsa.current = false;
       incarca();
       if (fereastra) fereastra.location.href = PREVIEW_URL;
@@ -776,6 +792,7 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
           <GrupInstagram
             ciorna={ciorna}
             seteaza={seteaza}
+            seteazaReels={seteazaReels}
             erori={erori}
           />
 

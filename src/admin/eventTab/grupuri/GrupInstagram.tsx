@@ -14,6 +14,12 @@ import {
 type Props = {
   ciorna: EventConfig;
   seteaza: <K extends keyof EventConfig>(cheie: K, valoare: EventConfig[K]) => void;
+  /**
+   * Scrie lista de clipuri pornind de la starea CURENTĂ a ciornei — undo-ul
+   * unei ștergeri rulează din toast, deci mai târziu decât randarea care l-a
+   * produs.
+   */
+  seteazaReels: (items: EventConfig['reels']['items']) => void;
   erori: Map<string, string>;
 };
 
@@ -26,7 +32,7 @@ type Props = {
  * explicație și eroare prin `aria-describedby`, câmpuri inerte cât ține o
  * scriere.
  */
-export const GrupInstagram = ({ ciorna, seteaza, erori }: Props) => {
+export const GrupInstagram = ({ ciorna, seteaza, seteazaReels: scrieReels, erori }: Props) => {
   const ocupat = useContext(Blocat);
   const { showToast } = useSesiuneAdmin();
 
@@ -46,7 +52,7 @@ export const GrupInstagram = ({ ciorna, seteaza, erori }: Props) => {
 
   const seteazaReels = (items: EventConfig['reels']['items'], structural = false) => {
     if (structural) setLinkBrut({});
-    seteaza('reels', { ...ciorna.reels, items });
+    scrieReels(items);
   };
 
   return (
