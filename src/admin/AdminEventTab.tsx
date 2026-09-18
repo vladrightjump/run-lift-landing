@@ -320,6 +320,27 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
    * închiderea paginii. Un dialog React ar fi cerut o mașinărie de intenție
    * amânată pentru o întrebare de o linie.
    */
+  /**
+   * Duce la primul câmp invalid: îl deschide, îl aduce în ecran, îl focusează.
+   *
+   * „3 câmpuri de reparat" era text inert — spunea CÂTE, niciodată CARE, iar
+   * căutarea trecea prin șapte grupuri. Ordinea din `validateEventConfig` e
+   * ordinea documentului, deci „primul" e și cel de sus. Grupurile cu eroare
+   * sînt deja deschise de la sine, deci elementul e randat.
+   */
+  const laPrimaEroare = () => {
+    const prima = probleme[0];
+    if (!prima) return;
+    const container = document.querySelector(`[data-camp="${prima.camp}"]`);
+    const control = container?.querySelector<HTMLElement>('input, select, textarea');
+    // `block: center` și nu `nearest`: bara lipită de jos acoperă exact ultima
+    // treime a formularului, iar un câmp adus „cât mai puțin" ajunge sub ea.
+    // Apelul e opțional pentru că jsdom nu implementează derularea; focusul,
+    // care e partea verificabilă, se face oricum.
+    (control ?? container)?.scrollIntoView?.({ block: 'center' });
+    control?.focus();
+  };
+
   const potPleca = (): boolean =>
     !nesalvat ||
     window.confirm(
@@ -998,11 +1019,16 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
             {/* Problemele de validare au întâietate: ele dezactivează „Publică",
                 deci un refuz vechi n-are ce concura cu ele. */}
             {probleme.length > 0 ? (
-              <span className="admin-bara-problema">
+              // Buton, nu text: numărul spunea CÂTE, niciodată CARE.
+              <button
+                type="button"
+                className="admin-bara-problema admin-bara-problema--link"
+                onClick={laPrimaEroare}
+              >
                 {probleme.length === 1
                   ? '1 câmp de reparat'
                   : `${probleme.length} câmpuri de reparat`}
-              </span>
+              </button>
             ) : refuz ? (
               <span className="admin-bara-problema">{refuz}</span>
             ) : (

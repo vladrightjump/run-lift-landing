@@ -18,6 +18,7 @@ export const GrupLocuri = ({ ciorna, seteaza, erori, areEroare }: Props) => (
   >
     <Camp
       eticheta="Locuri disponibile"
+      cheie="slots.total"
       ajutor="Bara de pe pagină are exact atâtea segmente."
       eroare={erori.get('slots.total')}
     >
@@ -38,6 +39,7 @@ export const GrupLocuri = ({ ciorna, seteaza, erori, areEroare }: Props) => (
     </Camp>
     <Camp
       eticheta="Locuri pe lista de așteptare"
+      cheie="slots.waitlist"
       ajutor="După ce se umplu locurile, formularul înscrie pe listă. Când se eliberează un loc, primul de pe listă urcă automat."
       eroare={erori.get('slots.waitlist')}
     >
@@ -60,6 +62,7 @@ export const GrupLocuri = ({ ciorna, seteaza, erori, areEroare }: Props) => (
         nouă, un backend care nu răspunde arăta ocupația ediției TRECUTE. */}
     <Camp
       eticheta="Ocupate (valoare de rezervă)"
+      cheie="slots.occupiedFallback"
       ajutor="Numărul pe care pagina îl arată dacă statisticile nu răspund. Zero e răspunsul normal — se folosește doar când nimic altceva nu e disponibil."
       eroare={erori.get('slots.occupiedFallback')}
       atentie={

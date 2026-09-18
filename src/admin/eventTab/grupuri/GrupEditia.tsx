@@ -25,6 +25,7 @@ export const GrupEditia = ({ ciorna, seteaza, erori, areEroare, atentieNumar }: 
   >
     <Camp
       eticheta="Numărul ediției"
+      cheie="number"
       ajutor="Ediția la care se înscrie lumea acum."
       eroare={erori.get('number')}
       atentie={atentieNumar}
@@ -41,6 +42,7 @@ export const GrupEditia = ({ ciorna, seteaza, erori, areEroare, atentieNumar }: 
     </Camp>
     <Camp
       eticheta="Ediția de lansare"
+      cheie="launchNumber"
       ajutor="Numărul din emailuri și din paginile /confirmare și /unsubscribe. De obicei același cu cel de sus — bumpează-l DUPĂ cursă."
       eroare={erori.get('launchNumber')}
     >
@@ -56,6 +58,7 @@ export const GrupEditia = ({ ciorna, seteaza, erori, areEroare, atentieNumar }: 
     </Camp>
     <Camp
       eticheta="Numele evenimentului"
+      cheie="eventName"
       ajutor="Apare în titlul paginii și în emailuri."
       eroare={erori.get('eventName')}
     >
@@ -69,6 +72,7 @@ export const GrupEditia = ({ ciorna, seteaza, erori, areEroare, atentieNumar }: 
     </Camp>
     <Camp
       eticheta="Concept"
+      cheie="concept"
       ajutor="Linia scurtă de sub titlu — ex. „outdoor adaptive”."
       eroare={erori.get('concept')}
     >

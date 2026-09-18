@@ -1244,6 +1244,14 @@
   }
   .admin-bara-detaliu { color: var(--e3-muted-dim); }
   .admin-bara-problema { color: var(--e3-danger); font-weight: 700; }
+  /* Numărul de câmpuri stricate duce LA primul dintre ele. Arată ca text,
+     se poartă ca un buton — și are focus vizibil, ca orice altceva. */
+  .admin-bara-problema--link {
+    font: inherit; font-weight: 700; padding: 0;
+    background: none; border: 0; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .admin-bara-problema--link:hover { color: var(--e3-text); }
   /* „Nesalvat" nu e o eroare — e diferența dintre ce vezi și ce e pe server.
      Chihlimbar, ca celelalte semnale de atenție din formular. */
   .admin-bara-nesalvat {
@@ -1325,6 +1333,10 @@
     display: flex; gap: 7px;
   }
   .admin-config-atentie::before { content: "▲"; font-size: 9px; line-height: 1.7; flex: none; }
+  /* Bara lipită de jos acoperă ultima treime a formularului: un câmp adus în
+     ecran (din saltul la prima eroare, sau din tabulare) trebuie să se
+     oprească deasupra ei, nu sub. */
+  .admin-config-camp { scroll-margin-bottom: 140px; scroll-margin-top: 80px; }
   .admin-config-camp.atentie select,
   .admin-config-camp.atentie input { border-color: #4A3F22; }
 

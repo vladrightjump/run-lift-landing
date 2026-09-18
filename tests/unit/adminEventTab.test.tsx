@@ -1578,3 +1578,65 @@ describe('câmpurile lipsă din formular', () => {
     );
   });
 });
+
+/**
+ * De la „N câmpuri de reparat" la câmpul vinovat.
+ *
+ * Numărul din bară spunea CÂTE, niciodată CARE: căutarea trecea prin șapte
+ * grupuri, dintre care unele pliate.
+ */
+describe('indicatorul de erori duce la câmp', () => {
+  it('apăsarea lui focusează primul câmp invalid', async () => {
+    await deschideCiorna();
+    fireEvent.change(camp('Coordonatele'), { target: { value: 'Valea Morilor' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /câmp de reparat/ }));
+    expect(document.activeElement).toBe(camp('Coordonatele'));
+  });
+
+  it('cu două probleme, merge la prima din document, nu la ultima', async () => {
+    await deschideCiorna();
+    // „Numele evenimentului" e sus în document, coordonatele mai jos.
+    fireEvent.change(camp('Numele evenimentului'), { target: { value: '' } });
+    fireEvent.change(camp('Coordonatele'), { target: { value: 'Valea Morilor' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /câmpuri de reparat/ }));
+    expect(document.activeElement).toBe(camp('Numele evenimentului'));
+  });
+
+  it('fără probleme, bara arată ediția și nu mai e buton', async () => {
+    await deschideCiorna();
+    expect(screen.queryByRole('button', { name: /de reparat/ })).toBeNull();
+  });
+
+  it('fiecare cheie produsă de validare are un câmp care o poartă', async () => {
+    // Garda care ține cele două vocabulare lipite: dacă o validare nouă scrie o
+    // cheie pe care niciun `Camp` n-o stampilează, saltul ar duce nicăieri.
+    await deschideCiorna();
+    const stampilate = new Set(
+      [...document.querySelectorAll('[data-camp]')].map((e) => e.getAttribute('data-camp'))
+    );
+    const cheiSimple = [
+      'number',
+      'launchNumber',
+      'eventName',
+      'concept',
+      'tz',
+      'start',
+      'durationHours',
+      'checkinFrom',
+      'registrationDeadline',
+      'launchAt',
+      'nextEditionAt',
+      'leaderboardLeadHours',
+      'slots.total',
+      'slots.waitlist',
+      'slots.occupiedFallback',
+      'venue.name',
+      'venue.city',
+      'venue.mapQuery',
+      'venue.zoom',
+    ];
+    for (const cheie of cheiSimple) expect(stampilate).toContain(cheie);
+  });
+});

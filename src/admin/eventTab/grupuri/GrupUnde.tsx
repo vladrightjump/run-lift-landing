@@ -46,6 +46,7 @@ export const GrupUnde = ({ ciorna, seteaza, erori, areEroare }: Props) => {
 
     <Camp
       eticheta="Numele locului"
+      cheie="venue.name"
       ajutor="Ex. „Scările de Granit”."
       eroare={erori.get('venue.name')}
     >
@@ -59,6 +60,7 @@ export const GrupUnde = ({ ciorna, seteaza, erori, areEroare }: Props) => {
     </Camp>
     <Camp
       eticheta="Orașul sau zona"
+      cheie="venue.city"
       ajutor="Ex. „Valea Morilor, Chișinău”."
       eroare={erori.get('venue.city')}
     >
@@ -72,6 +74,7 @@ export const GrupUnde = ({ ciorna, seteaza, erori, areEroare }: Props) => {
     </Camp>
     <Camp
       eticheta="Coordonatele"
+      cheie="venue.mapQuery"
       ajutor="Punct exact, „lat,lng” — nu text căutat pe hartă. Le iei din Google Maps: click dreapta pe punct → prima linie din meniu le copiază."
       eroare={erori.get('venue.mapQuery')}
       ecou={
@@ -103,6 +106,7 @@ export const GrupUnde = ({ ciorna, seteaza, erori, areEroare }: Props) => {
         ecran. */}
     <Camp
       eticheta="Zoom-ul hărții"
+      cheie="venue.zoom"
       ajutor="Cât de aproape pornește harta de pe pagină."
       eroare={erori.get('venue.zoom')}
     >
