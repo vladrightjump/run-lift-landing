@@ -57,6 +57,9 @@ type Props = {
   inregistreazaGardaIesire: (garda: (() => boolean) | null) => void;
 };
 
+/** Pagina publică randată din ciorna de pe server. */
+const PREVIEW_URL = '/?config=draft';
+
 const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
   format: 'Formatul',
   venue: 'Locația',
@@ -383,6 +386,47 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
     setCiorna({ ...publicat, layout: layoutComplet(publicat.layout) });
     setSalvat(null);
     setAncoraStart(publicat.start);
+  };
+
+  /**
+   * Previzualizarea arată ce e pe ecran, nu ce era pe server.
+   *
+   * `/?config=draft` reinterogează `admin_get_event_config` și randează rândul
+   * `draft` (vezi `hooks/useEventConfig.tsx`). Cât timp butonul a fost o simplă
+   * ancoră, editai șase câmpuri, deschideai previzualizarea, verificai
+   * documentul de DINAINTEA editărilor — și publicai convins că ai văzut. E
+   * aceeași clasă de capcană ca `launchAt` moștenit, doar mutată cu un ecran
+   * mai jos.
+   *
+   * Tabul se deschide SINCRON, pe click: un `window.open` de după `await` nu
+   * mai e o acțiune a utilizatorului, deci îl blochează browserul. La refuzul
+   * salvării se închide la loc — un tab rămas deschis pe configul publicat ar
+   * fi exact minciuna pe care o reparăm.
+   */
+  const previzualizeaza = async () => {
+    if (!ciorna || probleme.length > 0) return;
+    const fereastra = window.open('', '_blank', 'noopener');
+    setRefuz(null);
+    setSalveaza(true);
+    try {
+      await saveEventConfigDraft(token, ciorna.number, ciorna);
+      setSalvat(ciorna);
+      atinsa.current = false;
+      incarca();
+      if (fereastra) fereastra.location.href = PREVIEW_URL;
+      // Popup blocat: documentul e salvat, deci linkul din bară (ancora de
+      // lângă buton, activă cât timp nu mai sînt diferențe) arată deja ciorna
+      // corectă. Nu inventăm o a doua cale.
+    } catch (err) {
+      fereastra?.close();
+      if (!onAuthError(err)) {
+        const msg = refuzCuPas('salvare', err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
+    } finally {
+      setSalveaza(false);
+    }
   };
 
   const salveazaCiorna = async () => {
@@ -886,14 +930,30 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
             )}
           </span>
           <div className="admin-bara-butoane">
-            <a
-              className="admin-btn-ghost"
-              href="/?config=draft"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Previzualizează
-            </a>
+            {/* Cu diferențe nesalvate previzualizarea SCRIE întâi, deci e un
+                buton; fără ele rămâne ce era, o ancoră — cu Cmd-click și click
+                de mijloc cu tot. */}
+            {nesalvat ? (
+              <button
+                type="button"
+                className="admin-btn-ghost"
+                onClick={previzualizeaza}
+                // Aceeași gardă ca „Salvează": previzualizarea unui config pe
+                // care serverul l-ar refuza n-are ce arăta.
+                disabled={ocupat || !poatePublica}
+              >
+                {salveaza ? 'Se salvează…' : 'Salvează și previzualizează'}
+              </button>
+            ) : (
+              <a
+                className="admin-btn-ghost"
+                href={PREVIEW_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Previzualizează
+              </a>
+            )}
             <button
               type="button"
               className="admin-btn-ghost"
