@@ -5,7 +5,7 @@ import { META_PLACEHOLDERS } from './src/content/meta';
 // Injectează meta (title/description/Open Graph) în index.html la build ȘI în
 // dev, din `src/content/meta.ts` (derivat din EDITION). Astfel meta de share e
 // mereu în sincron cu ediția, fără editări manuale în index.html.
-// Vezi TASK-FOR-CLAUDE.md (Decizii de arhitectură).
+// Vezi README.md („Decizii de arhitectură").
 const injectEditionMeta = (): Plugin => ({
   name: 'inject-edition-meta',
   transformIndexHtml(html: string) {

@@ -89,7 +89,7 @@ necompletată la prima ediție e mai rea decât una absentă.
 ca principiu — dar momentul în care devine adevărat e chiar emailul de promovare, iar
 `send-email/index.ts:407-449` (`mode="promoted"`) nu duce niciun atașament. Promovarea automată
 trimite „best-effort” prin `pg_net` și un eșec nu blochează ștergerea
-(`supabase-migration-waitlist-autopromote.sql:95-107`) — deci cineva poate fi promovat în tăcere.
+(`supabase/sql/supabase-migration-waitlist-autopromote.sql:95-107`) — deci cineva poate fi promovat în tăcere.
 Confirmarea inițială e „fire-and-forget” (`useRegistration.ts:206-207`): un email tastat greșit e
 azi invizibil și nerecuperabil.
 

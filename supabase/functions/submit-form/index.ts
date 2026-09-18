@@ -4,7 +4,7 @@
 // publishable (vizibilă în bundle). Orice bot putea da `curl` pe endpoint fără să
 // deschidă vreodată site-ul, deci un captcha pus doar în React n-ar fi oprit nimic.
 // Acum: RLS nu mai permite INSERT din `anon` (vezi
-// `supabase-migration-turnstile-lockdown.sql`), iar scrierea se face DOAR de aici,
+// `supabase/sql/supabase-migration-turnstile-lockdown.sql`), iar scrierea se face DOAR de aici,
 // cu cheia de service, după ce token-ul Turnstile a fost verificat la Cloudflare.
 //
 // Moduri:

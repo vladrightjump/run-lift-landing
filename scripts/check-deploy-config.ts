@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { checkDeployConfig } from '../src/lib/deployConfig';
+import { sqlDinRadacina, mesajSqlInRadacina } from './rootSqlGuard';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel: string): string => readFileSync(resolve(repoRoot, rel), 'utf8');
@@ -46,6 +47,15 @@ if (!siteKey) {
     process.exit(1);
   }
   console.warn('⚠ VITE_TURNSTILE_SITE_KEY lipsește — Turnstile dezactivat în acest build.');
+}
+
+// Igiena rădăcinii, DUPĂ verificările de deploy: un CSP stricat oprește
+// înscrierile în producție, un fișier SQL rătăcit nu. Dacă amândouă sunt
+// stricate, operatorul trebuie să vadă întâi diagnosticul care doare.
+const sqlInRadacina = sqlDinRadacina(repoRoot);
+if (sqlInRadacina.length > 0) {
+  console.error(mesajSqlInRadacina(sqlInRadacina));
+  process.exit(1);
 }
 
 console.log('✓ Config de deploy consistent (CSP ↔ SUPABASE.url, Turnstile).');

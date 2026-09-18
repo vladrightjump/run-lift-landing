@@ -33,7 +33,7 @@ browser ──[mode, token, hp, elapsed, data]──▶ Edge: submit-form
 
 1. **`supabase/functions/submit-form/index.ts`** — singura poartă de scriere. Verifică
    token-ul Turnstile la Cloudflare, apoi scrie cu cheia de service.
-2. **`supabase-migration-turnstile-lockdown.sql`** — scoate politicile și grant-urile de
+2. **`supabase/sql/supabase-migration-turnstile-lockdown.sql`** — scoate politicile și grant-urile de
    INSERT pentru rolul `anon`. Fără pasul ăsta, restul e decorativ.
 3. **`src/lib/turnstile.ts` + `src/lib/antiBot.ts`** — generarea token-ului și colectarea
    dovezilor, în client.
@@ -240,7 +240,7 @@ funcțiune.
 
 1. Promovează în Vercel deployment-ul de producție dinaintea merge-ului. Auto-deploy-ul git
    e dezactivat, deci e o promovare manuală din dashboard, nu un push.
-2. Abia apoi blocul comentat de la finalul `supabase-migration-turnstile-lockdown.sql`, care
+2. Abia apoi blocul comentat de la finalul `supabase/sql/supabase-migration-turnstile-lockdown.sql`, care
    repune politicile în forma lor de AZI — inclusiv `editie = current_event_edition()`.
    (Versiunea veche a blocului o pierdea, adică „revenirea" ar fi fost o regresie.)
 
