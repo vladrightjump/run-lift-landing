@@ -1244,6 +1244,12 @@
   }
   .admin-bara-detaliu { color: var(--e3-muted-dim); }
   .admin-bara-problema { color: var(--e3-danger); font-weight: 700; }
+  /* „Nesalvat" nu e o eroare — e diferența dintre ce vezi și ce e pe server.
+     Chihlimbar, ca celelalte semnale de atenție din formular. */
+  .admin-bara-nesalvat {
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 2px 7px; border: 1px solid var(--e3-warn); color: var(--e3-warn);
+  }
   .admin-bara-butoane { display: flex; gap: 8px; flex-wrap: wrap; }
 
   /* O valoare care e o PROPOZITIE, nu o cifra. Fontul de afisare (Anton, mare)

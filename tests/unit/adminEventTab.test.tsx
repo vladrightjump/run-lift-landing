@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { AdminEventTab } from '../../src/admin/AdminEventTab';
@@ -59,16 +59,31 @@ const fataDeStart = (ore: number): string => {
 
 const showToast = vi.fn();
 const onAuthError = vi.fn(() => false);
+/** Spionul se pune la fiecare test: `restoreMocks` îl desface după fiecare. */
+let confirma: MockInstance<typeof window.confirm>;
+/**
+ * Garda „pot pleca din tab?", predată dashboardului. Aici o capturăm ca s-o
+ * putem interoga: ea e ce apără ciorna nesalvată la schimbarea tabului.
+ */
+const gardaIesire = { curenta: null as (() => boolean) | null };
+const inregistreazaGardaIesire = (g: (() => boolean) | null) => {
+  gardaIesire.curenta = g;
+};
 
 const randeaza = () =>
   render(
     <FurnizorSesiuneAdmin token="t" onAuthError={onAuthError} showToast={showToast}>
-      <AdminEventTab />
+      <AdminEventTab inregistreazaGardaIesire={inregistreazaGardaIesire} />
     </FurnizorSesiuneAdmin>
   );
 
 beforeEach(() => {
   vi.clearAllMocks();
+  gardaIesire.curenta = null;
+  // Ciorna nesalvată întreabă înainte să dispară. Implicit răspundem „da", ca
+  // testele care nu sînt despre gardă să treacă prin ea neschimbate; cele care
+  // SÎNT despre ea își pun propriul răspuns.
+  confirma = vi.spyOn(window, 'confirm').mockReturnValue(true);
   listEventConfig.mockResolvedValue([rand()]);
   saveEventConfigDraft.mockResolvedValue('draft-id');
   publishEventConfig.mockResolvedValue('pub-id');
@@ -1070,5 +1085,134 @@ describe('erorile indexate deschid grupul care le conține', () => {
     await deschideCiorna();
     fireEvent.change(camp('Cu câte ore înainte de start'), { target: { value: '12' } });
     expect(grupul('Remindere')?.className).not.toContain('invalid');
+  });
+});
+
+/**
+ * Ciorna nesalvată.
+ *
+ * Tabul se demontează la schimbarea tabului (`{tab === 'eveniment' && …}` în
+ * `AdminDashboard`), iar „Renunță" golea ciorna pe loc: douăzeci de câmpuri se
+ * puteau pierde dintr-un click greșit, fără o vorbă. Contractul păzit aici e că
+ * nicio plecare nu e tăcută cât timp există ce pierde.
+ */
+describe('ciorna nesalvată nu dispare tăcut', () => {
+  /** Textul barei lipite de jos. */
+  const bara = (): string =>
+    document.querySelector('.admin-bara-stare')?.textContent ?? '';
+
+  it('o ciornă pornită din publicat e nesalvată din prima clipă', async () => {
+    await deschideCiorna();
+    expect(bara()).toContain('Nesalvat');
+  });
+
+  it('o ciornă încărcată de pe server nu e nesalvată', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    expect(bara()).not.toContain('Nesalvat');
+  });
+
+  it('tastarea aprinde „Nesalvat", iar revenirea la valoarea inițială îl stinge', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    deschideGrupurile();
+
+    const nume = camp('Numele evenimentului');
+    const initial = nume.value;
+    fireEvent.change(nume, { target: { value: 'Altceva' } });
+    expect(bara()).toContain('Nesalvat');
+
+    fireEvent.change(nume, { target: { value: initial } });
+    expect(bara()).not.toContain('Nesalvat');
+  });
+
+  it('salvarea stinge „Nesalvat" fără să aștepte reîncărcarea', async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+    await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalled());
+    await waitFor(() => expect(bara()).not.toContain('Nesalvat'));
+  });
+
+  it('„Renunță" cu diferențe întreabă, iar refuzul păstrează ciorna intactă', async () => {
+    await deschideCiorna();
+    fireEvent.change(camp('Numele evenimentului'), { target: { value: 'Altceva' } });
+
+    confirma.mockReturnValue(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Renunță' }));
+
+    expect(confirma).toHaveBeenCalled();
+    // Ciorna e tot acolo, cu editarea în ea.
+    expect(screen.getByRole('button', { name: 'Renunță' })).toBeTruthy();
+    expect(camp('Numele evenimentului').value).toBe('Altceva');
+  });
+
+  it('„Renunță" confirmat închide ciorna', async () => {
+    await deschideCiorna();
+    confirma.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Renunță' }));
+    expect(screen.queryByRole('button', { name: 'Renunță' })).toBeNull();
+  });
+
+  it('„Renunță" pe o ciornă salvată nu mai întreabă nimic', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    fireEvent.click(await screen.findByRole('button', { name: 'Renunță' }));
+    expect(confirma).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Renunță' })).toBeNull();
+  });
+
+  it('garda de ieșire din tab refuză plecarea când răspunsul e „nu"', async () => {
+    await deschideCiorna();
+    expect(gardaIesire.curenta).toBeTruthy();
+
+    confirma.mockReturnValue(false);
+    expect(gardaIesire.curenta?.()).toBe(false);
+
+    confirma.mockReturnValue(true);
+    expect(gardaIesire.curenta?.()).toBe(true);
+  });
+
+  it('garda lasă plecarea liberă fără diferențe nesalvate', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+
+    expect(gardaIesire.curenta?.()).toBe(true);
+    expect(confirma).not.toHaveBeenCalled();
+  });
+
+  it('fără ciornă deschisă nu există nimic de păzit', async () => {
+    randeaza();
+    await screen.findByRole('button', { name: /Editează ediția/ });
+    expect(gardaIesire.curenta?.()).toBe(true);
+    expect(confirma).not.toHaveBeenCalled();
+  });
+
+  it('avertismentul browserului e înregistrat doar cât timp există ce pierde', async () => {
+    const adauga = vi.spyOn(window, 'addEventListener');
+    const scoate = vi.spyOn(window, 'removeEventListener');
+
+    await deschideCiorna();
+    expect(adauga.mock.calls.some(([tip]) => tip === 'beforeunload')).toBe(true);
+
+    confirma.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Renunță' }));
+    await waitFor(() =>
+      expect(scoate.mock.calls.some(([tip]) => tip === 'beforeunload')).toBe(true)
+    );
   });
 });

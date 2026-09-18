@@ -36,6 +36,7 @@ vi.mock('../../src/lib/supabase', async (orig) => ({
 }));
 
 const { AdminDashboard } = await import('../../src/admin/AdminDashboard');
+const { SNAPSHOT_CONFIG } = await import('../../src/content/eventConfig');
 
 afterEach(() => {
   cleanup();
@@ -189,6 +190,66 @@ describe('AdminDashboard — navigarea între taburi', () => {
 
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDefined();
     expect(screen.queryByText('Șabloane de email')).toBeNull();
+  });
+});
+
+describe('AdminDashboard — ciorna nesalvată din tabul „Evenimentul"', () => {
+  /**
+   * Taburile se randează condiționat, deci schimbarea tabului DEMONTEAZĂ tabul
+   * „Evenimentul" cu tot cu ciorna din el. Garda se înregistrează din tab și se
+   * consultă aici, unde trăiește `tab` — navigarea pleacă din trei locuri, iar o
+   * gardă pusă doar pe bara de taburi ar fi fost o gardă cu trei sferturi de
+   * gaură.
+   */
+  const deschideEvenimentul = async () => {
+    api.current!.listEventConfig.mockResolvedValue([
+      {
+        id: 'publicat',
+        editie: SNAPSHOT_CONFIG.number,
+        config: SNAPSHOT_CONFIG,
+        status: 'published',
+        created_at: '2026-08-01T10:00:00Z',
+        published_at: '2026-08-01T10:00:00Z',
+      },
+    ]);
+    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    await screen.findByText('Ana Popescu');
+    fireEvent.click(screen.getByRole('button', { name: /Setup/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Evenimentul/ }));
+    // Pornirea unei ciorne din ediția publicată: din clipa asta există ceva de
+    // pierdut.
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    await screen.findByRole('button', { name: 'Renunță' });
+  };
+
+  it('plecarea din tab întreabă, iar „nu" păstrează tabul și ciorna', async () => {
+    const confirma = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await deschideEvenimentul();
+
+    // Clicul pe grupul „Oameni" duce pe prima lui frunză, „Participanți" —
+    // adică e chiar o plecare din tabul „Evenimentul".
+    fireEvent.click(screen.getByRole('button', { name: /Oameni/ }));
+
+    expect(confirma).toHaveBeenCalled();
+    // Tot pe „Evenimentul", cu ciorna deschisă.
+    expect(screen.getByRole('button', { name: 'Renunță' })).toBeDefined();
+    expect(screen.queryByLabelText('Caută în lista de participanți')).toBeNull();
+  });
+
+  it('plecarea confirmată schimbă tabul', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await deschideEvenimentul();
+
+    fireEvent.click(screen.getByRole('button', { name: /Oameni/ }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Caută în lista de participanți')).toBeDefined()
+    );
+    expect(screen.queryByRole('button', { name: 'Renunță' })).toBeNull();
   });
 });
 

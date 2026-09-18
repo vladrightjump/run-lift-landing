@@ -31,6 +31,7 @@ import { useSesiuneAdmin } from './adminSession';
 import { Blocat } from './eventTab/primitive';
 import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
 import { refuzCuPas, type Pas } from './eventTab/ajutoare';
+import { esteNesalvat } from './eventTab/nesalvat';
 import { GrupCeArata } from './eventTab/grupuri/GrupCeArata';
 import { GrupLocuri } from './eventTab/grupuri/GrupLocuri';
 import { GrupUnde } from './eventTab/grupuri/GrupUnde';
@@ -46,6 +47,15 @@ import {
   reperiiCareSeMuta,
 } from './reperele';
 import { useNow } from '../hooks/useNow';
+
+type Props = {
+  /**
+   * Predă dashboardului garda „pot pleca din tab?" — el o consultă înainte să
+   * schimbe tabul, pentru că schimbarea DEMONTEAZĂ tabul ăsta cu tot cu ciorna
+   * din el. `null` o retrage.
+   */
+  inregistreazaGardaIesire: (garda: (() => boolean) | null) => void;
+};
 
 const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
   format: 'Formatul',
@@ -68,10 +78,19 @@ const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
  * ca opțiune dacă nu e printre ele, altfel un document scris manual în DB ar
  * părea că are altă valoare decât are.
  */
-export const AdminEventTab = () => {
+export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
   const { token, onAuthError, showToast } = useSesiuneAdmin();
   const [randuri, setRanduri] = useState<AdminEventConfigRow[] | null>(null);
   const [ciorna, setCiorna] = useState<EventConfig | null>(null);
+  /**
+   * Documentul așa cum e pe server — reperul față de care „nesalvat" e o
+   * afirmație verificabilă.
+   *
+   * `null` cu o ciornă deschisă înseamnă „n-a ajuns niciodată acolo": ciorna
+   * din dialogul de ediție nouă sau cea pornită din publicat trăiește doar în
+   * browser. Vezi `eventTab/nesalvat.ts`.
+   */
+  const [salvat, setSalvat] = useState<EventConfig | null>(null);
   const [salveaza, setSalveaza] = useState(false);
   const [publica, setPublica] = useState(false);
   const [confirmPublicare, setConfirmPublicare] = useState(false);
@@ -108,6 +127,7 @@ export const AdminEventTab = () => {
           if (draft) {
             const cfg = parseEventConfig(draft.config);
             setCiorna(cfg);
+            setSalvat(cfg);
             setAncoraStart(cfg?.start ?? null);
           }
         })
@@ -197,6 +217,15 @@ export const AdminEventTab = () => {
   const poatePublica = ciorna !== null && probleme.length === 0;
   // Aceleași probleme, dar indexate pe câmp — ca să apară lângă inputul vinovat.
   const erori = problemePeCamp(probleme);
+  /**
+   * Ciorna de pe ecran nu e (încă) documentul de pe server.
+   *
+   * De aici pleacă toate cele trei gărzi: confirmarea la „Renunță", cea la
+   * schimbarea tabului, și avertismentul browserului la închiderea paginii.
+   * Până acum niciuna nu exista, iar tabul se demontează la schimbarea tabului
+   * — deci un click greșit pierdea douăzeci de câmpuri fără o vorbă.
+   */
+  const nesalvat = esteNesalvat(salvat, ciorna);
   // Doar pentru „peste 3 luni” de sub datele calendaristice. Un minut e destul:
   // nimeni nu se uită la ecoul ăsta ca la un cronometru.
   const acum = useNow(60_000);
@@ -241,6 +270,48 @@ export const AdminEventTab = () => {
     setCiorna(mutaReperele({ ...ciorna, start: ancoraStart }, ciorna.start));
     setAncoraStart(ciorna.start);
   };
+
+  /**
+   * Întrebarea pusă înainte de orice plecare care ar pierde ciorna.
+   *
+   * `window.confirm`, nu un dialog al nostru: e singura întrebare care poate fi
+   * pusă SINCRON, dintr-un handler care trebuie să răspundă „da sau nu" pe loc
+   * (schimbarea tabului), și e aceeași voce cu avertismentul nativ de la
+   * închiderea paginii. Un dialog React ar fi cerut o mașinărie de intenție
+   * amânată pentru o întrebare de o linie.
+   */
+  const potPleca = (): boolean =>
+    !nesalvat ||
+    window.confirm(
+      'Ciorna are modificări nesalvate. Dacă pleci acum, se pierd. Continui?'
+    );
+
+  // Garda predată dashboardului. Se re-înregistrează când se schimbă
+  // `nesalvat`, ca să nu răspundă niciodată din starea de acum două randări; se
+  // retrage la demontare, altfel ar bloca navigarea din alt tab.
+  useEffect(() => {
+    inregistreazaGardaIesire(potPleca);
+    return () => inregistreazaGardaIesire(null);
+  });
+
+  /**
+   * Avertismentul nativ la închiderea sau reîncărcarea paginii.
+   *
+   * Înregistrat doar cât timp există ce pierde: un handler `beforeunload`
+   * permanent face unele browsere să trateze pagina ca „ocupată" și blochează
+   * restaurarea din bfcache degeaba.
+   */
+  useEffect(() => {
+    if (!nesalvat) return;
+    const avertizeaza = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Browserele moderne ignoră textul și afișează mesajul lor; `returnValue`
+      // rămâne necesar pentru cele care nu se uită la `preventDefault`.
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', avertizeaza);
+    return () => window.removeEventListener('beforeunload', avertizeaza);
+  }, [nesalvat]);
 
   /**
    * Are vreunul dintre câmpurile grupului o problemă?
@@ -299,6 +370,9 @@ export const AdminEventTab = () => {
     setRefuz(null);
     setDialogEditieNoua(false);
     setCiorna(noua);
+    // Ciorna asta n-a fost niciodată pe server, deci e nesalvată din prima
+    // clipă — și e chiar starea pe care ar durea cel mai tare s-o pierzi.
+    setSalvat(null);
     setAncoraStart(noua.start);
   };
 
@@ -307,6 +381,7 @@ export const AdminEventTab = () => {
     atinsa.current = true;
     setRefuz(null);
     setCiorna({ ...publicat, layout: layoutComplet(publicat.layout) });
+    setSalvat(null);
     setAncoraStart(publicat.start);
   };
 
@@ -320,6 +395,10 @@ export const AdminEventTab = () => {
         kind: 'success',
         msg: `Ciorna ediției ${ciorna.number} a fost salvată.`,
       });
+      // Reperul se mută pe documentul tocmai scris, fără să așteptăm
+      // `incarca()`: între cerere și răspuns bara ar continua să spună
+      // „Nesalvat" despre un document care e deja pe server.
+      setSalvat(ciorna);
       atinsa.current = false;
       incarca();
     } catch (err) {
@@ -365,6 +444,7 @@ export const AdminEventTab = () => {
         kind: 'success',
         msg: `Ediția ${ciorna.number} e publicată.`,
       });
+      setSalvat(ciorna);
       atinsa.current = false;
       incarca();
     } catch (err) {
@@ -436,9 +516,11 @@ export const AdminEventTab = () => {
                 // avea unde să se afișeze — exact garanția pe care o dăm.
                 disabled={ocupat}
                 onClick={() => {
+                  if (!potPleca()) return;
                   atinsa.current = false;
                   setRefuz(null);
                   setCiorna(null);
+                  setSalvat(null);
                   setAncoraStart(null);
                 }}
               >
@@ -796,6 +878,10 @@ export const AdminEventTab = () => {
                 <span className="admin-bara-detaliu">
                   {descrieMoment(ciorna.start, ciorna.tz, acum) || ciorna.start}
                 </span>
+                {/* După detaliu, nu în locul lui: „nesalvat" e o stare a
+                    documentului, nu o problemă a lui, iar ediția și startul
+                    rămân lucrurile pe care le verifici din bară. */}
+                {nesalvat && <span className="admin-bara-nesalvat">Nesalvat</span>}
               </>
             )}
           </span>
