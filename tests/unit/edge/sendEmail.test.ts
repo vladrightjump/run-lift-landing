@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { REMINDER_TEMPLATE_KEYS } from '../../../src/content/eventConfig';
 import {
   incarcaFunctieEdge,
   raspunde,
@@ -55,6 +56,10 @@ const SABLOANE: Record<string, { subiect: string; text_email: string }> = {
     text_email: 'Salut, {prenume}! Ne vedem la {locul}.\n\nEliberezi locul? {link_renunt}',
   },
   bulk_participant_reminder_final: { subiect: 'Ultimul reminder', text_email: 'Salut, {prenume}!' },
+  bulk_participant_reminder_binar: {
+    subiect: 'Mai vii?',
+    text_email: 'Salut, {prenume}! Dacă nu mai poți: {link_renunt}',
+  },
   bulk_waitlist_anunt: { subiect: 'S-au deschis înscrierile', text_email: 'Salut, {prenume}!' },
   confirmare: {
     subiect: 'Confirmă-ți adresa',
@@ -423,6 +428,23 @@ describe('broadcast — reminderele programate', () => {
     expect(trimise(f)[0].subject).toBe('Ultimul reminder');
     expect(jurnal(f)[0]).toMatchObject({ sablon: 'bulk_participant_reminder_final' });
   });
+
+  /**
+   * Orice șablon pe care admin-ul îl lasă ales pe un rând din orar trebuie să și
+   * plece cu textul lui. Lista din funcție și cea din `eventConfig.ts` trăiesc în
+   * două runtime-uri diferite (Deno vs. browser), deci testul ăsta e cel care le
+   * ține aliniate: reminderul binar a fost selectabil săptămâni întregi, dar
+   * pleca tăcut pe textul reminderului obișnuit.
+   */
+  it.each(REMINDER_TEMPLATE_KEYS.map((k) => [k]))(
+    'șablonul de reminder „%s", selectabil în admin, pleacă cu textul lui',
+    async (cheie) => {
+      const f = await incarca({ stare: stare() });
+      await cere(f, { mode: 'broadcast', secret: SECRET, template: cheie });
+      expect(trimise(f)[0].subject).toBe(SABLOANE[cheie].subiect);
+      expect(jurnal(f)[0]).toMatchObject({ sablon: cheie });
+    }
+  );
 
   /** O cheie inexistentă ar cădea tăcut pe textul din cod — adică alt email. */
   it('o cheie din afara listei cade pe reminderul implicit, editat din admin', async () => {
