@@ -331,7 +331,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         refreshEditions();
         showToast({
           kind: 'success',
-          msg: `Ediția ${nou} e deschisă. Actualizează edition.ts și redeployează.`,
+          msg: `Ediția ${nou} e deschisă. Datele ei le pui din Setup → Evenimentul.`,
         });
       })
       .catch((err) => {

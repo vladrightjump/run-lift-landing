@@ -833,9 +833,15 @@ Deno.serve(async (req: Request) => {
     // secretul de broadcast, dar o cheie inexistentă ar cădea tăcut pe textul de
     // rezervă din cod — adică un email generic, plecat, deci ireparabil. Mai bine
     // pe reminderul implicit, care cel puțin e cel editat din /admin.
+    //
+    // Reminderele de aici trebuie să fie EXACT `REMINDER_TEMPLATE_KEYS` din
+    // `src/content/eventConfig.ts` (lista din care alege admin-ul). Funcția nu o
+    // poate importa — alt runtime, alt bundle — deci alinierea o păzește
+    // `tests/unit/edge/sendEmail.test.ts`.
     const TEMPLATES_PERMISE = [
       "bulk_participant_reminder",
       "bulk_participant_reminder_final",
+      "bulk_participant_reminder_binar",
       "bulk_waitlist_anunt",
     ];
     const cerut = String(payload.template ?? "");

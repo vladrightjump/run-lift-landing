@@ -156,6 +156,7 @@ De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
 
 ## Documente
 
+- **`docs/FLUXURI.md`** — toate fluxurile de utilizator (public + `/admin`), cu diagrame.
 - **`GHID-EDITIE-NOUA.md`** — runbook pas cu pas pentru o ediție nouă.
 - **`MIGRATIONS.md`** — migrările DB + granița față de gym-app/bot.
 - **`ANTI-BOT.md`** — Turnstile + lockdown RLS: cum funcționează, configurare, runbook de deploy.

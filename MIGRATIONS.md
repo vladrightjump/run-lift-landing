@@ -123,7 +123,7 @@ armarea să nu se facă lângă un buton care trimite același text.
 nicio fereastră de reminder nu mai e deschisă și armarea nu poate trimite nimic. Se închide în
 clipa în care se publică ediția 7.
 
-### `supabase/sql/supabase-migration-reminder-binar.sql` — NEAPLICAT
+### `supabase/sql/supabase-migration-reminder-binar.sql` — APLICAT 18 septembrie 2026
 
 Al treilea șablon de reminder, `bulk_participant_reminder_binar`: întrebarea de la 72 de ore
 („mai vii?"), cu `{link_renunt}` ca singură acțiune. Nu adaugă schemă — un singur `insert` în
@@ -133,6 +133,11 @@ un text editat între timp din `/admin` → „Șabloane".
 Clientul îl cunoaște deja (`REMINDER_TEMPLATE_KEYS`, `ETICHETE_SABLOANE`, help-ul din tabul
 „Șabloane"), deci până la aplicare cheia apare în selectorul de orar fără să aibă text în DB.
 **Aplică migrarea înainte de a pune un rând de orar pe ea.**
+
+Aplicat pe 18 septembrie 2026 (insertul, direct în SQL — nu adaugă schemă). Tot atunci
+`send-email` a primit cheia în `TEMPLATES_PERMISE` din modul `broadcast`: până atunci un rând
+de orar pus pe „binar" pleca tăcut pe textul reminderului obișnuit. Alinierea celor două liste
+o păzește `tests/unit/edge/sendEmail.test.ts`.
 
 Rândul la `offsetHours: 72` nu vine din migrare — orarul e al operatorului și se scrie din
 `/admin` la configurarea ediției.
