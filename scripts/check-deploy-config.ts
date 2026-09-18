@@ -6,13 +6,25 @@
  *
  * Logica de verificare stă în `src/lib/deployConfig.ts` (partajată cu testul).
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { checkDeployConfig } from '../src/lib/deployConfig';
+import { fisiereSqlInRadacina, mesajSqlInRadacina } from './rootSqlGuard';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel: string): string => readFileSync(resolve(repoRoot, rel), 'utf8');
+
+// Doar rădăcina, fără recursie: `scripts/` și `supabase/` au fișiere SQL legitime.
+const sqlInRadacina = fisiereSqlInRadacina(
+  readdirSync(repoRoot, { withFileTypes: true })
+    .filter((e) => e.isFile())
+    .map((e) => e.name)
+);
+if (sqlInRadacina.length > 0) {
+  console.error(mesajSqlInRadacina(sqlInRadacina));
+  process.exit(1);
+}
 
 const problems = checkDeployConfig({
   vercelJson: read('vercel.json'),
