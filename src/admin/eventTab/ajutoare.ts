@@ -104,6 +104,25 @@ export const sambeteleUrmatoare = (acum: number, start: string): { eticheta: str
   });
 };
 
+/**
+ * Zoom-ul hărții, cu ce se vede la fiecare treaptă.
+ *
+ * Câmpul era VALIDAT (`zoom > 0`) și inexistent în formular: un document cu
+ * zoom zero — rând vechi, editat manual în DB — deschidea grupul „Unde" fără
+ * niciun câmp marcat și lăsa „Publică" mort, fără nimic de reparat pe ecran.
+ *
+ * Trepte, nu număr liber: nimeni nu alege „14,5", iar diferența dintre 12 și 17
+ * e greu de ținut minte fără ce se vede la fiecare.
+ */
+export const ZOOMURI: [number, string][] = [
+  [13, '13 · cartierul'],
+  [14, '14 · zona'],
+  [15, '15 · parcul întreg'],
+  [16, '16 · aleile'],
+  [17, '17 · strada, cu intrarea'],
+  [18, '18 · câțiva pași'],
+];
+
 /** Doar fusurile Moldovei; restul n-au ce căuta într-o cursă din Chișinău. */
 export const FUSURI: [string, string][] = [
   ['+03:00', '+03:00 · Chișinău vara (EEST)'],

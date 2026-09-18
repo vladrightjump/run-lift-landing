@@ -2,7 +2,7 @@ import type { EventConfig } from '../../../content/eventConfig';
 import { useContext } from 'react';
 import { Grup, Camp, Blocat } from '../primitive';
 import { linkHarta } from '../../eventConfigFields';
-import { LOCURI_SALVATE } from '../ajutoare';
+import { LOCURI_SALVATE, ZOOMURI } from '../ajutoare';
 
 type Props = {
   ciorna: EventConfig;
@@ -96,6 +96,35 @@ export const GrupUnde = ({ ciorna, seteaza, erori, areEroare }: Props) => {
             })
           }
         />
+      )}
+    </Camp>
+    {/* Zoom-ul era validat de ambele părți și nu exista în formular: un
+        document cu zoom zero lăsa „Publică" mort fără nimic de reparat pe
+        ecran. */}
+    <Camp
+      eticheta="Zoom-ul hărții"
+      ajutor="Cât de aproape pornește harta de pe pagină."
+      eroare={erori.get('venue.zoom')}
+    >
+      {(p) => (
+        <select
+          {...p}
+          value={String(ciorna.venue.zoom)}
+          onChange={(e) =>
+            seteaza('venue', { ...ciorna.venue, zoom: Number(e.target.value) })
+          }
+        >
+          {/* O valoare din afara treptelor rămâne vizibilă — altfel selectul ar
+              arăta alt zoom decât are documentul. */}
+          {!ZOOMURI.some(([v]) => v === ciorna.venue.zoom) && (
+            <option value={String(ciorna.venue.zoom)}>{ciorna.venue.zoom}</option>
+          )}
+          {ZOOMURI.map(([valoare, eticheta]) => (
+            <option key={valoare} value={valoare}>
+              {eticheta}
+            </option>
+          ))}
+        </select>
       )}
     </Camp>
   </Grup>

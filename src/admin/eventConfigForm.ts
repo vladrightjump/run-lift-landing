@@ -68,6 +68,14 @@ export const validateEventConfig = (c: EventConfig): CampInvalid[] => {
   );
   cere(Number.isInteger(c.slots.total) && c.slots.total > 0, 'slots.total', 'Capacitatea trebuie să fie pozitivă.');
   cere(Number.isInteger(c.slots.waitlist) && c.slots.waitlist >= 0, 'slots.waitlist', 'Lista de așteptare nu poate fi negativă.');
+  // Serverul n-o validează — nu decide nimic acolo, e doar numărul pe care
+  // pagina îl arată când statisticile tac. Dar un negativ ar desena o bară cu
+  // segmente în minus, iar câmpul există de-acum în formular.
+  cere(
+    Number.isInteger(c.slots.occupiedFallback) && c.slots.occupiedFallback >= 0,
+    'slots.occupiedFallback',
+    'Valoarea de rezervă nu poate fi negativă.'
+  );
   cere(c.venue.name.trim().length > 0, 'venue.name', 'Numele locului nu poate fi gol.');
   cere(c.venue.city.trim().length > 0, 'venue.city', 'Orașul nu poate fi gol.');
   cere(
@@ -381,7 +389,12 @@ export const cioarnaEditieNoua = (
   ...mutaReperele(publicat, startNou),
   number: publicat.number + 1,
   layout: layoutComplet(publicat.layout),
-  slots: { ...publicat.slots, total: locuriTotal },
+  // `occupiedFallback` pornește de la zero, nu moștenit: e numărul pe care
+  // pagina îl arată când statisticile tac, iar la o ediție la care nu s-a
+  // înscris încă nimeni orice altă valoare e o afirmație falsă — și una care
+  // se vede exact când backendul nu răspunde, adică atunci când nimeni n-o
+  // poate verifica.
+  slots: { ...publicat.slots, total: locuriTotal, occupiedFallback: 0 },
 });
 
 /** Un câmp al ciornei noi, așa cum îl citește organizatorul înainte să scrie. */
@@ -447,17 +460,8 @@ export const rezumatCiornaNoua = (publicat: EventConfig, ciorna: EventConfig): C
     },
   ];
 
-  /**
-   * Numărul de ocupate pe care pagina îl arată când statisticile nu răspund.
-   * Se raportează doar când nu e zero: moștenit ca atare, e ocupația ediției
-   * TRECUTE afișată pe una la care încă nu s-a înscris nimeni.
-   */
-  if (publicat.slots.occupiedFallback > 0) {
-    mostenite.push({
-      eticheta: 'Ocupate (valoare de rezervă)',
-      valoare: String(publicat.slots.occupiedFallback),
-    });
-  }
+  // Ocuparea de rezervă NU se mai raportează aici: nu se mai moștenește deloc
+  // (vezi `cioarnaEditieNoua`), deci n-are ce duce mai departe.
 
   return [...recalculate, ...mostenite];
 };

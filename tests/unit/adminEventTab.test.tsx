@@ -1496,3 +1496,85 @@ describe('ciorna bifurcată devine vizibilă', () => {
     );
   });
 });
+
+/**
+ * Câmpurile pe care validarea le cerea și formularul nu le avea.
+ *
+ * `venue.zoom` era validat de ambele părți și inexistent pe ecran: un document
+ * cu zoom zero deschidea grupul „Unde" fără niciun câmp marcat și lăsa
+ * „Publică" mort, fără nimic de reparat.
+ */
+describe('câmpurile lipsă din formular', () => {
+  it('zoom-ul hărții se poate alege, și ajunge în documentul salvat', async () => {
+    await deschideCiorna();
+    fireEvent.change(screen.getByLabelText('Zoom-ul hărții'), { target: { value: '18' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+
+    await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalled());
+    expect(saveEventConfigDraft.mock.calls[0][2].venue.zoom).toBe(18);
+  });
+
+  it('un document cu zoom zero e reparabil din formular, nu blocat pe veci', async () => {
+    listEventConfig.mockResolvedValue([
+      rand({
+        id: 'ciorna',
+        status: 'draft',
+        published_at: null,
+        config: { ...SNAPSHOT_CONFIG, venue: { ...SNAPSHOT_CONFIG.venue, zoom: 0 } },
+      }),
+      rand(),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+
+    // Grupul „Unde" e deschis de la sine, cu eroarea PE câmp.
+    expect(eroareaCampului('Zoom-ul hărții')).toContain('Zoom');
+    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
+
+    fireEvent.change(screen.getByLabelText('Zoom-ul hărții'), { target: { value: '16' } });
+    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
+      false
+    );
+  });
+
+  it('un zoom din afara treptelor rămâne vizibil, nu se pierde', async () => {
+    listEventConfig.mockResolvedValue([
+      rand({
+        id: 'ciorna',
+        status: 'draft',
+        published_at: null,
+        config: { ...SNAPSHOT_CONFIG, venue: { ...SNAPSHOT_CONFIG.venue, zoom: 11 } },
+      }),
+      rand(),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    deschideGrupurile();
+
+    expect((screen.getByLabelText('Zoom-ul hărții') as HTMLSelectElement).value).toBe('11');
+  });
+
+  it('valoarea de rezervă a ocupării se poate corecta din formular', async () => {
+    await deschideCiorna();
+    fireEvent.change(screen.getByLabelText(/Ocupate \(valoare de rezervă\)/), {
+      target: { value: '0' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+
+    await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalled());
+    expect(saveEventConfigDraft.mock.calls[0][2].slots.occupiedFallback).toBe(0);
+  });
+
+  it('o valoare de rezervă peste capacitate e semnalată, dar nu blochează', async () => {
+    await deschideCiorna();
+    fireEvent.change(screen.getByLabelText(/Ocupate \(valoare de rezervă\)/), {
+      target: { value: '999' },
+    });
+    expect(eroareaCampului(/Ocupate \(valoare de rezervă\)/)).toContain('capacitatea');
+    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
+      false
+    );
+  });
+});
