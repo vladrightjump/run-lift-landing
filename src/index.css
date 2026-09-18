@@ -1705,6 +1705,8 @@
   /* ---- Confirmare ștergere ---- */
   .admin-confirm-overlay {
     position: fixed; inset: 0; z-index: 60;
+    /* Derularea din dialog nu se scurge în pagina de dedesubt. */
+    overscroll-behavior: contain;
     background: rgba(18,20,16,0.7); backdrop-filter: blur(3px);
     display: flex; align-items: center; justify-content: center; padding: 24px;
   }

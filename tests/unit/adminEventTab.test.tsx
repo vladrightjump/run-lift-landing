@@ -1640,3 +1640,29 @@ describe('indicatorul de erori duce la câmp', () => {
     for (const cheie of cheiSimple) expect(stampilate).toContain(cheie);
   });
 });
+
+/** Cele două dialoguri ale tabului se poartă ca niște dialoguri. */
+describe('dialogurile tabului au tastatură', () => {
+  it('Escape închide confirmarea publicării, fără să publice', async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+
+    fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(publishEventConfig).not.toHaveBeenCalled();
+  });
+
+  it('Escape închide dialogul de ediție nouă, fără să deschidă vreo ciornă', async () => {
+    await deschideDialogEditieNoua();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Renunță' })).toBeNull();
+    expect(saveEventConfigDraft).not.toHaveBeenCalled();
+  });
+
+  it('dialogul de ediție nouă deschide focusul pe primul câmp', async () => {
+    await deschideDialogEditieNoua();
+    expect(document.activeElement).toBe(screen.getByLabelText('Data cursei'));
+  });
+});

@@ -30,6 +30,7 @@ import {
 import { useSesiuneAdmin } from './adminSession';
 import { Blocat } from './eventTab/primitive';
 import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
+import { Dialog } from './eventTab/Dialog';
 import { refuzCuPas, type Pas } from './eventTab/ajutoare';
 import { esteNesalvat } from './eventTab/nesalvat';
 import { diferenteFataDePublicat, esteComparabil } from './eventTab/diferente';
@@ -1128,14 +1129,11 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
       )}
 
       {confirmPublicare && ciorna && (
-        <div
-          className="admin-confirm-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConfirmPublicare(false);
-          }}
+        <Dialog
+          titlu={`Publici ediția ${ciorna.number}?`}
+          rol="alertdialog"
+          onInchide={() => setConfirmPublicare(false)}
         >
-          <div className="admin-confirm" role="alertdialog" aria-modal="true">
-            <h3>Publici ediția {ciorna.number}?</h3>
             <p>
               Se <strong>salvează ciorna așa cum arată acum</strong>, apoi se publică. Site-ul
               public trece pe configul ăsta imediat, fără deploy. Vizitatorii vor vedea{' '}
@@ -1191,8 +1189,7 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
                 Anulează
               </button>
             </div>
-          </div>
-        </div>
+        </Dialog>
       )}
     </section>
   );

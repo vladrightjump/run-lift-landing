@@ -8,6 +8,7 @@ import {
 } from '../eventConfigForm';
 import { timeOf } from '../../content/format';
 import { Camp } from './primitive';
+import { Dialog } from './Dialog';
 
 /**
  * Ediția următoare, din trei câmpuri.
@@ -76,14 +77,11 @@ export const DialogEditieNoua = ({
   const rezumat = gata ? rezumatCiornaNoua(publicat, ciorna) : [];
 
   return (
-    <div
-      className="admin-confirm-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onAnuleaza();
-      }}
+    <Dialog
+      titlu={`Ediția ${publicat.number + 1}`}
+      clasa="admin-confirm--neutru"
+      onInchide={onAnuleaza}
     >
-      <div className="admin-confirm admin-confirm--neutru" role="dialog" aria-modal="true">
-        <h3>Ediția {publicat.number + 1}</h3>
         <p>
           Data, ora și locurile se aleg acum. Restul se moștenește din ediția {publicat.number}, iar
           reperele care atârnă de start — check-inul, închiderea înscrierilor, anunțul — se{' '}
@@ -157,7 +155,6 @@ export const DialogEditieNoua = ({
             Anulează
           </button>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 };
