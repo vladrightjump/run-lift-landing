@@ -106,7 +106,7 @@ reminder „mâine alergăm" primit în drum spre cursă e mai rău decât niciu
 tot vrei să iasă ceva, micșorează avansul (ex. 24 → 6) și publică.
 
 Reminderele se schimbă **fără SQL**. Singurul pas manual e armarea cron-ului, o dată pe proiect —
-`supabase-cron-reminder-ARM.sql`; dacă nu l-ai rulat niciodată, nu pleacă nimic, oricât de frumos
+`supabase/sql/supabase-cron-reminder-ARM.sql`; dacă nu l-ai rulat niciodată, nu pleacă nimic, oricât de frumos
 ar arăta orarul.
 
 ## Linkul „nu mai pot veni"

@@ -93,7 +93,7 @@ describe.skipIf(!ready)('Integrare LIVE — schema runlift', () => {
   // TESTUL CARE CONTEAZĂ pentru protecția anti-bot: cheia publishable e vizibilă
   // în bundle-ul JS, deci oricine o poate lua. Dacă vreuna dintre cererile de mai
   // jos reușește, un bot poate insera fără să treacă prin captcha, iar Turnstile
-  // devine decorativ. Vezi `supabase-migration-turnstile-lockdown.sql`.
+  // devine decorativ. Vezi `supabase/sql/supabase-migration-turnstile-lockdown.sql`.
   it('lockdown: cheia publishable NU mai poate insera direct în niciun tabel public', async () => {
     const tabele: Array<[string, Record<string, unknown>]> = [
       [

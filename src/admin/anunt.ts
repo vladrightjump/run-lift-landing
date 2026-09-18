@@ -14,7 +14,7 @@ import type { AdminEmailLogEntry, DestinatarAnunt } from '../lib/adminApi';
 import type { Recipient } from './emailAudience';
 import type { DifuzareAnterioara } from './sendLock';
 
-/** Cheia șablonului implicit, creat de `supabase-migration-anunt-istoric.sql`. */
+/** Cheia șablonului implicit, creat de `supabase/sql/supabase-migration-anunt-istoric.sql`. */
 export const SABLON_ANUNT = 'bulk_participant_anunt';
 
 /** Adresa, adusă la forma pe care o compară și serverul. */

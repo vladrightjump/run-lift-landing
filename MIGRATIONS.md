@@ -40,28 +40,28 @@ prefix `runlift_`:
 | 20260720092534 | `runlift_05_functions` | runlift | Funcțiile (`public_stats`, `confirm_signup`, `template_lookup`, `admin_*`, …) |
 | 20260720092558 | `runlift_06_triggers_rls_grants` | runlift | Triggere, RLS, grants |
 | 20260804113546 | `runlift_align_dynamic_event_edition` | runlift | Ediția curentă citită dinamic din `app_config` |
-| 20260807… | `runlift_waitlist_autopromote` | runlift | Auto-promovare din waitlist la ștergerea unei înscrieri (trigger + `event_capacity` + email via pg_net). Vezi `supabase-migration-waitlist-autopromote.sql` |
-| 2026…      | `runlift_registration_guards` | runlift | Cap capacitate + deadline pe `registrations` (trigger BEFORE INSERT → `event_full`/`registration_closed`), doar pt. formularul public; add/promote/auto-promote sar prin flag de bypass. `app_config.registration_deadline`. Vezi `supabase-migration-registration-guards.sql` |
-| 2026…      | `runlift_admin_events_and_edit` | runlift | Tabel `admin_events` (audit) + logare în auto-promovare; RPC `admin_list_events` (feed backoffice) + `admin_update_registration` (editare in-place, păstrează `created_at`). Vezi `supabase-migration-admin-events-edit.sql` |
-| 2026…      | `runlift_unsubscribe` | runlift | Dezabonare din emailurile în masă: `dezabonat_la` + `token_unsub` pe `registrations`/`launch_notifications`, RPC public `unsubscribe`, recipients (`edition2_recipients`/`waitlist_recipients`) exclud dezabonații + întorc `token_unsub`. Vezi `supabase-migration-unsubscribe.sql` |
-| 2026…      | `runlift_reminder_idempotent` | runlift | Reminder pre-eveniment idempotent: `broadcast_once` + `maybe_send_reminder` (fereastră de timp, server-only) + chei `event_start`/`reminder_offset_hours`. Armarea cron: `supabase-cron-reminder-ARM.sql` (manual). Vezi `supabase-migration-reminder-idempotent.sql` |
-| 20260827   | `runlift_event_config` | runlift | Configurarea ediției trece în DB: tabelul `event_config` (document `jsonb` per rând, stări `draft`/`published`/`superseded`, RLS fără politici), validarea `event_config_validate`, citirea publică `public_config()` și RPC-urile `admin_get_event_config` / `admin_save_event_config_draft` / `admin_publish_event_config` / `admin_restore_event_config`. Publicarea scrie în ACEEAȘI tranzacție cele cinci scalare din `app_config` citite de guard-uri — de aici încolo nu mai există desincronizare de aliniat manual. Vezi `supabase-migration-event-config.sql` |
+| 20260807… | `runlift_waitlist_autopromote` | runlift | Auto-promovare din waitlist la ștergerea unei înscrieri (trigger + `event_capacity` + email via pg_net). Vezi `supabase/sql/supabase-migration-waitlist-autopromote.sql` |
+| 2026…      | `runlift_registration_guards` | runlift | Cap capacitate + deadline pe `registrations` (trigger BEFORE INSERT → `event_full`/`registration_closed`), doar pt. formularul public; add/promote/auto-promote sar prin flag de bypass. `app_config.registration_deadline`. Vezi `supabase/sql/supabase-migration-registration-guards.sql` |
+| 2026…      | `runlift_admin_events_and_edit` | runlift | Tabel `admin_events` (audit) + logare în auto-promovare; RPC `admin_list_events` (feed backoffice) + `admin_update_registration` (editare in-place, păstrează `created_at`). Vezi `supabase/sql/supabase-migration-admin-events-edit.sql` |
+| 2026…      | `runlift_unsubscribe` | runlift | Dezabonare din emailurile în masă: `dezabonat_la` + `token_unsub` pe `registrations`/`launch_notifications`, RPC public `unsubscribe`, recipients (`edition2_recipients`/`waitlist_recipients`) exclud dezabonații + întorc `token_unsub`. Vezi `supabase/sql/supabase-migration-unsubscribe.sql` |
+| 2026…      | `runlift_reminder_idempotent` | runlift | Reminder pre-eveniment idempotent: `broadcast_once` + `maybe_send_reminder` (fereastră de timp, server-only) + chei `event_start`/`reminder_offset_hours`. Armarea cron: `supabase/sql/supabase-cron-reminder-ARM.sql` (manual). Vezi `supabase/sql/supabase-migration-reminder-idempotent.sql` |
+| 20260827   | `runlift_event_config` | runlift | Configurarea ediției trece în DB: tabelul `event_config` (document `jsonb` per rând, stări `draft`/`published`/`superseded`, RLS fără politici), validarea `event_config_validate`, citirea publică `public_config()` și RPC-urile `admin_get_event_config` / `admin_save_event_config_draft` / `admin_publish_event_config` / `admin_restore_event_config`. Publicarea scrie în ACEEAȘI tranzacție cele cinci scalare din `app_config` citite de guard-uri — de aici încolo nu mai există desincronizare de aliniat manual. Vezi `supabase/sql/supabase-migration-event-config.sql` |
 | 20260827   | `runlift_event_config_seed_editia5` | runlift | Seed-ul ediției 5 transcris din `src/content/edition.ts`, ca rând `published`. NU trece prin publicare: verifică întâi că scalarele din `app_config` sunt deja de acord cu documentul și crapă la nepotrivire (`seed_drift`). |
-| 20260827   | `runlift_server_assigned_edition` | runlift | Politica RLS de insert public pe `registrations` si `event_waitlist` cere `editie = current_event_edition()` - clientul nu-si mai alege editia. Vezi `supabase-migration-server-assigned-edition.sql` |
+| 20260827   | `runlift_server_assigned_edition` | runlift | Politica RLS de insert public pe `registrations` si `event_waitlist` cere `editie = current_event_edition()` - clientul nu-si mai alege editia. Vezi `supabase/sql/supabase-migration-server-assigned-edition.sql` |
 | 20260827   | `runlift_event_config_validate_duplicate_si_checkin` | runlift | `event_config_validate` respinge si o sectiune duplicata in `layout` (s-ar randa de doua ori) si un `checkinFrom` malformat - alinierea serverului la regulile formularului din admin. |
 | 20260827   | `runlift_admin_get_event_config_vede_ciornele` | runlift | `admin_get_event_config` nu mai filtreaza pe editie: filtra pe cea curenta si astfel nu vedea ciorna editiei URMATOARE, care are alt numar. Ciorna disparea din UI si `?config=draft` cadea pe publicat. |
-| 20260827   | `runlift_forteaza_editia_la_insert` + `runlift_forteaza_editia_respecta_bypass` | runlift | Trigger BEFORE INSERT care IMPUNE editia curenta pe inserarile publice (un tab vechi aterizeaza corect in loc sa fie respins). Respecta `runlift.guard_bypass`, altfel `admin_promote_waitlist` - care insereaza cu editia intrarii din waitlist, posibil arhivata - ar fi mutat oamenii in editia curenta. Vezi `supabase-migration-server-assigned-edition.sql` |
+| 20260827   | `runlift_forteaza_editia_la_insert` + `runlift_forteaza_editia_respecta_bypass` | runlift | Trigger BEFORE INSERT care IMPUNE editia curenta pe inserarile publice (un tab vechi aterizeaza corect in loc sa fie respins). Respecta `runlift.guard_bypass`, altfel `admin_promote_waitlist` - care insereaza cu editia intrarii din waitlist, posibil arhivata - ar fi mutat oamenii in editia curenta. Vezi `supabase/sql/supabase-migration-server-assigned-edition.sql` |
 | 20260827   | `runlift_publish_upsert_toate_scalarele` | runlift | Publicarea/revenirea scriu toate cele cinci scalare prin UPSERT (`scrie_scalarele_editiei`), nu `update` pe doua dintre ele: un rand lipsa ar fi lasat publicarea sa raporteze succes fara sa schimbe nimic. |
 | 20260827   | `runlift_event_config_validate_search_path` | runlift | `event_config_validate` primește `search_path` pinuit și apeluri `jsonb` calificate `pg_catalog`, ca restul funcțiilor din schemă. |
-| 20260827   | `runlift_reels_si_coming_soon` | runlift | `event_config_validate` acceptă cheia opțională `reels` (banda de clipuri Instagram: plafon 12, cod `^[A-Za-z0-9_-]{5,32}$` pentru că ajunge în `src`-ul unui iframe, `kind` din `(reel,p)`, fără duplicate) și secțiunea `reels` în `layout`. Plus `admin_set_coming_soon(token, show, launch_at, next_edition_at)`: petice exact trei chei pe rândul `published`, revalidează, și scrie un rând NOU (vechiul trece pe `superseded`), deci rămâne reversibil din „Versiuni anterioare". NU atinge `app_config` — niciunul din cele cinci scalare nu derivă din cheile astea. Vezi `supabase-migration-reels-si-coming-soon.sql` |
-| 20260904184209 | `runlift_remindere_si_renuntare` | runlift | **Remindere:** orarul devine `config.reminders` (listă în documentul de ediție, editabilă din /admin → „Eveniment"), validat de `event_config_validate` (plafon 5, avans întreg 1–720, fără avansuri duplicate, șablon din listă închisă) și copiat de `scrie_scalarele_editiei` în `app_config.reminder_schedule` — al ȘASELEA scalar. `maybe_send_reminder` parcurge orarul, cu cheie de idempotență per (ediție, avans) și fereastră de declanșare `[scadență, scadență + 2h]` în loc de `[start − avans, start]` întreagă; duce cheia șablonului în apelul de broadcast. Șablon nou `bulk_participant_reminder_final`. **Renunțare:** `token_renunt` + `renuntat_la` pe `registrations`, RPC public `decline_spot` (setează `deleted_at` → declanșează auto-promovarea existentă; refuză edițiile încheiate și cursele începute), jurnal `admin_events` cu tip `renuntare`. `edition2_recipients`, `admin_list_registrations` și `confirm_lookup` întorc `token_renunt` (pentru `{link_renunt}`). Șabloanele de reminder + promovare pierd „Check-in de la {ora_checkin}." și capătă linkul. Vezi `supabase-migration-remindere-si-renuntare.sql` |
-| 20260917 | `runlift_turnstile_lockdown` | runlift | **Aplicată pe 17 septembrie 2026**, ultima din deploy-ul anti-bot, după ce `submit-form` era deployat și o înscriere reală trecuse prin el. Scoate politicile și grant-urile de INSERT pentru `anon` de pe `registrations`, `event_waitlist` și `launch_notifications`: singura cale de scriere publică rămâne funcția Edge `submit-form`, care verifică tokenul Turnstile înainte de insert. Verificat după aplicare: insert direct cu cheia publishable → `42501 permission denied` pe toate trei; `public_stats` și `submit-form` răspund normal; bundle-ul de producție nu conține niciun `fetch` spre `/rest/v1/*`. Trigger-ele guard rămân active. Rollback în DOI pași (întâi frontendul, apoi SQL-ul) la finalul fișierului. Vezi `supabase-migration-turnstile-lockdown.sql` |
-| 20260917 | `runlift_waitlist_cap_din_config` | runlift | `waitlist_cap()` întorcea `10` scris în cod, iar `scrie_scalarele_editiei()` nu ducea niciodată `slots.waitlist` în `app_config` — câmpul „listă de așteptare" din /admin era decorativ pentru baza de date. Acum funcția citește `app_config.waitlist_capacity` (plasă: 10), publicarea scrie cheia, iar migrarea o aduce la zi din documentul deja publicat. Al ȘAPTELEA scalar derivat. Vezi `supabase-migration-waitlist-cap-din-config.sql` |
-| 20260917 | `runlift_reminder_orar_robust` | runlift | `maybe_send_reminder()` avea plasa pentru „orar care nu e listă", dar nu ajungea la ea: `value::jsonb` arunca excepție înainte, iar funcția e chemată de `pg_cron` din 15 în 15 minute — reminder netrimis, tăcut. Conversia stă acum într-un bloc cu `exception`. Restul funcției, neschimbat. Vezi `supabase-migration-reminder-orar-robust.sql` |
-| 20260825   | `runlift_soft_delete_registrations` | runlift | Ștergere logică pe `registrations` (`deleted_at`) + undo real (`admin_undelete_registration`, păstrează `id`/`created_at`) + gardă de capacitate pe `admin_add_registration` + jurnal de scrieri în `admin_events` (feed neplafonat). Indexul de unicitate devine PARȚIAL (`where deleted_at is null`), auto-promovarea trece de pe `AFTER DELETE` pe `AFTER UPDATE OF deleted_at`, iar `registrations_backup_sync` propagă `deleted_at` și pe ramura UPDATE. Vezi `supabase-migration-soft-delete-registrations.sql` |
-| 20260907033347 | `runlift_undo_waitlist` | runlift | Ștergere logică pe `event_waitlist` (`deleted_at`) + `admin_undelete_waitlist` (reversare, păstrează `created_at` și poziția FIFO). Indexul de unicitate devine PARȚIAL. **`event_waitlist_cap()` numără doar rândurile active** — altfel cele șterse ar fi ocupat în continuare plafonul de 10, tăcut. Toți cei opt cititori ai tabelului sunt actualizați sau notați explicit ca neschimbați. Vezi `supabase-migration-undo-waitlist.sql` |
-| 20260907033437 | `runlift_rejucare` | runlift | `email_log.sablon` (fără el, rejucarea unei difuzări ar ghici între două șabloane ale aceleiași audiențe) + `admin_replay_lookup`, care spune ce mod / ce șablon / ce destinatar, sau de ce nu se poate. Destinatarul se rezolvă din starea de ACUM: `participanti` din `registrations`, **`asteptare` din `launch_notifications`** (acolo își ia destinatarii `waitlist_recipients()`). `admin_list_email_log` duce coloana mai departe. Vezi `supabase-migration-rejucare.sql` |
-| 20260907033532 | `runlift_escaladare` | runlift | `operator_email()` + `escaladeaza()` (dedup prin `broadcast_once`, tot corpul într-un bloc cu `exception` ca alerta să nu poată anula tranzacția care a chemat-o, ambele revocate de la `anon`/`authenticated`), escaladare din triggerul de auto-promovare, și trigger nou `registrations_locuri_epuizate_trg`. Cere precondiția `runlift_undo_waitlist`. **A fost inert până pe 17 septembrie 2026**, când s-a scris `app_config.operator_email` — până atunci fiecare escaladare ieșea tăcut pe prima ramură. Vezi `supabase-migration-escaladare.sql` |
+| 20260827   | `runlift_reels_si_coming_soon` | runlift | `event_config_validate` acceptă cheia opțională `reels` (banda de clipuri Instagram: plafon 12, cod `^[A-Za-z0-9_-]{5,32}$` pentru că ajunge în `src`-ul unui iframe, `kind` din `(reel,p)`, fără duplicate) și secțiunea `reels` în `layout`. Plus `admin_set_coming_soon(token, show, launch_at, next_edition_at)`: petice exact trei chei pe rândul `published`, revalidează, și scrie un rând NOU (vechiul trece pe `superseded`), deci rămâne reversibil din „Versiuni anterioare". NU atinge `app_config` — niciunul din cele cinci scalare nu derivă din cheile astea. Vezi `supabase/sql/supabase-migration-reels-si-coming-soon.sql` |
+| 20260904184209 | `runlift_remindere_si_renuntare` | runlift | **Remindere:** orarul devine `config.reminders` (listă în documentul de ediție, editabilă din /admin → „Eveniment"), validat de `event_config_validate` (plafon 5, avans întreg 1–720, fără avansuri duplicate, șablon din listă închisă) și copiat de `scrie_scalarele_editiei` în `app_config.reminder_schedule` — al ȘASELEA scalar. `maybe_send_reminder` parcurge orarul, cu cheie de idempotență per (ediție, avans) și fereastră de declanșare `[scadență, scadență + 2h]` în loc de `[start − avans, start]` întreagă; duce cheia șablonului în apelul de broadcast. Șablon nou `bulk_participant_reminder_final`. **Renunțare:** `token_renunt` + `renuntat_la` pe `registrations`, RPC public `decline_spot` (setează `deleted_at` → declanșează auto-promovarea existentă; refuză edițiile încheiate și cursele începute), jurnal `admin_events` cu tip `renuntare`. `edition2_recipients`, `admin_list_registrations` și `confirm_lookup` întorc `token_renunt` (pentru `{link_renunt}`). Șabloanele de reminder + promovare pierd „Check-in de la {ora_checkin}." și capătă linkul. Vezi `supabase/sql/supabase-migration-remindere-si-renuntare.sql` |
+| 20260917 | `runlift_turnstile_lockdown` | runlift | **Aplicată pe 17 septembrie 2026**, ultima din deploy-ul anti-bot, după ce `submit-form` era deployat și o înscriere reală trecuse prin el. Scoate politicile și grant-urile de INSERT pentru `anon` de pe `registrations`, `event_waitlist` și `launch_notifications`: singura cale de scriere publică rămâne funcția Edge `submit-form`, care verifică tokenul Turnstile înainte de insert. Verificat după aplicare: insert direct cu cheia publishable → `42501 permission denied` pe toate trei; `public_stats` și `submit-form` răspund normal; bundle-ul de producție nu conține niciun `fetch` spre `/rest/v1/*`. Trigger-ele guard rămân active. Rollback în DOI pași (întâi frontendul, apoi SQL-ul) la finalul fișierului. Vezi `supabase/sql/supabase-migration-turnstile-lockdown.sql` |
+| 20260917 | `runlift_waitlist_cap_din_config` | runlift | `waitlist_cap()` întorcea `10` scris în cod, iar `scrie_scalarele_editiei()` nu ducea niciodată `slots.waitlist` în `app_config` — câmpul „listă de așteptare" din /admin era decorativ pentru baza de date. Acum funcția citește `app_config.waitlist_capacity` (plasă: 10), publicarea scrie cheia, iar migrarea o aduce la zi din documentul deja publicat. Al ȘAPTELEA scalar derivat. Vezi `supabase/sql/supabase-migration-waitlist-cap-din-config.sql` |
+| 20260917 | `runlift_reminder_orar_robust` | runlift | `maybe_send_reminder()` avea plasa pentru „orar care nu e listă", dar nu ajungea la ea: `value::jsonb` arunca excepție înainte, iar funcția e chemată de `pg_cron` din 15 în 15 minute — reminder netrimis, tăcut. Conversia stă acum într-un bloc cu `exception`. Restul funcției, neschimbat. Vezi `supabase/sql/supabase-migration-reminder-orar-robust.sql` |
+| 20260825   | `runlift_soft_delete_registrations` | runlift | Ștergere logică pe `registrations` (`deleted_at`) + undo real (`admin_undelete_registration`, păstrează `id`/`created_at`) + gardă de capacitate pe `admin_add_registration` + jurnal de scrieri în `admin_events` (feed neplafonat). Indexul de unicitate devine PARȚIAL (`where deleted_at is null`), auto-promovarea trece de pe `AFTER DELETE` pe `AFTER UPDATE OF deleted_at`, iar `registrations_backup_sync` propagă `deleted_at` și pe ramura UPDATE. Vezi `supabase/sql/supabase-migration-soft-delete-registrations.sql` |
+| 20260907033347 | `runlift_undo_waitlist` | runlift | Ștergere logică pe `event_waitlist` (`deleted_at`) + `admin_undelete_waitlist` (reversare, păstrează `created_at` și poziția FIFO). Indexul de unicitate devine PARȚIAL. **`event_waitlist_cap()` numără doar rândurile active** — altfel cele șterse ar fi ocupat în continuare plafonul de 10, tăcut. Toți cei opt cititori ai tabelului sunt actualizați sau notați explicit ca neschimbați. Vezi `supabase/sql/supabase-migration-undo-waitlist.sql` |
+| 20260907033437 | `runlift_rejucare` | runlift | `email_log.sablon` (fără el, rejucarea unei difuzări ar ghici între două șabloane ale aceleiași audiențe) + `admin_replay_lookup`, care spune ce mod / ce șablon / ce destinatar, sau de ce nu se poate. Destinatarul se rezolvă din starea de ACUM: `participanti` din `registrations`, **`asteptare` din `launch_notifications`** (acolo își ia destinatarii `waitlist_recipients()`). `admin_list_email_log` duce coloana mai departe. Vezi `supabase/sql/supabase-migration-rejucare.sql` |
+| 20260907033532 | `runlift_escaladare` | runlift | `operator_email()` + `escaladeaza()` (dedup prin `broadcast_once`, tot corpul într-un bloc cu `exception` ca alerta să nu poată anula tranzacția care a chemat-o, ambele revocate de la `anon`/`authenticated`), escaladare din triggerul de auto-promovare, și trigger nou `registrations_locuri_epuizate_trg`. Cere precondiția `runlift_undo_waitlist`. **A fost inert până pe 17 septembrie 2026**, când s-a scris `app_config.operator_email` — până atunci fiecare escaladare ieșea tăcut pe prima ramură. Vezi `supabase/sql/supabase-migration-escaladare.sql` |
 
 **Migrări ale altei aplicații** (schema `public`, gym-app + bot — **hands-off**):
 `ironworks_initial_schema`, `monthly_summary_security_invoker`, `telegram_bot_phase1_attendance`,
@@ -80,15 +80,15 @@ local (repo-ul nu deține ciclul DB-ului partajat). Unele au fost scrise pentru 
 
 | Fișier | Proiect țintă | Ce face | Stare |
 |---|---|---|---|
-| `supabase-migration-hyrox.sql` | vechi (`iattq…`) | Ediția 2: coloana `editie` + `data_nasterii` | istoric |
-| `supabase-migration-email.sql` | vechi (`iattq…`) | RPC `confirm_lookup` pt. emailul de confirmare | istoric |
-| `supabase-roteste-secretul.sql` | vechi (`iattq…`) | Rotirea secretului de broadcast (fix securitate) | istoric |
-| `supabase-migration-bulk-templates.sql` | **runlift** (curent) | Seed șabloane email + `event_badge` (ediția curentă) | activ ca seed |
+| `supabase/sql/supabase-migration-hyrox.sql` | vechi (`iattq…`) | Ediția 2: coloana `editie` + `data_nasterii` | istoric |
+| `supabase/sql/supabase-migration-email.sql` | vechi (`iattq…`) | RPC `confirm_lookup` pt. emailul de confirmare | istoric |
+| `supabase/sql/supabase-roteste-secretul.sql` | vechi (`iattq…`) | Rotirea secretului de broadcast (fix securitate) | istoric |
+| `supabase/sql/supabase-migration-bulk-templates.sql` | **runlift** (curent) | Seed șabloane email + `event_badge` (ediția curentă) | activ ca seed |
 
 Doar ultimul reflectă schema `runlift` curentă și e menținut la zi (seed pentru start curat de
 ediție); restul sunt păstrate ca referință.
 
-### `supabase-cron-reminder-ARM.sql` — NEAPLICAT
+### `supabase/sql/supabase-cron-reminder-ARM.sql` — NEAPLICAT
 
 **`pg_cron` nu e instalat în proiect** (`pg_available_extensions` → `installed_version: null`;
 `cron.job` nu există). Verificat pe 4 septembrie 2026, cu ocazia migrării
@@ -119,7 +119,7 @@ armarea să nu se facă lângă un buton care trimite același text.
 nicio fereastră de reminder nu mai e deschisă și armarea nu poate trimite nimic. Se închide în
 clipa în care se publică ediția 7.
 
-### `supabase-migration-reminder-binar.sql` — NEAPLICAT
+### `supabase/sql/supabase-migration-reminder-binar.sql` — NEAPLICAT
 
 Al treilea șablon de reminder, `bulk_participant_reminder_binar`: întrebarea de la 72 de ore
 („mai vii?"), cu `{link_renunt}` ca singură acțiune. Nu adaugă schemă — un singur `insert` în
@@ -133,7 +133,7 @@ Clientul îl cunoaște deja (`REMINDER_TEMPLATE_KEYS`, `ETICHETE_SABLOANE`, help
 Rândul la `offsetHours: 72` nu vine din migrare — orarul e al operatorului și se scrie din
 `/admin` la configurarea ediției.
 
-### `supabase-migration-anunt-istoric.sql` — NEAPLICAT
+### `supabase/sql/supabase-migration-anunt-istoric.sql` — NEAPLICAT
 
 Anunțul de ediție nouă către toți participanții de până acum. Trei piese: `unsubscribe()` se
 aplică persoanei (toate rândurile aceleiași adrese, în ambele tabele), `anunt_recipients()`
@@ -152,13 +152,13 @@ aplicare, compară `select count(*) from runlift.anunt_recipients()` cu ea și n
 dezabonarea pe o adresă de test înainte să consideri migrarea aplicată (pașii sunt în coada
 fișierului).
 
-### `supabase-migration-anunt-rejucare.sql` — NEAPLICAT
+### `supabase/sql/supabase-migration-anunt-rejucare.sql` — NEAPLICAT
 
 `admin_replay_anunt_lookup()` — rejucarea unui anunț eșuat, reluând subiectul și textul din
 jurnal (operatorul își editează anunțul, deci șablonul ar retrimite alt mesaj).
-**Precondiție:** `supabase-migration-anunt-istoric.sql`, fiindcă citește `anunt_recipients()`.
+**Precondiție:** `supabase/sql/supabase-migration-anunt-istoric.sql`, fiindcă citește `anunt_recipients()`.
 
-### `supabase-migration-undo-waitlist.sql` — APLICAT 7 septembrie 2026
+### `supabase/sql/supabase-migration-undo-waitlist.sql` — APLICAT 7 septembrie 2026
 
 Ștergere logică pe `event_waitlist` + `admin_undelete_waitlist`, cu paritate față de
 `runlift_soft_delete_registrations`. Aplicat pe 7 septembrie 2026 ca `runlift_undo_waitlist` (`20260907033347`).
@@ -183,7 +183,7 @@ Un soft-delete acolo ar face `admin_undelete_waitlist` să readucă pe listă pe
 așa, undo-ul pe un rând promovat între timp întoarce `not_found`, iar backoffice-ul spune unde e
 persoana.
 
-### `supabase-migration-rejucare.sql` — APLICAT 7 septembrie 2026
+### `supabase/sql/supabase-migration-rejucare.sql` — APLICAT 7 septembrie 2026
 
 Rejucarea unei trimiteri eșuate prin fluxul modului ei. Aplicat pe 7 septembrie 2026 ca
 `runlift_rejucare` (`20260907033437`). Funcția Edge — modul `replay`, care depinde de RPC-ul de
@@ -206,7 +206,7 @@ aici — **încă nu e deployată**: `supabase functions deploy send-email --no-
 `info` rămâne exclus deliberat: cooldown-ul de 10 minute și `mark_confirmation_sent` fac din
 rejucare o cerere nouă, nu o reparație.
 
-### `supabase-migration-escaladare.sql` — APLICAT 7 septembrie 2026
+### `supabase/sql/supabase-migration-escaladare.sql` — APLICAT 7 septembrie 2026
 
 Anomaliile de flux ajung la operator fără să treacă printr-un login. Aplicat pe 7 septembrie 2026
 ca `runlift_escaladare` (`20260907033532`), DUPĂ celelalte două — precondiția din capul fișierului
@@ -248,7 +248,7 @@ apelante sunt triggere, deci o eroare din canalul de alertare ar urca prin trigg
 tranzacția declanșatoare — o înscriere reală respinsă fiindcă n-a mers alerta despre ea.
 
 **Ordinea e obligatorie.** Fișierul începe cu o precondiție care crapă dacă
-`supabase-migration-undo-waitlist.sql` n-a rulat: `auto_promote_from_waitlist()` citește
+`supabase/sql/supabase-migration-undo-waitlist.sql` n-a rulat: `auto_promote_from_waitlist()` citește
 `event_waitlist.deleted_at`, iar Postgres nu verifică corpul unei funcții plpgsql la creare — în
 ordine greșită migrarea ar trece tăcut și ar exploda abia la prima renunțare reală, în tranzacția
 participantului.

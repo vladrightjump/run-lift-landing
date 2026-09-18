@@ -232,7 +232,7 @@ describe('citirea directă a tabelelor', () => {
   });
 
   /**
-   * Lockdown-ul anti-bot (`supabase-migration-turnstile-lockdown.sql`, aplicată
+   * Lockdown-ul anti-bot (`supabase/sql/supabase-migration-turnstile-lockdown.sql`, aplicată
    * pe 17 septembrie 2026). Cheia publishable e în bundle, deci dacă `anon` ar
    * putea insera, un bot ar ocoli Turnstile cu un `curl` — captcha ar fi decor.
    * Singura cale de scriere publică e funcția Edge `submit-form`.

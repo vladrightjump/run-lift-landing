@@ -137,7 +137,7 @@ describe('lista de așteptare și promovarea automată', () => {
    * Regresie: `waitlist_cap()` întorcea `10` scris în cod, iar publicarea nu
    * ducea niciodată `slots.waitlist` în `app_config` — câmpul din /admin era
    * decorativ, iar al unsprezecelea om primea `waitlist_full` oricum ar fi fost
-   * configurat. Vezi `supabase-migration-waitlist-cap-din-config.sql`.
+   * configurat. Vezi `supabase/sql/supabase-migration-waitlist-cap-din-config.sql`.
    */
   it('publicarea duce plafonul listei în baza de date, ca pe cel al cursei', async () => {
     await db.query(`select runlift.scrie_scalarele_editiei($1::jsonb)`, [
