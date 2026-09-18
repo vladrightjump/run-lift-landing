@@ -73,7 +73,7 @@ Din **`/admin` → tabul „Eveniment"**. Fără editări în cod, fără deploy
 Singurul lucru care mai cere deploy e **share preview-ul** (meta se injectează la build, pentru că
 scraper-ele nu rulează JS). Tabul „Eveniment" îți spune când a rămas în urmă.
 
-Runbook complet: **`GHID-EDITIE-NOUA.md`**. Decizii de arhitectură: **`TASK-FOR-CLAUDE.md`**.
+Runbook complet: **`GHID-EDITIE-NOUA.md`**. Decizii de arhitectură: secțiunea de mai jos.
 
 ## Ziua evenimentului
 
@@ -127,9 +127,35 @@ assets locale (`public/reels/`), deci un poster nou cere deploy; un clip nou, nu
 CSP-ul trebuie să păstreze `https://www.instagram.com` în `frame-src`, iar `Permissions-Policy`
 delegarea de fullscreen. Există teste care păzesc ambele.
 
+## Decizii de arhitectură
+
+De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
+
+- **Ediția trăiește în baza de date, nu în cod.** Sursa de adevăr e rândul `published` din
+  `runlift.event_config`, editabil din `/admin`. `src/content/edition.ts` a rămas doar
+  instantaneul de build: randează primul cadru și hrănește meta de share, pentru că
+  scraperele de WhatsApp/Facebook nu rulează JS. Are voie să rămână în urmă față de ediția
+  publicată — tabul „Eveniment" îți spune când s-a întâmplat.
+- **Emailuri din DB, fără generator cod→DB.** Textele se editează din `/admin` → „Șabloane";
+  un generator din cod ar crea două stăpâne și ar suprascrie editările. Constantele
+  `*_FALLBACK` din funcția Edge sunt generice, fără dată, și se folosesc doar dacă DB-ul tace.
+- **Fără `copy.ts` de i18n.** Aplicația e mono-lingvă. Derivăm din config DOAR string-urile
+  dependente de ediție (`src/content/format.ts`); proza statică rămâne în componente.
+- **Meta de share injectată la build**, prin plugin Vite, nu din React — scraperele citesc
+  HTML static.
+- **Repo-ul nu deține ciclul de viață al bazei.** Proiectul Supabase e partajat cu gym-app și
+  botul de Telegram, iar noi ținem strict schema `runlift`. Migrările se documentează în
+  `MIGRATIONS.md` și se aplică manual; fișierele lor stau în `supabase/sql/`.
+
+## Live URLs
+
+- Producție: https://parktraining.fit
+- Vercel: https://vercel.com/muvs-projects-4dea1994/run-lift-landing
+- GitHub: https://github.com/vladrightjump/run-lift-landing
+- Supabase (`ironworks-gym`): https://supabase.com/dashboard/project/whyndrjcezmtajbykeil
+
 ## Documente
 
-- **`TASK-FOR-CLAUDE.md`** — context/handoff (arhitectură + decizii + capcane + Live URLs).
 - **`GHID-EDITIE-NOUA.md`** — runbook pas cu pas pentru o ediție nouă.
 - **`MIGRATIONS.md`** — migrările DB + granița față de gym-app/bot.
 - **`ANTI-BOT.md`** — Turnstile + lockdown RLS: cum funcționează, configurare, runbook de deploy.
