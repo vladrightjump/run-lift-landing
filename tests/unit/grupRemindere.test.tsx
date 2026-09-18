@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, within } from '@testing-library/react';
 import { GrupRemindere } from '../../src/admin/eventTab/grupuri/GrupRemindere';
+import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import type { LivrareReminder } from '../../src/admin/remindere';
 import {
   SNAPSHOT_CONFIG,
@@ -41,6 +42,13 @@ const livr = (
 ): LivrareReminder => ({ sablon: 'bulk_participant_reminder', status, la });
 
 let radacina: HTMLElement;
+const showToast = vi.fn();
+const seteazaRemindere = vi.fn();
+
+beforeEach(() => {
+  showToast.mockClear();
+  seteazaRemindere.mockClear();
+});
 
 /** Capacul grupului: și butonul de pliere, și locul unde stă rezumatul. */
 const capul = (): HTMLElement =>
@@ -58,13 +66,17 @@ const randeaza = (
 ) => {
   const ciorna: EventConfig = { ...SNAPSHOT_CONFIG, reminders };
   const r = render(
-    <GrupRemindere
-      ciorna={ciorna}
-      seteazaRemindere={vi.fn()}
-      erori={new Map()}
-      acum={acum}
-      livrari={livrari}
-    />
+    // Grupul cere sesiunea pentru `showToast`: ștergerea unui rând se poate
+    // anula din toast.
+    <FurnizorSesiuneAdmin token="t" onAuthError={() => false} showToast={showToast}>
+      <GrupRemindere
+        ciorna={ciorna}
+        seteazaRemindere={seteazaRemindere}
+        erori={new Map()}
+        acum={acum}
+        livrari={livrari}
+      />
+    </FurnizorSesiuneAdmin>
   );
   radacina = r.container;
   if (deschide) fireEvent.click(capul());
@@ -149,5 +161,37 @@ describe('GrupRemindere — rezumatul de pe capac', () => {
     randeaza([], DUPA_GRATIE, [rem(24), rem(3)], false);
     expect(rezumatul()).toContain('1 activ');
     expect(rezumatul()).not.toContain('2 active');
+  });
+});
+
+/**
+ * Ștergerea unui rând se aplica pe loc, fără confirmare și fără cale înapoi.
+ * Undo, nu confirmare: o întrebare la fiecare ștergere e o întrebare pe care o
+ * închizi fără s-o citești.
+ */
+describe('ștergerea se poate anula', () => {
+  it('ștergerea scoate rândul și oferă undo', () => {
+    randeaza(null, DUPA_GRATIE, [rem(24), rem(3)]);
+    const stergeri = radacina.querySelectorAll('button[aria-label^="Șterge"]');
+    fireEvent.click(stergeri[0]);
+
+    expect(seteazaRemindere).toHaveBeenCalledWith([rem(3)]);
+    const toast = showToast.mock.calls.at(-1)?.[0];
+    expect(toast.msg).toContain('24');
+    expect(typeof toast.undo).toBe('function');
+  });
+
+  it('undo-ul repune rândul cu avansul, șablonul și starea lui', () => {
+    const oprit: ReminderEntry = {
+      offsetHours: 3,
+      enabled: false,
+      template: 'bulk_participant_reminder_final',
+    };
+    randeaza(null, DUPA_GRATIE, [rem(24), oprit]);
+    const stergeri = radacina.querySelectorAll('button[aria-label^="Șterge"]');
+    fireEvent.click(stergeri[1]);
+
+    showToast.mock.calls.at(-1)?.[0].undo();
+    expect(seteazaRemindere).toHaveBeenLastCalledWith([rem(24), oprit]);
   });
 });

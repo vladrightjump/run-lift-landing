@@ -940,7 +940,18 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
                         className="admin-btn-ghost"
                         disabled={ocupat}
                         aria-label={`Șterge clipul ${i + 1}`}
-                        onClick={() => seteazaReels(stergeReel(ciorna.reels.items, i), true)}
+                        onClick={() => {
+                          // Lista de dinainte, prinsă în închidere: ștergerea
+                          // e stare locală de formular, deci undo-ul nu poate
+                          // eșua — n-are cu cine să vorbească.
+                          const inainte = ciorna.reels.items;
+                          seteazaReels(stergeReel(inainte, i), true);
+                          showToast({
+                            kind: 'success',
+                            msg: `Clipul ${i + 1} a fost șters din bandă.`,
+                            undo: () => seteazaReels(inainte, true),
+                          });
+                        }}
                       >
                         Șterge
                       </button>

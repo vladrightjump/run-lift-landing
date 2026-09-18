@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { AdminEventTab } from '../../src/admin/AdminEventTab';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
@@ -1664,5 +1664,34 @@ describe('dialogurile tabului au tastatură', () => {
   it('dialogul de ediție nouă deschide focusul pe primul câmp', async () => {
     await deschideDialogEditieNoua();
     expect(document.activeElement).toBe(screen.getByLabelText('Data cursei'));
+  });
+});
+
+/** Ștergerea unui clip se aplica pe loc, fără cale înapoi. */
+describe('ștergerea unui clip se poate anula', () => {
+  const adaugaClip = async (link: string) => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
+    fireEvent.change(screen.getByLabelText('Linkul clipului'), { target: { value: link } });
+  };
+
+  it('ștergerea oferă undo, iar undo-ul repune clipul cu tot cu codul lui', async () => {
+    await adaugaClip('https://www.instagram.com/reel/ABC12345/');
+    expect((screen.getByLabelText('Linkul clipului') as HTMLInputElement).value).toContain(
+      'ABC12345'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Șterge clipul 1' }));
+    expect(screen.queryByLabelText('Linkul clipului')).toBeNull();
+
+    const toast = showToast.mock.calls.at(-1)?.[0];
+    expect(typeof toast.undo).toBe('function');
+    // `act`: undo-ul vine din toast, adică din afara arborelui — fără el,
+    // schimbarea de stare n-ar fi aplicată până la următoarea randare.
+    act(() => toast.undo());
+
+    expect((screen.getByLabelText('Linkul clipului') as HTMLInputElement).value).toContain(
+      'ABC12345'
+    );
   });
 });
