@@ -11,12 +11,49 @@
  * build-ul imediat.
  */
 
+import { readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+
 /** Unde le e locul — apare în mesajul de eroare. */
 export const DOSAR_SQL = 'supabase/sql/';
 
 /** Numele de fișiere SQL dintre cele date, în ordinea primită. */
 export const fisiereSqlInRadacina = (nume: readonly string[]): string[] =>
   nume.filter((n) => n.toLowerCase().endsWith('.sql'));
+
+/**
+ * Citește rădăcina și întoarce fișierele SQL de acolo.
+ *
+ * Fără recursie, deliberat: `scripts/` și `supabase/` au fișiere SQL legitime.
+ * Legăturile simbolice NU intră — un `.sql` legat simbolic în rădăcină e o
+ * unealtă locală, nu un fișier al repo-ului.
+ *
+ * Ce ignoră git, ignoră și garda: un dump de lucru pus temporar în rădăcină și
+ * trecut în `.gitignore` nu trebuie să blocheze build-ul cuiva. Dacă git nu
+ * răspunde (arbore exportat fără `.git`), cade pe listarea simplă — acolo tot ce
+ * e în arbore a venit oricum din git.
+ */
+export const sqlDinRadacina = (radacina: string): string[] => {
+  const nume = fisiereSqlInRadacina(
+    readdirSync(radacina, { withFileTypes: true })
+      .filter((e) => e.isFile())
+      .map((e) => e.name)
+  );
+  return nume.filter((n) => !esteIgnoratDeGit(radacina, n));
+};
+
+const esteIgnoratDeGit = (radacina: string, nume: string): boolean => {
+  try {
+    // `check-ignore` întoarce 0 când fișierul E ignorat, 1 când nu e.
+    execFileSync('git', ['check-ignore', '--quiet', '--', nume], {
+      cwd: radacina,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 /** Mesajul pentru operator: ce s-a găsit și unde trebuie mutat. */
 export const mesajSqlInRadacina = (gasite: readonly string[]): string =>

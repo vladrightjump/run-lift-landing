@@ -74,8 +74,12 @@ prefix `runlift_`:
 
 ## Fișiere SQL „libere" din repo (istorice)
 
-Fișiere `.sql` din rădăcină — artefacte istorice. **NU** le mutăm într-un `supabase/migrations/`
-local (repo-ul nu deține ciclul DB-ului partajat). Unele au fost scrise pentru proiectul
+Toate stau în `supabase/sql/`, cu numele lor — numele rămâne cheia după care le cauți aici.
+Rădăcina nu mai primește fișiere SQL: build-ul pică dacă apare unul (`scripts/rootSqlGuard.ts`).
+
+**NU** stau într-un `supabase/migrations/` local: dosarul ăla e rezervat CLI-ului Supabase,
+care ar trata conținutul ca migrări de aplicat, cu o convenție de nume pe timestamp — iar
+repo-ul nu deține ciclul de viață al bazei partajate. Unele au fost scrise pentru proiectul
 **VECHI** `iattqvakxcgepjiecgpf` (abandonat):
 
 | Fișier | Proiect țintă | Ce face | Stare |

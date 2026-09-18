@@ -121,7 +121,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
   // Ediția pe care backendul o consideră curentă. Doar ea acceptă modificări:
   // ascunderea butoanelor de aici e comoditate, refuzul real vine din RPC-urile
-  // de scriere (`edition_archived` — vezi supabase-migration-editii-si-email-log.sql).
+  // de scriere (`edition_archived` — vezi supabase/sql/supabase-migration-editii-si-email-log.sql).
   const editieCurenta = editions?.find((e) => e.este_curenta)?.editie ?? null;
   const arhiva = editie !== null && editieCurenta !== null && editie !== editieCurenta;
 
