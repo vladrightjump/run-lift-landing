@@ -24,14 +24,14 @@ export default defineConfig({
       // Praguri de CLICHET: coborâte sub valoarea măsurată, ca să prindă o
       // regresie fără să blocheze un PR pentru zgomot. Se URCĂ pe măsură ce
       // acoperirea crește; nu se coboară niciodată. Vezi `CI-CD.md`.
-      // Măsurate pe 6 septembrie 2026, după valul 5 din
-      // `docs/plans/2026-09-06-1604-feat-idei-produs-si-admin-plan.md`:
-      // linii 70,36 · instrucțiuni 69,06 · funcții 65,4 · ramuri 61,7.
+      // Măsurate pe 18 septembrie 2026, după
+      // `docs/plans/2026-09-18-2222-feat-admin-eveniment-fiabil-plan.md`:
+      // linii 74,35 · instrucțiuni 72,9 · funcții 69,75 · ramuri 65,71.
       thresholds: {
-        lines: 72,
-        statements: 71,
-        functions: 67,
-        branches: 64,
+        lines: 74,
+        statements: 72,
+        functions: 69,
+        branches: 65,
       },
     },
   },
