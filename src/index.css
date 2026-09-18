@@ -1739,6 +1739,17 @@
   .admin-mostenire dt { font-size: 12px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--e3-muted-dim); }
   .admin-mostenire dd { margin: 0; font-size: 14px; color: var(--e3-text); text-align: right; overflow-wrap: anywhere; }
   .admin-mostenire > div.recalculat dd { color: var(--e3-accent); }
+  /* Diferențele de la publicare: „de la → la", pe un singur rând.
+     Valoarea veche e stinsă, cea nouă e accentul — ochiul caută ce URMEAZĂ să
+     fie pe site, nu ce a fost. */
+  .admin-diferente dd {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .admin-diferenta-inainte { color: var(--e3-muted-dim); text-decoration: line-through; }
+  .admin-diferenta-sageata { color: var(--e3-muted-dim); }
+  .admin-diferenta-acum { color: var(--e3-accent); }
+
   .admin-mostenire-marca {
     display: inline-block; margin-left: 8px; padding: 1px 6px;
     font-size: 10px; letter-spacing: 1px; text-transform: uppercase;

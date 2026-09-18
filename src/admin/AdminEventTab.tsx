@@ -32,6 +32,7 @@ import { Blocat } from './eventTab/primitive';
 import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
 import { refuzCuPas, type Pas } from './eventTab/ajutoare';
 import { esteNesalvat } from './eventTab/nesalvat';
+import { diferenteFataDePublicat, esteComparabil } from './eventTab/diferente';
 import { GrupCeArata } from './eventTab/grupuri/GrupCeArata';
 import { GrupLocuri } from './eventTab/grupuri/GrupLocuri';
 import { GrupUnde } from './eventTab/grupuri/GrupUnde';
@@ -229,6 +230,18 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
    * — deci un click greșit pierdea douăzeci de câmpuri fără o vorbă.
    */
   const nesalvat = esteNesalvat(salvat, ciorna);
+  /**
+   * Ce se schimbă pe site la publicare. Calculat doar cât timp dialogul e
+   * deschis: e o listă întreagă construită pentru un ecran care apare o dată
+   * per publicare.
+   */
+  const diferente = useMemo(
+    () =>
+      confirmPublicare && ciorna
+        ? diferenteFataDePublicat(publicat, ciorna, ETICHETE_SECTIUNI)
+        : [],
+    [confirmPublicare, ciorna, publicat]
+  );
   // Doar pentru „peste 3 luni” de sub datele calendaristice. Un minut e destul:
   // nimeni nu se uită la ecoul ăsta ca la un cronometru.
   const acum = useNow(60_000);
@@ -1026,6 +1039,39 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
               public trece pe configul ăsta imediat, fără deploy. Vizitatorii vor vedea{' '}
               <strong>{ciorna.showComingSoon ? 'Coming Soon' : 'landing-ul cu înscrieri'}</strong>.
             </p>
+
+            {/* CE se schimbă, nu doar ce se va vedea.
+                Singurul click ireversibil din backoffice era și singurul fără o
+                listă sub el: „vizitatorii vor vedea landing-ul" e adevărat și
+                când ai mutat cursa cu o săptămână din greșeală. */}
+            {!esteComparabil(publicat, ciorna) ? (
+              <p className="admin-confirm-note">
+                Prima publicare a ediției {ciorna.number} — nu există o versiune anterioară a ei cu
+                care să se compare.
+              </p>
+            ) : diferente.length === 0 ? (
+              <p className="admin-confirm-note">
+                Nimic nu se schimbă față de ce e publicat acum.
+              </p>
+            ) : (
+              <>
+                <p className="admin-confirm-note">Față de ce e publicat acum se schimbă:</p>
+                <dl className="admin-mostenire admin-diferente">
+                  {diferente.map((d) => (
+                    <div key={d.eticheta}>
+                      <dt>{d.eticheta}</dt>
+                      <dd>
+                        <span className="admin-diferenta-inainte">{d.inainte}</span>
+                        <span className="admin-diferenta-sageata" aria-hidden="true">
+                          →
+                        </span>
+                        <span className="admin-diferenta-acum">{d.acum}</span>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
+            )}
             <p className="admin-confirm-note">
               Share preview-ul (WhatsApp/Facebook) rămâne pe datele build-ului deployat până la
               următorul deploy — scraper-ele nu rulează JS, deci meta nu se poate schimba la
