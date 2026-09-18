@@ -6,10 +6,16 @@ type Props = {
   seteaza: <K extends keyof EventConfig>(cheie: K, valoare: EventConfig[K]) => void;
   erori: Map<string, string>;
   areEroare: (campuri: string[]) => boolean;
+  /**
+   * Numărul s-a mutat față de ciorna încărcată — salvarea va scrie o ciornă
+   * SEPARATĂ. Nu e o eroare, deci nu blochează nimic; dar e singurul câmp din
+   * formular care poate produce un al doilea document fără să spună.
+   */
+  atentieNumar?: string;
 };
 
 /** „Ediția": numărul, numele și textele care poartă ediția. */
-export const GrupEditia = ({ ciorna, seteaza, erori, areEroare }: Props) => (
+export const GrupEditia = ({ ciorna, seteaza, erori, areEroare, atentieNumar }: Props) => (
   <Grup
     titlu="Ediția"
     ajutor="Cum se numește și a câta e."
@@ -21,6 +27,7 @@ export const GrupEditia = ({ ciorna, seteaza, erori, areEroare }: Props) => (
       eticheta="Numărul ediției"
       ajutor="Ediția la care se înscrie lumea acum."
       eroare={erori.get('number')}
+      atentie={atentieNumar}
     >
       {(p) => (
         <input

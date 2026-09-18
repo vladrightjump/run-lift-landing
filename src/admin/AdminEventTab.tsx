@@ -95,6 +95,14 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
    * browser. Vezi `eventTab/nesalvat.ts`.
    */
   const [salvat, setSalvat] = useState<EventConfig | null>(null);
+  /**
+   * Ediția ciornei ÎNCĂRCATE de pe server — nu cea din câmpul „Numărul ediției".
+   *
+   * Salvarea face `on conflict (editie) where status = 'draft'`, deci un număr
+   * schimbat scrie o ciornă SEPARATĂ, iar cea veche rămâne pe server. Fără
+   * reperul ăsta n-am avea cum spune că urmează să se întâmple.
+   */
+  const [editieIncarcata, setEditieIncarcata] = useState<number | null>(null);
   const [salveaza, setSalveaza] = useState(false);
   const [publica, setPublica] = useState(false);
   const [confirmPublicare, setConfirmPublicare] = useState(false);
@@ -132,6 +140,7 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
             const cfg = parseEventConfig(draft.config);
             setCiorna(cfg);
             setSalvat(cfg);
+            setEditieIncarcata(draft.editie);
             setAncoraStart(cfg?.start ?? null);
           }
         })
@@ -193,6 +202,16 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
     return row ? parseEventConfig(row.config) : null;
   }, [randuri]);
 
+  /**
+   * Ciornele deschise pe server. Mai mult de una înseamnă că un număr de ediție
+   * schimbat a bifurcat documentul — iar tabul încarcă cea mai NOUĂ
+   * (`admin_get_event_config` sortează `created_at desc`), fără s-o spună.
+   */
+  const ciorne = useMemo(
+    () => (randuri ?? []).filter((r) => r.status === 'draft'),
+    [randuri]
+  );
+
   const versiuni = useMemo(
     () =>
       (randuri ?? [])
@@ -230,6 +249,11 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
    * — deci un click greșit pierdea douăzeci de câmpuri fără o vorbă.
    */
   const nesalvat = esteNesalvat(salvat, ciorna);
+  const atentieNumar =
+    ciorna && editieIncarcata !== null && ciorna.number !== editieIncarcata
+      ? `Salvarea va crea o ciornă separată pentru ediția ${ciorna.number}. ` +
+        `Cea a ediției ${editieIncarcata} rămâne pe server, neatinsă.`
+      : undefined;
   /**
    * Ce se schimbă pe site la publicare. Calculat doar cât timp dialogul e
    * deschis: e o listă întreagă construită pentru un ecran care apare o dată
@@ -389,7 +413,27 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
     // Ciorna asta n-a fost niciodată pe server, deci e nesalvată din prima
     // clipă — și e chiar starea pe care ar durea cel mai tare s-o pierzi.
     setSalvat(null);
+    setEditieIncarcata(null);
     setAncoraStart(noua.start);
+  };
+
+  /**
+   * Deschide o ciornă anume dintre cele de pe server.
+   *
+   * Aceeași cale ca încărcarea inițială, doar că rândul e ales, nu ghicit:
+   * `incarca()` ia întotdeauna cea mai nouă, ceea ce e util la deschiderea
+   * tabului și inutil când vrei cealaltă.
+   */
+  const deschideCiorna = (rand: AdminEventConfigRow) => {
+    if (!potPleca()) return;
+    const cfg = parseEventConfig(rand.config);
+    if (!cfg) return;
+    atinsa.current = true;
+    setRefuz(null);
+    setCiorna(cfg);
+    setSalvat(cfg);
+    setEditieIncarcata(rand.editie);
+    setAncoraStart(cfg.start);
   };
 
   const porneteDinPublicat = () => {
@@ -398,6 +442,7 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
     setRefuz(null);
     setCiorna({ ...publicat, layout: layoutComplet(publicat.layout) });
     setSalvat(null);
+    setEditieIncarcata(null);
     setAncoraStart(publicat.start);
   };
 
@@ -456,6 +501,7 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
       // `incarca()`: între cerere și răspuns bara ar continua să spună
       // „Nesalvat" despre un document care e deja pe server.
       setSalvat(ciorna);
+      setEditieIncarcata(ciorna.number);
       atinsa.current = false;
       incarca();
     } catch (err) {
@@ -578,6 +624,7 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
                   setRefuz(null);
                   setCiorna(null);
                   setSalvat(null);
+                  setEditieIncarcata(null);
                   setAncoraStart(null);
                 }}
               >
@@ -617,6 +664,34 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
               {publicat.showComingSoon ? 'Coming Soon' : 'Landing'}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Două ciorne pe server înseamnă că un număr de ediție schimbat a
+          bifurcat documentul. Tabul o încarcă pe cea mai nouă și publica din
+          câmpul „Numărul ediției" — deci se putea lucra la una și publica
+          alta, fără ca ceva să spună că a doua există. */}
+      {ciorne.length > 1 && (
+        <div className="admin-banner warn" role="status">
+          <strong>Sunt {ciorne.length} ciorne deschise</strong> — pentru edițiile{' '}
+          {ciorne.map((c) => c.editie).join(', ')}.
+          {editieIncarcata !== null && ` Aici se editează ediția ${editieIncarcata}.`} O ciornă se
+          publică singură, cu numărul ei; celelalte rămân pe server până le publici sau le rescrii.
+          <span className="admin-presetari">
+            {ciorne
+              .filter((c) => c.editie !== editieIncarcata)
+              .map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="admin-chip"
+                  disabled={ocupat}
+                  onClick={() => deschideCiorna(c)}
+                >
+                  Deschide ciorna ediției {c.editie}
+                </button>
+              ))}
+          </span>
         </div>
       )}
 
@@ -676,6 +751,7 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
             seteaza={seteaza}
             erori={erori}
             areEroare={areEroare}
+            atentieNumar={atentieNumar}
           />
 
           <GrupCand
