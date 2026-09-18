@@ -1695,3 +1695,73 @@ describe('ștergerea unui clip se poate anula', () => {
     );
   });
 });
+
+/**
+ * Clipurile și secțiunile stăteau în afara grupurilor, la capătul
+ * formularului: grupul „Instagram" își rezuma pliat („3 clipuri") un conținut
+ * pe care nu-l conținea, iar rândurile rămâneau pe ecran cu grupul închis.
+ */
+describe('clipurile și secțiunile stau în grupurile lor', () => {
+  /** Grupul cu titlul dat, ca element — ca să putem căuta ÎN el. */
+  const grupul = (titlu: string): HTMLElement => {
+    const cap = [...document.querySelectorAll('.admin-config-grup-cap')].find((c) =>
+      c.textContent?.includes(titlu)
+    );
+    return cap?.closest('.admin-config-grup') as HTMLElement;
+  };
+
+  const deschide = (titlu: string) => {
+    const cap = grupul(titlu).querySelector('.admin-config-grup-cap') as HTMLElement;
+    if (cap.getAttribute('aria-expanded') === 'false') fireEvent.click(cap);
+  };
+
+  it('clipurile se editează din grupul „Instagram"', async () => {
+    randeaza();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    deschide('Instagram');
+
+    const grup = grupul('Instagram');
+    fireEvent.click(within(grup).getByRole('button', { name: '+ Adaugă clip' }));
+    expect(within(grup).getByLabelText('Linkul clipului')).toBeDefined();
+  });
+
+  it('secțiunile se aranjează din grupul „Ce arată pagina"', async () => {
+    randeaza();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    deschide('Ce arată pagina');
+
+    const grup = grupul('Ce arată pagina');
+    expect(within(grup).getByText('Formatul')).toBeDefined();
+    expect(within(grup).getByRole('button', { name: /Mută „Locația” mai sus/ })).toBeDefined();
+  });
+
+  it('cu grupurile pliate, niciuna dintre cele două liste nu mai stă pe ecran', async () => {
+    randeaza();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    // Nimic nu s-a deschis: doar „Ediția" e deschis implicit.
+    expect(screen.queryByRole('button', { name: '+ Adaugă clip' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Mută „Locația” mai sus/ })).toBeNull();
+  });
+
+  it('un clip cu link stricat deschide grupul „Instagram" de la sine', async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
+
+    // Rândul gol e invalid: grupul nu se mai poate închide peste el.
+    const cap = grupul('Instagram').querySelector('.admin-config-grup-cap') as HTMLElement;
+    fireEvent.click(cap);
+    expect(cap.getAttribute('aria-expanded')).toBe('true');
+  });
+});

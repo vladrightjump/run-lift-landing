@@ -8,30 +8,18 @@ import {
   type AdminEventConfigRow,
 } from '../lib/adminApi';
 import type { LivrareReminder } from './remindere';
-import {
-  parseEventConfig,
-  MAX_REELS,
-  type EventConfig,
-  type SectionKey,
-} from '../content/eventConfig';
+import { parseEventConfig, type EventConfig } from '../content/eventConfig';
 import {
   validateEventConfig,
   avertismenteEventConfig,
-  mutaSectiune,
-  comutaVizibilitatea,
   layoutComplet,
-  parseInstagramUrl,
-  adaugaReel,
-  stergeReel,
-  mutaReel,
-  seteazaReel,
   type CampInvalid,
 } from './eventConfigForm';
 import { useSesiuneAdmin } from './adminSession';
 import { Blocat } from './eventTab/primitive';
 import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
 import { Dialog } from './eventTab/Dialog';
-import { refuzCuPas, type Pas } from './eventTab/ajutoare';
+import { refuzCuPas, ETICHETE_SECTIUNI, type Pas } from './eventTab/ajutoare';
 import { esteNesalvat } from './eventTab/nesalvat';
 import { diferenteFataDePublicat, esteComparabil } from './eventTab/diferente';
 import { GrupCeArata } from './eventTab/grupuri/GrupCeArata';
@@ -61,15 +49,6 @@ type Props = {
 
 /** Pagina publică randată din ciorna de pe server. */
 const PREVIEW_URL = '/?config=draft';
-
-const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
-  format: 'Formatul',
-  venue: 'Locația',
-  registration: 'Înscriere',
-  participants: 'Cine vine',
-  reels: 'Instagram',
-};
-
 
 /**
  * Valorile din listele formularului.
@@ -387,27 +366,6 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
   const seteaza = <K extends keyof EventConfig>(cheie: K, valoare: EventConfig[K]) => {
     atinsa.current = true;
     setCiorna((c) => (c ? { ...c, [cheie]: valoare } : c));
-  };
-
-  /**
-   * Textul brut din câmpurile de link ale clipurilor, pe index.
-   *
-   * De ce nu se poate randa direct din `code`: câmpul ar fi controlat de o
-   * valoare RECOMPUSĂ din ce s-a parsat, iar la tastare (nu lipire) fiecare
-   * caracter în parte e un URL invalid — deci câmpul s-ar goli singur la prima
-   * literă. Ciorna primește codul; câmpul păstrează ce a scris omul.
-   *
-   * Se golește la orice schimbare de structură (adăugare, ștergere, mutare):
-   * rândurile sunt identificate prin index, iar altfel textul ar rămâne agățat
-   * de poziție, nu de clip.
-   */
-  const [linkBrut, setLinkBrut] = useState<Record<number, string>>({});
-  const seteazaReels = (items: EventConfig['reels']['items'], structural = false) => {
-    if (structural) setLinkBrut({});
-    setCiorna((c) => {
-      atinsa.current = true;
-      return c ? { ...c, reels: { ...c.reels, items } } : c;
-    });
   };
 
   const seteazaRemindere = (reminders: EventConfig['reminders']) => {
@@ -821,201 +779,6 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
             erori={erori}
           />
 
-          <h3>Clipurile din bandă</h3>
-          <p className="admin-config-hint">
-            Ordinea de aici e ordinea din bandă. Fără niciun clip, secțiunea nu apare pe pagină,
-            oricât ar fi de vizibilă în lista de mai jos.
-          </p>
-          {erori.get('reels') && (
-            <div className="admin-banner warn" role="status">
-              {erori.get('reels')}
-            </div>
-          )}
-          <ol className="admin-reels-list">
-            {ciorna.reels.items.map((r, i) => {
-              const eroareCod = erori.get(`reels.${i}.code`);
-              return (
-                <li key={i} className={eroareCod ? 'invalid' : ''}>
-                  <div className="admin-reels-rand">
-                    <span className="admin-layout-nr">{String(i + 1).padStart(2, '0')}</span>
-                    <div className="admin-reels-campuri">
-                      <label className="admin-config-eticheta" htmlFor={`reel-link-${i}`}>
-                        Linkul clipului
-                      </label>
-                      <input
-                        id={`reel-link-${i}`}
-                        autoComplete="off"
-                        disabled={ocupat}
-                        aria-invalid={eroareCod ? true : undefined}
-                        placeholder="https://www.instagram.com/reel/ABC12345/"
-                        // Textul brut cât timp se scrie; URL-ul canonic recompus
-                        // din cod după ce câmpul e părăsit. Așa tastarea nu se
-                        // autodistruge, iar la final se vede ce am înțeles.
-                        value={
-                          linkBrut[i] ??
-                          (r.code ? `https://www.instagram.com/${r.kind}/${r.code}/` : '')
-                        }
-                        onChange={(e) => {
-                          const text = e.target.value;
-                          setLinkBrut((m) => ({ ...m, [i]: text }));
-                          const parsat = parseInstagramUrl(text);
-                          seteazaReels(
-                            parsat
-                              ? ciorna.reels.items.map((x, j) =>
-                                  j === i ? { ...x, code: parsat.code, kind: parsat.kind } : x
-                                )
-                              : seteazaReel(ciorna.reels.items, i, 'code', '')
-                          );
-                        }}
-                        onBlur={() =>
-                          // Ce a rămas în câmp după ce s-a extras codul nu mai
-                          // interesează: la ieșire arătăm forma canonică.
-                          setLinkBrut((m) => {
-                            const { [i]: _, ...rest } = m;
-                            return rest;
-                          })
-                        }
-                      />
-                      {eroareCod ? (
-                        <span className="admin-config-eroare" role="alert">
-                          {eroareCod}
-                        </span>
-                      ) : (
-                        r.code && (
-                          <span className="admin-config-ecou">
-                            cod: {r.code} · {r.kind === 'p' ? 'postare' : 'reel'}
-                          </span>
-                        )
-                      )}
-
-                      <label className="admin-config-eticheta" htmlFor={`reel-poster-${i}`}>
-                        Poster (opțional)
-                      </label>
-                      <input
-                        id={`reel-poster-${i}`}
-                        autoComplete="off"
-                        disabled={ocupat}
-                        placeholder="/reels/marti.jpg"
-                        value={r.poster}
-                        onChange={(e) =>
-                          seteazaReels(seteazaReel(ciorna.reels.items, i, 'poster', e.target.value))
-                        }
-                      />
-
-                      <label className="admin-config-eticheta" htmlFor={`reel-caption-${i}`}>
-                        Textul de sub card
-                      </label>
-                      <input
-                        id={`reel-caption-${i}`}
-                        autoComplete="off"
-                        disabled={ocupat}
-                        placeholder="Marți dimineața, Râșcani"
-                        value={r.caption}
-                        onChange={(e) =>
-                          seteazaReels(seteazaReel(ciorna.reels.items, i, 'caption', e.target.value))
-                        }
-                      />
-                    </div>
-                    <div className="admin-reels-actiuni">
-                      <button
-                        type="button"
-                        className="admin-btn-ghost"
-                        disabled={ocupat || i === 0}
-                        aria-label={`Mută clipul ${i + 1} mai devreme`}
-                        onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, -1), true)}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-btn-ghost"
-                        disabled={ocupat || i === ciorna.reels.items.length - 1}
-                        aria-label={`Mută clipul ${i + 1} mai târziu`}
-                        onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, 1), true)}
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-btn-ghost"
-                        disabled={ocupat}
-                        aria-label={`Șterge clipul ${i + 1}`}
-                        onClick={() => {
-                          // Lista de dinainte, prinsă în închidere: ștergerea
-                          // e stare locală de formular, deci undo-ul nu poate
-                          // eșua — n-are cu cine să vorbească.
-                          const inainte = ciorna.reels.items;
-                          seteazaReels(stergeReel(inainte, i), true);
-                          showToast({
-                            kind: 'success',
-                            msg: `Clipul ${i + 1} a fost șters din bandă.`,
-                            undo: () => seteazaReels(inainte, true),
-                          });
-                        }}
-                      >
-                        Șterge
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-          <button
-            type="button"
-            className="admin-btn-ghost"
-            disabled={ocupat || ciorna.reels.items.length >= MAX_REELS}
-            onClick={() => seteazaReels(adaugaReel(ciorna.reels.items), true)}
-          >
-            + Adaugă clip
-          </button>
-
-          <h3>Secțiunile paginii</h3>
-          <p className="admin-config-hint">
-            Ordinea de aici e ordinea de pe pagină. Numerele (01, 02…) se recalculează singure — o
-            secțiune ascunsă nu lasă gaură.
-          </p>
-          <ol className="admin-layout-list">
-            {ciorna.layout.map((s, i) => (
-              <li key={s.key} className={s.visible ? '' : 'ascunsa'}>
-                <span className="admin-layout-nr">
-                  {s.visible
-                    ? String(ciorna.layout.filter((x, j) => x.visible && j <= i).length).padStart(
-                        2,
-                        '0'
-                      )
-                    : '—'}
-                </span>
-                <span className="admin-layout-nume">{ETICHETE_SECTIUNI[s.key]}</span>
-                <button
-                  type="button"
-                  className="admin-btn-ghost"
-                  onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, -1))}
-                  disabled={ocupat || i === 0}
-                  aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai sus`}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="admin-btn-ghost"
-                  onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, 1))}
-                  disabled={ocupat || i === ciorna.layout.length - 1}
-                  aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai jos`}
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  className="admin-btn-ghost"
-                  onClick={() => seteaza('layout', comutaVizibilitatea(ciorna.layout, s.key))}
-                  disabled={ocupat}
-                >
-                  {s.visible ? 'Ascunde' : 'Arată'}
-                </button>
-              </li>
-            ))}
-          </ol>
         </div>
         </Blocat.Provider>
       )}

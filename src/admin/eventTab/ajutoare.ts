@@ -1,5 +1,5 @@
 import { durataRo } from '../reperele';
-import type { ReminderTemplateKey } from '../../content/eventConfig';
+import type { ReminderTemplateKey, SectionKey } from '../../content/eventConfig';
 
 /**
  * Ajutoarele pure ale tabului „Eveniment": listele de opțiuni și derivările de
@@ -9,6 +9,20 @@ import type { ReminderTemplateKey } from '../../content/eventConfig';
  * Sunt funcții fără stare și fără DOM, deci se testează direct — vezi
  * `tests/unit/eventTabAjutoare.test.ts`.
  */
+
+/**
+ * Numele omenești ale secțiunilor paginii.
+ *
+ * Stau aici, nu în tabul care le randează: le folosesc și lista din grupul „Ce
+ * arată pagina", și rezumatul diferențelor de la publicare.
+ */
+export const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
+  format: 'Formatul',
+  venue: 'Locația',
+  registration: 'Înscriere',
+  participants: 'Cine vine',
+  reels: 'Instagram',
+};
 
 export const DURATE = [1, 1.5, 2, 2.5, 3, 4, 5, 6] as const;
 

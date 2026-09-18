@@ -1226,6 +1226,11 @@
     display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
     gap: 18px 22px; align-items: start;
   }
+  /* O listă în interiorul unui grup (clipurile, secțiunile paginii): ține
+     toată lățimea, nu o coloană din grila de câmpuri. */
+  .admin-config-lista { grid-column: 1 / -1; display: grid; gap: 10px; }
+  .admin-config-lista > .admin-config-hint { margin: 0; }
+
   /* ---- Bara de actiuni lipita jos ----
      „Salveaza" si „Publica" stateau doar in capul tabului, la doua ecrane si
      jumatate deasupra locului in care editezi ultimul camp. */
