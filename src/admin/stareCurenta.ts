@@ -22,8 +22,7 @@ export type TabAdmin =
   | 'lansare'
   | 'sabloane'
   | 'eveniment'
-  | 'coming-soon'
-  | 'antrenament';
+  | 'coming-soon';
 
 /**
  * Reperul pe care-l raportează panoul de stare vine acum din `reperele.ts`.

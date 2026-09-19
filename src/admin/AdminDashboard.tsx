@@ -33,6 +33,7 @@ import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminEventTab } from './AdminEventTab';
 import { AdminComingSoonTab } from './AdminComingSoonTab';
 import { AdminAntrenamentTab } from './AdminAntrenamentTab';
+import { BlocSaptamanal } from './BlocSaptamanal';
 import { AdminNav } from './AdminNav';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
@@ -127,6 +128,10 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // Cerere venită de pe linia de timp: deschide tabul „Evenimentul" cu dialogul
   // de ediție nouă pe ecran. Se stinge imediat ce tabul a onorat-o.
   const [deschideDialogEditie, setDeschideDialogEditie] = useState(false);
+  // Antrenamentul nu mai e un tab: n-are de ce să stea în structura pe ediții,
+  // fiindcă nu ține de nicio ediție. Se deschide din blocul de sub linia de
+  // timp și se randează acolo, sub el.
+  const [antrenamentDeschis, setAntrenamentDeschis] = useState(false);
   const [metaInUrma, setMetaInUrma] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
   // Ediția și capacitatea vin din configul PUBLICAT, nu din bundle: după ce
@@ -344,7 +349,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     lansare: null,
     eveniment: null,
     'coming-soon': null,
-    antrenament: null,
     sabloane: null,
   };
 
@@ -710,6 +714,10 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           arhiva={arhiva}
         />
 
+        <BlocSaptamanal onDeschide={() => setAntrenamentDeschis((v) => !v)} />
+
+        {antrenamentDeschis && <AdminAntrenamentTab />}
+
         {/* Tab-urile poartă un contor, ca să știi ce e în spatele lor fără să
             le deschizi. Contorul lipsește cât timp datele nu au sosit — un „0"
             afișat în timpul încărcării ar fi o minciună scurtă, dar tocmai pe
@@ -753,7 +761,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           />
         )}
 
-        {tab === 'antrenament' && <AdminAntrenamentTab />}
 
         {tab === 'lansare' && (
           <div className="admin-launch">
