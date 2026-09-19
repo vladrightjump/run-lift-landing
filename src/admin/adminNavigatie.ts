@@ -80,6 +80,15 @@ export const GRUPURI: GrupNav[] = [
         eticheta: 'Coming Soon',
         descriere: 'Comutatorul ecranului de dinainte de lansare și țintele numărătorilor',
       },
+      // Stă în „Setup" fiindcă acolo se răspunde la „cum arată pagina?", dar
+      // antrenamentul NU ține de ediție — se schimbă săptămânal și rămâne
+      // valabil între ediții. Locul lui firesc e în afara structurii pe ediții;
+      // intrarea asta e casa provizorie până când ecranul principal îl ia.
+      {
+        cheie: 'antrenament',
+        eticheta: 'Antrenamentul săptămânii',
+        descriere: 'Textul paginii /antrenament și comutatorul ei — efect imediat',
+      },
     ],
   },
 ];

@@ -32,6 +32,7 @@ import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminEventTab } from './AdminEventTab';
 import { AdminComingSoonTab } from './AdminComingSoonTab';
+import { AdminAntrenamentTab } from './AdminAntrenamentTab';
 import { AdminNav } from './AdminNav';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
@@ -340,6 +341,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     lansare: null,
     eveniment: null,
     'coming-soon': null,
+    antrenament: null,
     sabloane: null,
   };
 
@@ -728,6 +730,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           <AdminComingSoonTab
           />
         )}
+
+        {tab === 'antrenament' && <AdminAntrenamentTab />}
 
         {tab === 'lansare' && (
           <div className="admin-launch">
