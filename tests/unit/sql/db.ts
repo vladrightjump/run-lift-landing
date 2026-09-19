@@ -91,8 +91,22 @@ export const reseteaza = async (db: BazaTest, r: Reper = {}): Promise<void> => {
   await db.exec('reset role');
   await db.exec(`truncate ${TABELE.map((t) => `runlift.${t}`).join(', ')} cascade; truncate net._apeluri;`);
   const editie = r.editie ?? 7;
-  const start = r.start ?? '2026-09-19T07:00:00+03:00';
-  const deadline = r.deadline ?? '2026-09-19T06:00:00+03:00';
+  /**
+   * Reperele implicite se măsoară față de ACUM, nu scrise ca dată.
+   *
+   * Erau `2026-09-19T07:00:00+03:00` și deadline-ul cu o oră înainte — chiar
+   * momentele ediției 7. Au ținut exact până în dimineața cursei: pe 19
+   * septembrie, la 06:00, deadline-ul a trecut, `runlift.register()` a început
+   * să răspundă `registration_closed`, iar seed-ul a picat în TOATE testele din
+   * `business` și `drepturi` — inclusiv în cele despre RLS, care au nevoie doar
+   * de un rând existent. Treizeci și trei de teste roșii fără ca vreo regulă să
+   * se fi schimbat, și o dată pe zi de atunci înainte.
+   *
+   * Testele care au nevoie de o fereastră ÎNCHISĂ o cer explicit (`deadline` sau
+   * `start` în 2020), deci relativul nu le atinge.
+   */
+  const start = r.start ?? new Date(Date.now() + 3_600_000).toISOString();
+  const deadline = r.deadline ?? new Date(Date.now() + 1_800_000).toISOString();
   await db.query(
     `insert into runlift.app_config (key, value) values
        ('current_event_edition', $1), ('current_launch_edition', $1),
