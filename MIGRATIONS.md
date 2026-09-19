@@ -3,7 +3,7 @@
 Catalog al migrărilor care ating Run + Lift, cu granița clară față de aplicația vecină
 (gym-app + botul de Telegram) care împarte același proiect Supabase.
 
-Ultima actualizare: 17 septembrie 2026.
+Ultima actualizare: 19 septembrie 2026.
 
 ---
 
@@ -142,7 +142,7 @@ o păzește `tests/unit/edge/sendEmail.test.ts`.
 Rândul la `offsetHours: 72` nu vine din migrare — orarul e al operatorului și se scrie din
 `/admin` la configurarea ediției.
 
-### `supabase/sql/supabase-migration-antrenament-saptamanii.sql` — NEAPLICAT
+### `supabase/sql/supabase-migration-antrenament-saptamanii.sql` — APLICAT 19 septembrie 2026
 
 Antrenamentul săptămânii: tabelul `weekly_workout` (rânduri `published`/`superseded`, un singur
 publicat), plus `admin_save_weekly_workout`, `admin_list_weekly_workout`,
@@ -159,9 +159,24 @@ comutatorul peticește rândul publicat în loc să scrie o versiune nouă. Vezi
 Tabelul n-are `grant select` pentru `anon` deloc, pe lângă RLS fără politici — cu un strat mai
 strict decât `event_config`, fiindcă nimic din el nu se citește vreodată direct din browser.
 
-Instantaneul `supabase/schema/runlift.sql` conține deja migrarea, deci testele SQL o acoperă
-înainte de aplicare. **Un instantaneu verde nu înseamnă bază migrată** — pagina `/antrenament`
-nu funcționează până când migrarea nu e aplicată în proiectul real.
+Instantaneul `supabase/schema/runlift.sql` conține migrarea, deci testele SQL o acoperă. **Un
+instantaneu verde nu înseamnă bază migrată** — asta a fost verificat separat, în proiectul real.
+
+Verificat la aplicare (19 septembrie 2026), direct în `ironworks-gym`:
+
+| Ce | Așteptat | Găsit |
+|---|---|---|
+| Tabelul | există | da |
+| RLS | pornit, fără politici | pornit, 0 politici |
+| Indecși | pkey + publicat-unic + istoric | 3 |
+| Funcții | 4 | 4 |
+| `anon` poate face `select` pe tabel | nu | nu |
+| `anon` poate chema `public_weekly_workout()` | da | da |
+| `public_weekly_workout()` fără rânduri | `null` | `null` |
+| `admin_save_weekly_workout` cu token inventat | refuz, fără scriere | refuzat, 0 rânduri |
+
+Nu s-a scris niciun rând de test în producție — tabelul a rămas gol pentru primul antrenament
+real.
 
 ### `supabase/sql/supabase-migration-anunt-istoric.sql` — NEAPLICAT
 
