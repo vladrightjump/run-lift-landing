@@ -95,7 +95,7 @@ export const fazaSite = (config: EventConfig, dates: EditionDates, acum: number)
  * Aceleași trei opțiuni pentru panoul „Acum" și pentru linia de timp, ca
  * „următorul reper" să însemne același lucru în amândouă.
  */
-const NODURI_DESFASURARE = {
+export const NODURI_DESFASURARE = {
   leaderboard: true,
   remindere: true,
   scoateAnuntulInactiv: true,
