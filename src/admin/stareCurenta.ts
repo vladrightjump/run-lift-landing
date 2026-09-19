@@ -21,7 +21,8 @@ export type TabAdmin =
   | 'lansare'
   | 'sabloane'
   | 'eveniment'
-  | 'coming-soon';
+  | 'coming-soon'
+  | 'antrenament';
 
 export type Reper = {
   eticheta: string;

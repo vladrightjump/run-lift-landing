@@ -255,6 +255,43 @@ export const fetchPublicConfig = async (signal?: AbortSignal): Promise<EventConf
   return parseEventConfig(await res.json());
 };
 
+/** Antrenamentul săptămânii, așa cum îl vede pagina publică. */
+export type WeeklyWorkout = { titlu: string; corp: string };
+
+/**
+ * Antrenamentul publicat și pornit. `null` acoperă trei situații pe care pagina
+ * le tratează identic: nu s-a scris încă nimic, comutatorul e oprit, sau tot ce
+ * există în tabel e o versiune înlocuită. Serverul nu le distinge deliberat —
+ * un vizitator n-are de ce să afle care dintre ele e cazul.
+ *
+ * Aceeași formă ca `fetchPublicConfig`: RPC stabil peste un tabel închis, cu
+ * cheia publicabilă.
+ */
+export const fetchWeeklyWorkout = async (
+  signal?: AbortSignal
+): Promise<WeeklyWorkout | null> => {
+  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/public_weekly_workout`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE.publishableKey,
+      'Content-Type': 'application/json',
+      'Content-Profile': SUPABASE.schema,
+    },
+    body: '{}',
+    signal,
+  });
+  if (!res.ok) {
+    throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
+  }
+  const raw: unknown = await res.json();
+  // Tolerant ca `parseEventConfig`: un document stricat înseamnă „nimic de
+  // arătat", nu o pagină pe jumătate randată.
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { titlu, corp } = raw as Record<string, unknown>;
+  if (typeof titlu !== 'string' || typeof corp !== 'string') return null;
+  return { titlu, corp };
+};
+
 export type ConfirmResult = 'confirmat' | 'deja_confirmat' | 'invalid';
 
 /**

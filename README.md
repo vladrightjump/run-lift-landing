@@ -111,6 +111,21 @@ lansare și mută țintele numărătorilor fără să treacă prin ciornă → p
 nu de verificări — serverul revalidează documentul peticit prin aceeași poartă ca publicarea și
 scrie un rând nou, deci orice apăsare se poate întoarce din „Versiuni anterioare".
 
+## Antrenamentul săptămânii (`/antrenament`)
+
+Pagină publică la un URL care nu se schimbă, ca să ai ce link trimite în story sau în grupul de
+Telegram. Un singur antrenament — cel curent; nu e arhivă și n-are navigare între săptămâni.
+
+Se scrie din `/admin` → „Antrenamentul săptămânii": titlu, text liber, comutator, o salvare, efect
+imediat. Nu trece prin ciornă → publică, fiindcă nu ține de ediție. Comutatorul e independent de
+text, deci antrenamentul de săptămâna viitoare poate fi scris din timp cu pagina oprită; **pornit
+peste un text gol** e refuzat de server. Oprit, URL-ul răspunde și spune că nu e nimic publicat —
+nu dă 404, ca linkurile deja trimise să nu se rupă.
+
+E singura pagină cu **shell propriu de build** (`antrenament.html`). Meta de share se injectează la
+build, deci un card per pagină cere un fișier per pagină — altfel linkul ar arăta cardul ediției, cu
+o dată posibil trecută. Cardul e fix: spune „Antrenamentul săptămânii", nu conținutul săptămânii.
+
 ## Banda „Instagram"
 
 Secțiune configurabilă ca oricare alta (ordonabilă și ascunsă din tabul „Eveniment"). Clipurile se

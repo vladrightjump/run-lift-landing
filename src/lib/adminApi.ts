@@ -238,6 +238,62 @@ export const setComingSoon = (
 export const restoreEventConfig = (token: string, id: string): Promise<string> =>
   rpc<string>('admin_restore_event_config', { p_token: token, p_id: id });
 
+/** Un rând din istoricul antrenamentului săptămânii. */
+export type AdminWorkoutRow = {
+  id: string;
+  status: 'published' | 'superseded';
+  titlu: string;
+  corp: string;
+  activ: boolean;
+  creat_la: string;
+};
+
+/**
+ * Salvează antrenamentul. Efect imediat pe site — nu trece prin ciornă.
+ *
+ * Serverul decide dacă scrie o versiune nouă sau peticește rândul publicat:
+ * titlul sau corpul schimbat scriu, comutatorul singur peticește. Clientul nu
+ * trebuie să știe regula, doar s-o nu o contrazică trimițând altceva.
+ */
+export const saveWeeklyWorkout = (
+  token: string,
+  titlu: string,
+  corp: string,
+  activ: boolean
+): Promise<string> =>
+  rpc<string>('admin_save_weekly_workout', {
+    p_token: token,
+    p_titlu: titlu,
+    p_corp: corp,
+    p_activ: activ,
+  });
+
+export const listWeeklyWorkout = (
+  token: string,
+  signal?: AbortSignal
+): Promise<AdminWorkoutRow[]> =>
+  rpc<AdminWorkoutRow[]>('admin_list_weekly_workout', { p_token: token }, signal);
+
+export const restoreWeeklyWorkout = (token: string, id: string): Promise<string> =>
+  rpc<string>('admin_restore_weekly_workout', { p_token: token, p_id: id });
+
+/**
+ * Refuzul serverului, în cuvintele operatorului.
+ *
+ * Stă lângă wrapper, nu în componentă: codul `workout_empty` e o proprietate a
+ * RPC-ului, iar oricine îl mai cheamă cândva are nevoie de aceeași traducere.
+ */
+export const mesajRefuzAntrenament = (err: unknown): string => {
+  const text = err instanceof Error ? err.message : String(err);
+  if (text.includes('workout_empty')) {
+    return 'Nu poți porni pagina cu antrenamentul gol. Scrie antrenamentul, sau lasă comutatorul oprit.';
+  }
+  if (text.includes('not_found')) {
+    return 'Versiunea aceea nu mai există.';
+  }
+  return 'Nu am putut salva. Încearcă din nou.';
+};
+
 export type AdminLaunchSignup = {
   id: string;
   created_at: string;

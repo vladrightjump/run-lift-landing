@@ -5,6 +5,7 @@ import {
   submitLaunchNotification,
   fetchStats,
   confirmSignup,
+  fetchWeeklyWorkout,
 } from '../../src/lib/supabase';
 import { SUPABASE } from '../../src/lib/config';
 
@@ -80,6 +81,41 @@ describe('rutarea spre schema runlift', () => {
     );
     await fetchStats();
     expect(headersOf()['Accept-Profile']).toBe(SUPABASE.schema);
+  });
+
+  it('citirea antrenamentului trimite Content-Profile = schema și merge spre proiectul corect', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ titlu: 'Tempo', corp: '5×1000m' }), { status: 200 })
+    );
+    await fetchWeeklyWorkout();
+    expect(headersOf()['Content-Profile']).toBe(SUPABASE.schema);
+    expect(urlOf()).toBe(`${SUPABASE.url}/rest/v1/rpc/public_weekly_workout`);
+  });
+});
+
+describe('antrenamentul săptămânii — ce ajunge la pagină', () => {
+  it('întoarce titlul și corpul când serverul le dă', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ titlu: 'Tempo', corp: '5×1000m' }), { status: 200 })
+    );
+    expect(await fetchWeeklyWorkout()).toEqual({ titlu: 'Tempo', corp: '5×1000m' });
+  });
+
+  it('`null` de la server (oprit, inexistent, sau doar versiuni vechi) devine `null`', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('null', { status: 200 }));
+    expect(await fetchWeeklyWorkout()).toBeNull();
+  });
+
+  it('un document stricat devine `null`, nu o pagină pe jumătate randată', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ titlu: 'Tempo' }), { status: 200 })
+    );
+    expect(await fetchWeeklyWorkout()).toBeNull();
+  });
+
+  it('o eroare HTTP se propagă — pagina arată starea de eroare, nu „nimic publicat"', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('boom', { status: 500 }));
+    await expect(fetchWeeklyWorkout()).rejects.toThrow();
   });
 });
 

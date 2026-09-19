@@ -24,6 +24,7 @@ const TOATE_CHEILE: TabAdmin[] = [
   'sabloane',
   'eveniment',
   'coming-soon',
+  'antrenament',
 ];
 
 describe('nicio secțiune nu rămâne fără acoperiș', () => {
