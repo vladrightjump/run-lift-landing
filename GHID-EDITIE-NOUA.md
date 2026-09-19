@@ -16,7 +16,11 @@ generat, fără deploy.
 ## Pașii (majoritatea edițiilor: doar atât)
 
 ### 1. Deschide ciorna
-`/admin` → **Eveniment** → „**+ Ciornă pentru ediția N+1**".
+`/admin` → ultimul nod al **liniei de timp** → „**Pornește ediția următoare**".
+
+Linia de timp e primul lucru de pe ecran, iar nodul ediției următoare stă la capătul ei — acolo
+unde te uiți oricum după ce cursa s-a consumat. Deschide același dialog de trei câmpuri ca butonul
+din tabul **Eveniment** („**+ Ciornă pentru ediția N+1**"), care rămâne unde era.
 
 Pornește de la ediția publicată, cu numărul incrementat. Editează ce se schimbă:
 

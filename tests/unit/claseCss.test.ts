@@ -79,3 +79,45 @@ describe('fiecare clasă proprie folosită în TSX există în CSS', () => {
     ).toEqual({});
   });
 });
+
+/**
+ * Cealaltă direcție: stil fără niciun purtător.
+ *
+ * Garda de mai sus prinde clasa inventată în TSX. N-o prinde pe cea rămasă în
+ * CSS după ce componenta a dispărut — exact ce s-a întâmplat când panoul „Acum"
+ * a fost înlocuit de linia de timp: șaizeci și cinci de linii de stil pe care
+ * nu le mai purta nimeni, invizibile pentru orice test.
+ *
+ * Verifică doar prefixele ecranelor proprii, unde o clasă corespunde unui
+ * element concret. `e3-` e exclus: landing-ul are stări și variante aplicate
+ * dinamic, iar o clasă compusă la randare n-ar apărea niciodată ca literal.
+ */
+describe('nicio regulă CSS fără purtător', () => {
+  const PREFIXE_STRICTE = ['admin-', 'an-'];
+
+  it('nu există stil orfan', () => {
+    /*
+     * Aici „folosit" e căutat LARG, nu prin `className`: o clasă poate ajunge pe
+     * element ca prop (`clasa="admin-confirm--neutru"`) sau compusă într-un
+     * array cu `.join(' ')`. Direcția asta trebuie să greșească în favoarea lui
+     * „e folosit" — un orfan ratat costă câteva linii de stil, o alarmă falsă
+     * costă încrederea în gardă.
+     */
+    const sursa = fisiereTsx(resolve(root, 'src'))
+      .map((f) => readFileSync(f, 'utf8'))
+      .join('\n');
+
+    const orfane = new Set<string>();
+    for (const m of css.matchAll(/\.([a-z][a-z0-9-]*)/g)) {
+      const clasa = m[1];
+      if (!PREFIXE_STRICTE.some((p) => clasa.startsWith(p))) continue;
+      if (sursa.includes(clasa)) continue;
+      orfane.add(clasa);
+    }
+
+    expect(
+      [...orfane].sort(),
+      'Reguli CSS pentru clase pe care nu le mai poartă niciun element'
+    ).toEqual([]);
+  });
+});
