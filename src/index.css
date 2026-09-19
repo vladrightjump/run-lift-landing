@@ -2524,3 +2524,29 @@
     text-transform: uppercase; color: var(--e3-text); text-align: center;
     animation: fade-up 0.6s ease-out 0.1s both;
   }
+
+  /* ---- Pagina /antrenament ---- */
+  .an-card {
+    width: min(680px, 100%);
+    margin: 8px auto 0;
+    padding: clamp(20px, 4vw, 32px);
+    background: var(--e3-surface);
+    border: 1px solid var(--e3-border);
+    border-radius: 14px;
+    animation: fade-up 0.6s ease-out 0.15s both;
+  }
+  .an-titlu {
+    margin: 0 0 14px;
+    font-family: 'Anton', sans-serif; font-weight: 400;
+    font-size: clamp(22px, 4vw, 30px); letter-spacing: 0.4px;
+    text-transform: uppercase; color: var(--e3-accent);
+  }
+  /* `pre-wrap`: rândurile pe care le tastează organizatorul SUNT formatul.
+     `break-word` ca un URL lipit în antrenament să nu lărgească pagina. */
+  .an-corp {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    font-size: clamp(15px, 2.2vw, 17px); line-height: 1.6;
+    color: var(--e3-text);
+  }

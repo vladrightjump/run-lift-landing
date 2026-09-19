@@ -7,6 +7,7 @@ import { Confirmare } from './components/Confirmare';
 import { Inscriere } from './components/Inscriere';
 import { Unsubscribe } from './components/Unsubscribe';
 import { Renunt } from './components/Renunt';
+import { Antrenament } from './components/Antrenament';
 import { installGlobalMonitoring } from './lib/monitoring';
 import { EventConfigProvider } from './hooks/useEventConfig';
 import { redirectCanonic } from './lib/canonicalHost';
@@ -33,7 +34,8 @@ if (!rootEl) throw new Error('Root element #root not found');
 // Pagini fără router: /admin → backoffice, /despre-noi → prezentare + formular,
 // /confirmare → confirmarea înscrierii din email, /inscriere → formularul singur
 // (linkul din bio/story), /unsubscribe → dezabonare, /renunt → eliberarea
-// locului din linkul de reminder, restul → landing.
+// locului din linkul de reminder, /antrenament → antrenamentul săptămânii
+// (linkul de trimis în story sau în Telegram), restul → landing.
 const path = window.location.pathname.replace(/\/+$/, '');
 
 const page =
@@ -49,23 +51,31 @@ const page =
     <Unsubscribe />
   ) : path === '/renunt' ? (
     <Renunt />
+  ) : path === '/antrenament' ? (
+    <Antrenament />
   ) : (
     <App />
   );
 
 /**
- * `/despre-noi` NU primește provider-ul, deliberat.
+ * `/despre-noi` și `/antrenament` NU primesc provider-ul, deliberat.
  *
- * Pagina arată doar locul antrenamentelor și linkurile de social — lucruri care
- * rămân în cod pentru că nu țin de ediție. Nu afișează nimic derivat din ediție,
- * deci n-are ce reconcilia, iar `tests/despre-noi.spec.ts` păzește de mai demult
- * proprietatea că se încarcă fără NICIUN request către Supabase. Un provider pus
- * peste tot ar fi rupt-o tăcut, pentru un fetch de care pagina n-are nevoie.
+ * `/despre-noi` arată doar locul antrenamentelor și linkurile de social — lucruri
+ * care rămân în cod pentru că nu țin de ediție. Nu afișează nimic derivat din
+ * ediție, deci n-are ce reconcilia, iar `tests/despre-noi.spec.ts` păzește de mai
+ * demult proprietatea că se încarcă fără NICIUN request către Supabase. Un
+ * provider pus peste tot ar fi rupt-o tăcut, pentru un fetch de care pagina n-are
+ * nevoie.
  *
- * Componentele ei care ar chema hook-urile ar primi oricum instantaneul de build
+ * `/antrenament` e în aceeași situație, dintr-un alt motiv: antrenamentul
+ * săptămânii nu aparține niciunei ediții. Își cere singur datele, dintr-un RPC
+ * propriu, și rămâne corect și între ediții — tocmai săptămânile în care are cel
+ * mai mult sens.
+ *
+ * Componentele lor care ar chema hook-urile ar primi oricum instantaneul de build
  * din valoarea implicită a contextului.
  */
-const areNevoieDeConfig = path !== '/despre-noi';
+const areNevoieDeConfig = path !== '/despre-noi' && path !== '/antrenament';
 
 // Paginile care arată ediția o citesc din același context: pornește pe
 // instantaneul de build (primul cadru e complet, fără ecran de încărcare) și se
