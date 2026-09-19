@@ -1,5 +1,5 @@
 import { durataRo } from '../reperele';
-import type { ReminderTemplateKey } from '../../content/eventConfig';
+import type { ReminderTemplateKey, SectionKey } from '../../content/eventConfig';
 
 /**
  * Ajutoarele pure ale tabului „Eveniment": listele de opțiuni și derivările de
@@ -9,6 +9,20 @@ import type { ReminderTemplateKey } from '../../content/eventConfig';
  * Sunt funcții fără stare și fără DOM, deci se testează direct — vezi
  * `tests/unit/eventTabAjutoare.test.ts`.
  */
+
+/**
+ * Numele omenești ale secțiunilor paginii.
+ *
+ * Stau aici, nu în tabul care le randează: le folosesc și lista din grupul „Ce
+ * arată pagina", și rezumatul diferențelor de la publicare.
+ */
+export const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
+  format: 'Formatul',
+  venue: 'Locația',
+  registration: 'Înscriere',
+  participants: 'Cine vine',
+  reels: 'Instagram',
+};
 
 export const DURATE = [1, 1.5, 2, 2.5, 3, 4, 5, 6] as const;
 
@@ -103,6 +117,25 @@ export const sambeteleUrmatoare = (acum: number, start: string): { eticheta: str
     };
   });
 };
+
+/**
+ * Zoom-ul hărții, cu ce se vede la fiecare treaptă.
+ *
+ * Câmpul era VALIDAT (`zoom > 0`) și inexistent în formular: un document cu
+ * zoom zero — rând vechi, editat manual în DB — deschidea grupul „Unde" fără
+ * niciun câmp marcat și lăsa „Publică" mort, fără nimic de reparat pe ecran.
+ *
+ * Trepte, nu număr liber: nimeni nu alege „14,5", iar diferența dintre 12 și 17
+ * e greu de ținut minte fără ce se vede la fiecare.
+ */
+export const ZOOMURI: [number, string][] = [
+  [13, '13 · cartierul'],
+  [14, '14 · zona'],
+  [15, '15 · parcul întreg'],
+  [16, '16 · aleile'],
+  [17, '17 · strada, cu intrarea'],
+  [18, '18 · câțiva pași'],
+];
 
 /** Doar fusurile Moldovei; restul n-au ce căuta într-o cursă din Chișinău. */
 export const FUSURI: [string, string][] = [

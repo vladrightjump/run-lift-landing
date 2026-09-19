@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
+import { render, screen, cleanup, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { AdminEventTab } from '../../src/admin/AdminEventTab';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
@@ -59,16 +59,31 @@ const fataDeStart = (ore: number): string => {
 
 const showToast = vi.fn();
 const onAuthError = vi.fn(() => false);
+/** Spionul se pune la fiecare test: `restoreMocks` îl desface după fiecare. */
+let confirma: MockInstance<typeof window.confirm>;
+/**
+ * Garda „pot pleca din tab?", predată dashboardului. Aici o capturăm ca s-o
+ * putem interoga: ea e ce apără ciorna nesalvată la schimbarea tabului.
+ */
+const gardaIesire = { curenta: null as (() => boolean) | null };
+const inregistreazaGardaIesire = (g: (() => boolean) | null) => {
+  gardaIesire.curenta = g;
+};
 
 const randeaza = () =>
   render(
     <FurnizorSesiuneAdmin token="t" onAuthError={onAuthError} showToast={showToast}>
-      <AdminEventTab />
+      <AdminEventTab inregistreazaGardaIesire={inregistreazaGardaIesire} />
     </FurnizorSesiuneAdmin>
   );
 
 beforeEach(() => {
   vi.clearAllMocks();
+  gardaIesire.curenta = null;
+  // Ciorna nesalvată întreabă înainte să dispară. Implicit răspundem „da", ca
+  // testele care nu sînt despre gardă să treacă prin ea neschimbate; cele care
+  // SÎNT despre ea își pun propriul răspuns.
+  confirma = vi.spyOn(window, 'confirm').mockReturnValue(true);
   listEventConfig.mockResolvedValue([rand()]);
   saveEventConfigDraft.mockResolvedValue('draft-id');
   publishEventConfig.mockResolvedValue('pub-id');
@@ -393,7 +408,12 @@ describe('publicarea cere confirmare și spune ce urmează', () => {
     await deschideCiorna();
     fireEvent.change(screen.getByLabelText('Homepage-ul arată'), { target: { value: 'soon' } });
     fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
-    expect(within(screen.getByRole('alertdialog')).getByText('Coming Soon')).toBeTruthy();
+    // `strong`: de când confirmarea listează și diferențele, „Coming Soon"
+    // apare de două ori — o dată ca urmare („vizitatorii vor vedea…"), o dată
+    // ca valoare nouă a câmpului. Aici ne interesează prima.
+    expect(
+      within(screen.getByRole('alertdialog')).getByText('Coming Soon', { selector: 'strong' })
+    ).toBeTruthy();
   });
 
   it('anularea nu publică nimic', async () => {
@@ -1070,5 +1090,704 @@ describe('erorile indexate deschid grupul care le conține', () => {
     await deschideCiorna();
     fireEvent.change(camp('Cu câte ore înainte de start'), { target: { value: '12' } });
     expect(grupul('Remindere')?.className).not.toContain('invalid');
+  });
+});
+
+/**
+ * Ciorna nesalvată.
+ *
+ * Tabul se demontează la schimbarea tabului (`{tab === 'eveniment' && …}` în
+ * `AdminDashboard`), iar „Renunță" golea ciorna pe loc: douăzeci de câmpuri se
+ * puteau pierde dintr-un click greșit, fără o vorbă. Contractul păzit aici e că
+ * nicio plecare nu e tăcută cât timp există ce pierde.
+ */
+describe('ciorna nesalvată nu dispare tăcut', () => {
+  /** Textul barei lipite de jos. */
+  const bara = (): string =>
+    document.querySelector('.admin-bara-stare')?.textContent ?? '';
+
+  it('o ciornă pornită din publicat e nesalvată din prima clipă', async () => {
+    await deschideCiorna();
+    expect(bara()).toContain('Nesalvat');
+  });
+
+  it('o ciornă încărcată de pe server nu e nesalvată', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    expect(bara()).not.toContain('Nesalvat');
+  });
+
+  it('tastarea aprinde „Nesalvat", iar revenirea la valoarea inițială îl stinge', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    deschideGrupurile();
+
+    const nume = camp('Numele evenimentului');
+    const initial = nume.value;
+    fireEvent.change(nume, { target: { value: 'Altceva' } });
+    expect(bara()).toContain('Nesalvat');
+
+    fireEvent.change(nume, { target: { value: initial } });
+    expect(bara()).not.toContain('Nesalvat');
+  });
+
+  it('salvarea stinge „Nesalvat" fără să aștepte reîncărcarea', async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+    await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalled());
+    await waitFor(() => expect(bara()).not.toContain('Nesalvat'));
+  });
+
+  it('„Renunță" cu diferențe întreabă, iar refuzul păstrează ciorna intactă', async () => {
+    await deschideCiorna();
+    fireEvent.change(camp('Numele evenimentului'), { target: { value: 'Altceva' } });
+
+    confirma.mockReturnValue(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Renunță' }));
+
+    expect(confirma).toHaveBeenCalled();
+    // Ciorna e tot acolo, cu editarea în ea.
+    expect(screen.getByRole('button', { name: 'Renunță' })).toBeTruthy();
+    expect(camp('Numele evenimentului').value).toBe('Altceva');
+  });
+
+  it('„Renunță" confirmat închide ciorna', async () => {
+    await deschideCiorna();
+    confirma.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Renunță' }));
+    expect(screen.queryByRole('button', { name: 'Renunță' })).toBeNull();
+  });
+
+  it('„Renunță" pe o ciornă salvată nu mai întreabă nimic', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    fireEvent.click(await screen.findByRole('button', { name: 'Renunță' }));
+    expect(confirma).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Renunță' })).toBeNull();
+  });
+
+  it('garda de ieșire din tab refuză plecarea când răspunsul e „nu"', async () => {
+    await deschideCiorna();
+    expect(gardaIesire.curenta).toBeTruthy();
+
+    confirma.mockReturnValue(false);
+    expect(gardaIesire.curenta?.()).toBe(false);
+
+    confirma.mockReturnValue(true);
+    expect(gardaIesire.curenta?.()).toBe(true);
+  });
+
+  it('garda lasă plecarea liberă fără diferențe nesalvate', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+
+    expect(gardaIesire.curenta?.()).toBe(true);
+    expect(confirma).not.toHaveBeenCalled();
+  });
+
+  it('fără ciornă deschisă nu există nimic de păzit', async () => {
+    randeaza();
+    await screen.findByRole('button', { name: /Editează ediția/ });
+    expect(gardaIesire.curenta?.()).toBe(true);
+    expect(confirma).not.toHaveBeenCalled();
+  });
+
+  it('avertismentul browserului e înregistrat doar cât timp există ce pierde', async () => {
+    const adauga = vi.spyOn(window, 'addEventListener');
+    const scoate = vi.spyOn(window, 'removeEventListener');
+
+    await deschideCiorna();
+    expect(adauga.mock.calls.some(([tip]) => tip === 'beforeunload')).toBe(true);
+
+    confirma.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Renunță' }));
+    await waitFor(() =>
+      expect(scoate.mock.calls.some(([tip]) => tip === 'beforeunload')).toBe(true)
+    );
+  });
+});
+
+/**
+ * Previzualizarea.
+ *
+ * `/?config=draft` randează ciorna DE PE SERVER. Cât timp butonul a fost o
+ * ancoră, previzualizarea putea arăta documentul dinaintea editărilor — și
+ * nimic nu spunea asta. Contractul păzit aici: ce se deschide e ce e pe ecran.
+ */
+describe('previzualizarea arată ce e pe ecran', () => {
+  const refuz = (): string =>
+    document.querySelector('.admin-bara-problema')?.textContent ?? '';
+
+  /** `window.open` care întoarce o fereastră falsă, ca s-o putem interoga. */
+  const fereastraFalsa = () => {
+    const fereastra = { location: { href: '' }, close: vi.fn() };
+    const open = vi
+      .spyOn(window, 'open')
+      .mockReturnValue(fereastra as unknown as Window);
+    return { fereastra, open };
+  };
+
+  it('cu diferențe nesalvate, salvează documentul de pe ecran înainte să deschidă', async () => {
+    const { fereastra } = fereastraFalsa();
+    await deschideCiorna();
+    fireEvent.change(camp('Numele evenimentului'), { target: { value: 'Ediție de test' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Salvează și previzualizează/ }));
+
+    await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalledTimes(1));
+    expect(saveEventConfigDraft.mock.calls[0][2].eventName).toBe('Ediție de test');
+    await waitFor(() => expect(fereastra.location.href).toBe('/?config=draft'));
+  });
+
+  it('o salvare refuzată nu deschide nimic și spune care pas a picat', async () => {
+    const { fereastra } = fereastraFalsa();
+    saveEventConfigDraft.mockRejectedValue(new Error('config_invalid: ceva'));
+    await deschideCiorna();
+    fireEvent.change(camp('Numele evenimentului'), { target: { value: 'Ediție de test' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Salvează și previzualizează/ }));
+
+    await waitFor(() => expect(fereastra.close).toHaveBeenCalled());
+    expect(fereastra.location.href).toBe('');
+    await waitFor(() => expect(refuz()).toContain('Salvarea'));
+  });
+
+  it('fără diferențe, previzualizarea rămâne un link care nu scrie nimic', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+
+    const link = screen.getByRole('link', { name: 'Previzualizează' });
+    expect(link.getAttribute('href')).toBe('/?config=draft');
+    expect(saveEventConfigDraft).not.toHaveBeenCalled();
+  });
+
+  it('un config invalid face previzualizarea inertă, ca „Publică"', async () => {
+    await deschideCiorna();
+    fireEvent.change(camp('Numele evenimentului'), { target: { value: '' } });
+
+    const buton = screen.getByRole('button', {
+      name: /Salvează și previzualizează/,
+    }) as HTMLButtonElement;
+    expect(buton.disabled).toBe(true);
+  });
+
+  it('după previzualizare, ciorna nu mai e „Nesalvat"', async () => {
+    fereastraFalsa();
+    await deschideCiorna();
+    fireEvent.change(camp('Numele evenimentului'), { target: { value: 'Ediție de test' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Salvează și previzualizează/ }));
+
+    await waitFor(() =>
+      expect(document.querySelector('.admin-bara-stare')?.textContent).not.toContain('Nesalvat')
+    );
+  });
+});
+
+/**
+ * Confirmarea publicării arată CE se schimbă.
+ *
+ * Până acum spunea doar consecința („vizitatorii vor vedea landing-ul"), care e
+ * adevărată și când ai mutat cursa cu o săptămână din greșeală.
+ */
+describe('confirmarea publicării arată diferențele', () => {
+  const deschideConfirmarea = () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+
+  const diferente = (): string[] =>
+    [...document.querySelectorAll('.admin-diferente > div')].map(
+      (d) => d.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+    );
+
+  it('enumeră doar câmpurile schimbate, cu valoarea veche și cea nouă', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    deschideGrupurile();
+
+    fireEvent.change(camp('Locuri disponibile'), { target: { value: '42' } });
+    deschideConfirmarea();
+
+    const lista = diferente();
+    expect(lista).toHaveLength(1);
+    expect(lista[0]).toContain('Locuri disponibile');
+    expect(lista[0]).toContain(String(SNAPSHOT_CONFIG.slots.total));
+    expect(lista[0]).toContain('42');
+  });
+
+  it('un document neschimbat o spune, în loc să arate o listă goală', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+
+    deschideConfirmarea();
+    expect(screen.getByText(/Nimic nu se schimbă/)).toBeDefined();
+    expect(diferente()).toHaveLength(0);
+  });
+
+  it('o ciornă a altei ediții e prima publicare, nu un document „tot schimbat"', async () => {
+    await creeazaPrinDialog();
+    deschideConfirmarea();
+
+    expect(screen.getByText(/Prima publicare a ediției/)).toBeDefined();
+    expect(diferente()).toHaveLength(0);
+  });
+
+  it('confirmarea păstrează ce vede vizitatorul și nota despre share preview', async () => {
+    await deschideCiorna();
+    deschideConfirmarea();
+
+    expect(screen.getByText(/landing-ul cu înscrieri/)).toBeDefined();
+    expect(screen.getByText(/Share preview-ul/)).toBeDefined();
+  });
+
+  it('momentele din listă se citesc, nu se descifrează', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    deschideGrupurile();
+
+    // Două ore mai târziu, nu o altă lună: restul reperelor ale instantaneului
+    // rămân valide, deci „Publică" nu e blocat de validare și dialogul se
+    // deschide — testul e despre FORMA valorii, nu despre validare.
+    const nou = fataDeStart(2);
+    fireEvent.change(camp('Startul cursei'), { target: { value: nou } });
+    deschideConfirmarea();
+
+    const rand0 = diferente().find((d) => d.includes('Startul cursei')) ?? '';
+    expect(rand0).toContain(nou.slice(11, 16));
+    expect(rand0).not.toContain(`${nou}:00`);
+  });
+});
+
+/**
+ * Ciorna bifurcată.
+ *
+ * `admin_save_event_config_draft` face `on conflict (editie) where status =
+ * 'draft'`, deci un număr de ediție schimbat scrie o ciornă SEPARATĂ. Tabul
+ * încărca cea mai nouă (`created_at desc`) fără s-o spună: se putea lucra la
+ * una și publica alta.
+ */
+describe('ciorna bifurcată devine vizibilă', () => {
+  const douaCiorne = () => {
+    listEventConfig.mockResolvedValue([
+      rand({
+        id: 'ciorna-noua',
+        editie: SNAPSHOT_CONFIG.number + 1,
+        config: { ...SNAPSHOT_CONFIG, number: SNAPSHOT_CONFIG.number + 1 },
+        status: 'draft',
+        published_at: null,
+        created_at: '2026-08-10T10:00:00Z',
+      }),
+      rand({
+        id: 'ciorna-veche',
+        editie: SNAPSHOT_CONFIG.number,
+        config: SNAPSHOT_CONFIG,
+        status: 'draft',
+        published_at: null,
+        created_at: '2026-08-02T10:00:00Z',
+      }),
+      rand(),
+    ]);
+  };
+
+  const banner = (): string =>
+    [...document.querySelectorAll('.admin-banner')]
+      .map((b) => b.textContent ?? '')
+      .find((t) => t.includes('ciorne deschise')) ?? '';
+
+  it('două ciorne pe server produc un banner care le numește', async () => {
+    douaCiorne();
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+
+    expect(banner()).toContain('2 ciorne deschise');
+    expect(banner()).toContain(String(SNAPSHOT_CONFIG.number));
+    expect(banner()).toContain(String(SNAPSHOT_CONFIG.number + 1));
+  });
+
+  it('o singură ciornă nu produce niciun banner', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    expect(banner()).toBe('');
+  });
+
+  it('cealaltă ciornă se poate deschide dintr-un click', async () => {
+    douaCiorne();
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    deschideGrupurile();
+    // Se încarcă cea mai nouă: ediția N+1.
+    expect(camp('Numărul ediției').value).toBe(String(SNAPSHOT_CONFIG.number + 1));
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(`Deschide ciorna ediției ${SNAPSHOT_CONFIG.number}$`),
+      })
+    );
+    deschideGrupurile();
+    expect(camp('Numărul ediției').value).toBe(String(SNAPSHOT_CONFIG.number));
+  });
+
+  it('schimbarea numărului ediției spune că salvarea va crea o ciornă separată', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    deschideGrupurile();
+
+    const numar = camp('Numărul ediției');
+    fireEvent.change(numar, { target: { value: String(SNAPSHOT_CONFIG.number + 1) } });
+    expect(eroareaCampului('Numărul ediției')).toContain('ciornă separată');
+
+    // Înapoi la numărul încărcat: atenționarea dispare.
+    fireEvent.change(numar, { target: { value: String(SNAPSHOT_CONFIG.number) } });
+    expect(eroareaCampului('Numărul ediției')).not.toContain('ciornă separată');
+  });
+
+  it('atenționarea nu blochează publicarea — nu e o eroare', async () => {
+    listEventConfig.mockResolvedValue([
+      rand(),
+      rand({ id: 'ciorna', status: 'draft', published_at: null }),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    deschideGrupurile();
+
+    fireEvent.change(camp('Numărul ediției'), {
+      target: { value: String(SNAPSHOT_CONFIG.number + 1) },
+    });
+    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
+      false
+    );
+  });
+});
+
+/**
+ * Câmpurile pe care validarea le cerea și formularul nu le avea.
+ *
+ * `venue.zoom` era validat de ambele părți și inexistent pe ecran: un document
+ * cu zoom zero deschidea grupul „Unde" fără niciun câmp marcat și lăsa
+ * „Publică" mort, fără nimic de reparat.
+ */
+describe('câmpurile lipsă din formular', () => {
+  it('zoom-ul hărții se poate alege, și ajunge în documentul salvat', async () => {
+    await deschideCiorna();
+    fireEvent.change(screen.getByLabelText('Zoom-ul hărții'), { target: { value: '18' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+
+    await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalled());
+    expect(saveEventConfigDraft.mock.calls[0][2].venue.zoom).toBe(18);
+  });
+
+  it('un document cu zoom zero e reparabil din formular, nu blocat pe veci', async () => {
+    listEventConfig.mockResolvedValue([
+      rand({
+        id: 'ciorna',
+        status: 'draft',
+        published_at: null,
+        config: { ...SNAPSHOT_CONFIG, venue: { ...SNAPSHOT_CONFIG.venue, zoom: 0 } },
+      }),
+      rand(),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+
+    // Grupul „Unde" e deschis de la sine, cu eroarea PE câmp.
+    expect(eroareaCampului('Zoom-ul hărții')).toContain('Zoom');
+    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
+
+    fireEvent.change(screen.getByLabelText('Zoom-ul hărții'), { target: { value: '16' } });
+    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
+      false
+    );
+  });
+
+  it('un zoom din afara treptelor rămâne vizibil, nu se pierde', async () => {
+    listEventConfig.mockResolvedValue([
+      rand({
+        id: 'ciorna',
+        status: 'draft',
+        published_at: null,
+        config: { ...SNAPSHOT_CONFIG, venue: { ...SNAPSHOT_CONFIG.venue, zoom: 11 } },
+      }),
+      rand(),
+    ]);
+    randeaza();
+    await screen.findByRole('button', { name: 'Renunță' });
+    deschideGrupurile();
+
+    expect((screen.getByLabelText('Zoom-ul hărții') as HTMLSelectElement).value).toBe('11');
+  });
+
+  it('valoarea de rezervă a ocupării se poate corecta din formular', async () => {
+    await deschideCiorna();
+    fireEvent.change(screen.getByLabelText(/Ocupate \(valoare de rezervă\)/), {
+      target: { value: '0' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+
+    await waitFor(() => expect(saveEventConfigDraft).toHaveBeenCalled());
+    expect(saveEventConfigDraft.mock.calls[0][2].slots.occupiedFallback).toBe(0);
+  });
+
+  it('o valoare de rezervă peste capacitate e semnalată, dar nu blochează', async () => {
+    await deschideCiorna();
+    fireEvent.change(screen.getByLabelText(/Ocupate \(valoare de rezervă\)/), {
+      target: { value: '999' },
+    });
+    expect(eroareaCampului(/Ocupate \(valoare de rezervă\)/)).toContain('capacitatea');
+    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
+      false
+    );
+  });
+});
+
+/**
+ * De la „N câmpuri de reparat" la câmpul vinovat.
+ *
+ * Numărul din bară spunea CÂTE, niciodată CARE: căutarea trecea prin șapte
+ * grupuri, dintre care unele pliate.
+ */
+describe('indicatorul de erori duce la câmp', () => {
+  it('apăsarea lui focusează primul câmp invalid', async () => {
+    await deschideCiorna();
+    fireEvent.change(camp('Coordonatele'), { target: { value: 'Valea Morilor' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /câmp de reparat/ }));
+    expect(document.activeElement).toBe(camp('Coordonatele'));
+  });
+
+  it('cu două probleme, merge la prima din document, nu la ultima', async () => {
+    await deschideCiorna();
+    // „Numele evenimentului" e sus în document, coordonatele mai jos.
+    fireEvent.change(camp('Numele evenimentului'), { target: { value: '' } });
+    fireEvent.change(camp('Coordonatele'), { target: { value: 'Valea Morilor' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /câmpuri de reparat/ }));
+    expect(document.activeElement).toBe(camp('Numele evenimentului'));
+  });
+
+  it('fără probleme, bara arată ediția și nu mai e buton', async () => {
+    await deschideCiorna();
+    expect(screen.queryByRole('button', { name: /de reparat/ })).toBeNull();
+  });
+
+  it('fiecare cheie produsă de validare are un câmp care o poartă', async () => {
+    // Garda care ține cele două vocabulare lipite: dacă o validare nouă scrie o
+    // cheie pe care niciun `Camp` n-o stampilează, saltul ar duce nicăieri.
+    await deschideCiorna();
+    const stampilate = new Set(
+      [...document.querySelectorAll('[data-camp]')].map((e) => e.getAttribute('data-camp'))
+    );
+    const cheiSimple = [
+      'number',
+      'launchNumber',
+      'eventName',
+      'concept',
+      'tz',
+      'start',
+      'durationHours',
+      'checkinFrom',
+      'registrationDeadline',
+      'launchAt',
+      'nextEditionAt',
+      'leaderboardLeadHours',
+      'slots.total',
+      'slots.waitlist',
+      'slots.occupiedFallback',
+      'venue.name',
+      'venue.city',
+      'venue.mapQuery',
+      'venue.zoom',
+    ];
+    for (const cheie of cheiSimple) expect(stampilate).toContain(cheie);
+  });
+});
+
+/** Cele două dialoguri ale tabului se poartă ca niște dialoguri. */
+describe('dialogurile tabului au tastatură', () => {
+  it('Escape închide confirmarea publicării, fără să publice', async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+
+    fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(publishEventConfig).not.toHaveBeenCalled();
+  });
+
+  it('Escape închide dialogul de ediție nouă, fără să deschidă vreo ciornă', async () => {
+    await deschideDialogEditieNoua();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Renunță' })).toBeNull();
+    expect(saveEventConfigDraft).not.toHaveBeenCalled();
+  });
+
+  it('dialogul de ediție nouă deschide focusul pe primul câmp', async () => {
+    await deschideDialogEditieNoua();
+    expect(document.activeElement).toBe(screen.getByLabelText('Data cursei'));
+  });
+});
+
+/** Ștergerea unui clip se aplica pe loc, fără cale înapoi. */
+describe('ștergerea unui clip se poate anula', () => {
+  const adaugaClip = async (link: string) => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
+    fireEvent.change(screen.getByLabelText('Linkul clipului'), { target: { value: link } });
+  };
+
+  it('ștergerea oferă undo, iar undo-ul repune clipul cu tot cu codul lui', async () => {
+    await adaugaClip('https://www.instagram.com/reel/ABC12345/');
+    expect((screen.getByLabelText('Linkul clipului') as HTMLInputElement).value).toContain(
+      'ABC12345'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Șterge clipul 1' }));
+    expect(screen.queryByLabelText('Linkul clipului')).toBeNull();
+
+    const toast = showToast.mock.calls.at(-1)?.[0];
+    expect(typeof toast.undo).toBe('function');
+    // `act`: undo-ul vine din toast, adică din afara arborelui — fără el,
+    // schimbarea de stare n-ar fi aplicată până la următoarea randare.
+    act(() => toast.undo());
+
+    expect((screen.getByLabelText('Linkul clipului') as HTMLInputElement).value).toContain(
+      'ABC12345'
+    );
+  });
+});
+
+/**
+ * Clipurile și secțiunile stăteau în afara grupurilor, la capătul
+ * formularului: grupul „Instagram" își rezuma pliat („3 clipuri") un conținut
+ * pe care nu-l conținea, iar rândurile rămâneau pe ecran cu grupul închis.
+ */
+describe('clipurile și secțiunile stau în grupurile lor', () => {
+  /** Grupul cu titlul dat, ca element — ca să putem căuta ÎN el. */
+  const grupul = (titlu: string): HTMLElement => {
+    const cap = [...document.querySelectorAll('.admin-config-grup-cap')].find((c) =>
+      c.textContent?.includes(titlu)
+    );
+    return cap?.closest('.admin-config-grup') as HTMLElement;
+  };
+
+  const deschide = (titlu: string) => {
+    const cap = grupul(titlu).querySelector('.admin-config-grup-cap') as HTMLElement;
+    if (cap.getAttribute('aria-expanded') === 'false') fireEvent.click(cap);
+  };
+
+  it('clipurile se editează din grupul „Instagram"', async () => {
+    randeaza();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    deschide('Instagram');
+
+    const grup = grupul('Instagram');
+    fireEvent.click(within(grup).getByRole('button', { name: '+ Adaugă clip' }));
+    expect(within(grup).getByLabelText('Linkul clipului')).toBeDefined();
+  });
+
+  it('secțiunile se aranjează din grupul „Ce arată pagina"', async () => {
+    randeaza();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    deschide('Ce arată pagina');
+
+    const grup = grupul('Ce arată pagina');
+    expect(within(grup).getByText('Formatul')).toBeDefined();
+    expect(within(grup).getByRole('button', { name: /Mută „Locația” mai sus/ })).toBeDefined();
+  });
+
+  it('cu grupurile pliate, niciuna dintre cele două liste nu mai stă pe ecran', async () => {
+    randeaza();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: new RegExp(`Editează ediția ${SNAPSHOT_CONFIG.number}`),
+      })
+    );
+    // Nimic nu s-a deschis: doar „Ediția" e deschis implicit.
+    expect(screen.queryByRole('button', { name: '+ Adaugă clip' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Mută „Locația” mai sus/ })).toBeNull();
+  });
+
+  it('un clip cu link stricat deschide grupul „Instagram" de la sine', async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
+
+    // Rândul gol e invalid: grupul nu se mai poate închide peste el.
+    const cap = grupul('Instagram').querySelector('.admin-config-grup-cap') as HTMLElement;
+    fireEvent.click(cap);
+    expect(cap.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
+/**
+ * Undo-ul unei ștergeri rulează din toast, deci mai târziu decât randarea care
+ * l-a produs: dacă ar fi scris `{...ciorna.reels, items}` cu ciorna prinsă
+ * atunci, ar fi revenit și titlul secțiunii editat între timp.
+ */
+describe('undo-ul unui clip nu revine peste editările de după', () => {
+  it('titlul secțiunii editat după ștergere rămâne', async () => {
+    await deschideCiorna();
+    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
+    fireEvent.change(screen.getByLabelText('Linkul clipului'), {
+      target: { value: 'https://www.instagram.com/reel/ABC12345/' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Șterge clipul 1' }));
+    const toast = showToast.mock.calls.at(-1)?.[0];
+
+    fireEvent.change(camp('Titlul secțiunii'), { target: { value: 'Din teren' } });
+    act(() => toast.undo());
+
+    expect(camp('Titlul secțiunii').value).toBe('Din teren');
+    expect((screen.getByLabelText('Linkul clipului') as HTMLInputElement).value).toContain(
+      'ABC12345'
+    );
   });
 });

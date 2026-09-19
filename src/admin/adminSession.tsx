@@ -15,7 +15,13 @@ import type { ReactNode } from 'react';
  * dependență care trebuie să se vadă în semnătură.
  */
 
-type ToastAdmin = { kind: 'error' | 'success'; msg: string };
+/**
+ * `undo` există deja în toastul randat de `AdminDashboard` (și îi dublează
+ * durata, de la 3,2 la 6 secunde). Lipsea doar din contractul de sesiune, deci
+ * un tab nu-l putea folosi — iar ștergerile din formular se aplicau pe loc, fără
+ * confirmare și fără cale înapoi.
+ */
+type ToastAdmin = { kind: 'error' | 'success'; msg: string; undo?: () => void };
 
 export type SesiuneAdmin = {
   token: string;

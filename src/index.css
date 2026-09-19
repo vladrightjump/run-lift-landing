@@ -1226,6 +1226,11 @@
     display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
     gap: 18px 22px; align-items: start;
   }
+  /* O listă în interiorul unui grup (clipurile, secțiunile paginii): ține
+     toată lățimea, nu o coloană din grila de câmpuri. */
+  .admin-config-lista { grid-column: 1 / -1; display: grid; gap: 10px; }
+  .admin-config-lista > .admin-config-hint { margin: 0; }
+
   /* ---- Bara de actiuni lipita jos ----
      „Salveaza" si „Publica" stateau doar in capul tabului, la doua ecrane si
      jumatate deasupra locului in care editezi ultimul camp. */
@@ -1244,6 +1249,20 @@
   }
   .admin-bara-detaliu { color: var(--e3-muted-dim); }
   .admin-bara-problema { color: var(--e3-danger); font-weight: 700; }
+  /* Numărul de câmpuri stricate duce LA primul dintre ele. Arată ca text,
+     se poartă ca un buton — și are focus vizibil, ca orice altceva. */
+  .admin-bara-problema--link {
+    font: inherit; font-weight: 700; padding: 0;
+    background: none; border: 0; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .admin-bara-problema--link:hover { color: var(--e3-text); }
+  /* „Nesalvat" nu e o eroare — e diferența dintre ce vezi și ce e pe server.
+     Chihlimbar, ca celelalte semnale de atenție din formular. */
+  .admin-bara-nesalvat {
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 2px 7px; border: 1px solid var(--e3-warn); color: var(--e3-warn);
+  }
   .admin-bara-butoane { display: flex; gap: 8px; flex-wrap: wrap; }
 
   /* O valoare care e o PROPOZITIE, nu o cifra. Fontul de afisare (Anton, mare)
@@ -1319,6 +1338,10 @@
     display: flex; gap: 7px;
   }
   .admin-config-atentie::before { content: "▲"; font-size: 9px; line-height: 1.7; flex: none; }
+  /* Bara lipită de jos acoperă ultima treime a formularului: un câmp adus în
+     ecran (din saltul la prima eroare, sau din tabulare) trebuie să se
+     oprească deasupra ei, nu sub. */
+  .admin-config-camp { scroll-margin-bottom: 140px; scroll-margin-top: 80px; }
   .admin-config-camp.atentie select,
   .admin-config-camp.atentie input { border-color: #4A3F22; }
 
@@ -1687,6 +1710,8 @@
   /* ---- Confirmare ștergere ---- */
   .admin-confirm-overlay {
     position: fixed; inset: 0; z-index: 60;
+    /* Derularea din dialog nu se scurge în pagina de dedesubt. */
+    overscroll-behavior: contain;
     background: rgba(18,20,16,0.7); backdrop-filter: blur(3px);
     display: flex; align-items: center; justify-content: center; padding: 24px;
   }
@@ -1733,6 +1758,17 @@
   .admin-mostenire dt { font-size: 12px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--e3-muted-dim); }
   .admin-mostenire dd { margin: 0; font-size: 14px; color: var(--e3-text); text-align: right; overflow-wrap: anywhere; }
   .admin-mostenire > div.recalculat dd { color: var(--e3-accent); }
+  /* Diferențele de la publicare: „de la → la", pe un singur rând.
+     Valoarea veche e stinsă, cea nouă e accentul — ochiul caută ce URMEAZĂ să
+     fie pe site, nu ce a fost. */
+  .admin-diferente dd {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .admin-diferenta-inainte { color: var(--e3-muted-dim); text-decoration: line-through; }
+  .admin-diferenta-sageata { color: var(--e3-muted-dim); }
+  .admin-diferenta-acum { color: var(--e3-accent); }
+
   .admin-mostenire-marca {
     display: inline-block; margin-left: 8px; padding: 1px 6px;
     font-size: 10px; letter-spacing: 1px; text-transform: uppercase;

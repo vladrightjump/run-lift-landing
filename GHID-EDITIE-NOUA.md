@@ -26,8 +26,11 @@ Pornește de la ediția publicată, cu numărul incrementat. Editează ce se sch
 - **Start / Deadline înscriere / Momentul lansării / Următorul antrenament** — se aleg din calendar;
   se compun cu câmpul *Fus orar*.
 - **Check-in de la**, **Durata (ore)**, **„Cine vine" cu (ore) înainte**.
-- **Locul** — nume, oraș/zonă și **coordonate `lat,lng`** (punct exact, nu text căutat pe hartă).
-- **Locuri** și **Lista de așteptare** — capacitatea.
+- **Locul** — nume, oraș/zonă, **coordonate `lat,lng`** (punct exact, nu text căutat pe hartă) și
+  zoom-ul hărții.
+- **Locuri**, **Lista de așteptare** și **Ocupate (valoare de rezervă)** — capacitatea, plus
+  numărul pe care pagina îl arată dacă statisticile nu răspund (zero e răspunsul normal; o ciornă
+  de ediție nouă pornește de la zero).
 - **Homepage-ul arată** — Landing (înscrieri) sau Coming Soon.
 - **Secțiunile paginii** — ordinea și ce se ascunde. Numerele (01, 02…) se recalculează singure.
 
@@ -70,19 +73,37 @@ Butonul „**Previzualizează**" deschide `/?config=draft` — pagina reală, ra
 o vezi: preview-ul folosește sesiunea ta de admin, iar un vizitator care ghicește parametrul vede
 tot configul publicat.
 
+Previzualizarea randează ciorna **de pe server**, nu câmpurile de pe ecran — de asta, cât timp ai
+modificări nesalvate, butonul scrie „**Salvează și previzualizează**" și le salvează întâi. Ce se
+deschide e întotdeauna ce ai pe ecran.
+
 Se compune cu fazele zilei: `/?config=draft&preview=leaderboard` și `?preview=next` îți arată cum
 arată ciorna în dimineața cursei și după. **Verifică-le seara dinainte** — sunt singurele ecrane
 care apar când nu ești la laptop.
 
 ### 3. Publică
-Butonul „**Publică**", cu confirmare. Confirmarea îți spune ce va vedea vizitatorul: Coming Soon
-sau landing-ul cu înscrieri.
+Butonul „**Publică**", cu confirmare. Confirmarea îți spune ce va vedea vizitatorul (Coming Soon
+sau landing-ul cu înscrieri) și, sub asta, **ce se schimbă față de ce e publicat acum** — câmp cu
+câmp, cu valoarea veche și cea nouă. Un câmp neschimbat nu apare. Dacă ciorna e a altei ediții
+decât cea publicată, scrie „prima publicare": n-are cu ce să compare.
 
 Din acel moment site-ul public servește configul nou. Un tab deja deschis îl prinde la următorul
 poll, fără reload.
 
 Versiunea publicată anterior rămâne salvată: dacă ceva e greșit, „**Revino la asta**" din
 *Versiuni anterioare* o readuce, tot într-o singură tranzacție.
+
+### Ce te apără între timp
+
+- **Ciorna nesalvată nu dispare tăcut.** Cât timp ai modificări nesalvate, bara de jos scrie
+  „Nesalvat", iar „Renunță", schimbarea tabului și închiderea paginii întreabă întâi. Salvarea sau
+  publicarea sting semnalul.
+- **Numărul câmpurilor stricate e un buton.** „3 câmpuri de reparat" te duce la primul dintre ele,
+  deschide grupul în care stă și îl focusează.
+- **Ștergerile se pot anula.** Un clip sau un reminder șters din greșeală se întoarce din toast.
+- **Două ciorne se văd ca două ciorne.** Dacă schimbi „Numărul ediției", salvarea creează o ciornă
+  SEPARATĂ (ciornele sînt cheiate pe ediție), iar cea veche rămâne pe server. Câmpul ți-o spune
+  înainte, iar un banner de sus le enumeră și le poate deschide pe oricare.
 
 ### 4. (Opțional) Textul emailurilor
 Emailurile (confirmare/reminder/anunț + badge) sunt în DB, editabile din **`/admin` → „Șabloane de
@@ -126,7 +147,7 @@ paragraful în care e scrisă, ca să nu plece o frază care trimite spre nimic.
 
 ## Banda „Instagram"
 
-Din **`/admin` → „Eveniment" → „Clipurile din bandă"**, în ciornă ca orice altceva.
+Din **`/admin` → „Eveniment" → grupul „Instagram"**, în ciornă ca orice altceva.
 
 1. Pe telefon: **Copiază linkul** la clipul dorit.
 2. „+ Adaugă clip" → lipești linkul în „Linkul clipului". Sub câmp apare ecoul

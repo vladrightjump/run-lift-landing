@@ -407,13 +407,19 @@ describe('rezumatCiornaNoua — ce s-a moștenit, câmp cu câmp', () => {
     expect(etichete(SNAPSHOT_CONFIG.start)).toContain('Locația');
   });
 
-  it('ocupatele de rezervă se raportează doar când nu sunt zero', () => {
-    expect(etichete()).not.toContain('Ocupate (valoare de rezervă)');
-    const cuOcupate = { ...SNAPSHOT_CONFIG, slots: { ...SNAPSHOT_CONFIG.slots, occupiedFallback: 7 } };
+  it('ocuparea de rezervă nu se mai moștenește, deci n-are ce raporta', () => {
+    // Era numărul pe care pagina îl arată când statisticile tac. Moștenit, pe o
+    // ediție la care încă nu s-a înscris nimeni, e ocupația ediției TRECUTE —
+    // afișată exact atunci când backendul nu răspunde, adică atunci când nimeni
+    // n-o poate verifica.
+    const cuOcupate = {
+      ...SNAPSHOT_CONFIG,
+      slots: { ...SNAPSHOT_CONFIG.slots, occupiedFallback: 7 },
+    };
+    const noua = cioarnaEditieNoua(cuOcupate, START_NOU, 30);
+    expect(noua.slots.occupiedFallback).toBe(0);
     expect(
-      rezumatCiornaNoua(cuOcupate, cioarnaEditieNoua(cuOcupate, START_NOU, 30)).find(
-        (c) => c.eticheta === 'Ocupate (valoare de rezervă)'
-      )?.valoare
-    ).toBe('7');
+      rezumatCiornaNoua(cuOcupate, noua).map((c) => c.eticheta)
+    ).not.toContain('Ocupate (valoare de rezervă)');
   });
 });

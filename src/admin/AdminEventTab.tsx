@@ -8,29 +8,20 @@ import {
   type AdminEventConfigRow,
 } from '../lib/adminApi';
 import type { LivrareReminder } from './remindere';
-import {
-  parseEventConfig,
-  MAX_REELS,
-  type EventConfig,
-  type SectionKey,
-} from '../content/eventConfig';
+import { parseEventConfig, type EventConfig } from '../content/eventConfig';
 import {
   validateEventConfig,
   avertismenteEventConfig,
-  mutaSectiune,
-  comutaVizibilitatea,
   layoutComplet,
-  parseInstagramUrl,
-  adaugaReel,
-  stergeReel,
-  mutaReel,
-  seteazaReel,
   type CampInvalid,
 } from './eventConfigForm';
 import { useSesiuneAdmin } from './adminSession';
 import { Blocat } from './eventTab/primitive';
 import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
-import { refuzCuPas, type Pas } from './eventTab/ajutoare';
+import { Dialog } from './eventTab/Dialog';
+import { refuzCuPas, ETICHETE_SECTIUNI, type Pas } from './eventTab/ajutoare';
+import { esteNesalvat } from './eventTab/nesalvat';
+import { diferenteFataDePublicat, esteComparabil } from './eventTab/diferente';
 import { GrupCeArata } from './eventTab/grupuri/GrupCeArata';
 import { GrupLocuri } from './eventTab/grupuri/GrupLocuri';
 import { GrupUnde } from './eventTab/grupuri/GrupUnde';
@@ -47,14 +38,17 @@ import {
 } from './reperele';
 import { useNow } from '../hooks/useNow';
 
-const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
-  format: 'Formatul',
-  venue: 'Locația',
-  registration: 'Înscriere',
-  participants: 'Cine vine',
-  reels: 'Instagram',
+type Props = {
+  /**
+   * Predă dashboardului garda „pot pleca din tab?" — el o consultă înainte să
+   * schimbe tabul, pentru că schimbarea DEMONTEAZĂ tabul ăsta cu tot cu ciorna
+   * din el. `null` o retrage.
+   */
+  inregistreazaGardaIesire: (garda: (() => boolean) | null) => void;
 };
 
+/** Pagina publică randată din ciorna de pe server. */
+const PREVIEW_URL = '/?config=draft';
 
 /**
  * Valorile din listele formularului.
@@ -68,10 +62,27 @@ const ETICHETE_SECTIUNI: Record<SectionKey, string> = {
  * ca opțiune dacă nu e printre ele, altfel un document scris manual în DB ar
  * părea că are altă valoare decât are.
  */
-export const AdminEventTab = () => {
+export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
   const { token, onAuthError, showToast } = useSesiuneAdmin();
   const [randuri, setRanduri] = useState<AdminEventConfigRow[] | null>(null);
   const [ciorna, setCiorna] = useState<EventConfig | null>(null);
+  /**
+   * Documentul așa cum e pe server — reperul față de care „nesalvat" e o
+   * afirmație verificabilă.
+   *
+   * `null` cu o ciornă deschisă înseamnă „n-a ajuns niciodată acolo": ciorna
+   * din dialogul de ediție nouă sau cea pornită din publicat trăiește doar în
+   * browser. Vezi `eventTab/nesalvat.ts`.
+   */
+  const [salvat, setSalvat] = useState<EventConfig | null>(null);
+  /**
+   * Ediția ciornei ÎNCĂRCATE de pe server — nu cea din câmpul „Numărul ediției".
+   *
+   * Salvarea face `on conflict (editie) where status = 'draft'`, deci un număr
+   * schimbat scrie o ciornă SEPARATĂ, iar cea veche rămâne pe server. Fără
+   * reperul ăsta n-am avea cum spune că urmează să se întâmple.
+   */
+  const [editieIncarcata, setEditieIncarcata] = useState<number | null>(null);
   const [salveaza, setSalveaza] = useState(false);
   const [publica, setPublica] = useState(false);
   const [confirmPublicare, setConfirmPublicare] = useState(false);
@@ -108,6 +119,8 @@ export const AdminEventTab = () => {
           if (draft) {
             const cfg = parseEventConfig(draft.config);
             setCiorna(cfg);
+            setSalvat(cfg);
+            setEditieIncarcata(draft.editie);
             setAncoraStart(cfg?.start ?? null);
           }
         })
@@ -169,6 +182,16 @@ export const AdminEventTab = () => {
     return row ? parseEventConfig(row.config) : null;
   }, [randuri]);
 
+  /**
+   * Ciornele deschise pe server. Mai mult de una înseamnă că un număr de ediție
+   * schimbat a bifurcat documentul — iar tabul încarcă cea mai NOUĂ
+   * (`admin_get_event_config` sortează `created_at desc`), fără s-o spună.
+   */
+  const ciorne = useMemo(
+    () => (randuri ?? []).filter((r) => r.status === 'draft'),
+    [randuri]
+  );
+
   const versiuni = useMemo(
     () =>
       (randuri ?? [])
@@ -197,6 +220,32 @@ export const AdminEventTab = () => {
   const poatePublica = ciorna !== null && probleme.length === 0;
   // Aceleași probleme, dar indexate pe câmp — ca să apară lângă inputul vinovat.
   const erori = problemePeCamp(probleme);
+  /**
+   * Ciorna de pe ecran nu e (încă) documentul de pe server.
+   *
+   * De aici pleacă toate cele trei gărzi: confirmarea la „Renunță", cea la
+   * schimbarea tabului, și avertismentul browserului la închiderea paginii.
+   * Până acum niciuna nu exista, iar tabul se demontează la schimbarea tabului
+   * — deci un click greșit pierdea douăzeci de câmpuri fără o vorbă.
+   */
+  const nesalvat = esteNesalvat(salvat, ciorna);
+  const atentieNumar =
+    ciorna && editieIncarcata !== null && ciorna.number !== editieIncarcata
+      ? `Salvarea va crea o ciornă separată pentru ediția ${ciorna.number}. ` +
+        `Cea a ediției ${editieIncarcata} rămâne pe server, neatinsă.`
+      : undefined;
+  /**
+   * Ce se schimbă pe site la publicare. Calculat doar cât timp dialogul e
+   * deschis: e o listă întreagă construită pentru un ecran care apare o dată
+   * per publicare.
+   */
+  const diferente = useMemo(
+    () =>
+      confirmPublicare && ciorna
+        ? diferenteFataDePublicat(publicat, ciorna, ETICHETE_SECTIUNI)
+        : [],
+    [confirmPublicare, ciorna, publicat]
+  );
   // Doar pentru „peste 3 luni” de sub datele calendaristice. Un minut e destul:
   // nimeni nu se uită la ecoul ăsta ca la un cronometru.
   const acum = useNow(60_000);
@@ -243,6 +292,69 @@ export const AdminEventTab = () => {
   };
 
   /**
+   * Duce la primul câmp invalid: îl deschide, îl aduce în ecran, îl focusează.
+   *
+   * „3 câmpuri de reparat" era text inert — spunea CÂTE, niciodată CARE, iar
+   * căutarea trecea prin șapte grupuri. Ordinea din `validateEventConfig` e
+   * ordinea documentului, deci „primul" e și cel de sus. Grupurile cu eroare
+   * sînt deja deschise de la sine, deci elementul e randat.
+   */
+  const laPrimaEroare = () => {
+    const prima = probleme[0];
+    if (!prima) return;
+    const container = document.querySelector(`[data-camp="${prima.camp}"]`);
+    const control = container?.querySelector<HTMLElement>('input, select, textarea');
+    // `block: center` și nu `nearest`: bara lipită de jos acoperă exact ultima
+    // treime a formularului, iar un câmp adus „cât mai puțin" ajunge sub ea.
+    // Apelul e opțional pentru că jsdom nu implementează derularea; focusul,
+    // care e partea verificabilă, se face oricum.
+    (control ?? container)?.scrollIntoView?.({ block: 'center' });
+    control?.focus();
+  };
+
+  /**
+   * Întrebarea pusă înainte de orice plecare care ar pierde ciorna.
+   *
+   * `window.confirm`, nu un dialog al nostru: e singura întrebare care poate fi
+   * pusă SINCRON, dintr-un handler care trebuie să răspundă „da sau nu" pe loc
+   * (schimbarea tabului), și e aceeași voce cu avertismentul nativ de la
+   * închiderea paginii. Un dialog React ar fi cerut o mașinărie de intenție
+   * amânată pentru o întrebare de o linie.
+   */
+  const potPleca = (): boolean =>
+    !nesalvat ||
+    window.confirm(
+      'Ciorna are modificări nesalvate. Dacă pleci acum, se pierd. Continui?'
+    );
+
+  // Garda predată dashboardului. Se re-înregistrează când se schimbă
+  // `nesalvat`, ca să nu răspundă niciodată din starea de acum două randări; se
+  // retrage la demontare, altfel ar bloca navigarea din alt tab.
+  useEffect(() => {
+    inregistreazaGardaIesire(potPleca);
+    return () => inregistreazaGardaIesire(null);
+  });
+
+  /**
+   * Avertismentul nativ la închiderea sau reîncărcarea paginii.
+   *
+   * Înregistrat doar cât timp există ce pierde: un handler `beforeunload`
+   * permanent face unele browsere să trateze pagina ca „ocupată" și blochează
+   * restaurarea din bfcache degeaba.
+   */
+  useEffect(() => {
+    if (!nesalvat) return;
+    const avertizeaza = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Browserele moderne ignoră textul și afișează mesajul lor; `returnValue`
+      // rămâne necesar pentru cele care nu se uită la `preventDefault`.
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', avertizeaza);
+    return () => window.removeEventListener('beforeunload', avertizeaza);
+  }, [nesalvat]);
+
+  /**
    * Are vreunul dintre câmpurile grupului o problemă?
    *
    * Un grup cu erori se deschide singur și nu se mai poate închide: altfel
@@ -257,20 +369,14 @@ export const AdminEventTab = () => {
   };
 
   /**
-   * Textul brut din câmpurile de link ale clipurilor, pe index.
+   * Clipurile, scrise din starea CURENTĂ a ciornei.
    *
-   * De ce nu se poate randa direct din `code`: câmpul ar fi controlat de o
-   * valoare RECOMPUSĂ din ce s-a parsat, iar la tastare (nu lipire) fiecare
-   * caracter în parte e un URL invalid — deci câmpul s-ar goli singur la prima
-   * literă. Ciorna primește codul; câmpul păstrează ce a scris omul.
-   *
-   * Se golește la orice schimbare de structură (adăugare, ștergere, mutare):
-   * rândurile sunt identificate prin index, iar altfel textul ar rămâne agățat
-   * de poziție, nu de clip.
+   * Funcțional, nu `seteaza('reels', {...ciorna.reels, items})`: undo-ul unei
+   * ștergeri pleacă din toast, deci rulează mai târziu, cu `ciorna` prinsă la
+   * randarea în care s-a apăsat „Șterge". Un titlu de secțiune editat între
+   * timp ar fi fost revenit odată cu clipul.
    */
-  const [linkBrut, setLinkBrut] = useState<Record<number, string>>({});
-  const seteazaReels = (items: EventConfig['reels']['items'], structural = false) => {
-    if (structural) setLinkBrut({});
+  const seteazaReels = (items: EventConfig['reels']['items']) => {
     setCiorna((c) => {
       atinsa.current = true;
       return c ? { ...c, reels: { ...c.reels, items } } : c;
@@ -299,7 +405,30 @@ export const AdminEventTab = () => {
     setRefuz(null);
     setDialogEditieNoua(false);
     setCiorna(noua);
+    // Ciorna asta n-a fost niciodată pe server, deci e nesalvată din prima
+    // clipă — și e chiar starea pe care ar durea cel mai tare s-o pierzi.
+    setSalvat(null);
+    setEditieIncarcata(null);
     setAncoraStart(noua.start);
+  };
+
+  /**
+   * Deschide o ciornă anume dintre cele de pe server.
+   *
+   * Aceeași cale ca încărcarea inițială, doar că rândul e ales, nu ghicit:
+   * `incarca()` ia întotdeauna cea mai nouă, ceea ce e util la deschiderea
+   * tabului și inutil când vrei cealaltă.
+   */
+  const deschideCiorna = (rand: AdminEventConfigRow) => {
+    if (!potPleca()) return;
+    const cfg = parseEventConfig(rand.config);
+    if (!cfg) return;
+    atinsa.current = true;
+    setRefuz(null);
+    setCiorna(cfg);
+    setSalvat(cfg);
+    setEditieIncarcata(rand.editie);
+    setAncoraStart(cfg.start);
   };
 
   const porneteDinPublicat = () => {
@@ -307,7 +436,51 @@ export const AdminEventTab = () => {
     atinsa.current = true;
     setRefuz(null);
     setCiorna({ ...publicat, layout: layoutComplet(publicat.layout) });
+    setSalvat(null);
+    setEditieIncarcata(null);
     setAncoraStart(publicat.start);
+  };
+
+  /**
+   * Previzualizarea arată ce e pe ecran, nu ce era pe server.
+   *
+   * `/?config=draft` reinterogează `admin_get_event_config` și randează rândul
+   * `draft` (vezi `hooks/useEventConfig.tsx`). Cât timp butonul a fost o simplă
+   * ancoră, editai șase câmpuri, deschideai previzualizarea, verificai
+   * documentul de DINAINTEA editărilor — și publicai convins că ai văzut. E
+   * aceeași clasă de capcană ca `launchAt` moștenit, doar mutată cu un ecran
+   * mai jos.
+   *
+   * Tabul se deschide SINCRON, pe click: un `window.open` de după `await` nu
+   * mai e o acțiune a utilizatorului, deci îl blochează browserul. La refuzul
+   * salvării se închide la loc — un tab rămas deschis pe configul publicat ar
+   * fi exact minciuna pe care o reparăm.
+   */
+  const previzualizeaza = async () => {
+    if (!ciorna || probleme.length > 0) return;
+    const fereastra = window.open('', '_blank', 'noopener');
+    setRefuz(null);
+    setSalveaza(true);
+    try {
+      await saveEventConfigDraft(token, ciorna.number, ciorna);
+      setSalvat(ciorna);
+      setEditieIncarcata(ciorna.number);
+      atinsa.current = false;
+      incarca();
+      if (fereastra) fereastra.location.href = PREVIEW_URL;
+      // Popup blocat: documentul e salvat, deci linkul din bară (ancora de
+      // lângă buton, activă cât timp nu mai sînt diferențe) arată deja ciorna
+      // corectă. Nu inventăm o a doua cale.
+    } catch (err) {
+      fereastra?.close();
+      if (!onAuthError(err)) {
+        const msg = refuzCuPas('salvare', err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
+    } finally {
+      setSalveaza(false);
+    }
   };
 
   const salveazaCiorna = async () => {
@@ -320,6 +493,11 @@ export const AdminEventTab = () => {
         kind: 'success',
         msg: `Ciorna ediției ${ciorna.number} a fost salvată.`,
       });
+      // Reperul se mută pe documentul tocmai scris, fără să așteptăm
+      // `incarca()`: între cerere și răspuns bara ar continua să spună
+      // „Nesalvat" despre un document care e deja pe server.
+      setSalvat(ciorna);
+      setEditieIncarcata(ciorna.number);
       atinsa.current = false;
       incarca();
     } catch (err) {
@@ -365,6 +543,7 @@ export const AdminEventTab = () => {
         kind: 'success',
         msg: `Ediția ${ciorna.number} e publicată.`,
       });
+      setSalvat(ciorna);
       atinsa.current = false;
       incarca();
     } catch (err) {
@@ -436,9 +615,12 @@ export const AdminEventTab = () => {
                 // avea unde să se afișeze — exact garanția pe care o dăm.
                 disabled={ocupat}
                 onClick={() => {
+                  if (!potPleca()) return;
                   atinsa.current = false;
                   setRefuz(null);
                   setCiorna(null);
+                  setSalvat(null);
+                  setEditieIncarcata(null);
                   setAncoraStart(null);
                 }}
               >
@@ -478,6 +660,34 @@ export const AdminEventTab = () => {
               {publicat.showComingSoon ? 'Coming Soon' : 'Landing'}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Două ciorne pe server înseamnă că un număr de ediție schimbat a
+          bifurcat documentul. Tabul o încarcă pe cea mai nouă și publica din
+          câmpul „Numărul ediției" — deci se putea lucra la una și publica
+          alta, fără ca ceva să spună că a doua există. */}
+      {ciorne.length > 1 && (
+        <div className="admin-banner warn" role="status">
+          <strong>Sunt {ciorne.length} ciorne deschise</strong> — pentru edițiile{' '}
+          {ciorne.map((c) => c.editie).join(', ')}.
+          {editieIncarcata !== null && ` Aici se editează ediția ${editieIncarcata}.`} O ciornă se
+          publică singură, cu numărul ei; celelalte rămân pe server până le publici sau le rescrii.
+          <span className="admin-presetari">
+            {ciorne
+              .filter((c) => c.editie !== editieIncarcata)
+              .map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="admin-chip"
+                  disabled={ocupat}
+                  onClick={() => deschideCiorna(c)}
+                >
+                  Deschide ciorna ediției {c.editie}
+                </button>
+              ))}
+          </span>
         </div>
       )}
 
@@ -537,6 +747,7 @@ export const AdminEventTab = () => {
             seteaza={seteaza}
             erori={erori}
             areEroare={areEroare}
+            atentieNumar={atentieNumar}
           />
 
           <GrupCand
@@ -581,193 +792,10 @@ export const AdminEventTab = () => {
           <GrupInstagram
             ciorna={ciorna}
             seteaza={seteaza}
+            seteazaReels={seteazaReels}
             erori={erori}
           />
 
-          <h3>Clipurile din bandă</h3>
-          <p className="admin-config-hint">
-            Ordinea de aici e ordinea din bandă. Fără niciun clip, secțiunea nu apare pe pagină,
-            oricât ar fi de vizibilă în lista de mai jos.
-          </p>
-          {erori.get('reels') && (
-            <div className="admin-banner warn" role="status">
-              {erori.get('reels')}
-            </div>
-          )}
-          <ol className="admin-reels-list">
-            {ciorna.reels.items.map((r, i) => {
-              const eroareCod = erori.get(`reels.${i}.code`);
-              return (
-                <li key={i} className={eroareCod ? 'invalid' : ''}>
-                  <div className="admin-reels-rand">
-                    <span className="admin-layout-nr">{String(i + 1).padStart(2, '0')}</span>
-                    <div className="admin-reels-campuri">
-                      <label className="admin-config-eticheta" htmlFor={`reel-link-${i}`}>
-                        Linkul clipului
-                      </label>
-                      <input
-                        id={`reel-link-${i}`}
-                        autoComplete="off"
-                        disabled={ocupat}
-                        aria-invalid={eroareCod ? true : undefined}
-                        placeholder="https://www.instagram.com/reel/ABC12345/"
-                        // Textul brut cât timp se scrie; URL-ul canonic recompus
-                        // din cod după ce câmpul e părăsit. Așa tastarea nu se
-                        // autodistruge, iar la final se vede ce am înțeles.
-                        value={
-                          linkBrut[i] ??
-                          (r.code ? `https://www.instagram.com/${r.kind}/${r.code}/` : '')
-                        }
-                        onChange={(e) => {
-                          const text = e.target.value;
-                          setLinkBrut((m) => ({ ...m, [i]: text }));
-                          const parsat = parseInstagramUrl(text);
-                          seteazaReels(
-                            parsat
-                              ? ciorna.reels.items.map((x, j) =>
-                                  j === i ? { ...x, code: parsat.code, kind: parsat.kind } : x
-                                )
-                              : seteazaReel(ciorna.reels.items, i, 'code', '')
-                          );
-                        }}
-                        onBlur={() =>
-                          // Ce a rămas în câmp după ce s-a extras codul nu mai
-                          // interesează: la ieșire arătăm forma canonică.
-                          setLinkBrut((m) => {
-                            const { [i]: _, ...rest } = m;
-                            return rest;
-                          })
-                        }
-                      />
-                      {eroareCod ? (
-                        <span className="admin-config-eroare" role="alert">
-                          {eroareCod}
-                        </span>
-                      ) : (
-                        r.code && (
-                          <span className="admin-config-ecou">
-                            cod: {r.code} · {r.kind === 'p' ? 'postare' : 'reel'}
-                          </span>
-                        )
-                      )}
-
-                      <label className="admin-config-eticheta" htmlFor={`reel-poster-${i}`}>
-                        Poster (opțional)
-                      </label>
-                      <input
-                        id={`reel-poster-${i}`}
-                        autoComplete="off"
-                        disabled={ocupat}
-                        placeholder="/reels/marti.jpg"
-                        value={r.poster}
-                        onChange={(e) =>
-                          seteazaReels(seteazaReel(ciorna.reels.items, i, 'poster', e.target.value))
-                        }
-                      />
-
-                      <label className="admin-config-eticheta" htmlFor={`reel-caption-${i}`}>
-                        Textul de sub card
-                      </label>
-                      <input
-                        id={`reel-caption-${i}`}
-                        autoComplete="off"
-                        disabled={ocupat}
-                        placeholder="Marți dimineața, Râșcani"
-                        value={r.caption}
-                        onChange={(e) =>
-                          seteazaReels(seteazaReel(ciorna.reels.items, i, 'caption', e.target.value))
-                        }
-                      />
-                    </div>
-                    <div className="admin-reels-actiuni">
-                      <button
-                        type="button"
-                        className="admin-btn-ghost"
-                        disabled={ocupat || i === 0}
-                        aria-label={`Mută clipul ${i + 1} mai devreme`}
-                        onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, -1), true)}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-btn-ghost"
-                        disabled={ocupat || i === ciorna.reels.items.length - 1}
-                        aria-label={`Mută clipul ${i + 1} mai târziu`}
-                        onClick={() => seteazaReels(mutaReel(ciorna.reels.items, i, 1), true)}
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-btn-ghost"
-                        disabled={ocupat}
-                        aria-label={`Șterge clipul ${i + 1}`}
-                        onClick={() => seteazaReels(stergeReel(ciorna.reels.items, i), true)}
-                      >
-                        Șterge
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-          <button
-            type="button"
-            className="admin-btn-ghost"
-            disabled={ocupat || ciorna.reels.items.length >= MAX_REELS}
-            onClick={() => seteazaReels(adaugaReel(ciorna.reels.items), true)}
-          >
-            + Adaugă clip
-          </button>
-
-          <h3>Secțiunile paginii</h3>
-          <p className="admin-config-hint">
-            Ordinea de aici e ordinea de pe pagină. Numerele (01, 02…) se recalculează singure — o
-            secțiune ascunsă nu lasă gaură.
-          </p>
-          <ol className="admin-layout-list">
-            {ciorna.layout.map((s, i) => (
-              <li key={s.key} className={s.visible ? '' : 'ascunsa'}>
-                <span className="admin-layout-nr">
-                  {s.visible
-                    ? String(ciorna.layout.filter((x, j) => x.visible && j <= i).length).padStart(
-                        2,
-                        '0'
-                      )
-                    : '—'}
-                </span>
-                <span className="admin-layout-nume">{ETICHETE_SECTIUNI[s.key]}</span>
-                <button
-                  type="button"
-                  className="admin-btn-ghost"
-                  onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, -1))}
-                  disabled={ocupat || i === 0}
-                  aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai sus`}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="admin-btn-ghost"
-                  onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, 1))}
-                  disabled={ocupat || i === ciorna.layout.length - 1}
-                  aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai jos`}
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  className="admin-btn-ghost"
-                  onClick={() => seteaza('layout', comutaVizibilitatea(ciorna.layout, s.key))}
-                  disabled={ocupat}
-                >
-                  {s.visible ? 'Ascunde' : 'Arată'}
-                </button>
-              </li>
-            ))}
-          </ol>
         </div>
         </Blocat.Provider>
       )}
@@ -783,11 +811,16 @@ export const AdminEventTab = () => {
             {/* Problemele de validare au întâietate: ele dezactivează „Publică",
                 deci un refuz vechi n-are ce concura cu ele. */}
             {probleme.length > 0 ? (
-              <span className="admin-bara-problema">
+              // Buton, nu text: numărul spunea CÂTE, niciodată CARE.
+              <button
+                type="button"
+                className="admin-bara-problema admin-bara-problema--link"
+                onClick={laPrimaEroare}
+              >
                 {probleme.length === 1
                   ? '1 câmp de reparat'
                   : `${probleme.length} câmpuri de reparat`}
-              </span>
+              </button>
             ) : refuz ? (
               <span className="admin-bara-problema">{refuz}</span>
             ) : (
@@ -796,18 +829,38 @@ export const AdminEventTab = () => {
                 <span className="admin-bara-detaliu">
                   {descrieMoment(ciorna.start, ciorna.tz, acum) || ciorna.start}
                 </span>
+                {/* După detaliu, nu în locul lui: „nesalvat" e o stare a
+                    documentului, nu o problemă a lui, iar ediția și startul
+                    rămân lucrurile pe care le verifici din bară. */}
+                {nesalvat && <span className="admin-bara-nesalvat">Nesalvat</span>}
               </>
             )}
           </span>
           <div className="admin-bara-butoane">
-            <a
-              className="admin-btn-ghost"
-              href="/?config=draft"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Previzualizează
-            </a>
+            {/* Cu diferențe nesalvate previzualizarea SCRIE întâi, deci e un
+                buton; fără ele rămâne ce era, o ancoră — cu Cmd-click și click
+                de mijloc cu tot. */}
+            {nesalvat ? (
+              <button
+                type="button"
+                className="admin-btn-ghost"
+                onClick={previzualizeaza}
+                // Aceeași gardă ca „Salvează": previzualizarea unui config pe
+                // care serverul l-ar refuza n-are ce arăta.
+                disabled={ocupat || !poatePublica}
+              >
+                {salveaza ? 'Se salvează…' : 'Salvează și previzualizează'}
+              </button>
+            ) : (
+              <a
+                className="admin-btn-ghost"
+                href={PREVIEW_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Previzualizează
+              </a>
+            )}
             <button
               type="button"
               className="admin-btn-ghost"
@@ -867,19 +920,49 @@ export const AdminEventTab = () => {
       )}
 
       {confirmPublicare && ciorna && (
-        <div
-          className="admin-confirm-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConfirmPublicare(false);
-          }}
+        <Dialog
+          titlu={`Publici ediția ${ciorna.number}?`}
+          rol="alertdialog"
+          onInchide={() => setConfirmPublicare(false)}
         >
-          <div className="admin-confirm" role="alertdialog" aria-modal="true">
-            <h3>Publici ediția {ciorna.number}?</h3>
             <p>
               Se <strong>salvează ciorna așa cum arată acum</strong>, apoi se publică. Site-ul
               public trece pe configul ăsta imediat, fără deploy. Vizitatorii vor vedea{' '}
               <strong>{ciorna.showComingSoon ? 'Coming Soon' : 'landing-ul cu înscrieri'}</strong>.
             </p>
+
+            {/* CE se schimbă, nu doar ce se va vedea.
+                Singurul click ireversibil din backoffice era și singurul fără o
+                listă sub el: „vizitatorii vor vedea landing-ul" e adevărat și
+                când ai mutat cursa cu o săptămână din greșeală. */}
+            {!esteComparabil(publicat, ciorna) ? (
+              <p className="admin-confirm-note">
+                Prima publicare a ediției {ciorna.number} — nu există o versiune anterioară a ei cu
+                care să se compare.
+              </p>
+            ) : diferente.length === 0 ? (
+              <p className="admin-confirm-note">
+                Nimic nu se schimbă față de ce e publicat acum.
+              </p>
+            ) : (
+              <>
+                <p className="admin-confirm-note">Față de ce e publicat acum se schimbă:</p>
+                <dl className="admin-mostenire admin-diferente">
+                  {diferente.map((d) => (
+                    <div key={d.eticheta}>
+                      <dt>{d.eticheta}</dt>
+                      <dd>
+                        <span className="admin-diferenta-inainte">{d.inainte}</span>
+                        <span className="admin-diferenta-sageata" aria-hidden="true">
+                          →
+                        </span>
+                        <span className="admin-diferenta-acum">{d.acum}</span>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
+            )}
             <p className="admin-confirm-note">
               Share preview-ul (WhatsApp/Facebook) rămâne pe datele build-ului deployat până la
               următorul deploy — scraper-ele nu rulează JS, deci meta nu se poate schimba la
@@ -897,8 +980,7 @@ export const AdminEventTab = () => {
                 Anulează
               </button>
             </div>
-          </div>
-        </div>
+        </Dialog>
       )}
     </section>
   );

@@ -101,6 +101,7 @@ export type ControlCamp = {
  */
 export const Camp = ({
   eticheta,
+  cheie,
   ajutor,
   eroare,
   atentie,
@@ -108,6 +109,16 @@ export const Camp = ({
   children,
 }: {
   eticheta: string;
+  /**
+   * Cheia câmpului din validare (`venue.mapQuery`, `slots.total`), stampilată
+   * ca `data-camp`.
+   *
+   * Rostul ei: indicatorul „N câmpuri de reparat" din bară trebuie să ducă LA
+   * câmpul vinovat. Id-ul controlului vine din `useId()`, deci nu e ghicibil
+   * din afară, iar o hartă cheie→id ținută în tab ar fi fost un al doilea
+   * vocabular de întreținut. Cheia e aceeași cu `CampInvalid.camp`.
+   */
+  cheie?: string;
   ajutor?: string;
   eroare?: string;
   /**
@@ -133,7 +144,10 @@ export const Camp = ({
     .join(' ');
 
   return (
-    <div className={`admin-config-camp${eroare ? ' invalid' : ''}${atentie ? ' atentie' : ''}`}>
+    <div
+      className={`admin-config-camp${eroare ? ' invalid' : ''}${atentie ? ' atentie' : ''}`}
+      data-camp={cheie}
+    >
       <label className="admin-config-eticheta" htmlFor={id}>
         {eticheta}
       </label>

@@ -98,6 +98,27 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
   const [prezentaRow, setPrezentaRow] = useState<AdminRegistration | null>(null);
   const [tab, setTab] = useState<TabAdmin>('participanti');
+  /**
+   * Garda tabului curent: „pot pleca de aici?".
+   *
+   * Un tab se randează condiționat (`{tab === 'eveniment' && …}`), deci
+   * schimbarea tabului îl DEMONTEAZĂ — iar ce era în el, nesalvat, dispărea
+   * fără să întrebe. Registrul stă aici, unde trăiește `tab`, nu în `AdminNav`:
+   * navigația se face din trei locuri (bara de taburi, panoul „Acum", linkul
+   * spre „Livrare"), iar o gardă pusă pe unul singur ar fi fost o gardă cu trei
+   * sferturi de gaură.
+   */
+  const gardaIesire = useRef<(() => boolean) | null>(null);
+  const schimbaTab = useCallback((urmator: TabAdmin) => {
+    setTab((curent) => {
+      if (urmator === curent) return curent;
+      if (gardaIesire.current && !gardaIesire.current()) return curent;
+      return urmator;
+    });
+  }, []);
+  const inregistreazaGardaIesire = useCallback((garda: (() => boolean) | null) => {
+    gardaIesire.current = garda;
+  }, []);
   // Semnalele pentru panoul „Acum". Ciorna și amprenta de build trăiesc în
   // tabul „Eveniment"; aici le citim doar ca să putem spune, din prima pagină,
   // că a rămas ceva nepublicat.
@@ -664,14 +685,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             „cine s-a înscris". */}
         <AdminAcum
           semnale={{ nelivrate, asteptare: waitAll.length, ciornaNepublicata, metaInUrma, arhiva }}
-          onTab={setTab}
+          onTab={schimbaTab}
         />
 
         {/* Tab-urile poartă un contor, ca să știi ce e în spatele lor fără să
             le deschizi. Contorul lipsește cât timp datele nu au sosit — un „0"
             afișat în timpul încărcării ar fi o minciună scurtă, dar tocmai pe
             aia o citește organizatorul când intră. */}
-        <AdminNav tab={tab} onTab={setTab} contorTab={contorTab} nelivrate={nelivrate} />
+        <AdminNav tab={tab} onTab={schimbaTab} contorTab={contorTab} nelivrate={nelivrate} />
 
         {tab === 'sabloane' && (
           <AdminTemplatesTab />
@@ -699,6 +720,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
         {tab === 'eveniment' && (
           <AdminEventTab
+            inregistreazaGardaIesire={inregistreazaGardaIesire}
           />
         )}
 
@@ -812,7 +834,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
                       type="button"
                       className={`admin-mail-badge ${rezumat.clasa}`}
                       title={`${rezumat.detaliu} — click pentru fișa de acoperire`}
-                      onClick={() => setTab('livrare')}
+                      onClick={() => schimbaTab('livrare')}
                     >
                       {rezumat.eticheta}
                     </button>

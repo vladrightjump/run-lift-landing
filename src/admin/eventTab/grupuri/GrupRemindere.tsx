@@ -16,6 +16,7 @@ import {
   type StareReminder,
 } from '../../remindere';
 import { ETICHETE_SABLOANE, areEroareIndexata } from '../ajutoare';
+import { useSesiuneAdmin } from '../../adminSession';
 
 /**
  * Semnul din dreptul fiecărui rând.
@@ -60,6 +61,7 @@ type Props = {
 /** „Remindere": orarul emailurilor care pleacă singure înainte de cursă. */
 export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }: Props) => {
   const ocupat = useContext(Blocat);
+  const { showToast } = useSesiuneAdmin();
   // Derivate din ciornă, nu primite: grupul e singurul care le folosește, iar
   // ca prop-uri ar fi fost două valori în plus de ținut în sincron.
   const programate = useMemo(
@@ -203,7 +205,18 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }
                   className="admin-btn-ghost"
                   disabled={ocupat}
                   aria-label={`Șterge reminderul cu ${r.intrare.offsetHours} ore înainte`}
-                  onClick={() => seteazaRemindere(stergeReminder(ciorna.reminders, i))}
+                  onClick={() => {
+                    // Undo, nu confirmare: o întrebare la fiecare ștergere e o
+                    // întrebare pe care o închizi fără s-o citești. Lista e
+                    // stare locală, deci întoarcerea nu poate eșua.
+                    const inainte = ciorna.reminders;
+                    seteazaRemindere(stergeReminder(inainte, i));
+                    showToast({
+                      kind: 'success',
+                      msg: `Reminderul cu ${r.intrare.offsetHours} ore înainte a fost șters.`,
+                      undo: () => seteazaRemindere(inainte),
+                    });
+                  }}
                 >
                   Șterge
                 </button>

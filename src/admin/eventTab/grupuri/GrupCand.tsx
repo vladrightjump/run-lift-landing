@@ -46,6 +46,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
 
     <Camp
       eticheta="Startul cursei"
+      cheie="start"
       eroare={erori.get('start')}
       ecou={
         <>
@@ -113,6 +114,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
 
     <Camp
       eticheta="Durata"
+      cheie="durationHours"
       ajutor="Ore. După start + durată, pagina trece pe countdown-ul următorului antrenament."
       eroare={erori.get('durationHours')}
     >
@@ -132,6 +134,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
     </Camp>
     <Camp
       eticheta="Check-in de la"
+      cheie="checkinFrom"
       ajutor="Ora la care se deschide check-inul, în ziua cursei. Opțiunile se măsoară față de start."
       eroare={erori.get('checkinFrom')}
       atentie={reperPe.get('checkin')?.problema}
@@ -161,6 +164,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
     </Camp>
     <Camp
       eticheta="Se închid înscrierile"
+      cheie="registrationDeadline"
       ajutor="Nu poate fi după start."
       eroare={erori.get('registrationDeadline')}
       ecou={descrieMoment(ciorna.registrationDeadline, ciorna.tz, acum)}
@@ -178,6 +182,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
     </Camp>
     <Camp
       eticheta="Se anunță ediția"
+      cheie="launchAt"
       ajutor="Până atunci homepage-ul poate sta pe Coming Soon, cu numărătoarea inversă spre momentul ăsta."
       eroare={erori.get('launchAt')}
       // Ciorna ediției următoare moștenește anunțul ediției trecute —
@@ -196,6 +201,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
     </Camp>
     <Camp
       eticheta="Următorul antrenament"
+      cheie="nextEditionAt"
       ajutor="După ce se termină cursa, pagina numără invers spre data asta. Trebuie să fie după finalul cursei."
       eroare={erori.get('nextEditionAt')}
       atentie={reperPe.get('nextEditionAt')?.problema}
@@ -212,6 +218,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
     </Camp>
     <Camp
       eticheta={'„Cine vine” apare cu'}
+      cheie="leaderboardLeadHours"
       ajutor="Atunci pagina scoate formularul și urcă lista de participanți sub hero."
       eroare={erori.get('leaderboardLeadHours')}
     >
@@ -241,6 +248,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
     </Camp>
     <Camp
       eticheta="Fusul orar"
+      cheie="tz"
       ajutor="Decalajul față de UTC, scris ca „+03:00”. Moldova: +03:00 vara, +02:00 iarna."
       eroare={erori.get('tz')}
     >
