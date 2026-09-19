@@ -100,7 +100,12 @@ Nu există router. `src/main.tsx` alege componenta după `pathname`:
 | `/confirmare?token=` | `Confirmare` | Double opt-in pentru lista „anunță-mă" | da |
 | `/renunt?token=` | `Renunt` | „Nu mai pot veni" — eliberează locul | da |
 | `/unsubscribe?token=` | `Unsubscribe` | Dezabonare de la emailurile în masă | da |
+| `/antrenament` | `Antrenament` | Antrenamentul săptămânii — linkul de trimis în story sau în Telegram | **nu** (nu ține de nicio ediție; își cere singur datele) |
 | `/admin` | `AdminApp` | Backoffice | da |
+
+`/antrenament` e singura rută cu **shell propriu de build** (`antrenament.html`, rutat din
+`vercel.json`). Meta de share se injectează la build, deci un card per pagină cere un fișier per
+pagină — altfel linkul antrenamentului ar arăta cardul ediției, cu o dată posibil trecută.
 
 Înainte de orice randare, `redirectCanonic` mută vizitatorii de pe `*.vercel.app` (producție) pe
 `parktraining.fit`, cu tot cu cale și parametri.
@@ -589,6 +594,25 @@ sequenceDiagram
 
 Cod: `AdminComingSoonTab.tsx`.
 
+### 4.9b Setup → Antrenamentul săptămânii
+
+Al doilea tab cu efect **imediat**, fără ciornă. Titlu, text liber și un comutator; o salvare și
+pagina `/antrenament` arată textul nou.
+
+Nu ține de nicio ediție — se editează și între ediții, iar ediția de arhivă nu-l blochează.
+Cod: `AdminAntrenamentTab.tsx`; tabelul și RPC-urile:
+`supabase/sql/supabase-migration-antrenament-saptamanii.sql`.
+
+Două reguli le impune **serverul**, nu formularul, fiindcă formularul nu e singura cale spre tabel:
+
+| Regulă | De ce acolo |
+|---|---|
+| Comutator pornit + corp gol → `workout_empty` | O scriere directă ar fi produs o pagină publică goală la un URL tocmai trimis |
+| Salvarea care schimbă doar comutatorul peticește rândul publicat, nu scrie versiune | Altfel o pornire-oprire dublă ar fi îngropat editarea reală sub rânduri identice |
+
+Versiunile anterioare rămân (`superseded`) și se pot republica din același ecran. Oprit, URL-ul
+**răspunde** și spune că nu e nimic publicat — nu dă 404, ca linkurile deja trimise să nu se rupă.
+
 ### 4.10 Selectorul de ediție și „+ Ediție nouă"
 
 Două lucruri diferite care se confundă ușor:
@@ -634,6 +658,7 @@ Fiecare încercare lasă un rând în `email_log` (`log_emails`), vizibil în 4.
 |---|---|---|
 | Data, locul, locurile, secțiunile, orarul reminderelor | `/admin` → Evenimentul → ciornă → Publică | nu |
 | Coming Soon on/off, momentul anunțului | `/admin` → Coming Soon | nu |
+| Antrenamentul săptămânii (text + pornit/oprit) | `/admin` → Antrenamentul săptămânii | nu |
 | Textul oricărui email | `/admin` → Șabloane | nu |
 | Un clip Instagram | `/admin` → Evenimentul → Instagram | nu (posterul nou, da: `public/reels/`) |
 | Meta de share (titlu/imagine WhatsApp/Facebook) | `src/content/edition.ts` → build | **da** |
