@@ -142,6 +142,27 @@ o păzește `tests/unit/edge/sendEmail.test.ts`.
 Rândul la `offsetHours: 72` nu vine din migrare — orarul e al operatorului și se scrie din
 `/admin` la configurarea ediției.
 
+### `supabase/sql/supabase-migration-antrenament-saptamanii.sql` — NEAPLICAT
+
+Antrenamentul săptămânii: tabelul `weekly_workout` (rânduri `published`/`superseded`, un singur
+publicat), plus `admin_save_weekly_workout`, `admin_list_weekly_workout`,
+`admin_restore_weekly_workout` și `public_weekly_workout`.
+
+Nu atinge nimic existent — tabel nou, funcții noi, fără trigger și fără `app_config`. Se poate
+aplica oricând, independent de celelalte migrări neaplicate.
+
+Două reguli trăiesc în RPC pentru că formularul nu e singura cale spre tabel: salvarea cu
+comutatorul pornit și corpul gol se refuză (`workout_empty`), iar o salvare care schimbă doar
+comutatorul peticește rândul publicat în loc să scrie o versiune nouă. Vezi
+`docs/plans/2026-09-19-1151-feat-antrenamentul-saptamanii-si-admin-cronologic-plan.md` (KTD5, KTD9).
+
+Tabelul n-are `grant select` pentru `anon` deloc, pe lângă RLS fără politici — cu un strat mai
+strict decât `event_config`, fiindcă nimic din el nu se citește vreodată direct din browser.
+
+Instantaneul `supabase/schema/runlift.sql` conține deja migrarea, deci testele SQL o acoperă
+înainte de aplicare. **Un instantaneu verde nu înseamnă bază migrată** — pagina `/antrenament`
+nu funcționează până când migrarea nu e aplicată în proiectul real.
+
 ### `supabase/sql/supabase-migration-anunt-istoric.sql` — NEAPLICAT
 
 Anunțul de ediție nouă către toți participanții de până acum. Trei piese: `unsubscribe()` se

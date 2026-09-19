@@ -96,7 +96,8 @@ describe('funcțiile de admin cer un token de sesiune', () => {
           `select (select count(*) from runlift.registrations where deleted_at is null)
                 + (select count(*) from runlift.event_waitlist)
                 + (select count(*) from runlift.email_templates)
-                + (select count(*) from runlift.event_config) as n`
+                + (select count(*) from runlift.event_config)
+                + (select count(*) from runlift.weekly_workout) as n`
         )
       ).rows[0].n;
 
@@ -118,6 +119,8 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
   const PERMISE_PUBLIC = [
     'public_stats',
     'public_config',
+    // Întoarce doar rândul publicat ȘI activ, deci exact ce arată pagina.
+    'public_weekly_workout',
     'confirm_signup',
     'decline_spot',
     'unsubscribe',
@@ -150,6 +153,7 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
       'admin_publish_event_config', 'admin_replay_lookup', 'admin_restore_event_config',
       'admin_save_email_template', 'admin_save_event_config_draft', 'admin_set_coming_soon',
       'admin_undelete_registration', 'admin_undelete_waitlist', 'admin_update_registration',
+      'admin_save_weekly_workout', 'admin_list_weekly_workout', 'admin_restore_weekly_workout',
     ],
   ];
 
