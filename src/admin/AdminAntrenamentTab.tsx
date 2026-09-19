@@ -30,7 +30,9 @@ import { useSesiuneAdmin } from './adminSession';
 
 const LINK = '/antrenament';
 
-const candScurt = (iso: string): string =>
+/** Momentul salvării, scurt. Primește un timestamptz din DB (cu fus), nu ISO
+ *  local — de asta nu e `candScurt` din `reperele.ts`, care cere altceva. */
+const candSalvat = (iso: string): string =>
   new Date(iso).toLocaleString('ro-RO', {
     day: 'numeric',
     month: 'short',
@@ -216,7 +218,7 @@ export const AdminAntrenamentTab = () => {
           </div>
         </fieldset>
 
-        <div className="admin-config-bara">
+        <div className="admin-table-actions">
           <button
             type="button"
             className="admin-btn-accent"
@@ -235,21 +237,25 @@ export const AdminAntrenamentTab = () => {
             Doar editările de conținut lasă o versiune. Pornirea și oprirea nu — altfel lista ar
             fi plină de rânduri identice.
           </p>
-          <ul className="admin-versiuni">
-            {istoric.map((v) => (
-              <li key={v.id}>
-                <span className="admin-versiune-cand">{candScurt(v.creat_la)}</span>
-                <span className="admin-versiune-titlu">{v.titlu || '(fără titlu)'}</span>
-                <button
-                  type="button"
-                  className="admin-btn-ghost"
-                  onClick={() => void revinoLa(v.id)}
-                >
-                  Revino la ea
-                </button>
-              </li>
-            ))}
-          </ul>
+          {/* Aceleași clase ca istoricul ediției din tabul „Evenimentul" — e
+              aceeași listă, cu aceeași treabă. */}
+          <div className="admin-table-wrap">
+            <div className="admin-table">
+              {istoric.map((v) => (
+                <div key={v.id} className="admin-row">
+                  <span className="admin-cell-name">{v.titlu || '(fără titlu)'}</span>
+                  <span className="admin-cell-date">{candSalvat(v.creat_la)}</span>
+                  <button
+                    type="button"
+                    className="admin-btn-ghost"
+                    onClick={() => void revinoLa(v.id)}
+                  >
+                    Revino la ea
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </section>
