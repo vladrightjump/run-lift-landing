@@ -45,6 +45,13 @@ type Props = {
    * din el. `null` o retrage.
    */
   inregistreazaGardaIesire: (garda: (() => boolean) | null) => void;
+  /**
+   * Cerere venită de pe linia de timp: deschide dialogul de ediție nouă imediat
+   * ce tabul se montează. Calea scurtă e chemată de acolo, nu căutată aici.
+   */
+  deschideDialogNou?: boolean;
+  /** Confirmă că cererea de mai sus a fost onorată, ca să nu se repete. */
+  onDialogNouDeschis?: () => void;
 };
 
 /** Pagina publică randată din ciorna de pe server. */
@@ -62,7 +69,11 @@ const PREVIEW_URL = '/?config=draft';
  * ca opțiune dacă nu e printre ele, altfel un document scris manual în DB ar
  * părea că are altă valoare decât are.
  */
-export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
+export const AdminEventTab = ({
+  inregistreazaGardaIesire,
+  deschideDialogNou = false,
+  onDialogNouDeschis,
+}: Props) => {
   const { token, onAuthError, showToast } = useSesiuneAdmin();
   const [randuri, setRanduri] = useState<AdminEventConfigRow[] | null>(null);
   const [ciorna, setCiorna] = useState<EventConfig | null>(null);
@@ -400,10 +411,27 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
    * Un refuz descrie documentul care l-a produs. Când se schimbă ciorna
    * deschisă, reproșul nu mai are despre ce să fie.
    */
+  /**
+   * Dialogul e deschis fie fiindcă s-a apăsat butonul de aici, fie fiindcă
+   * linia de timp a cerut calea scurtă.
+   *
+   * Derivat la randare, nu scris dintr-un efect: un efect ar fi însemnat o
+   * rundă de randare în plus pentru o stare care se poate citi direct. Cererea
+   * de afară așteaptă `publicat` — dialogul pornește ciorna DIN ediția
+   * publicată, deci fără ea n-ar avea din ce moșteni — și se stinge la
+   * închidere, prin `inchideDialogNou`.
+   */
+  const arataDialogEditieNoua = dialogEditieNoua || (deschideDialogNou && publicat !== null);
+
+  const inchideDialogNou = () => {
+    setDialogEditieNoua(false);
+    onDialogNouDeschis?.();
+  };
+
   const creeazaDinDialog = (noua: EventConfig) => {
     atinsa.current = true;
     setRefuz(null);
-    setDialogEditieNoua(false);
+    inchideDialogNou();
     setCiorna(noua);
     // Ciorna asta n-a fost niciodată pe server, deci e nesalvată din prima
     // clipă — și e chiar starea pe care ar durea cel mai tare s-o pierzi.
@@ -911,11 +939,11 @@ export const AdminEventTab = ({ inregistreazaGardaIesire }: Props) => {
         </>
       )}
 
-      {dialogEditieNoua && publicat && (
+      {arataDialogEditieNoua && publicat && (
         <DialogEditieNoua
           publicat={publicat}
           onCreeaza={creeazaDinDialog}
-          onAnuleaza={() => setDialogEditieNoua(false)}
+          onAnuleaza={inchideDialogNou}
         />
       )}
 

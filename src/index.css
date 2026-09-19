@@ -2550,3 +2550,155 @@
     font-size: clamp(15px, 2.2vw, 17px); line-height: 1.6;
     color: var(--e3-text);
   }
+
+  /* ---- Linia de timp a ediției (primul bloc din backoffice) ---- */
+  .admin-linie {
+    border: 1px solid var(--e3-border); border-left: 3px solid var(--e3-accent);
+    background: var(--e3-surface); display: grid; gap: 0;
+    animation: stat-pop 0.45s ease-out both;
+  }
+  .admin-linie-antet {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px 16px; padding: 16px 24px;
+    border-bottom: 1px solid var(--e3-border);
+  }
+  .admin-linie-eticheta {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+  .admin-linie-faza {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 600; color: var(--e3-text);
+  }
+  /* Lime cât timp pagina e „vie", stins în rest; pulsează doar în ziua cursei,
+     singurul moment în care starea se schimbă sub ochii tăi. */
+  .admin-linie-punct-faza {
+    width: 9px; height: 9px; border-radius: 50%; flex: none;
+    background: var(--e3-muted-dim);
+  }
+  .faza-landing .admin-linie-punct-faza { background: var(--e3-accent); }
+  .faza-cine-vine .admin-linie-punct-faza {
+    background: var(--e3-accent); animation: dot-blink 1.4s ease-in-out infinite;
+  }
+
+  .admin-linie-gol { margin: 0; padding: 20px 24px; font-size: 14px; color: var(--e3-muted-strong); }
+
+  .admin-linie-noduri { list-style: none; margin: 0; padding: 12px 24px 16px; display: grid; }
+  .admin-linie-nod {
+    position: relative;
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 2px 12px;
+    padding: 10px 0 10px 0;
+  }
+  /* Firul care leagă nodurile. Nu pe ultimul — linia nu continuă după el. */
+  .admin-linie-nod::before {
+    content: ""; position: absolute; left: 6px; top: 18px; bottom: -2px;
+    width: 1px; background: var(--e3-border);
+  }
+  .admin-linie-nod:last-child::before { display: none; }
+  .admin-linie-punct {
+    width: 11px; height: 11px; border-radius: 50%; flex: none;
+    border: 1px solid var(--e3-muted-dim); background: var(--e3-surface);
+    grid-row: 1; align-self: center;
+  }
+  .admin-linie-nod.trecut .admin-linie-punct { background: var(--e3-muted-dim); }
+  .admin-linie-nod.urmatorul .admin-linie-punct {
+    border-color: var(--e3-accent); border-width: 2px;
+  }
+  .admin-linie-nod.problema .admin-linie-punct { border-color: var(--e3-danger-strong); }
+
+  .admin-linie-nume {
+    grid-column: 2; font-size: 15px; font-weight: 600; color: var(--e3-text);
+  }
+  .admin-linie-nod.trecut .admin-linie-nume { color: var(--e3-muted-strong); font-weight: 500; }
+  .admin-linie-stare {
+    grid-column: 3; grid-row: 1; justify-self: end;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+  .admin-linie-nod.urmatorul .admin-linie-stare { color: var(--e3-accent); }
+  .admin-linie-cand {
+    grid-column: 2; font-size: 13px; color: var(--e3-accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .admin-linie-nod.trecut .admin-linie-cand { color: var(--e3-muted); }
+  .admin-linie-semnal {
+    grid-column: 2; font-size: 13px; line-height: 1.45;
+    color: var(--e3-danger-strong); text-wrap: pretty;
+  }
+  .admin-linie-actiune { grid-column: 3; justify-self: end; margin-top: 4px; }
+
+  .admin-linie-atentie {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 14px 24px; border-top: 1px solid var(--e3-border);
+    background: var(--e3-bg);
+  }
+  .admin-linie-ok { font-size: 13px; color: var(--e3-muted); }
+  .admin-linie-atentie-semnal {
+    font-family: inherit; font-size: 13px; line-height: 1.4;
+    background: transparent; color: var(--e3-muted-strong);
+    border: 1px solid var(--e3-border); padding: 7px 12px; cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .admin-linie-atentie-semnal:hover {
+    border-color: var(--e3-accent); color: var(--e3-accent);
+    background: var(--e3-surface);
+  }
+  .admin-linie-atentie-semnal.static { cursor: default; }
+  .admin-linie-atentie-semnal.urgent {
+    color: var(--e3-danger-strong); border-color: var(--e3-danger-strong);
+  }
+
+  @media (max-width: 560px) {
+    /* Pe mobil acțiunea nu mai încape pe rând — trece dedesubt, aliniată la
+       text, ca linia să rămână o coloană citibilă. */
+    .admin-linie-nod { grid-template-columns: 14px minmax(0, 1fr); }
+    .admin-linie-stare { grid-column: 2; grid-row: auto; justify-self: start; }
+    .admin-linie-actiune { grid-column: 2; justify-self: start; }
+  }
+
+  /* ---- „În fiecare săptămână" (sub linia de timp) ---- */
+  .admin-saptamanal {
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    display: grid; gap: 0;
+  }
+  .admin-saptamanal-cap { padding: 12px 24px 0; }
+  .admin-saptamanal-eticheta {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+  .admin-saptamanal-rand {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
+    padding: 10px 24px 16px;
+  }
+  .admin-saptamanal-stare {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--e3-muted-strong);
+  }
+  .admin-saptamanal-stare.pornit { color: var(--e3-accent); }
+  .admin-saptamanal-punct {
+    width: 9px; height: 9px; border-radius: 50%; flex: none;
+    background: var(--e3-muted-dim);
+  }
+  .admin-saptamanal-stare.pornit .admin-saptamanal-punct { background: var(--e3-accent); }
+  .admin-saptamanal-titlu {
+    flex: 1 1 auto; min-width: 0; font-size: 14px; color: var(--e3-text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ---- Navigația ca al doilea nivel ----
+     De când linia de timp e primul ecran, bara de grupuri nu mai e punctul de
+     pornire. Aceleași grupuri, aceleași frunze, același comportament — doar
+     greutatea vizuală scade, ca să nu concureze cu desfășurarea de deasupra. */
+  .admin-nav-eticheta {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--e3-muted);
+    padding: 4px 2px 8px;
+  }
+  .admin-nav-grupuri { background: var(--e3-border); }
+  .admin-nav-grup { min-height: 54px; padding: 10px 14px; }
+  /* Muchia activă se subțiază: marchează în continuare unde ești, fără să
+     revendice atenția pe care o cere acum linia de timp. */
+  .admin-nav-grup.activ { box-shadow: inset 0 2px 0 var(--e3-accent); }

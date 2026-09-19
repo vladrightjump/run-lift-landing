@@ -1,5 +1,6 @@
 import type { EventConfig } from '../content/eventConfig';
 import type { EditionDates } from '../lib/config';
+import { reperele, type Reper } from './reperele';
 
 /**
  * Ce se întâmplă ACUM și ce urmează — răspunsul pe care backoffice-ul nu-l dădea.
@@ -21,13 +22,15 @@ export type TabAdmin =
   | 'lansare'
   | 'sabloane'
   | 'eveniment'
-  | 'coming-soon'
-  | 'antrenament';
+  | 'coming-soon';
 
-export type Reper = {
-  eticheta: string;
-  moment: Date;
-};
+/**
+ * Reperul pe care-l raportează panoul de stare vine acum din `reperele.ts`.
+ *
+ * Erau două liste de repere în același dosar, cu forme diferite — una bogată
+ * (stări, semnale, consecințe) și una subțire, folosită doar ca să afle care
+ * urmează. A doua a dispărut; `Reper` se importă sus.
+ */
 
 export type Atentie = {
   /** Cheie stabilă — pentru `key` la randare și pentru aserțiuni în teste. */
@@ -85,21 +88,17 @@ export const fazaSite = (config: EventConfig, dates: EditionDates, acum: number)
 };
 
 /**
- * Reperele ediției, în ordine cronologică. Numele sunt scrise ca efect pe
- * pagină („se închid înscrierile"), nu ca nume de câmp („registrationDeadline") —
- * organizatorul se gândește în efecte.
+ * Nodurile pe care le cere linia de timp a backoffice-ului: ce SE ÎNTÂMPLĂ cu
+ * ediția, nu ce câmpuri are formularul.
+ *
+ * Aceleași trei opțiuni pentru panoul „Acum" și pentru linia de timp, ca
+ * „următorul reper" să însemne același lucru în amândouă.
  */
-export const repere = (config: EventConfig, dates: EditionDates): Reper[] => {
-  const toate: Reper[] = [
-    ...(config.showComingSoon ? [{ eticheta: 'se anunță ediția', moment: dates.LAUNCH_DATE }] : []),
-    { eticheta: 'se închid înscrierile', moment: dates.REGISTRATION_DEADLINE },
-    { eticheta: 'pagina trece pe „cine vine”', moment: dates.LEADERBOARD_DATE },
-    { eticheta: 'startul cursei', moment: dates.EVENT_DATE },
-    { eticheta: 'finalul cursei', moment: dates.EVENT_END_DATE },
-    { eticheta: 'următorul antrenament', moment: dates.NEXT_EDITION_DATE },
-  ];
-  return toate.sort((a, b) => a.moment.getTime() - b.moment.getTime());
-};
+export const NODURI_DESFASURARE = {
+  leaderboard: true,
+  remindere: true,
+  scoateAnuntulInactiv: true,
+} as const;
 
 export type SemnaleAdmin = {
   nelivrate: number;
@@ -181,7 +180,7 @@ export const stareCurenta = (
   return {
     faza,
     ceVede: CE_VEDE[faza],
-    urmatorul: repere(config, dates).find((r) => r.moment.getTime() > acum) ?? null,
+    urmatorul: reperele(config, acum, NODURI_DESFASURARE).find((r) => r.la > acum) ?? null,
     atentie: semnaleDeAtentie(semnale, faza),
   };
 };

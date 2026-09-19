@@ -115,6 +115,93 @@ describe('cronologia — momentele în ordinea în care se întâmplă', () => {
   });
 });
 
+describe('nodurile în plus, cerute explicit', () => {
+  /**
+   * Linia de timp a backoffice-ului cere două noduri pe care formularul
+   * ediției nu le vrea: momentul în care pagina trece pe „cine vine" (trăia
+   * până acum într-o a doua listă, în `stareCurenta`) și reminderele armate.
+   *
+   * Opționale, nu implicite: cronologia din tabul „Evenimentul" e despre
+   * câmpurile pe care le editezi acolo, iar reminderele stau în alt grup. Un
+   * nod în plus acolo ar fi zgomot într-un ecran care nu l-a cerut.
+   */
+  it('implicit, lista rămâne exact cea de dinainte', () => {
+    expect(reperele(SNAPSHOT_CONFIG, INAINTE).map((x) => x.cheie)).toEqual(
+      reperele(SNAPSHOT_CONFIG, INAINTE, {}).map((x) => x.cheie)
+    );
+  });
+
+  it('cerut, nodul „cine vine" intră la locul lui cronologic', () => {
+    const r = reperele(SNAPSHOT_CONFIG, INAINTE, { leaderboard: true });
+    const chei = r.map((x) => x.cheie);
+    expect(chei).toContain('leaderboard');
+    // `leaderboardLeadHours` înaintea startului, deci între check-in și start
+    // pentru instantaneul de build.
+    expect(chei.indexOf('leaderboard')).toBeLessThan(chei.indexOf('start'));
+  });
+
+  it('cerute, reminderele armate apar câte unul', () => {
+    const r = reperele(
+      cu({
+        reminders: [
+          { offsetHours: 24, enabled: true, template: 'bulk_participant_reminder' },
+          { offsetHours: 2, enabled: true, template: 'bulk_participant_reminder_final' },
+        ],
+      }),
+      INAINTE,
+      { remindere: true }
+    );
+    expect(r.filter((x) => x.cheie === 'reminder')).toHaveLength(2);
+  });
+
+  it('un reminder oprit rămâne în orar dar nu pe linia de timp', () => {
+    // Oprit e altceva decât șters: rămâne în listă, dar nu pleacă. Linia de
+    // timp arată ce SE ÎNTÂMPLĂ, nu ce e configurat.
+    const r = reperele(
+      cu({
+        reminders: [{ offsetHours: 24, enabled: false, template: 'bulk_participant_reminder' }],
+      }),
+      INAINTE,
+      { remindere: true }
+    );
+    expect(r.filter((x) => x.cheie === 'reminder')).toHaveLength(0);
+  });
+
+  it('fiecare nod are un id unic, inclusiv când sunt mai multe remindere', () => {
+    // `cheie` nu mai e unică de când reminderele pot fi mai multe, iar randarea
+    // cheie pe `cheie` ar fi dat două rânduri cu aceeași cheie React.
+    const r = reperele(
+      cu({
+        reminders: [
+          { offsetHours: 24, enabled: true, template: 'bulk_participant_reminder' },
+          { offsetHours: 2, enabled: true, template: 'bulk_participant_reminder_final' },
+        ],
+      }),
+      INAINTE,
+      { leaderboard: true, remindere: true }
+    );
+    const ids = r.map((x) => x.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('cerut, anunțul dispare când pornirea nu e pe Coming Soon', () => {
+    // Regula venea din `stareCurenta.repere`: cu pornirea pe landing, momentul
+    // anunțului nu comută nimic.
+    const r = reperele(cu({ showComingSoon: false }), INAINTE, { scoateAnuntulInactiv: true });
+    expect(r.map((x) => x.cheie)).not.toContain('launchAt');
+  });
+
+  it('cu Coming Soon pornit, anunțul rămâne chiar și cerut', () => {
+    const r = reperele(cu({ showComingSoon: true }), INAINTE, { scoateAnuntulInactiv: true });
+    expect(r.map((x) => x.cheie)).toContain('launchAt');
+  });
+
+  it('necerut, anunțul rămâne oricum — formularul îl are ca un câmp', () => {
+    const r = reperele(cu({ showComingSoon: false }), INAINTE);
+    expect(r.map((x) => x.cheie)).toContain('launchAt');
+  });
+});
+
 describe('semnalele — consecința, nu regula', () => {
   const problema = (c: EventConfig, cheie: string, acum = INAINTE): string | undefined =>
     reperele(c, acum).find((x) => x.cheie === cheie)?.problema;

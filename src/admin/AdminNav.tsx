@@ -33,6 +33,14 @@ export const AdminNav = ({ tab, onTab, contorTab, nelivrate }: Props) => {
 
   return (
     <nav className="admin-nav" aria-label="Secțiunile backoffice-ului">
+      {/*
+        Eticheta e nouă odată cu linia de timp. Cât timp navigația era primul
+        lucru de pe ecran, nu-i trebuia nume — era evident că de acolo pornește
+        totul. Acum e al doilea nivel, sub desfășurare, iar fără un nume o bară
+        de butoane așezată la mijlocul paginii nu spune ce e.
+      */}
+      <span className="admin-nav-eticheta">Toate secțiunile</span>
+
       <ul className="admin-nav-grupuri">
         {GRUPURI.map((g) => {
           const activ = g.cheie === grupActiv;

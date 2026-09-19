@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fazaSite, repere, semnaleDeAtentie, stareCurenta } from '../../src/admin/stareCurenta';
+import { fazaSite, semnaleDeAtentie, stareCurenta } from '../../src/admin/stareCurenta';
 import type { SemnaleAdmin } from '../../src/admin/stareCurenta';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 import { deriveEditionDates, type EditionDates } from '../../src/lib/config';
@@ -75,19 +75,9 @@ describe('faza site-ului', () => {
 });
 
 describe('reperele', () => {
-  it('sunt în ordine cronologică', () => {
-    const c = config();
-    const lista = repere(c, deriveEditionDates(c));
-    const momente = lista.map((r) => r.moment.getTime());
-    expect([...momente].sort((a, b) => a - b)).toEqual(momente);
-  });
-
-  it('fără Coming Soon, momentul anunțului nu mai e un reper', () => {
-    // Nu se mai întâmplă nimic vizibil atunci — l-am arăta ca pe o promisiune.
-    const c = config({ showComingSoon: false });
-    const etichete = repere(c, deriveEditionDates(c)).map((r) => r.eticheta);
-    expect(etichete).not.toContain('se anunță ediția');
-  });
+  // Ordinea, condiționarea anunțului și nodurile în plus se verifică acum în
+  // `reperele.test.ts`, pe funcția care le produce. Aici rămâne doar contractul
+  // pe care-l consumă panoul de stare: „care urmează".
 
   it('„urmează" e primul reper care n-a trecut', () => {
     // Deadline-ul e mutat cu o zi înaintea cursei ca ordinea să fie neambiguă.
@@ -97,7 +87,7 @@ describe('reperele', () => {
     const c = config({ showComingSoon: true, registrationDeadline: '2026-08-21T12:00:00' });
     const d = deriveEditionDates(c);
     const stare = stareCurenta(c, d, la(c, '2026-08-20T10:00:00'), fara);
-    expect(stare.urmatorul?.eticheta).toBe('se închid înscrierile');
+    expect(stare.urmatorul?.eticheta).toBe('Se închid înscrierile');
   });
 
   it('după ultimul reper nu mai inventează unul', () => {

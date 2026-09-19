@@ -5,7 +5,7 @@ organizatorul în `/admin`. Pentru fiecare flux: ce vede, ce se întâmplă dede
 ce trebuie să atingi ca să-l schimbi.
 
 > Diagramele sunt Mermaid — se randează direct pe GitHub și în preview-ul Markdown din VS Code.
-> Documentul descrie codul de la commit-ul pe care a fost scris (18 sept 2026). Când schimbi un
+> Documentul descrie codul de la commit-ul pe care a fost scris (19 sept 2026). Când schimbi un
 > flux, actualizează secțiunea lui și tabelul „Unde schimbi ce" de la final.
 
 **Cuprins**
@@ -30,6 +30,7 @@ ce trebuie să atingi ca să-l schimbi.
    - [4.7 Comunicare → Șabloane](#47-comunicare--șabloane)
    - [4.8 Setup → Evenimentul](#48-setup--evenimentul)
    - [4.9 Setup → Coming Soon](#49-setup--coming-soon)
+   - [4.9b Antrenamentul săptămânii (bloc, nu tab)](#49b-antrenamentul-săptămânii-bloc-nu-tab)
    - [4.10 Selectorul de ediție și „+ Ediție nouă"](#410-selectorul-de-ediție-și--ediție-nouă)
 5. [Emailurile: cine le declanșează](#5-emailurile-cine-le-declanșează)
 6. [Unde schimbi ce](#6-unde-schimbi-ce)
@@ -407,9 +408,10 @@ Cod: `AdminApp.tsx`, `AdminLogin.tsx`, `adminSession.tsx` (contextul `token` + `
 flowchart TB
   TOP["Antet: faza de pe site acum (link spre /) · countdown spre anunț · Ieși din cont"]
   ED["Selector de ediție (curentă / arhivă) · + Ediție nouă"]
-  ACUM["Panoul „Acum”: ce vede un vizitator, următorul reper,<br/>semnale de atenție (ciornă nepublicată, meta de share în urmă…)<br/>cu salt direct la tabul care le rezolvă"]
-  NAV["Navigare pe 3 grupuri"]
-  TOP --> ED --> ACUM --> NAV
+  LINIE["Linia de timp a ediției: anunț → înscrieri → remindere → start →<br/>după cursă → ediția următoare. Fiecare nod își spune starea în cuvinte<br/>și poartă acțiunea care-i aparține. Semnalele de atenție dedesubt."]
+  SAPT["„În fiecare săptămână”: antrenamentul — pornit/oprit + titlul curent"]
+  NAV["Navigare pe 3 grupuri (al doilea nivel)"]
+  TOP --> ED --> LINIE --> SAPT --> NAV
   NAV --> O["Oameni — „Cine vine?”"]
   NAV --> C["Comunicare — „Ce le scriu?”"]
   NAV --> S["Setup — „Cum arată pagina?”"]
@@ -427,8 +429,16 @@ flowchart TB
   `auto_promote` nou aduce un toast.
 - **Ediție de arhivă** = orice ediție selectată care nu e cea curentă. Butoanele de scriere se
   ascund, iar serverul refuză oricum (`edition_archived`).
-- Grupurile și taburile: `src/admin/adminNavigatie.ts`. Regulile panoului „Acum":
-  `src/admin/stareCurenta.ts`.
+- Grupurile și taburile: `src/admin/adminNavigatie.ts`. Nodurile liniei de timp:
+  `src/admin/reperele.ts` — **singura** listă de repere; faza și semnalele de atenție rămân în
+  `src/admin/stareCurenta.ts`. Randarea: `src/admin/LiniaDeTimp.tsx`.
+- **De ce linia de timp și nu meniul.** Desfășurarea în timp e forma pe care organizatorul o are
+  oricum în cap; meniul îl obliga s-o traducă în taburi — reminderele sunt un grup din
+  „Evenimentul", lista de înscriși e alt tab, ediția următoare un dialog în al treilea. Panoul
+  „Acum" răspundea la aceeași întrebare, dar în două propoziții: restul rămânea de reconstruit.
+- **Antrenamentul stă în AFARA liniei**, într-un bloc propriu: nu aparține niciunei ediții, iar pe
+  linie ar fi părut un reper al ediției curente și ar fi dispărut odată cu ea. Împărțirea de nivel
+  întâi a backoffice-ului e episodic (ediția) față de recurent (săptămâna).
 
 ### 4.3 Oameni → Participanți
 
@@ -594,9 +604,10 @@ sequenceDiagram
 
 Cod: `AdminComingSoonTab.tsx`.
 
-### 4.9b Setup → Antrenamentul săptămânii
+### 4.9b Antrenamentul săptămânii (bloc, nu tab)
 
-Al doilea tab cu efect **imediat**, fără ciornă. Titlu, text liber și un comutator; o salvare și
+Se deschide din blocul „în fiecare săptămână", de sub linia de timp — **nu e un tab**, fiindcă nu
+e o setare a ediției. Efect **imediat**, fără ciornă: titlu, text liber, un comutator; o salvare și
 pagina `/antrenament` arată textul nou.
 
 Nu ține de nicio ediție — se editează și între ediții, iar ediția de arhivă nu-l blochează.
@@ -658,7 +669,7 @@ Fiecare încercare lasă un rând în `email_log` (`log_emails`), vizibil în 4.
 |---|---|---|
 | Data, locul, locurile, secțiunile, orarul reminderelor | `/admin` → Evenimentul → ciornă → Publică | nu |
 | Coming Soon on/off, momentul anunțului | `/admin` → Coming Soon | nu |
-| Antrenamentul săptămânii (text + pornit/oprit) | `/admin` → Antrenamentul săptămânii | nu |
+| Antrenamentul săptămânii (text + pornit/oprit) | `/admin` → blocul „în fiecare săptămână” | nu |
 | Textul oricărui email | `/admin` → Șabloane | nu |
 | Un clip Instagram | `/admin` → Evenimentul → Instagram | nu (posterul nou, da: `public/reels/`) |
 | Meta de share (titlu/imagine WhatsApp/Facebook) | `src/content/edition.ts` → build | **da** |

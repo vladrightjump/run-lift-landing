@@ -101,7 +101,13 @@ npm run verify        # typecheck + typecheck:tests + test + build + e2e
 
 ## Backoffice (/admin)
 
-Dashboard de organizator: statistici live, listă înscrieri, căutare, adăugare manuală, ștergere
+Dashboard de organizator. Primul lucru pe ecran e **linia de timp a ediției** — anunț, înscrieri,
+remindere, start, după cursă, ediția următoare — fiecare nod cu starea lui în cuvinte și cu acțiunea
+care-i aparține; calea scurtă de creare a ediției următoare stă pe ultimul nod. Sub ea, blocul
+**„în fiecare săptămână"** (antrenamentul, în afara structurii pe ediții, fiindcă nu ține de nicio
+ediție). Abia apoi navigația pe trei grupuri, ca al doilea nivel.
+
+Restul: statistici live, listă înscrieri, căutare, adăugare manuală, ștergere
 cu undo, export CSV, trimitere emailuri în masă, editare șabloane. Auth: cont unic în
 `admin_users` (bcrypt) + token de sesiune în `admin_sessions`; operațiile trec prin RPC-uri
 `SECURITY DEFINER`. Cod: `src/admin/` + `src/lib/adminApi.ts`.
@@ -116,7 +122,7 @@ scrie un rând nou, deci orice apăsare se poate întoarce din „Versiuni anter
 Pagină publică la un URL care nu se schimbă, ca să ai ce link trimite în story sau în grupul de
 Telegram. Un singur antrenament — cel curent; nu e arhivă și n-are navigare între săptămâni.
 
-Se scrie din `/admin` → „Antrenamentul săptămânii": titlu, text liber, comutator, o salvare, efect
+Se scrie din `/admin`, din blocul „în fiecare săptămână" de sub linia de timp: titlu, text liber, comutator, o salvare, efect
 imediat. Nu trece prin ciornă → publică, fiindcă nu ține de ediție. Comutatorul e independent de
 text, deci antrenamentul de săptămâna viitoare poate fi scris din timp cu pagina oprită; **pornit
 peste un text gol** e refuzat de server. Oprit, URL-ul răspunde și spune că nu e nimic publicat —

@@ -33,6 +33,7 @@ import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminEventTab } from './AdminEventTab';
 import { AdminComingSoonTab } from './AdminComingSoonTab';
 import { AdminAntrenamentTab } from './AdminAntrenamentTab';
+import { BlocSaptamanal } from './BlocSaptamanal';
 import { AdminNav } from './AdminNav';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
@@ -46,7 +47,7 @@ import { useCountdown } from '../hooks/useCountdown';
 import { useNow } from '../hooks/useNow';
 import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
 import { AdminSkeleton } from './AdminSkeleton';
-import { AdminAcum } from './AdminAcum';
+import { LiniaDeTimp } from './LiniaDeTimp';
 import { AdminActivitate } from './AdminActivitate';
 import { AdminAsteptare } from './AdminAsteptare';
 import { AdminCifre } from './AdminCifre';
@@ -124,6 +125,13 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // tabul „Eveniment"; aici le citim doar ca să putem spune, din prima pagină,
   // că a rămas ceva nepublicat.
   const [ciornaNepublicata, setCiornaNepublicata] = useState(false);
+  // Cerere venită de pe linia de timp: deschide tabul „Evenimentul" cu dialogul
+  // de ediție nouă pe ecran. Se stinge imediat ce tabul a onorat-o.
+  const [deschideDialogEditie, setDeschideDialogEditie] = useState(false);
+  // Antrenamentul nu mai e un tab: n-are de ce să stea în structura pe ediții,
+  // fiindcă nu ține de nicio ediție. Se deschide din blocul de sub linia de
+  // timp și se randează acolo, sub el.
+  const [antrenamentDeschis, setAntrenamentDeschis] = useState(false);
   const [metaInUrma, setMetaInUrma] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
   // Ediția și capacitatea vin din configul PUBLICAT, nu din bundle: după ce
@@ -341,8 +349,22 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     lansare: null,
     eveniment: null,
     'coming-soon': null,
-    antrenament: null,
     sabloane: null,
+  };
+
+  /**
+   * Calea scurtă de creare, chemată de pe ultimul nod al liniei de timp.
+   *
+   * Deschide tabul „Evenimentul" CU dialogul de trei câmpuri deja pe ecran.
+   * Ideal ar fi fost dialogul chiar peste linie, dar ciorna pe care o produce
+   * e ținută în starea locală a tabului, iar mutarea ei în dashboard e un
+   * refactor al unui fișier de o mie de linii — disproporționat față de ce
+   * câștigă. Organizatorul tot nu mai caută unde stă calea scurtă, ceea ce era
+   * problema.
+   */
+  const porneșteEditiaUrmatoare = () => {
+    setDeschideDialogEditie(true);
+    schimbaTab('eveniment');
   };
 
   const handleCreateEdition = () => {
@@ -682,13 +704,19 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </div>
         )}
 
-        {/* Panoul de orientare stă ÎNAINTEA tabelelor și a tab-urilor: prima
-            întrebare cu care se deschide backoffice-ul e „unde suntem?", nu
-            „cine s-a înscris". */}
-        <AdminAcum
+        {/* Desfășurarea stă ÎNAINTEA tabelelor și a tab-urilor: prima întrebare
+            cu care se deschide backoffice-ul e „unde suntem?", nu „cine s-a
+            înscris". */}
+        <LiniaDeTimp
           semnale={{ nelivrate, asteptare: waitAll.length, ciornaNepublicata, metaInUrma, arhiva }}
           onTab={schimbaTab}
+          onEditieNoua={porneșteEditiaUrmatoare}
+          arhiva={arhiva}
         />
+
+        <BlocSaptamanal onDeschide={() => setAntrenamentDeschis((v) => !v)} />
+
+        {antrenamentDeschis && <AdminAntrenamentTab />}
 
         {/* Tab-urile poartă un contor, ca să știi ce e în spatele lor fără să
             le deschizi. Contorul lipsește cât timp datele nu au sosit — un „0"
@@ -723,6 +751,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         {tab === 'eveniment' && (
           <AdminEventTab
             inregistreazaGardaIesire={inregistreazaGardaIesire}
+            deschideDialogNou={deschideDialogEditie}
+            onDialogNouDeschis={() => setDeschideDialogEditie(false)}
           />
         )}
 
@@ -731,7 +761,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           />
         )}
 
-        {tab === 'antrenament' && <AdminAntrenamentTab />}
 
         {tab === 'lansare' && (
           <div className="admin-launch">

@@ -131,6 +131,10 @@ export const adminApiMock = (
     listEventConfig: vi.fn(
       async (_token: string, _editie?: number, _signal?: AbortSignal) => s.eventConfig
     ),
+    // Blocul „în fiecare săptămână" de sub linia de timp. Gol implicit:
+    // antrenamentul nu ține de ediție, deci niciun test de ediție nu depinde
+    // de el — dar dashboardul îl cere la montare.
+    listWeeklyWorkout: vi.fn(async (_token: string, _signal?: AbortSignal) => []),
     listLaunchNotifications: vi.fn(async (_token: string, _signal?: AbortSignal) => s.launch),
     listEmailTemplates: vi.fn(async (_token: string, _signal?: AbortSignal) => s.templates),
 

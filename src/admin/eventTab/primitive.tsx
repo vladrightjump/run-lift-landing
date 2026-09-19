@@ -207,7 +207,7 @@ export const LinieDeTimp = ({ repere }: { repere: Reper[] }) => {
     <ol className="admin-cronologie" aria-label="Desfășurarea ediției">
       {repere.map((r) => (
         <li
-          key={r.cheie}
+          key={r.id}
           className={[
             'admin-cronologie-reper',
             r.cheie === 'start' ? 'start' : '',
