@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { EDITION } from '../../src/content/edition';
-import { META } from '../../src/content/meta';
+import { META, META_ANTRENAMENT, META_PER_SHELL } from '../../src/content/meta';
 import { formatRoDate } from '../../src/content/format';
 
 /**
@@ -52,5 +52,35 @@ describe('index.html folosește placeholder-e (nu meta hardcodată)', () => {
     // Placeholder-ul %META_OG_IMAGE% aduce versiunea; un `og.png?v=<număr>` scris
     // de mână ar drifta de la EDITION.
     expect(indexHtml).not.toMatch(/og\.png\?v=\d+/);
+  });
+});
+
+describe('cardul paginii /antrenament', () => {
+  const antrenamentHtml = readFileSync(resolve(repoRoot, 'antrenament.html'), 'utf8');
+
+  it('shell-ul folosește aceleași placeholdere, nu valori scrise de mână', () => {
+    for (const ph of ['%META_TITLE%', '%META_DESCRIPTION%', '%META_OG_IMAGE%', '%META_URL%']) {
+      expect(antrenamentHtml).toContain(ph);
+    }
+    expect(antrenamentHtml).not.toMatch(/og\.png\?v=\d+/);
+  });
+
+  it('fiecare shell își primește propriul set de valori', () => {
+    expect(Object.keys(META_PER_SHELL).sort()).toEqual(['antrenament.html', 'index.html']);
+    expect(META_PER_SHELL['index.html']['%META_TITLE%']).toBe(META.title);
+    expect(META_PER_SHELL['antrenament.html']['%META_TITLE%']).toBe(META_ANTRENAMENT.title);
+  });
+
+  it('cardul e fix — nu poartă data ediției, care poate fi deja trecută', () => {
+    // Exact regresia pentru care pagina are shell propriu: cu un singur shell,
+    // linkul antrenamentului lipit în Telegram arăta cardul ediției.
+    expect(META_ANTRENAMENT.title).not.toContain(formatRoDate(EDITION.start));
+    expect(META_ANTRENAMENT.description).not.toContain(formatRoDate(EDITION.start));
+    expect(META_ANTRENAMENT.title).toContain('Antrenamentul săptămânii');
+  });
+
+  it('url-ul canonic e chiar pagina, nu rădăcina site-ului', () => {
+    expect(META_ANTRENAMENT.url).toBe(`${EDITION.urls.site}/antrenament`);
+    expect(META_ANTRENAMENT.url).not.toBe(META.url);
   });
 });

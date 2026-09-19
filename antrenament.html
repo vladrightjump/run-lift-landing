@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--
+  Shell-ul de build al paginii /antrenament.
+
+  Există dintr-un singur motiv: meta de share se injectează la BUILD, într-un
+  fișier HTML, fiindcă scraperele de share nu rulează JS. Un singur shell ar fi
+  însemnat un singur card pentru tot site-ul, iar linkul antrenamentului lipit
+  în Telegram ar fi arătat cardul ediției, cu o dată posibil trecută.
+
+  Identic cu index.html în afară de valorile pe care le primesc placeholderele
+  — vezi META_PER_SHELL din src/content/meta.ts. Aceleași chei, alt set.
+-->
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#121410">
+<title>%META_TITLE%</title>
+<meta name="description" content="%META_DESCRIPTION%">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Run + Lift">
+<meta property="og:title" content="%META_TITLE%">
+<meta property="og:description" content="%META_DESCRIPTION%">
+<link rel="canonical" href="%META_URL%">
+<meta property="og:url" content="%META_URL%">
+<meta property="og:locale" content="ro_RO">
+<meta property="og:image" content="%META_OG_IMAGE%">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="%META_OG_IMAGE_ALT%">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="%META_TITLE%">
+<meta name="twitter:description" content="%META_DESCRIPTION%">
+<meta name="twitter:image" content="%META_OG_IMAGE%">
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
+
+<!-- Vercel Analytics + Speed Insights: scoase pentru că nu sunt activate pe proiect
+     și /_vercel/insights/script.js returna 404 (două erori în consolă la fiecare
+     vizită). Dacă activezi Analytics din dashboard-ul Vercel, decomentează. -->
+<!--
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+-->
+</body>
+</html>
