@@ -2687,3 +2687,18 @@
     flex: 1 1 auto; min-width: 0; font-size: 14px; color: var(--e3-text);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+
+  /* ---- Navigația ca al doilea nivel ----
+     De când linia de timp e primul ecran, bara de grupuri nu mai e punctul de
+     pornire. Aceleași grupuri, aceleași frunze, același comportament — doar
+     greutatea vizuală scade, ca să nu concureze cu desfășurarea de deasupra. */
+  .admin-nav-eticheta {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--e3-muted);
+    padding: 4px 2px 8px;
+  }
+  .admin-nav-grupuri { background: var(--e3-border); }
+  .admin-nav-grup { min-height: 54px; padding: 10px 14px; }
+  /* Muchia activă se subțiază: marchează în continuare unde ești, fără să
+     revendice atenția pe care o cere acum linia de timp. */
+  .admin-nav-grup.activ { box-shadow: inset 0 2px 0 var(--e3-accent); }
