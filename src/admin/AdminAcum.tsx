@@ -44,7 +44,7 @@ export const AdminAcum = ({ semnale, onTab }: Props) => {
             <span className="admin-acum-valoare">
               {stare.urmatorul.eticheta}
               <span className="admin-acum-cand">
-                {descrieMoment(oraDePerete(stare.urmatorul.moment, config.tz), config.tz, acum)}
+                {descrieMoment(stare.urmatorul.moment, config.tz, acum)}
               </span>
             </span>
           ) : (
@@ -84,19 +84,4 @@ export const AdminAcum = ({ semnale, onTab }: Props) => {
       </div>
     </section>
   );
-};
-
-/**
- * `Date` → stringul local pe care îl așteaptă `descrieMoment`.
- *
- * Reperele sunt momente absolute (derivate deja cu fusul ediției), iar ecoul în
- * limbaj natural lucrează pe ora de perete. Refacem ora de perete din offsetul
- * ediției, nu din cel al calculatorului: un organizator care deschide adminul
- * din altă țară trebuie să vadă ora cursei, nu ora lui.
- */
-const oraDePerete = (d: Date, tz: string): string => {
-  const semn = tz.startsWith('-') ? -1 : 1;
-  const [ore, minute] = tz.slice(1).split(':').map(Number);
-  const offsetMs = semn * ((ore || 0) * 60 + (minute || 0)) * 60_000;
-  return new Date(d.getTime() + offsetMs).toISOString().slice(0, 19);
 };

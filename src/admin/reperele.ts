@@ -29,9 +29,19 @@ type CheieReper =
   | 'checkin'
   | 'start'
   | 'final'
-  | 'nextEditionAt';
+  | 'nextEditionAt'
+  | 'leaderboard'
+  | 'reminder';
 
 export type Reper = {
+  /**
+   * Identitate stabilă pentru randare.
+   *
+   * `cheie` nu mai ajunge de când reminderele pot fi mai multe: două rânduri cu
+   * aceeași cheie React se calcă unul pe altul. Pentru nodurile unice `id` e
+   * chiar cheia; pentru remindere poartă și avansul.
+   */
+  id: string;
   cheie: CheieReper;
   eticheta: string;
   /** Momentul local ISO, `YYYY-MM-DDTHH:mm:ss`. */
@@ -137,11 +147,64 @@ export const momentulCheckinului = (c: EventConfig): string => {
  * arăta, iar validarea spune deja care câmp e de reparat. Mai bine lipsește
  * decât să deseneze o ordine calculată din `NaN`.
  */
-export const reperele = (c: EventConfig, acum: number): Reper[] => {
+/**
+ * Ce noduri în plus vrea apelantul.
+ *
+ * Opționale, nu implicite: cronologia din tabul „Evenimentul" e despre
+ * câmpurile pe care le editezi ACOLO, iar reminderele stau în alt grup. Linia
+ * de timp a backoffice-ului răspunde însă la „ce se întâmplă cu ediția", deci
+ * le cere pe amândouă.
+ */
+export type NoduriInPlus = {
+  /** Momentul în care pagina trece pe „cine vine". */
+  leaderboard?: boolean;
+  /** Câte un nod pentru fiecare reminder ARMAT. */
+  remindere?: boolean;
+  /**
+   * Scoate anunțul când ecranul de pornire nu e pe Coming Soon.
+   *
+   * Formularul îl vrea oricum — `launchAt` e un câmp pe care îl editezi acolo,
+   * iar o cronologie care ascunde un câmp e o cronologie în care nu ai
+   * încredere. Linia de timp arată însă ce SE ÎNTÂMPLĂ, iar cu pornirea pe
+   * landing momentul anunțului nu comută nimic.
+   */
+  scoateAnuntulInactiv?: boolean;
+};
+
+/**
+ * Momentul în care pagina comută pe „cine vine": cu `leaderboardLeadHours`
+ * înaintea startului.
+ */
+const momentulLeaderboardului = (c: EventConfig): string =>
+  LOCAL_ISO_RE.test(c.start) && c.leaderboardLeadHours >= 0
+    ? isoLocalDin(la(c.start, c.tz) - c.leaderboardLeadHours * ORA, c.tz)
+    : '';
+
+export const reperele = (c: EventConfig, acum: number, inPlus: NoduriInPlus = {}): Reper[] => {
   const momenteBrute: [CheieReper, string, string][] = [
-    ['launchAt', 'Se anunță ediția', c.launchAt],
+    ...(inPlus.scoateAnuntulInactiv && !c.showComingSoon
+      ? []
+      : ([['launchAt', 'Se anunță ediția', c.launchAt]] as [CheieReper, string, string][])),
     ['registrationDeadline', 'Se închid înscrierile', c.registrationDeadline],
     ['checkin', 'Check-in de la', momentulCheckinului(c)],
+    ...(inPlus.leaderboard
+      ? ([
+          ['leaderboard', 'Pagina trece pe „cine vine”', momentulLeaderboardului(c)],
+        ] as [CheieReper, string, string][])
+      : []),
+    ...(inPlus.remindere
+      ? c.reminders
+          .filter((r) => r.enabled)
+          .map(
+            (r): [CheieReper, string, string] => [
+              'reminder',
+              `Pleacă reminderul de ${durataRo(r.offsetHours * ORA)}`,
+              LOCAL_ISO_RE.test(c.start)
+                ? isoLocalDin(la(c.start, c.tz) - r.offsetHours * ORA, c.tz)
+                : '',
+            ]
+          )
+      : []),
     ['start', 'Startul cursei', c.start],
     [
       'final',
@@ -163,6 +226,9 @@ export const reperele = (c: EventConfig, acum: number): Reper[] => {
   const repere = momenteBrute.map(([cheie, eticheta, moment]) => {
     const momentLa = la(moment, c.tz);
     return {
+      // Reminderele pot fi mai multe, deci `cheie` singură nu mai identifică un
+      // rând. Momentul le separă: orarul refuză două remindere la același avans.
+      id: cheie === 'reminder' ? `reminder-${moment}` : cheie,
       cheie,
       eticheta,
       moment,
