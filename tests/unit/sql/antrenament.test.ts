@@ -45,7 +45,7 @@ const versiuni = async (): Promise<Versiune[]> =>
     await db.query<Versiune>(`select * from runlift.admin_list_weekly_workout($1)`, [ADMIN_TOKEN])
   ).rows;
 
-const public_ = async (): Promise<{ titlu: string; corp: string } | null> =>
+const vedePublicul = async (): Promise<{ titlu: string; corp: string } | null> =>
   (
     await db.query<{ public_weekly_workout: { titlu: string; corp: string } | null }>(
       `select runlift.public_weekly_workout()`
@@ -105,7 +105,7 @@ describe('versionarea', () => {
     const v = await versiuni();
     expect(v.filter((r) => r.status === 'published')).toHaveLength(1);
     expect(v.find((r) => r.status === 'published')!.id).toBe(vechi);
-    expect((await public_())!.corp).toBe('5×1000m');
+    expect((await vedePublicul())!.corp).toBe('5×1000m');
   });
 
   it('revenirea la un id inexistent e refuzată', async () => {
@@ -121,25 +121,25 @@ describe('versionarea', () => {
 describe('ce vede publicul', () => {
   it('întoarce titlul și corpul rândului publicat și activ', async () => {
     await salveaza('Tempo', '5×1000m', true);
-    expect(await public_()).toEqual({ titlu: 'Tempo', corp: '5×1000m' });
+    expect(await vedePublicul()).toEqual({ titlu: 'Tempo', corp: '5×1000m' });
   });
 
   it('cu antrenamentul oprit nu scurge nici titlul, nici corpul', async () => {
     await salveaza('Tempo', '5×1000m', true);
     await salveaza('Tempo', '5×1000m', false);
 
-    expect(await public_()).toBeNull();
+    expect(await vedePublicul()).toBeNull();
   });
 
   it('fără niciun antrenament salvat întoarce nimic', async () => {
-    expect(await public_()).toBeNull();
+    expect(await vedePublicul()).toBeNull();
   });
 
   it('nu întoarce niciodată o versiune înlocuită', async () => {
     await salveaza('Tempo', '5×1000m', true);
     await salveaza('Fartlek', '8×400m', true);
 
-    expect((await public_())!.titlu).toBe('Fartlek');
+    expect((await vedePublicul())!.titlu).toBe('Fartlek');
   });
 
   it('e apelabilă de rolul anon', async () => {

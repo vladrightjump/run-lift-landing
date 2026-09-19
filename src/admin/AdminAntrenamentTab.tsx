@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   listWeeklyWorkout,
   saveWeeklyWorkout,
@@ -46,14 +46,31 @@ export const AdminAntrenamentTab = () => {
   const [corp, setCorp] = useState('');
   const [activ, setActiv] = useState(false);
   const [salveaza, setSalveaza] = useState(false);
-  // Formularul a fost atins de om: după asta, o reîncărcare a listei nu mai
-  // rescrie câmpurile. Altfel salvarea proprie ar arunca peste ce tocmai
-  // tastezi, iar o greșeală de scriere n-ar mai putea fi corectată.
-  const [atins, setAtins] = useState(false);
+  /**
+   * Formularul a fost atins de om.
+   *
+   * Ref, nu state, și citit în callback-ul de încărcare, nu într-un efect de
+   * sincronizare: valoarea contează exact în clipa în care sosește răspunsul,
+   * iar un efect ar fi însemnat o rundă de randare în plus pentru o decizie
+   * care nu se vede pe ecran.
+   *
+   * Cursa pe care o apără: salvezi, componenta reinterogează lista, iar tu
+   * începi deja să scrii antrenamentul următor. Răspunsul poartă valoarea de
+   * dinainte și n-are voie să-ți șteargă textul din mână.
+   */
+  const atinsRef = useRef(false);
 
   const incarca = useCallback(() => {
     listWeeklyWorkout(token)
-      .then(setVersiuni)
+      .then((randuri) => {
+        setVersiuni(randuri);
+        if (atinsRef.current) return;
+        const pub = randuri.find((v) => v.status === 'published');
+        if (!pub) return;
+        setTitlu(pub.titlu);
+        setCorp(pub.corp);
+        setActiv(pub.activ);
+      })
       .catch((err: unknown) => {
         if (!onAuthError(err)) setVersiuni([]);
       });
@@ -63,21 +80,11 @@ export const AdminAntrenamentTab = () => {
 
   const publicat = versiuni?.find((v) => v.status === 'published') ?? null;
 
-  // Prima încărcare populează formularul din rândul publicat. Cheia ține
-  // efectul legat de CONȚINUT, nu de identitatea listei.
-  const publicatKey = publicat ? `${publicat.id}|${publicat.activ}` : '';
-  useEffect(() => {
-    if (atins || publicat === null) return;
-    setTitlu(publicat.titlu);
-    setCorp(publicat.corp);
-    setActiv(publicat.activ);
-  }, [publicatKey, atins, publicat]);
-
   const trimite = async () => {
     setSalveaza(true);
     try {
       await saveWeeklyWorkout(token, titlu, corp, activ);
-      setAtins(false);
+      atinsRef.current = false;
       showToast({
         kind: 'success',
         msg: activ ? 'Salvat. Pagina arată deja antrenamentul nou.' : 'Salvat. Pagina e oprită.',
@@ -93,7 +100,7 @@ export const AdminAntrenamentTab = () => {
   const revinoLa = async (id: string) => {
     try {
       await restoreWeeklyWorkout(token, id);
-      setAtins(false);
+      atinsRef.current = false;
       showToast({ kind: 'success', msg: 'Versiunea aceea e din nou publicată.' });
       incarca();
     } catch (err) {
@@ -112,7 +119,7 @@ export const AdminAntrenamentTab = () => {
   };
 
   const atinge = <T,>(set: (v: T) => void) => (v: T) => {
-    setAtins(true);
+    atinsRef.current = true;
     set(v);
   };
 

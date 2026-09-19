@@ -76,7 +76,7 @@ export const META_PLACEHOLDERS: Record<string, string> = {
 };
 
 /** Aceleași placeholdere, valorile paginii de antrenament. */
-export const META_PLACEHOLDERS_ANTRENAMENT: Record<string, string> = {
+const META_PLACEHOLDERS_ANTRENAMENT: Record<string, string> = {
   '%META_TITLE%': META_ANTRENAMENT.title,
   '%META_DESCRIPTION%': META_ANTRENAMENT.description,
   '%META_URL%': META_ANTRENAMENT.url,
