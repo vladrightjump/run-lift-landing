@@ -62,6 +62,8 @@ prefix `runlift_`:
 | 20260907033347 | `runlift_undo_waitlist` | runlift | Ștergere logică pe `event_waitlist` (`deleted_at`) + `admin_undelete_waitlist` (reversare, păstrează `created_at` și poziția FIFO). Indexul de unicitate devine PARȚIAL. **`event_waitlist_cap()` numără doar rândurile active** — altfel cele șterse ar fi ocupat în continuare plafonul de 10, tăcut. Toți cei opt cititori ai tabelului sunt actualizați sau notați explicit ca neschimbați. Vezi `supabase/sql/supabase-migration-undo-waitlist.sql` |
 | 20260907033437 | `runlift_rejucare` | runlift | `email_log.sablon` (fără el, rejucarea unei difuzări ar ghici între două șabloane ale aceleiași audiențe) + `admin_replay_lookup`, care spune ce mod / ce șablon / ce destinatar, sau de ce nu se poate. Destinatarul se rezolvă din starea de ACUM: `participanti` din `registrations`, **`asteptare` din `launch_notifications`** (acolo își ia destinatarii `waitlist_recipients()`). `admin_list_email_log` duce coloana mai departe. Vezi `supabase/sql/supabase-migration-rejucare.sql` |
 | 20260907033532 | `runlift_escaladare` | runlift | `operator_email()` + `escaladeaza()` (dedup prin `broadcast_once`, tot corpul într-un bloc cu `exception` ca alerta să nu poată anula tranzacția care a chemat-o, ambele revocate de la `anon`/`authenticated`), escaladare din triggerul de auto-promovare, și trigger nou `registrations_locuri_epuizate_trg`. Cere precondiția `runlift_undo_waitlist`. **A fost inert până pe 17 septembrie 2026**, când s-a scris `app_config.operator_email` — până atunci fiecare escaladare ieșea tăcut pe prima ramură. Vezi `supabase/sql/supabase-migration-escaladare.sql` |
+| 20260919124301 | `runlift_antrenament_saptamanii` | runlift | Antrenamentul saptamanii: tabelul `weekly_workout` + cele patru RPC-uri. Vezi `supabase/sql/supabase-migration-antrenament-saptamanii.sql` |
+| 20260920120025 | `runlift_program_antrenamente` | runlift | Antrenamentul devine **program numerotat**: `numar` (pozitia, 1...N fara goluri), `activ` → `vizibil` (per saptamana), unicitatea trece pe un publicat per numar. Trei functii sterse inainte de recreare (retur/semnatura schimbate), doua noi (`admin_move_`/`admin_delete_weekly_workout`), `public_weekly_workout()` → `public_weekly_workouts()`. Renumerotarea trece prin interval-tampon negativ: indexul unic e PARTIAL, deci neamanabil. Vezi `supabase/sql/supabase-migration-program-antrenamente.sql` |
 
 **Migrări ale altei aplicații** (schema `public`, gym-app + bot — **hands-off**):
 `ironworks_initial_schema`, `monthly_summary_security_invoker`, `telegram_bot_phase1_attendance`,
@@ -181,7 +183,7 @@ real.
 **Înlocuită parțial** de `supabase-migration-program-antrenamente.sql` (mai jos): tabelul rămâne,
 dar capătă `numar`, `activ` devine `vizibil`, iar trei dintre cele patru funcții sunt rescrise.
 
-### `supabase/sql/supabase-migration-program-antrenamente.sql` — NEAPLICAT
+### `supabase/sql/supabase-migration-program-antrenamente.sql` — APLICAT 20 septembrie 2026
 
 Antrenamentul săptămânii devine **program numerotat**: Săptămâna 1…N, parcurgibil de la început
 de cine abia se apucă de alergat. Pe `weekly_workout` apare `numar int not null` (poziția în
@@ -232,10 +234,32 @@ dintr-un `update … case` pică cu `duplicate key`, la fel orice `numar + 1` pe
 `numar - 1` trece, dar doar fiindcă inserările lasă rândurile în ordine fizică crescătoare — o
 coincidență, nu o garanție.
 
-La aplicare, completează tabelul de verificare (model: migrarea de deasupra) cu: coloanele noi,
-indexul vechi dispărut și cel nou prezent, 6 funcții `*weekly_workout*` în `pg_proc` (nu 7, nu 4),
-`anon` fără `select` pe tabel, `anon` poate chema `public_weekly_workouts()`, iar aceasta întoarce
-`[]` pe tabel gol.
+Aplicată ca `runlift_program_antrenamente` (`20260920120025`), prin MCP `apply_migration` — care
+rulează deja în tranzacție, deci `begin;`/`commit;` din fișier au fost scoase la aplicare. Pentru
+cine rulează fișierul de mână (SQL Editor), ele trebuie păstrate: acolo nimic altceva nu asigură
+atomicitatea.
+
+Verificat la aplicare (20 septembrie 2026), direct în `ironworks-gym`:
+
+| Ce | Așteptat | Găsit |
+|---|---|---|
+| Rânduri în tabel, înainte de aplicare | 0 (premisa migrării) | 0 |
+| Coloana `numar` | există, `not null` | da |
+| Coloana `activ` | nu mai există | redenumită `vizibil` |
+| Index `weekly_workout_un_singur_publicat` | dispărut | da |
+| Index `weekly_workout_un_publicat_pe_numar` | prezent, unic parțial | da |
+| Index `weekly_workout_program` | prezent | da |
+| Funcții `*weekly_workout*` în `pg_proc` | 6 (nu 7, nu 4) | 6 |
+| `admin_save_weekly_workout` | 5 argumente | `(uuid, uuid, text, text, boolean)` |
+| `public_weekly_workout()` (singular) | nu mai există | da |
+| RLS | pornit, fără politici | pornit, 0 politici |
+| `anon` poate face `select` pe tabel | nu | nu |
+| `anon` poate chema `public_weekly_workouts()` | da | da |
+| `public_weekly_workouts()` pe tabel gol | `[]`, nu `null` | `[]` |
+| `admin_save_weekly_workout` cu token inventat | refuz, fără scriere | refuzat, 0 rânduri |
+| `get_advisors` (security) după DDL | doar tiparele preexistente ale schemei | doar ele |
+
+Nu s-a scris niciun rând de test în producție — tabelul a rămas gol pentru prima săptămână reală.
 
 ### `supabase/sql/supabase-migration-anunt-istoric.sql` — NEAPLICAT
 
