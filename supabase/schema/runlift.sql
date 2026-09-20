@@ -2209,30 +2209,31 @@ alter table runlift.registrations_backup enable row level security;
 -- (nicio politică: după lockdown-ul anti-bot, nimeni nu scrie direct din browser)
 
 -- ===========================================================================
--- Antrenamentul saptamanii (supabase-migration-antrenament-saptamanii.sql)
+-- Programul antrenamentelor (supabase-migration-program-antrenamente.sql)
 -- ===========================================================================
 
--- Antrenamentul săptămânii — tabelul, versiunile și cele patru RPC-uri.
+-- Antrenamentul săptămânii e un PROGRAM numerotat: Săptămâna 1, 2, 3 … N.
+--
+-- De ce numerotat și nu invers cronologic: cine abia începe să alerge n-are de
+-- unde porni într-o arhivă. Un program are un început, iar numărul e ce-l
+-- face parcurgibil — „începe de la Săptămâna 1" e o instrucțiune, „vezi ce-a
+-- fost săptămâna trecută" nu e.
 --
 -- De ce un tabel propriu și nu documentul ediției: cadența. Documentul ediției
 -- se schimbă de câteva ori pe ediție; antrenamentul, în fiecare săptămână.
--- Ținut acolo, fiecare antrenament ar fi scris un rând nou de `event_config` și
--- ar fi îngropat istoricul real al ediției sub editări de antrenament. Pe
--- deasupra, ar fi legat o treabă de treizeci de secunde de fluxul ciornă →
--- previzualizare → publică, care e potrivit pentru o ediție întreagă.
+-- Programul nu aparține niciunei ediții și rămâne valabil între ele.
 --
--- Antrenamentul nu aparține niciunei ediții. Rămâne editabil și vizibil între
--- ediții — exact săptămânile în care are cel mai mult sens.
---
--- Două reguli stau AICI, nu în formular, pentru că formularul nu e singura cale
+-- Trei reguli stau AICI, nu în formular, pentru că formularul nu e singura cale
 -- spre tabel:
 --
---  1. `pornit și corp gol` se refuză. Altfel o scriere directă ar produce o
---     pagină publică goală la un URL pe care organizatorul tocmai l-a trimis.
---  2. Comutatorul peticește rândul publicat; doar titlul sau corpul schimbat
---     scrie o versiune nouă. Altfel o pornire-oprire dublă ar adăuga patru
---     rânduri identice, iar „Versiuni anterioare" — care există ca să repari o
---     suprascriere — ar deveni inutilizabil exact pentru asta.
+--  1. `vizibil și corp gol` se refuză. Altfel o scriere directă ar produce o
+--     săptămână goală la un URL pe care organizatorul tocmai l-a trimis.
+--  2. Comutatorul de vizibilitate peticește rândul publicat; doar titlul sau
+--     corpul schimbat scrie o versiune nouă. Altfel o pornire-oprire dublă ar
+--     adăuga patru rânduri identice, iar „Versiuni anterioare" — care există ca
+--     să repari o suprascriere — ar deveni inutilizabil exact pentru asta.
+--  3. Renumerotarea trece printr-un interval-tampon. Vezi
+--     `admin_move_weekly_workout` pentru de ce un singur `update` nu e sigur.
 
 -- ---------------------------------------------------------------------------
 -- 1. Tabelul
@@ -2240,39 +2241,57 @@ alter table runlift.registrations_backup enable row level security;
 
 create table if not exists runlift.weekly_workout (
   id uuid primary key default gen_random_uuid(),
+  -- Poziția în program: 1…N, fără goluri. E POZIȚIE, nu identificator etern —
+  -- mutarea și ștergerea renumerotează. Un program căruia îi lipsește
+  -- Săptămâna 2 e un program stricat, nu un program cu o gaură.
+  numar int not null,
   status text not null check (status in ('published', 'superseded')),
   titlu text not null,
   corp text not null,
-  -- Vizibil pe site. Separat de conținut, ca antrenamentul de săptămâna
-  -- viitoare să poată fi scris din timp, cu pagina oprită.
-  activ boolean not null default false,
+  -- Vizibilă pe site. Per săptămână, nu pe toată pagina: antrenamentul de
+  -- săptămâna viitoare se scrie din timp și se ține ascuns până luni.
+  vizibil boolean not null default false,
   creat_la timestamptz not null default now()
 );
 
--- Un singur rând publicat în tot tabelul, ca la `event_config`. `public_weekly_workout()`
--- se bazează pe asta ca să nu aibă nevoie de `order by`.
-create unique index if not exists weekly_workout_un_singur_publicat
-  on runlift.weekly_workout (status) where status = 'published';
+-- Un singur rând publicat PER SĂPTĂMÂNĂ (înainte era unul în tot tabelul).
+-- Versiunile înlocuite poartă același `numar`, deci „Versiuni anterioare"
+-- devine per săptămână fără niciun mecanism nou.
+create unique index if not exists weekly_workout_un_publicat_pe_numar
+  on runlift.weekly_workout (numar) where status = 'published';
 
--- Istoricul se citește invers cronologic.
+-- Programul se citește crescător…
+create index if not exists weekly_workout_program
+  on runlift.weekly_workout (numar);
+
+-- …iar versiunile unei săptămâni, invers cronologic.
 create index if not exists weekly_workout_istoric
   on runlift.weekly_workout (creat_la desc);
 
 -- RLS fără politici, ca la restul schemei: nimic nu se citește direct cu cheia
 -- publică. Fără asta, `anon` ar putea citi rândurile `superseded` și
--- antrenamentul oprit — adică exact ce cele două funcții publice ascund.
+-- săptămânile ascunse — adică exact ce funcția publică ascunde.
 revoke all on table runlift.weekly_workout from public, anon, authenticated, service_role;
 alter table runlift.weekly_workout enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- 2. Salvarea
 -- ---------------------------------------------------------------------------
+--
+-- `p_id` null înseamnă „săptămână nouă" și primește automat numărul următor:
+-- organizatorul nu tastează și nu alege niciun număr. `p_id` dat înseamnă
+-- „editez săptămâna asta" și păstrează numărul.
+--
+-- `p_id` e id-ul rândului PUBLICAT al săptămânii, nu numărul ei. Un număr
+-- trimis dintr-un ecran rămas în urmă după o renumerotare ar fi lovit altă
+-- săptămână decât cea apăsată.
 
 create or replace function runlift.admin_save_weekly_workout(
   p_token uuid,
+  p_id uuid,
   p_titlu text,
   p_corp text,
-  p_activ boolean
+  p_vizibil boolean
 )
 returns uuid
 language plpgsql
@@ -2280,9 +2299,9 @@ security definer
 set search_path to 'runlift'
 as $function$
 declare
-  v_curent_id uuid;
-  v_curent_titlu text;
-  v_curent_corp text;
+  v_numar int;
+  v_titlu text;
+  v_corp text;
   v_nou_id uuid;
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
@@ -2290,50 +2309,158 @@ begin
   -- Regula 1. `btrim` cu setul explicit, nu `trim`: `trim` scoate DOAR spații,
   -- iar un corp de forma "   \n  " ar fi trecut drept scris. `coalesce`
   -- înaintea lui, fiindcă un corp `null` e tot gol.
-  if coalesce(p_activ, false)
+  if coalesce(p_vizibil, false)
      and char_length(btrim(coalesce(p_corp, ''), E' \t\r\n')) = 0
   then
     raise exception 'workout_empty';
   end if;
 
-  select w.id, w.titlu, w.corp into v_curent_id, v_curent_titlu, v_curent_corp
-  from weekly_workout w where w.status = 'published';
+  if p_id is null then
+    select coalesce(max(w.numar), 0) + 1 into v_numar from weekly_workout w;
+
+    insert into weekly_workout (numar, status, titlu, corp, vizibil)
+    values (v_numar, 'published', coalesce(p_titlu, ''), coalesce(p_corp, ''),
+            coalesce(p_vizibil, false))
+    returning id into v_nou_id;
+
+    insert into admin_events (tip, detaliu)
+    values ('workout_save', jsonb_build_object('id', v_nou_id, 'numar', v_numar,
+                                               'vizibil', coalesce(p_vizibil, false)));
+    return v_nou_id;
+  end if;
+
+  select w.numar, w.titlu, w.corp into v_numar, v_titlu, v_corp
+  from weekly_workout w where w.id = p_id and w.status = 'published';
+  if v_numar is null then raise exception 'not_found'; end if;
 
   -- Regula 2. Conținut neschimbat → petic pe loc, același id, nicio versiune.
-  if v_curent_id is not null
-     and v_curent_titlu is not distinct from coalesce(p_titlu, '')
-     and v_curent_corp is not distinct from coalesce(p_corp, '')
+  if v_titlu is not distinct from coalesce(p_titlu, '')
+     and v_corp is not distinct from coalesce(p_corp, '')
   then
-    update weekly_workout set activ = coalesce(p_activ, false) where id = v_curent_id;
-    return v_curent_id;
+    update weekly_workout set vizibil = coalesce(p_vizibil, false) where id = p_id;
+    return p_id;
   end if;
 
-  if v_curent_id is not null then
-    update weekly_workout set status = 'superseded' where id = v_curent_id;
-  end if;
+  update weekly_workout set status = 'superseded' where id = p_id;
 
-  insert into weekly_workout (status, titlu, corp, activ)
-  values ('published', coalesce(p_titlu, ''), coalesce(p_corp, ''), coalesce(p_activ, false))
+  insert into weekly_workout (numar, status, titlu, corp, vizibil)
+  values (v_numar, 'published', coalesce(p_titlu, ''), coalesce(p_corp, ''),
+          coalesce(p_vizibil, false))
   returning id into v_nou_id;
 
   insert into admin_events (tip, detaliu)
-  values ('workout_save', jsonb_build_object('id', v_nou_id, 'activ', coalesce(p_activ, false)));
-
+  values ('workout_save', jsonb_build_object('id', v_nou_id, 'numar', v_numar,
+                                             'vizibil', coalesce(p_vizibil, false)));
   return v_nou_id;
 end;
 $function$;
 
 -- ---------------------------------------------------------------------------
--- 3. Istoricul și revenirea
+-- 3. Ordinea programului
+-- ---------------------------------------------------------------------------
+
+create or replace function runlift.admin_move_weekly_workout(
+  p_token uuid,
+  p_id uuid,
+  p_directie int
+)
+returns int
+language plpgsql
+security definer
+set search_path to 'runlift'
+as $function$
+declare
+  v_numar int;
+  v_vecin int;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_directie is null or p_directie not in (-1, 1) then
+    raise exception 'directie_invalida';
+  end if;
+
+  select w.numar into v_numar from weekly_workout w
+  where w.id = p_id and w.status = 'published';
+  if v_numar is null then raise exception 'not_found'; end if;
+
+  v_vecin := v_numar + p_directie;
+
+  -- La capăt de program nu există vecin. Nu e o eroare — butonul e dezactivat
+  -- în ecran, dar ecranul nu e singura cale spre RPC.
+  if not exists (select 1 from weekly_workout w where w.numar = v_vecin) then
+    return v_numar;
+  end if;
+
+  -- Schimbul trece printr-un interval-tampon NEGATIV, în trei pași.
+  --
+  -- De ce nu un singur `update … set numar = case numar when A then B …`:
+  -- indexul de unicitate e PARȚIAL, deci nu poate fi `deferrable` — numai
+  -- constrângerile pot fi, iar o constrângere unică parțială nu există în
+  -- Postgres. Verificarea se face rând cu rând, în timpul instrucțiunii, așa că
+  -- primul rând schimbat scrie peste un număr încă ocupat de al doilea.
+  --
+  -- Nu e o teorie: forma cu `case` pică măsurat, cu „duplicate key value
+  -- violates unique constraint weekly_workout_un_publicat_pe_numar". La fel și
+  -- orice `set numar = numar + 1` pe mai multe rânduri.
+  --
+  -- Numerele reale sunt >= 1, deci intervalul negativ nu se poate ciocni de nimic.
+  update weekly_workout set numar = 0 - v_numar where numar = v_numar;
+  update weekly_workout set numar = v_numar where numar = v_vecin;
+  update weekly_workout set numar = v_vecin where numar = 0 - v_numar;
+
+  insert into admin_events (tip, detaliu)
+  values ('workout_move', jsonb_build_object('id', p_id, 'din', v_numar, 'in', v_vecin));
+
+  return v_vecin;
+end;
+$function$;
+
+create or replace function runlift.admin_delete_weekly_workout(p_token uuid, p_id uuid)
+returns int
+language plpgsql
+security definer
+set search_path to 'runlift'
+as $function$
+declare v_numar int;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  select w.numar into v_numar from weekly_workout w
+  where w.id = p_id and w.status = 'published';
+  if v_numar is null then raise exception 'not_found'; end if;
+
+  -- Săptămâna, cu tot cu versiunile ei. Ștergerea e definitivă: soft-delete ar
+  -- fi cerut un filtru în fiecare RPC și în indexul de unicitate, pentru un
+  -- gest rar pe care confirmarea din ecran îl acoperă deja.
+  delete from weekly_workout where numar = v_numar;
+
+  -- Compactarea trece prin același tampon. Aici forma naivă
+  -- (`set numar = numar - 1 where numar > v_numar`) se ÎNTÂMPLĂ să treacă:
+  -- rândurile sunt inserate crescător, deci ordinea fizică coincide cu ordinea
+  -- în care coborârea e sigură. E o coincidență de așezare pe disc, nu o
+  -- garanție — mutările rescriu tupluri și pot schimba acea ordine. Tamponul o
+  -- face independentă de ea.
+  update weekly_workout set numar = 0 - numar where numar > v_numar;
+  update weekly_workout set numar = (0 - numar) - 1 where numar < 0;
+
+  insert into admin_events (tip, detaliu)
+  values ('workout_delete', jsonb_build_object('numar', v_numar));
+
+  return v_numar;
+end;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- 4. Programul și revenirea
 -- ---------------------------------------------------------------------------
 
 create or replace function runlift.admin_list_weekly_workout(p_token uuid)
 returns table (
   id uuid,
+  numar int,
   status text,
   titlu text,
   corp text,
-  activ boolean,
+  vizibil boolean,
   creat_la timestamptz
 )
 language plpgsql
@@ -2344,69 +2471,96 @@ begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
 
   return query
-    select w.id, w.status, w.titlu, w.corp, w.activ, w.creat_la
+    select w.id, w.numar, w.status, w.titlu, w.corp, w.vizibil, w.creat_la
     from weekly_workout w
-    order by w.creat_la desc;
+    order by w.numar asc, w.creat_la desc;
 end;
 $function$;
 
+-- Revenirea e ÎN CADRUL unei săptămâni: versiunea aleasă îi ia locul celei
+-- publicate din aceeași poziție. Restul programului nu se clintește.
 create or replace function runlift.admin_restore_weekly_workout(p_token uuid, p_id uuid)
 returns uuid
 language plpgsql
 security definer
 set search_path to 'runlift'
 as $function$
-declare v_exista boolean;
+declare v_numar int;
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
 
-  select true into v_exista from weekly_workout where id = p_id;
-  if v_exista is null then raise exception 'not_found'; end if;
+  select w.numar into v_numar from weekly_workout w where w.id = p_id;
+  if v_numar is null then raise exception 'not_found'; end if;
 
   update weekly_workout set status = 'superseded'
-    where status = 'published' and id <> p_id;
+    where status = 'published' and numar = v_numar and id <> p_id;
   update weekly_workout set status = 'published' where id = p_id;
 
   insert into admin_events (tip, detaliu)
-  values ('workout_restore', jsonb_build_object('id', p_id));
+  values ('workout_restore', jsonb_build_object('id', p_id, 'numar', v_numar));
 
   return p_id;
 end;
 $function$;
 
 -- ---------------------------------------------------------------------------
--- 4. Ce vede publicul
+-- 5. Ce vede publicul
 -- ---------------------------------------------------------------------------
 --
--- `null` acoperă trei situații pe care pagina le tratează la fel: nu s-a scris
--- încă nimic, antrenamentul e oprit, sau tot ce există e o versiune înlocuită.
--- Pagina spune „nu e nimic publicat acum" — nu dă eroare și nu redirectează,
--- fiindcă linkul trimis săptămâna trecută trebuie să rămână bun.
+-- Tot programul vizibil, într-un singur răspuns: alegerea unei săptămâni din
+-- selector nu mai cere nimic de la server. Un al doilea RPC „dă-mi săptămâna N"
+-- ar fi însemnat un tur la server la fiecare apăsare, pentru un conținut care
+-- încape într-un răspuns.
+--
+-- Array GOL, nu `null`, când nu e nimic vizibil — `jsonb_agg` pe zero rânduri
+-- dă `null`, iar pagina ar fi trebuit să trateze două forme pentru aceeași
+-- situație. Cele trei situații pe care ea le tratează la fel (nimic scris, tot
+-- ascuns, doar versiuni înlocuite) rămân nedistinse deliberat: un vizitator
+-- n-are de ce să afle care dintre ele e cazul.
+--
+-- Ascunderea NU renumerotează: cu Săptămâna 3 ascunsă, publicul vede 1, 2, 4.
+-- Numerele recalculate peste cele vizibile ar fi mutat numărul săptămânii
+-- curente la fiecare ascundere, iar un `#s3` trimis ieri ar fi dus altundeva azi.
 
-create or replace function runlift.public_weekly_workout()
+create or replace function runlift.public_weekly_workouts()
 returns jsonb
 language sql
 stable
 security definer
 set search_path to ''
 as $function$
-  select jsonb_build_object('titlu', w.titlu, 'corp', w.corp)
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object('numar', w.numar, 'titlu', w.titlu, 'corp', w.corp)
+      order by w.numar
+    ),
+    '[]'::jsonb
+  )
   from runlift.weekly_workout w
-  where w.status = 'published' and w.activ
-  limit 1;
+  where w.status = 'published' and w.vizibil;
 $function$;
 
 -- ---------------------------------------------------------------------------
--- 5. Drepturi
+-- 6. Drepturi
 -- ---------------------------------------------------------------------------
 --
 -- RPC-urile de admin sunt deschise rolului `anon` din acelaşi motiv ca toate
 -- celelalte: /admin se autentifică prin `p_token`, nu printr-o sesiune
 -- Postgres. Verificarea tokenului din corpul fiecăreia e apărarea reală.
 
-revoke all on function runlift.admin_save_weekly_workout(uuid, text, text, boolean)
+revoke all on function runlift.admin_save_weekly_workout(uuid, uuid, text, text, boolean)
   from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_save_weekly_workout(uuid, text, text, boolean)
+grant execute on function runlift.admin_save_weekly_workout(uuid, uuid, text, text, boolean)
+  to anon, authenticated, service_role;
+
+revoke all on function runlift.admin_move_weekly_workout(uuid, uuid, int)
+  from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_move_weekly_workout(uuid, uuid, int)
+  to anon, authenticated, service_role;
+
+revoke all on function runlift.admin_delete_weekly_workout(uuid, uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_delete_weekly_workout(uuid, uuid)
   to anon, authenticated, service_role;
 
 revoke all on function runlift.admin_list_weekly_workout(uuid)
@@ -2419,7 +2573,7 @@ revoke all on function runlift.admin_restore_weekly_workout(uuid, uuid)
 grant execute on function runlift.admin_restore_weekly_workout(uuid, uuid)
   to anon, authenticated, service_role;
 
-revoke all on function runlift.public_weekly_workout()
+revoke all on function runlift.public_weekly_workouts()
   from public, anon, authenticated, service_role;
-grant execute on function runlift.public_weekly_workout()
+grant execute on function runlift.public_weekly_workouts()
   to anon, authenticated, service_role;

@@ -178,6 +178,48 @@ Verificat la aplicare (19 septembrie 2026), direct în `ironworks-gym`:
 Nu s-a scris niciun rând de test în producție — tabelul a rămas gol pentru primul antrenament
 real.
 
+**Înlocuită parțial** de `supabase-migration-program-antrenamente.sql` (mai jos): tabelul rămâne,
+dar capătă `numar`, `activ` devine `vizibil`, iar trei dintre cele patru funcții sunt rescrise.
+
+### `supabase/sql/supabase-migration-program-antrenamente.sql` — NEAPLICAT
+
+Antrenamentul săptămânii devine **program numerotat**: Săptămâna 1…N, parcurgibil de la început
+de cine abia se apucă de alergat. Pe `weekly_workout` apare `numar int not null` (poziția în
+program), `activ` se redenumește `vizibil` (per săptămână, nu pe toată pagina), iar unicitatea
+trece de la „un singur publicat în tot tabelul" la „un singur publicat **per număr**".
+
+Decizii: `docs/plans/2026-09-20-0838-feat-programul-antrenamentelor-pe-saptamani-plan.md`.
+
+**Precondiție:** `supabase-migration-antrenament-saptamanii.sql`, deja aplicată pe 19 septembrie.
+
+**Premisă de date:** tabelul era **gol** în producție la scrierea migrării (verificat direct în
+`ironworks-gym`, 20 septembrie 2026: 0 rânduri). De asta `numar int not null` se adaugă fără
+`default` și fără backfill. Dacă între timp s-a scris primul antrenament real, adaugă coloana
+fără `not null`, rulează `update runlift.weekly_workout set numar = 1 where numar is null;` și
+abia apoi pune `not null` — e un pas în plus, nu alt plan. **Verifică asta înainte de aplicare.**
+
+⚠️ **Trei funcții se șterg înainte de a fi recreate**, fiindcă `create or replace` nu schimbă
+tipul de retur și nu înlocuiește o semnătură diferită — o *suprasolicită*. Fără `drop`,
+`admin_save_weekly_workout` ar rămâne în două variante și PostgREST ar putea alege alta decât
+cea vrută. `drop function` ia și grant-urile cu el, deci fiecare funcție recreată le primește
+din nou. Un test din `tests/unit/sql/antrenament.test.ts` numără intrările din `pg_proc`.
+
+`public_weekly_workout()` (singular) **dispare**; o înlocuiește `public_weekly_workouts()`, care
+întoarce tot programul vizibil ca array (array gol, nu `null`, când nu e nimic de arătat).
+Funcții noi: `admin_move_weekly_workout`, `admin_delete_weekly_workout`.
+
+**Renumerotarea trece printr-un interval-tampon negativ, nu printr-un singur `update`.** Indexul
+de unicitate e *parțial*, deci nu poate fi `deferrable` (numai constrângerile pot, iar o
+constrângere unică parțială nu există în Postgres). Măsurat pe instantaneu: schimbul a două numere
+dintr-un `update … case` pică cu `duplicate key`, la fel orice `numar + 1` pe mai multe rânduri;
+`numar - 1` trece, dar doar fiindcă inserările lasă rândurile în ordine fizică crescătoare — o
+coincidență, nu o garanție.
+
+La aplicare, completează tabelul de verificare (model: migrarea de deasupra) cu: coloanele noi,
+indexul vechi dispărut și cel nou prezent, 6 funcții `*weekly_workout*` în `pg_proc` (nu 7, nu 4),
+`anon` fără `select` pe tabel, `anon` poate chema `public_weekly_workouts()`, iar aceasta întoarce
+`[]` pe tabel gol.
+
 ### `supabase/sql/supabase-migration-anunt-istoric.sql` — NEAPLICAT
 
 Anunțul de ediție nouă către toți participanții de până acum. Trei piese: `unsubscribe()` se

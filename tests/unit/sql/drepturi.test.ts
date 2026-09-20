@@ -119,8 +119,9 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
   const PERMISE_PUBLIC = [
     'public_stats',
     'public_config',
-    // Întoarce doar rândul publicat ȘI activ, deci exact ce arată pagina.
-    'public_weekly_workout',
+    // Întoarce doar săptămânile publicate ȘI vizibile, deci exact ce arată
+    // pagina. Versiunile înlocuite și săptămânile ascunse nu ies niciodată.
+    'public_weekly_workouts',
     'confirm_signup',
     'decline_spot',
     'unsubscribe',
@@ -154,6 +155,7 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
       'admin_save_email_template', 'admin_save_event_config_draft', 'admin_set_coming_soon',
       'admin_undelete_registration', 'admin_undelete_waitlist', 'admin_update_registration',
       'admin_save_weekly_workout', 'admin_list_weekly_workout', 'admin_restore_weekly_workout',
+      'admin_move_weekly_workout', 'admin_delete_weekly_workout',
     ],
   ];
 
