@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fetchWeeklyWorkouts, type WeeklyWorkout } from '../lib/supabase';
 
 /**
@@ -20,6 +20,30 @@ import { fetchWeeklyWorkouts, type WeeklyWorkout } from '../lib/supabase';
  */
 export const CardAntrenament = () => {
   const [saptamana, setSaptamana] = useState<WeeklyWorkout | null>(null);
+  /**
+   * Corpul chiar a fost tăiat de `max-height`?
+   *
+   * Se măsoară, nu se ghicește din numărul de rânduri din text: la 375px un
+   * singur rând scris se poate rupe în trei, deci numărătoarea ar fi greșit
+   * exact acolo unde contează. Fade-ul se aplică doar când răspunsul e da —
+   * altfel un antrenament scurt ar fi stins degeaba, promițând un „mai e
+   * dedesubt" inexistent.
+   */
+  const [taiat, setTaiat] = useState(false);
+
+  /**
+   * Callback ref, nu `useRef` + efect: măsurătoarea are nevoie de exact o
+   * clipă — cea în care elementul intră în pagină — iar asta e chiar momentul
+   * în care React cheamă funcția. Un efect ar fi cerut o listă de dependențe
+   * care să descrie acel moment indirect.
+   *
+   * Identitatea e stabilă, deci re-randarea provocată de `setTaiat` nu o
+   * recheamă.
+   */
+  const masoaraCorpul = useCallback((el: HTMLSpanElement | null) => {
+    if (el === null) return;
+    setTaiat(el.scrollHeight > el.clientHeight + 1);
+  }, []);
 
   useEffect(() => {
     const control = new AbortController();
@@ -37,7 +61,16 @@ export const CardAntrenament = () => {
   if (saptamana === null) return null;
 
   return (
-    <a className="cs-antren" href="/antrenament">
+    /**
+     * Numele accesibil e pus explicit fiindcă întreg cardul e un singur link:
+     * fără el, un cititor de ecran ar citi tot antrenamentul ca etichetă a
+     * linkului, fără nicio cale de a-l survola.
+     */
+    <a
+      className="cs-antren"
+      href="/antrenament"
+      aria-label={`Antrenamentul săptămânii ${saptamana.numar}: ${saptamana.titlu}`}
+    >
       <span className="cs-antren-eticheta">Până atunci</span>
 
       <span className="cs-antren-cap">
@@ -46,10 +79,12 @@ export const CardAntrenament = () => {
       </span>
 
       {/*
-        Primele rânduri, tăiate cu fade. `pre-wrap` ca pe pagina întreagă —
-        rândurile scrise de organizator sunt formatul, și aici la fel.
+        Primele rânduri. `pre-wrap` ca pe pagina întreagă — rândurile scrise de
+        organizator sunt formatul, și aici la fel.
       */}
-      <span className="cs-antren-corp">{saptamana.corp}</span>
+      <span ref={masoaraCorpul} className={`cs-antren-corp${taiat ? ' taiat' : ''}`}>
+        {saptamana.corp}
+      </span>
 
       <span className="cs-antren-cta">Vezi antrenamentul →</span>
     </a>

@@ -17,6 +17,21 @@ import type { Page, Route } from '@playwright/test';
 
 const PROGRAM_ROUTE = '**/rest/v1/rpc/public_weekly_workouts';
 
+/**
+ * Ceasul se fixează înaintea țintei countdown-ului (`nextEditionAt`).
+ *
+ * Fără asta, testul care verifică „ecranul rămâne întreg la o eroare" ar fi
+ * expirat de la sine după 26 septembrie 2026: `.cs-countdown` se randează doar
+ * cât timp countdown-ul n-a ajuns la zero, iar eșecul ar fi arătat ca o
+ * regresie a cardului, nu ca un ceas trecut.
+ */
+const INAINTE_DE_TINTA = Date.parse('2026-09-22T09:00:00+03:00');
+
+const fixClock = (page: Page, moment: number) =>
+  page.addInitScript((fixed) => {
+    Date.now = () => fixed;
+  }, moment);
+
 const saptamana = (numar: number) => ({
   numar,
   titlu: `Intervale ${numar}`,
@@ -74,6 +89,7 @@ test.describe('Cardul „Până atunci"', () => {
   });
 
   test('o eroare de server rămâne INVIZIBILĂ — ecranul nu se strică', async ({ page }) => {
+    await fixClock(page, INAINTE_DE_TINTA);
     await mockProgram(page, { message: 'boom' }, 500);
     await page.goto('/?preview=next');
 
@@ -115,10 +131,52 @@ test.describe('Cardul „Până atunci"', () => {
     ]);
     await page.goto('/?preview=next');
 
-    await expect(page.locator('.cs-antren')).toBeVisible();
-    const latime = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
-    );
-    expect(latime).toBeLessThanOrEqual(1);
+    const card = page.locator('.cs-antren');
+    await expect(card).toBeVisible();
+
+    /**
+     * Se măsoară CARDUL, nu documentul.
+     *
+     * `documentElement.scrollWidth - clientWidth` nu poate depăși zero pentru
+     * nimic din interiorul lui `.cs-root`, care e `overflow: hidden`: depășirea
+     * e tăiată înainte să ajungă la document. Garda scrisă așa citea 0 în timp
+     * ce cardul ieșea 26px în afara ecranului — trecea exact pe bug-ul pe care
+     * pretindea că-l păzește.
+     */
+    const cutie = (await card.boundingBox())!;
+    expect(cutie.x).toBeGreaterThanOrEqual(0);
+    expect(cutie.x + cutie.width).toBeLessThanOrEqual(375);
+  });
+
+  test('un antrenament scurt NU se stinge — fade-ul apare doar când s-a tăiat', async ({
+    page,
+  }) => {
+    // Masca aplicată mereu stingea și un text care încăpea întreg: promitea
+    // fals „mai e dedesubt" și cobora contrastul sub pragul de citit.
+    await mockProgram(page, [{ numar: 1, titlu: 'Scurt', corp: 'Alergare ușoară 30 min.' }]);
+    await page.goto('/?preview=next');
+
+    await expect(page.locator('.cs-antren-corp')).toBeVisible();
+    await expect(page.locator('.cs-antren-corp.taiat')).toHaveCount(0);
+  });
+
+  test('un antrenament lung primește fade-ul', async ({ page }) => {
+    await mockProgram(page, [
+      { numar: 1, titlu: 'Lung', corp: Array.from({ length: 12 }, (_, i) => `rândul ${i + 1}`).join('\n') },
+    ]);
+    await page.goto('/?preview=next');
+
+    await expect(page.locator('.cs-antren-corp.taiat')).toHaveCount(1);
+  });
+
+  test('linkul are un nume accesibil scurt, nu tot antrenamentul', async ({ page }) => {
+    await mockProgram(page, [saptamana(3)]);
+    await page.goto('/?preview=next');
+
+    // Fără `aria-label`, numele linkului ar fi fost tot corpul antrenamentului,
+    // citit dintr-o suflare de un cititor de ecran.
+    const nume = await page.locator('.cs-antren').getAttribute('aria-label');
+    expect(nume).toBe('Antrenamentul săptămânii 3: Intervale 3');
+    expect(nume).not.toContain('ÎNCĂLZIRE');
   });
 });
