@@ -2348,6 +2348,67 @@
     display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;
     animation: fade-up 0.6s ease-out 0.5s both;
   }
+  /* ---- „Până atunci": antrenamentul săptămânii, sub countdown ---- */
+  .cs-antren {
+    /* Fără el, padding-ul și bordura se ADAUGĂ la `100%`, iar cardul iese 26px
+       în afara ecranului pe 375px — tăiat tăcut de `overflow: hidden` de pe
+       `.cs-root`. Repo-ul n-are reset global, deci fiecare regulă cu lățime și
+       padding și-l pune singură. */
+    box-sizing: border-box;
+    display: grid; gap: 10px; text-align: left; text-decoration: none;
+    /* Marginea e strânsă ca eticheta lime să rămână peste fold pe telefon.
+       Pe 375x812 rămân ~240px sub countdown, iar cardul are 246 — deci nu
+       încape lângă butoane oricum. Aleg să se vadă CAPUL lui: o fâșie care
+       spune „mai e ceva" cheamă la derulare, unde un card complet ascuns n-ar
+       exista deloc. Butonul principal rămâne primul, fiindcă ecranul ăsta e
+       al formularului de notificare. */
+    width: min(520px, 100%); margin: 22px auto 0; padding: 20px 22px 18px;
+    background: var(--e3-surface); border: 1px solid var(--e3-border);
+    border-radius: 14px; color: var(--e3-text);
+    transition: border-color 0.2s ease, transform 0.15s ease;
+    /* Fără întârziere: cardul se montează abia după ce răspunde serverul, deci
+       o pauză în plus ar ține locul ocupat și gol după ce coloana s-a mutat. */
+    animation: fade-up 0.45s ease-out both;
+  }
+  .cs-antren:hover { border-color: var(--e3-accent); transform: translateY(-2px); }
+  .cs-antren:focus-visible { outline: 2px solid var(--e3-accent); outline-offset: 3px; }
+  .cs-antren-eticheta {
+    font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--e3-accent);
+  }
+  .cs-antren-cap { display: grid; gap: 2px; }
+  .cs-antren-nr {
+    font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--e3-muted);
+  }
+  .cs-antren-titlu {
+    font-family: Anton, sans-serif; font-size: clamp(19px, 3.4vw, 23px);
+    letter-spacing: 0.4px; text-transform: uppercase; color: var(--e3-text);
+    /* Titlul îl scrie organizatorul: un cuvânt lung fără spații ar împinge
+       cardul peste lățimea lui, iar `.cs-root` l-ar tăia în loc să-l rupă. */
+    overflow-wrap: break-word; min-width: 0;
+  }
+  .cs-antren-corp {
+    white-space: pre-wrap; overflow: hidden; overflow-wrap: break-word;
+    max-height: 7.2em; font-size: 14px; line-height: 1.6; color: var(--e3-muted);
+  }
+  /* Fade-ul DOAR când chiar s-a tăiat ceva (clasa o pune componenta, după ce
+     măsoară). Aplicat mereu, stingea și un antrenament scurt care încăpea
+     întreg: promitea fals „mai e dedesubt" și cobora contrastul textului gri
+     sub pragul de citit. */
+  .cs-antren-corp.taiat {
+    -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  }
+  .cs-antren-cta {
+    font-family: Anton, sans-serif; font-size: 14px; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--e3-accent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cs-antren { animation: none; }
+    .cs-antren:hover { transform: none; }
+  }
+
   .cs-cta-secondary {
     margin-top: 6px; background: transparent; color: var(--e3-text);
     border: 1px solid var(--e3-border); cursor: pointer;

@@ -129,6 +129,12 @@ la început cine abia se apucă de alergat. Alegerea scrie fragmentul (`/antrena
 > Decizia s-a schimbat: fără un început, programul nu folosea nimănui care nu alerga deja. Vezi
 > `docs/plans/2026-09-20-0838-feat-programul-antrenamentelor-pe-saptamani-plan.md`.
 
+Pe ecranul „Ne vedem curând" (între ediții), sub countdown apare cardul **„Până atunci"** cu
+săptămâna curentă — numărul, titlul și primele rânduri, tăiate cu fade. Arată conținut, nu o
+etichetă: un buton scris „Antrenamentul săptămânii" ar fi cerut încredere înainte de clic.
+Tace complet dacă programul e gol sau cererea pică — e decor pe un ecran al cărui rost e
+formularul de notificare. Cod: `src/components/CardAntrenament.tsx`.
+
 Se scrie din `/admin`, din blocul „în fiecare săptămână" de sub linia de timp. Ecranul e lista
 programului plus editorul săptămânii deschise; numărul îl pune serverul, iar butonul de adăugare
 îl arată dinainte („+ Săptămâna 10"). Săptămânile se mută cu ↑ ↓, se ascund una câte una și se
