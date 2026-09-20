@@ -5,7 +5,7 @@ import {
   submitLaunchNotification,
   fetchStats,
   confirmSignup,
-  fetchWeeklyWorkout,
+  fetchWeeklyWorkouts,
 } from '../../src/lib/supabase';
 import { SUPABASE } from '../../src/lib/config';
 
@@ -83,39 +83,63 @@ describe('rutarea spre schema runlift', () => {
     expect(headersOf()['Accept-Profile']).toBe(SUPABASE.schema);
   });
 
-  it('citirea antrenamentului trimite Content-Profile = schema și merge spre proiectul corect', async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ titlu: 'Tempo', corp: '5×1000m' }), { status: 200 })
-    );
-    await fetchWeeklyWorkout();
+  it('citirea programului trimite Content-Profile = schema și merge spre proiectul corect', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('[]', { status: 200 }));
+    await fetchWeeklyWorkouts();
     expect(headersOf()['Content-Profile']).toBe(SUPABASE.schema);
-    expect(urlOf()).toBe(`${SUPABASE.url}/rest/v1/rpc/public_weekly_workout`);
+    expect(urlOf()).toBe(`${SUPABASE.url}/rest/v1/rpc/public_weekly_workouts`);
   });
 });
 
-describe('antrenamentul săptămânii — ce ajunge la pagină', () => {
-  it('întoarce titlul și corpul când serverul le dă', async () => {
+describe('programul antrenamentelor — ce ajunge la pagină', () => {
+  const saptamana = (numar: number) => ({ numar, titlu: `S${numar}`, corp: `corp ${numar}` });
+
+  it('întoarce programul când serverul îl dă', async () => {
     fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ titlu: 'Tempo', corp: '5×1000m' }), { status: 200 })
+      new Response(JSON.stringify([saptamana(1), saptamana(2)]), { status: 200 })
     );
-    expect(await fetchWeeklyWorkout()).toEqual({ titlu: 'Tempo', corp: '5×1000m' });
+    expect(await fetchWeeklyWorkouts()).toEqual([saptamana(1), saptamana(2)]);
   });
 
-  it('`null` de la server (oprit, inexistent, sau doar versiuni vechi) devine `null`', async () => {
+  it('array gol (nimic vizibil, nimic scris, doar versiuni vechi) rămâne gol', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('[]', { status: 200 }));
+    expect(await fetchWeeklyWorkouts()).toEqual([]);
+  });
+
+  it('o săptămână stricată se sare, fără să le ascundă pe celelalte', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([saptamana(1), { numar: 2, titlu: 'S2' }, saptamana(3)]),
+        { status: 200 }
+      )
+    );
+    expect(await fetchWeeklyWorkouts()).toEqual([saptamana(1), saptamana(3)]);
+  });
+
+  it('un număr care nu e număr descalifică doar săptămâna lui', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify([{ numar: 'unu', titlu: 'S1', corp: 'x' }, saptamana(2)]), {
+        status: 200,
+      })
+    );
+    expect(await fetchWeeklyWorkouts()).toEqual([saptamana(2)]);
+  });
+
+  it('un răspuns care nu e array devine listă goală, nu excepție', async () => {
     fetchMock.mockResolvedValueOnce(new Response('null', { status: 200 }));
-    expect(await fetchWeeklyWorkout()).toBeNull();
+    expect(await fetchWeeklyWorkouts()).toEqual([]);
   });
 
-  it('un document stricat devine `null`, nu o pagină pe jumătate randată', async () => {
+  it('numerele sosite în dezordine ies crescător — ordinea E programul', async () => {
     fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ titlu: 'Tempo' }), { status: 200 })
+      new Response(JSON.stringify([saptamana(3), saptamana(1), saptamana(2)]), { status: 200 })
     );
-    expect(await fetchWeeklyWorkout()).toBeNull();
+    expect((await fetchWeeklyWorkouts()).map((s) => s.numar)).toEqual([1, 2, 3]);
   });
 
   it('o eroare HTTP se propagă — pagina arată starea de eroare, nu „nimic publicat"', async () => {
     fetchMock.mockResolvedValueOnce(new Response('boom', { status: 500 }));
-    await expect(fetchWeeklyWorkout()).rejects.toThrow();
+    await expect(fetchWeeklyWorkouts()).rejects.toThrow();
   });
 });
 
