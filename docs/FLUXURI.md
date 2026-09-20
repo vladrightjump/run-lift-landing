@@ -101,7 +101,7 @@ Nu există router. `src/main.tsx` alege componenta după `pathname`:
 | `/confirmare?token=` | `Confirmare` | Double opt-in pentru lista „anunță-mă" | da |
 | `/renunt?token=` | `Renunt` | „Nu mai pot veni" — eliberează locul | da |
 | `/unsubscribe?token=` | `Unsubscribe` | Dezabonare de la emailurile în masă | da |
-| `/antrenament` | `Antrenament` | Antrenamentul săptămânii — linkul de trimis în story sau în Telegram | **nu** (nu ține de nicio ediție; își cere singur datele) |
+| `/antrenament` | `Antrenament` | Antrenamentul săptămânii + programul Săptămâna 1…N | **nu** (nu ține de nicio ediție; își cere singur datele) |
 | `/admin` | `AdminApp` | Backoffice | da |
 
 `/antrenament` e singura rută cu **shell propriu de build** (`antrenament.html`, rutat din
@@ -604,25 +604,44 @@ sequenceDiagram
 
 Cod: `AdminComingSoonTab.tsx`.
 
-### 4.9b Antrenamentul săptămânii (bloc, nu tab)
+### 4.9b Programul antrenamentelor (bloc, nu tab)
 
 Se deschide din blocul „în fiecare săptămână", de sub linia de timp — **nu e un tab**, fiindcă nu
-e o setare a ediției. Efect **imediat**, fără ciornă: titlu, text liber, un comutator; o salvare și
-pagina `/antrenament` arată textul nou.
+e o setare a ediției. Efect **imediat**, fără ciornă.
+
+Ecranul are două jumătăți: **lista programului** (Săptămâna 1…N, cu ↑ ↓, Ascunde/Arată, Șterge)
+și **editorul** săptămânii deschise (titlu, text liber, vizibilitate). Butonul de adăugare poartă
+numărul deja calculat — „+ Săptămâna 10" — deci numărul nu se tastează nicăieri.
 
 Nu ține de nicio ediție — se editează și între ediții, iar ediția de arhivă nu-l blochează.
 Cod: `AdminAntrenamentTab.tsx`; tabelul și RPC-urile:
-`supabase/sql/supabase-migration-antrenament-saptamanii.sql`.
+`supabase/sql/supabase-migration-program-antrenamente.sql`.
 
-Două reguli le impune **serverul**, nu formularul, fiindcă formularul nu e singura cale spre tabel:
+Patru reguli le impune **serverul**, nu formularul, fiindcă formularul nu e singura cale spre tabel:
 
 | Regulă | De ce acolo |
 |---|---|
-| Comutator pornit + corp gol → `workout_empty` | O scriere directă ar fi produs o pagină publică goală la un URL tocmai trimis |
-| Salvarea care schimbă doar comutatorul peticește rândul publicat, nu scrie versiune | Altfel o pornire-oprire dublă ar fi îngropat editarea reală sub rânduri identice |
+| Săptămână vizibilă + corp gol → `workout_empty` | O scriere directă ar fi produs o săptămână goală la un URL tocmai trimis |
+| Salvarea care schimbă doar vizibilitatea peticește rândul publicat, nu scrie versiune | Altfel o ascundere-arătare dublă ar fi îngropat editarea reală sub rânduri identice |
+| Numărul următor se calculează la server (`max(numar) + 1`) | Două ecrane deschise ar fi putut trimite același număr |
+| Mutarea și ștergerea renumerotează, prin interval-tampon | Indexul unic e *parțial*, deci neamânabil: un schimb dintr-un singur `update` pică cu `duplicate key` |
 
-Versiunile anterioare rămân (`superseded`) și se pot republica din același ecran. Oprit, URL-ul
+**Numărul e poziția în program, nu un identificator etern.** Mutarea și ștergerea renumerotează,
+ca programul să rămână 1…N fără goluri — un program căruia îi lipsește Săptămâna 2 e un program
+stricat. Consecința asumată: un `#s5` trimis luna trecută poate să nu mai însemne același lucru.
+
+**Ascunderea NU renumerotează.** Cu Săptămâna 3 ascunsă, publicul vede 1, 2, 4. Numerele
+recalculate peste cele vizibile ar fi mutat numărul săptămânii curente la fiecare ascundere.
+
+Versiunile anterioare rămân (`superseded`), poartă numărul săptămânii lor — deci lista e **per
+săptămână** — și se pot republica din același ecran. Fără nicio săptămână vizibilă, URL-ul
 **răspunde** și spune că nu e nimic publicat — nu dă 404, ca linkurile deja trimise să nu se rupă.
+
+Pe partea publică, `/antrenament` arată în prim-plan săptămâna curentă (cea mai mare vizibilă) și,
+sub ea, un `<select>` nativ cu tot programul. Alegerea schimbă cardul pe loc și scrie fragmentul
+(`/antrenament#s1`), fără să mai ceară nimic de la server: tot programul vine într-un singur
+răspuns (`public_weekly_workouts`). Un fragment care nu corespunde niciunei săptămâni vizibile e
+ignorat, iar pagina deschide săptămâna curentă.
 
 ### 4.10 Selectorul de ediție și „+ Ediție nouă"
 
@@ -669,7 +688,7 @@ Fiecare încercare lasă un rând în `email_log` (`log_emails`), vizibil în 4.
 |---|---|---|
 | Data, locul, locurile, secțiunile, orarul reminderelor | `/admin` → Evenimentul → ciornă → Publică | nu |
 | Coming Soon on/off, momentul anunțului | `/admin` → Coming Soon | nu |
-| Antrenamentul săptămânii (text + pornit/oprit) | `/admin` → blocul „în fiecare săptămână” | nu |
+| Antrenamentul săptămânii, ordinea programului, ce se vede | `/admin` → blocul „în fiecare săptămână” | nu |
 | Textul oricărui email | `/admin` → Șabloane | nu |
 | Un clip Instagram | `/admin` → Evenimentul → Instagram | nu (posterul nou, da: `public/reels/`) |
 | Meta de share (titlu/imagine WhatsApp/Facebook) | `src/content/edition.ts` → build | **da** |
