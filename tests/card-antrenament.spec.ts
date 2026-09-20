@@ -1,0 +1,124 @@
+import { test, expect } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
+
+/**
+ * „Până atunci" — cardul antrenamentului de pe ecranul „Ne vedem curând".
+ *
+ * Countdown-ul de deasupra ridică întrebarea „ce fac în zilele astea?", iar
+ * cardul e răspunsul. De aceea arată CONȚINUT, nu o etichetă: numărul
+ * săptămânii, titlul și primele rânduri.
+ *
+ * Contractul păzit aici e mai ales ce NU face. Cardul e decor pe un ecran al
+ * cărui rost e formularul de notificare, deci orice eșec al lui trebuie să fie
+ * invizibil: fără bandă de eroare, fără card gol, fără să atingă butonul
+ * principal. Un card care strică homepage-ul când tace backend-ul ar fi mai rău
+ * decât niciun card.
+ */
+
+const PROGRAM_ROUTE = '**/rest/v1/rpc/public_weekly_workouts';
+
+const saptamana = (numar: number) => ({
+  numar,
+  titlu: `Intervale ${numar}`,
+  corp: `ÎNCĂLZIRE\n5 min alergare ușoară\nINTERVALE\n1200 m · RPE 5/10\nREVENIRE\n5 min mers`,
+});
+
+const mockProgram = (page: Page, body: unknown, status = 200) =>
+  page.route(PROGRAM_ROUTE, (route: Route) =>
+    route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+  );
+
+test.describe('Cardul „Până atunci"', () => {
+  test('arată săptămâna curentă — numărul, titlul și primele rânduri', async ({ page }) => {
+    await mockProgram(page, [saptamana(1), saptamana(2)]);
+    await page.goto('/?preview=next');
+
+    const card = page.locator('.cs-antren');
+    await expect(card).toBeVisible();
+    // Cea curentă e cea mai mare, ca pe /antrenament.
+    await expect(card).toContainText('Săptămâna 2');
+    await expect(card).toContainText('Intervale 2');
+    await expect(card).toContainText('ÎNCĂLZIRE');
+  });
+
+  test('tot cardul e un link spre pagina antrenamentului', async ({ page }) => {
+    await mockProgram(page, [saptamana(1)]);
+    await page.goto('/?preview=next');
+
+    // Linkul e stabil la renumerotare: pagina deschide oricum săptămâna curentă,
+    // deci nu poartă un `#sN` care poate expira.
+    await expect(page.locator('.cs-antren')).toHaveAttribute('href', '/antrenament');
+  });
+
+  test('duce chiar acolo la clic', async ({ page }) => {
+    await mockProgram(page, [saptamana(1)]);
+    await page.goto('/?preview=next');
+    await page.locator('.cs-antren').click();
+
+    await expect(page).toHaveURL(/\/antrenament$/);
+  });
+
+  test('păstrează rândurile scrise de organizator', async ({ page }) => {
+    await mockProgram(page, [saptamana(1)]);
+    await page.goto('/?preview=next');
+
+    await expect(page.locator('.cs-antren-corp')).toHaveCSS('white-space', 'pre-wrap');
+  });
+
+  test('fără niciun antrenament vizibil, cardul nu se randează deloc', async ({ page }) => {
+    await mockProgram(page, []);
+    await page.goto('/?preview=next');
+
+    await expect(page.locator('.cs-root')).toBeVisible();
+    await expect(page.locator('.cs-antren')).toHaveCount(0);
+  });
+
+  test('o eroare de server rămâne INVIZIBILĂ — ecranul nu se strică', async ({ page }) => {
+    await mockProgram(page, { message: 'boom' }, 500);
+    await page.goto('/?preview=next');
+
+    await expect(page.locator('.cs-antren')).toHaveCount(0);
+    await expect(page.locator('[role="alert"]')).toHaveCount(0);
+    // Ce contează pe ecranul ăsta e în continuare acolo.
+    await expect(page.getByRole('button', { name: /Anunță-mă la lansare/i })).toBeVisible();
+    await expect(page.locator('.cs-countdown')).toBeVisible();
+  });
+
+  test('un răspuns stricat e tratat la fel de tăcut', async ({ page }) => {
+    await mockProgram(page, { nu: 'e un array' });
+    await page.goto('/?preview=next');
+
+    await expect(page.locator('.cs-antren')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Anunță-mă la lansare/i })).toBeVisible();
+  });
+
+  test('nu apare pe „Coming Soon" — acolo ecranul încă își face promisiunea', async ({
+    page,
+  }) => {
+    await mockProgram(page, [saptamana(1)]);
+    await page.goto('/?preview=soon');
+
+    // Întâi dovedim că suntem chiar pe ecranul acela; altfel absența cardului
+    // n-ar însemna nimic.
+    await expect(page.locator('.cs-title')).toContainText('Coming');
+    await expect(page.locator('.cs-antren')).toHaveCount(0);
+  });
+
+  test('rămâne lizibil pe mobil, fără scroll orizontal', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await mockProgram(page, [
+      {
+        numar: 1,
+        titlu: 'Intervale lungi cu revenire activă pe deal',
+        corp: 'https://exemplu.ro/un-link-foarte-foarte-foarte-lung-care-nu-are-voie-sa-latească-pagina',
+      },
+    ]);
+    await page.goto('/?preview=next');
+
+    await expect(page.locator('.cs-antren')).toBeVisible();
+    const latime = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(latime).toBeLessThanOrEqual(1);
+  });
+});

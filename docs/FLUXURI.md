@@ -101,7 +101,7 @@ Nu există router. `src/main.tsx` alege componenta după `pathname`:
 | `/confirmare?token=` | `Confirmare` | Double opt-in pentru lista „anunță-mă" | da |
 | `/renunt?token=` | `Renunt` | „Nu mai pot veni" — eliberează locul | da |
 | `/unsubscribe?token=` | `Unsubscribe` | Dezabonare de la emailurile în masă | da |
-| `/antrenament` | `Antrenament` | Antrenamentul săptămânii + programul Săptămâna 1…N | **nu** (nu ține de nicio ediție; își cere singur datele) |
+| `/antrenament` | `Antrenament` | Antrenamentul săptămânii + programul Săptămâna 1…N (linkul din cardul „Până atunci", pe ecranul „Ne vedem curând") | **nu** (nu ține de nicio ediție; își cere singur datele) |
 | `/admin` | `AdminApp` | Backoffice | da |
 
 `/antrenament` e singura rută cu **shell propriu de build** (`antrenament.html`, rutat din

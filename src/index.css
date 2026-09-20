@@ -2348,6 +2348,47 @@
     display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;
     animation: fade-up 0.6s ease-out 0.5s both;
   }
+  /* ---- „Până atunci": antrenamentul săptămânii, sub countdown ---- */
+  .cs-antren {
+    display: grid; gap: 10px; text-align: left; text-decoration: none;
+    width: min(520px, 100%); margin: 34px auto 0; padding: 20px 22px 18px;
+    background: var(--e3-surface); border: 1px solid var(--e3-border);
+    border-radius: 14px; color: var(--e3-text);
+    transition: border-color 0.2s ease, transform 0.15s ease;
+    animation: fade-up 0.6s ease-out 0.65s both;
+  }
+  .cs-antren:hover { border-color: var(--e3-accent); transform: translateY(-2px); }
+  .cs-antren:focus-visible { outline: 2px solid var(--e3-accent); outline-offset: 3px; }
+  .cs-antren-eticheta {
+    font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--e3-accent);
+  }
+  .cs-antren-cap { display: grid; gap: 2px; }
+  .cs-antren-nr {
+    font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--e3-muted);
+  }
+  .cs-antren-titlu {
+    font-family: Anton, sans-serif; font-size: clamp(19px, 3.4vw, 23px);
+    letter-spacing: 0.4px; text-transform: uppercase; color: var(--e3-text);
+  }
+  /* Primele rânduri, tăiate cu fade: marginea moale spune „mai e", acolo unde
+     o tăietură dreaptă ar fi arătat ca un text trunchiat din greșeală. */
+  .cs-antren-corp {
+    white-space: pre-wrap; overflow: hidden; overflow-wrap: break-word;
+    max-height: 4.8em; font-size: 14px; line-height: 1.6; color: var(--e3-muted);
+    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  }
+  .cs-antren-cta {
+    font-family: Anton, sans-serif; font-size: 14px; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--e3-accent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cs-antren { animation: none; }
+    .cs-antren:hover { transform: none; }
+  }
+
   .cs-cta-secondary {
     margin-top: 6px; background: transparent; color: var(--e3-text);
     border: 1px solid var(--e3-border); cursor: pointer;

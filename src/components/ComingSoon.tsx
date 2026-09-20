@@ -5,6 +5,7 @@ import { useCountdown } from '../hooks/useCountdown';
 import { useLaunchForm } from '../hooks/useLaunchForm';
 import type { ToastKind } from '../hooks/useToast';
 import { momentComplet, ziLunaLunga } from '../lib/formatare';
+import { CardAntrenament } from './CardAntrenament';
 
 type Props = {
   showToast: (kind: ToastKind, msg: string) => void;
@@ -163,6 +164,14 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
             Află mai multe
           </a>
         </div>
+
+        {/*
+          Doar pe ecranul dintre ediții. Pe „Coming Soon" (înainte de anunț)
+          întrebarea „până atunci ce fac?" n-a apărut încă — acolo ecranul încă
+          își construiește promisiunea, iar un al doilea conținut ar împărți
+          atenția înainte de a o câștiga.
+        */}
+        {urmatorul && <CardAntrenament />}
       </main>
 
       <footer className="cs-footer">
