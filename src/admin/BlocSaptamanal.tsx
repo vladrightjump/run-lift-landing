@@ -18,8 +18,8 @@ type Props = {
  * desfășurarea. Împărțirea de nivel întâi a backoffice-ului devine astfel
  * episodic (ediția) față de recurent (săptămâna).
  *
- * Arată starea și titlul curent fără să intri în el — dacă trebuie să deschizi
- * ecranul ca să afli dacă pagina e pornită, blocul nu și-a făcut treaba.
+ * Arată unde a ajuns programul fără să intri în el — dacă trebuie să deschizi
+ * ecranul ca să afli dacă pagina arată ceva, blocul nu și-a făcut treaba.
  */
 export const BlocSaptamanal = ({ onDeschide }: Props) => {
   const incarca = useCallback(
@@ -28,10 +28,18 @@ export const BlocSaptamanal = ({ onDeschide }: Props) => {
   );
   // O singură încărcare: antrenamentul se schimbă o dată pe săptămână, dintr-un
   // singur loc. Un poll la 15 secunde ar fi trafic pentru nimic.
-  const { date: versiuni } = useAdminResource<AdminWorkoutRow[]>(incarca, null);
+  const { date: randuri } = useAdminResource<AdminWorkoutRow[]>(incarca, null);
 
-  const publicat = versiuni?.find((v) => v.status === 'published') ?? null;
-  const pornit = publicat?.activ === true;
+  /**
+   * Săptămâna pe care o vede publicul: cea mai mare dintre cele vizibile.
+   * Derivată, nu marcată — o coloană „curent" ar fi fost o a doua sursă de
+   * adevăr peste ordine, cu voie să o contrazică.
+   */
+  const vizibile = (randuri ?? [])
+    .filter((r) => r.status === 'published' && r.vizibil)
+    .sort((a, b) => a.numar - b.numar);
+  const curenta = vizibile.length === 0 ? null : vizibile[vizibile.length - 1];
+  const cate = (randuri ?? []).filter((r) => r.status === 'published').length;
 
   return (
     <section className="admin-saptamanal" aria-label="În fiecare săptămână">
@@ -41,20 +49,26 @@ export const BlocSaptamanal = ({ onDeschide }: Props) => {
 
       <div className="admin-saptamanal-rand">
         <span
-          className={`admin-saptamanal-stare${pornit ? ' pornit' : ''}`}
+          className={`admin-saptamanal-stare${curenta ? ' pornit' : ''}`}
           // Starea în cuvinte, nu doar prin culoarea punctului — aceeași
           // regulă ca pe nodurile liniei de timp.
         >
           <span className="admin-saptamanal-punct" aria-hidden="true" />
-          {versiuni === null ? 'se încarcă…' : pornit ? 'Pagina e pornită' : 'Pagina e oprită'}
+          {randuri === null
+            ? 'se încarcă…'
+            : curenta
+              ? `Săptămâna ${curenta.numar} pe pagină`
+              : 'Pagina e oprită'}
         </span>
 
         <span className="admin-saptamanal-titlu">
-          {versiuni === null
+          {randuri === null
             ? ''
-            : publicat
-              ? publicat.titlu || '(fără titlu)'
-              : 'Niciun antrenament scris încă'}
+            : curenta
+              ? `${curenta.titlu || '(fără titlu)'} · ${cate} în program`
+              : cate > 0
+                ? `${cate} în program, niciuna vizibilă`
+                : 'Niciun antrenament scris încă'}
         </span>
 
         <button type="button" className="admin-btn-ghost" onClick={onDeschide}>

@@ -120,13 +120,24 @@ scrie un rând nou, deci orice apăsare se poate întoarce din „Versiuni anter
 ## Antrenamentul săptămânii (`/antrenament`)
 
 Pagină publică la un URL care nu se schimbă, ca să ai ce link trimite în story sau în grupul de
-Telegram. Un singur antrenament — cel curent; nu e arhivă și n-are navigare între săptămâni.
+Telegram. În prim-plan e antrenamentul săptămânii curente — linkul trimis acum o lună duce tot la
+el. Sub card, un selector cu **programul întreg**: Săptămâna 1, 2, 3 … N, din care poate porni de
+la început cine abia se apucă de alergat. Alegerea scrie fragmentul (`/antrenament#s1`), deci
+„începe de la Săptămâna 1" e un link trimisibil.
 
-Se scrie din `/admin`, din blocul „în fiecare săptămână" de sub linia de timp: titlu, text liber, comutator, o salvare, efect
-imediat. Nu trece prin ciornă → publică, fiindcă nu ține de ediție. Comutatorul e independent de
-text, deci antrenamentul de săptămâna viitoare poate fi scris din timp cu pagina oprită; **pornit
-peste un text gol** e refuzat de server. Oprit, URL-ul răspunde și spune că nu e nimic publicat —
-nu dă 404, ca linkurile deja trimise să nu se rupă.
+> Până pe 20 septembrie 2026 pagina arăta **un singur** antrenament, deliberat („nu e arhivă").
+> Decizia s-a schimbat: fără un început, programul nu folosea nimănui care nu alerga deja. Vezi
+> `docs/plans/2026-09-20-0838-feat-programul-antrenamentelor-pe-saptamani-plan.md`.
+
+Se scrie din `/admin`, din blocul „în fiecare săptămână" de sub linia de timp. Ecranul e lista
+programului plus editorul săptămânii deschise; numărul îl pune serverul, iar butonul de adăugare
+îl arată dinainte („+ Săptămâna 10"). Săptămânile se mută cu ↑ ↓, se ascund una câte una și se
+pot șterge. Nu trece prin ciornă → publică, fiindcă nu ține de ediție.
+
+Vizibilitatea e per săptămână și independentă de text, deci antrenamentul de săptămâna viitoare
+poate fi scris din timp și ținut ascuns; **vizibil peste un text gol** e refuzat de server. Fără
+nicio săptămână vizibilă, URL-ul răspunde și spune că nu e nimic publicat — nu dă 404, ca
+linkurile deja trimise să nu se rupă.
 
 E singura pagină cu **shell propriu de build** (`antrenament.html`). Meta de share se injectează la
 build, deci un card per pagină cere un fișier per pagină — altfel linkul ar arăta cardul ediției, cu
@@ -164,6 +175,16 @@ De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
   dependente de ediție (`src/content/format.ts`); proza statică rămâne în componente.
 - **Meta de share injectată la build**, prin plugin Vite, nu din React — scraperele citesc
   HTML static.
+- **Numărul săptămânii e poziția în program, nu un identificator etern.** Mutarea și ștergerea
+  renumerotează, ca programul să rămână 1…N fără goluri: un program căruia îi lipsește Săptămâna 2
+  e un program stricat, nu unul cu o gaură. Prețul — un `#s5` trimis luna trecută poate ajunge la
+  alt antrenament — e acceptabil fiindcă nu există rute per săptămână, doar un selector.
+  Ascunderea, în schimb, **nu** renumerotează: altfel numărul săptămânii curente s-ar fi mutat la
+  fiecare pornire-oprire.
+- **Renumerotarea trece printr-un interval-tampon.** Indexul de unicitate pe `numar` e *parțial*,
+  iar Postgres nu poate amâna verificarea unui index — numai constrângerile sunt `deferrable`, și
+  o constrângere unică parțială nu există. Măsurat: un schimb dintr-un singur `update … case` pică
+  cu „duplicate key". De asta ambele operații mută întâi rândurile în negativ.
 - **Repo-ul nu deține ciclul de viață al bazei.** Proiectul Supabase e partajat cu gym-app și
   botul de Telegram, iar noi ținem strict schema `runlift`. Migrările se documentează în
   `MIGRATIONS.md` și se aplică manual; fișierele lor stau în `supabase/sql/`.
