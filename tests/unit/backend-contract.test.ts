@@ -7,6 +7,7 @@ import {
   confirmSignup,
   fetchWeeklyWorkouts,
 } from '../../src/lib/supabase';
+import { listWeeklyWorkout, mesajRefuzAntrenament } from '../../src/lib/adminApi';
 import { SUPABASE } from '../../src/lib/config';
 
 /**
@@ -140,6 +141,46 @@ describe('programul antrenamentelor — ce ajunge la pagină', () => {
   it('o eroare HTTP se propagă — pagina arată starea de eroare, nu „nimic publicat"', async () => {
     fetchMock.mockResolvedValueOnce(new Response('boom', { status: 500 }));
     await expect(fetchWeeklyWorkouts()).rejects.toThrow();
+  });
+});
+
+describe('programul din admin — apărarea de o bază nemigrată', () => {
+  /**
+   * `admin_list_weekly_workout(uuid)` e singurul RPC din migrarea programului
+   * care și-a păstrat SEMNĂTURA schimbându-și forma răspunsului. Toate celelalte
+   * s-au redenumit sau au primit un parametru, deci o bază nemigrată le respinge
+   * din PostgREST. Ăsta ar rezolva liniștit împotriva funcției vechi, iar ecranul
+   * ar randa un program greșit în loc să se oprească.
+   */
+  const randNou = { id: 'r1', numar: 1, status: 'published', titlu: 'T', corp: 'C', vizibil: true, creat_la: 'x' };
+  const randVechi = { id: 'r1', status: 'published', titlu: 'T', corp: 'C', activ: true, creat_la: 'x' };
+
+  it('rândurile în forma nouă trec', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([randNou]), { status: 200 }));
+    expect(await listWeeklyWorkout('t')).toHaveLength(1);
+  });
+
+  it('rândurile în forma VECHE sunt respinse, nu interpretate greșit', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([randVechi]), { status: 200 }));
+    await expect(listWeeklyWorkout('t')).rejects.toThrow(/weekly_workout_forma_veche/);
+  });
+
+  it('un singur rând vechi între altele bune descalifică tot răspunsul', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify([randNou, randVechi]), { status: 200 })
+    );
+    await expect(listWeeklyWorkout('t')).rejects.toThrow(/weekly_workout_forma_veche/);
+  });
+
+  it('un program gol e valid, nu o formă veche', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('[]', { status: 200 }));
+    expect(await listWeeklyWorkout('t')).toEqual([]);
+  });
+
+  it('refuzul ajunge la operator ca instrucțiune, nu ca text brut', () => {
+    const msg = mesajRefuzAntrenament(new Error('weekly_workout_forma_veche'));
+    expect(msg).toMatch(/migrarea/i);
+    expect(msg).not.toMatch(/weekly_workout_forma_veche/);
   });
 });
 

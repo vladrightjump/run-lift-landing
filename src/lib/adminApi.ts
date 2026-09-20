@@ -282,11 +282,35 @@ export const saveWeeklyWorkout = (
     p_vizibil: vizibil,
   });
 
-export const listWeeklyWorkout = (
+/**
+ * Programul, cu tot cu versiuni.
+ *
+ * Verifică forma rândurilor, spre deosebire de celelalte wrappere, fiindcă e
+ * singurul RPC din migrarea programului care și-a păstrat SEMNĂTURA schimbându-și
+ * forma răspunsului (`activ` → `vizibil`, plus `numar`). Toate celelalte s-au
+ * redenumit sau au primit un parametru, deci o bază nemigrată le respinge din
+ * PostgREST. Ăsta ar rezolva liniștit împotriva funcției vechi și ar întoarce
+ * rânduri fără `numar`, iar ecranul ar randa un program greșit în loc să se
+ * oprească — exact felul de eșec tăcut pe care fereastra dintre deploy și
+ * migrarea manuală îl face posibil (vezi `MIGRATIONS.md`).
+ */
+export const listWeeklyWorkout = async (
   token: string,
   signal?: AbortSignal
-): Promise<AdminWorkoutRow[]> =>
-  rpc<AdminWorkoutRow[]>('admin_list_weekly_workout', { p_token: token }, signal);
+): Promise<AdminWorkoutRow[]> => {
+  const randuri = await rpc<AdminWorkoutRow[]>(
+    'admin_list_weekly_workout',
+    { p_token: token },
+    signal
+  );
+  if (!Array.isArray(randuri)) throw new Error('weekly_workout_forma_veche');
+  for (const r of randuri) {
+    if (typeof r?.numar !== 'number' || typeof r?.vizibil !== 'boolean') {
+      throw new Error('weekly_workout_forma_veche');
+    }
+  }
+  return randuri;
+};
 
 /**
  * Mută o săptămână cu o poziție. Întoarce numărul ei de după mutare — la capăt
@@ -319,6 +343,9 @@ export const restoreWeeklyWorkout = (token: string, id: string): Promise<string>
  */
 export const mesajRefuzAntrenament = (err: unknown): string => {
   const text = err instanceof Error ? err.message : String(err);
+  if (text.includes('weekly_workout_forma_veche')) {
+    return 'Baza de date n-are încă migrarea programului. Aplic-o înainte să folosești ecranul.';
+  }
   if (text.includes('workout_empty')) {
     return 'Nu poți face vizibilă o săptămână fără text scris. Scrie antrenamentul, sau las-o ascunsă.';
   }
@@ -328,7 +355,10 @@ export const mesajRefuzAntrenament = (err: unknown): string => {
   if (text.includes('directie_invalida')) {
     return 'Nu am putut muta săptămâna. Reîncarcă pagina.';
   }
-  return 'Nu am putut salva. Încearcă din nou.';
+  // Neutru ca verb: aceeași traducere servește și mutarea, și ștergerea, nu doar
+  // salvarea. „Nu am putut salva" pe o ștergere eșuată ar fi trimis omul să caute
+  // problema în formular.
+  return 'Nu a mers. Încearcă din nou.';
 };
 
 export type AdminLaunchSignup = {

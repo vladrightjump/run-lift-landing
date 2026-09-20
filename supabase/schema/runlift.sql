@@ -2420,11 +2420,16 @@ language plpgsql
 security definer
 set search_path to 'runlift'
 as $function$
-declare v_numar int;
+declare
+  v_numar int;
+  v_titlu text;
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
 
-  select w.numar into v_numar from weekly_workout w
+  -- Titlul se citește ÎNAINTE de ștergere, pentru jurnal: după compactare,
+  -- `numar` arată deja spre altă săptămână, deci singur n-ar mai identifica
+  -- nimic pentru cine citește `admin_events` peste o lună.
+  select w.numar, w.titlu into v_numar, v_titlu from weekly_workout w
   where w.id = p_id and w.status = 'published';
   if v_numar is null then raise exception 'not_found'; end if;
 
@@ -2443,7 +2448,8 @@ begin
   update weekly_workout set numar = (0 - numar) - 1 where numar < 0;
 
   insert into admin_events (tip, detaliu)
-  values ('workout_delete', jsonb_build_object('numar', v_numar));
+  values ('workout_delete',
+          jsonb_build_object('id', p_id, 'numar', v_numar, 'titlu', v_titlu));
 
   return v_numar;
 end;

@@ -250,6 +250,8 @@ index  (creat_la desc)                       -- versiunile, invers cronologic
 4. **U5** — blocul săptămânal din dashboard, după ce lista de admin are forma finală.
 5. **U6** — documentația, la sfârșit, ca să descrie ce s-a construit.
 
+**Ordinea la livrare, separată de ordinea la construire:** migrarea se aplică în Supabase **înainte** de merge-ul în `main`, fiindcă merge-ul *este* deploy-ul. Invers, fereastra în care clientul nou cheamă un RPC inexistent ține până când aplică cineva manual SQL-ul. Detalii și tabelul comparativ: `MIGRATIONS.md`, secțiunea migrării.
+
 ### Risks & Dependencies
 
 - RISK1. **Numerotarea fără capăt își pierde înțelesul.** Peste un an, „Săptămâna 47" nu-i spune nimic unui începător, iar selectorul are 52 de rânduri. Alegere asumată (KD4). *Prag de reconsiderare: peste ~30 de săptămâni vizibile, reia discuția despre grupare pe cicluri sau program cu lungime fixă.* Planul nu construiește nimic pentru asta acum.

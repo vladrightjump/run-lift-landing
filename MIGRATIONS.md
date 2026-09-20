@@ -192,6 +192,23 @@ Decizii: `docs/plans/2026-09-20-0838-feat-programul-antrenamentelor-pe-saptamani
 
 **Precondiție:** `supabase-migration-antrenament-saptamanii.sql`, deja aplicată pe 19 septembrie.
 
+> ### ⚠️ ORDINE OBLIGATORIE: migrarea ÎNTÂI, merge-ul în `main` după
+>
+> Merge-ul în `main` **este** deploy-ul (Vercel, prin CI), dar migrarea se aplică
+> manual. Cele două nu sunt atomice, iar ordinea decide cât durează stricăciunea:
+>
+> | Ordine | Fereastra de stricăciune |
+> |---|---|
+> | Migrare, apoi merge | **un ciclu de build+deploy** (sub 4 minute). Frontend-ul vechi cheamă `public_weekly_workout`, care tocmai a dispărut → `/antrenament` arată ecranul de eroare atâta timp |
+> | Merge, apoi migrare | **nemărginită** — ține până când își amintește cineva să aplice SQL-ul |
+>
+> Partea tăcută a ordinii greșite e mai rea decât cea zgomotoasă. `/antrenament`
+> cel puțin **eșuează vizibil**. Dar vechiul `admin_list_weekly_workout(uuid)` are
+> aceeași semnătură ca noul, deci **încă rezolvă** — întoarce rânduri cu `activ` și
+> fără `numar`, iar ecranul de admin randează un program greșit în loc să se
+> oprească. (Clientul se apără acum de asta — vezi `listWeeklyWorkout` în
+> `src/lib/adminApi.ts` — dar apărarea e a clientului nou, nu a celui deployat.)
+
 **Premisă de date:** tabelul era **gol** în producție la scrierea migrării (verificat direct în
 `ironworks-gym`, 20 septembrie 2026: 0 rânduri). De asta `numar int not null` se adaugă fără
 `default` și fără backfill. Dacă între timp s-a scris primul antrenament real, adaugă coloana

@@ -293,6 +293,19 @@ describe('ștergerea', () => {
     expect(await program()).toHaveLength(0);
   });
 
+  it('lasă în jurnal cu ce să identifici ce s-a șters', async () => {
+    // `numar` singur nu ajunge: compactarea îl repune imediat pe altă săptămână,
+    // deci peste o lună n-ar mai însemna nimic pentru cine citește jurnalul.
+    const ids = await programDe(3);
+    await sterge(ids[1]);
+
+    const ev = await db.query<{ detaliu: { id: string; numar: number; titlu: string } }>(
+      `select detaliu from runlift.admin_events where tip = 'workout_delete'`
+    );
+    expect(ev.rows).toHaveLength(1);
+    expect(ev.rows[0].detaliu).toEqual({ id: ids[1], numar: 2, titlu: 'S2' });
+  });
+
   it('ștergerea unui id inexistent e refuzată', async () => {
     await expect(
       db.query(`select runlift.admin_delete_weekly_workout($1, $2)`, [
@@ -323,6 +336,38 @@ describe('renumerotarea nu se auto-lovește', () => {
 
     // Ultima a urcat până în față; restul au coborât cu unu.
     expect(await schita()).toBe('1:S8, 2:S1, 3:S2, 4:S3, 5:S4, 6:S5, 7:S6, 8:S7');
+  });
+
+  it('compactează corect și după ce ordinea FIZICĂ a rândurilor a fost amestecată', async () => {
+    /**
+     * Testul de mai jos („șterge prima săptămână la rând") trece și pe varianta
+     * naivă `set numar = numar - 1`, fiindcă `programDe` inserează crescător,
+     * iar coborârea în ordinea fizică nu se ciocnește niciodată de ea însăși.
+     * Adică păzea exact atât cât nu trebuia.
+     *
+     * Aici amestecăm întâi așezarea pe disc cu mutări reale — fiecare mutare
+     * rescrie tupluri — și abia apoi ștergem. Fără tampon, compactarea are de ce
+     * să cadă.
+     */
+    await programDe(8);
+
+    for (const [poz, directie] of [
+      [8, -1], [7, -1], [2, 1], [5, -1], [3, 1], [6, -1],
+    ] as [number, -1 | 1][]) {
+      const p = await program();
+      await muta(p[poz - 1].id, directie);
+    }
+    expect((await program()).map((r) => r.numar)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+
+    // Acum ștergerile, din mijloc spre capete, pe rândurile deja plimbate.
+    for (const poz of [4, 2, 5, 1]) {
+      const p = await program();
+      await sterge(p[poz - 1].id);
+      const numere = (await program()).map((r) => r.numar);
+      expect(numere).toEqual(Array.from({ length: numere.length }, (_, i) => i + 1));
+    }
+
+    expect(await program()).toHaveLength(4);
   });
 
   it('șterge prima săptămână la rând, pe un program de opt', async () => {

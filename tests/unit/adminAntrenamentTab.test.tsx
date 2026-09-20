@@ -233,27 +233,47 @@ describe('editarea unei săptămâni', () => {
     );
   });
 
-  it('reîncărcarea de după salvare nu calcă peste ce s-a tastat între timp', async () => {
+  it('a doua salvare pe aceeași săptămână merge — editorul urmează id-ul nou', async () => {
+    /**
+     * Drumul „corectez o greșeală, apoi încă una".
+     *
+     * O editare de conținut trece rândul în `superseded` și scrie unul nou, cu
+     * alt id. Dacă editorul rămâne ancorat pe cel vechi, a doua salvare pleacă
+     * cu un id care nu mai e publicat, iar serverul o refuză cu `not_found`.
+     *
+     * Mock-ul TREBUIE să rotească id-ul, altfel testul nu păzește nimic — exact
+     * greșeala care a lăsat defectul să treacă prima dată.
+     */
+    const dupaPrimaSalvare = programDe(3).map((s) =>
+      s.id === 's2' ? { ...s, id: 's2-nou', corp: 'prima corectură' } : s
+    );
+    saveWeeklyWorkout.mockResolvedValueOnce('s2-nou');
     randeaza();
     await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());
-    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
 
-    // Răspunsul lent al reîncărcării poartă valoarea de DINAINTE.
-    let elibereaza: (v: AdminWorkoutRow[]) => void = () => {};
-    listWeeklyWorkout.mockReturnValueOnce(
-      new Promise<AdminWorkoutRow[]>((res) => {
-        elibereaza = res;
-      })
+    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
+    listWeeklyWorkout.mockResolvedValue(dupaPrimaSalvare);
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'prima corectură' } });
+    fireEvent.click(butonSalveaza());
+    await waitFor(() =>
+      expect(saveWeeklyWorkout).toHaveBeenLastCalledWith('t', 's2', 'S2', 'prima corectură', true)
     );
 
-    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'x' } });
+    // Săptămâna deschisă e tot 2, nu „—": ancorarea a urmat id-ul nou.
+    await waitFor(() => expect(screen.getByText(/Săptămâna 2$/)).toBeDefined());
+
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'a doua corectură' } });
     fireEvent.click(butonSalveaza());
-    await waitFor(() => expect(saveWeeklyWorkout).toHaveBeenCalled());
 
-    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'ce scriu acum' } });
-    elibereaza(programDe(3));
-
-    await waitFor(() => expect(camp(/Antrenamentul/).value).toBe('ce scriu acum'));
+    await waitFor(() =>
+      expect(saveWeeklyWorkout).toHaveBeenLastCalledWith(
+        't',
+        's2-nou',
+        'S2',
+        'a doua corectură',
+        true
+      )
+    );
   });
 });
 
@@ -290,6 +310,49 @@ describe('textul nesalvat', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Renunț la text' }));
 
     expect(camp(/Antrenamentul/).value).toBe('corp 2');
+  });
+
+  it('text tastat ÎN TIMPUL salvării rămâne păzit — nu trece drept salvat', async () => {
+    // Garda se golește după `await`, deci trebuie să știe dacă între plecarea
+    // cererii și întoarcerea ei s-a mai scris ceva. Altfel textul de după ar fi
+    // aruncat fără confirmare la următorul clic pe altă săptămână.
+    let elibereaza: (v: string) => void = () => {};
+    saveWeeklyWorkout.mockReturnValueOnce(
+      new Promise<string>((res) => {
+        elibereaza = res;
+      })
+    );
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
+
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'prima versiune' } });
+    fireEvent.click(butonSalveaza());
+    await waitFor(() => expect(saveWeeklyWorkout).toHaveBeenCalled());
+
+    // Omul continuă să scrie cât timp cererea e în zbor.
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'ce scriu acum' } });
+    elibereaza('s2');
+    await waitFor(() => expect(showToast).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'S1' }));
+
+    expect(screen.getByRole('alertdialog', { name: /text nesalvat/i })).toBeDefined();
+    expect(camp(/Antrenamentul/).value).toBe('ce scriu acum');
+  });
+
+  it('fără nimic tastat în timpul salvării, garda se golește', async () => {
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
+
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'corectat' } });
+    fireEvent.click(butonSalveaza());
+    await waitFor(() => expect(showToast).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'S1' }));
+
+    expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 
   it('fără text atins, schimbarea se face direct', async () => {
@@ -341,9 +404,11 @@ describe('vizibilitatea din listă', () => {
   it('„Ascunde" trimite aceeași săptămână cu vizibilitatea întoarsă', async () => {
     listWeeklyWorkout.mockResolvedValue([rand({ id: 's1', numar: 1, titlu: 'S1', corp: 'c1' })]);
     randeaza();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Ascunde' })).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Ascunde săptămâna 1/ })).toBeDefined()
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ascunde' }));
+    fireEvent.click(screen.getByRole('button', { name: /Ascunde săptămâna 1/ }));
 
     await waitFor(() =>
       expect(saveWeeklyWorkout).toHaveBeenCalledWith('t', 's1', 'S1', 'c1', false)
@@ -353,7 +418,9 @@ describe('vizibilitatea din listă', () => {
   it('o săptămână ascunsă arată „Arată", nu „Ascunde"', async () => {
     listWeeklyWorkout.mockResolvedValue([rand({ id: 's1', vizibil: false })]);
     randeaza();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Arată' })).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Arată săptămâna 1/ })).toBeDefined()
+    );
   });
 });
 
@@ -451,6 +518,23 @@ describe('versiunile anterioare', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Revino la ea' }));
 
     await waitFor(() => expect(restoreWeeklyWorkout).toHaveBeenCalledWith('t', 'v2'));
+  });
+
+  it('după revenire, editorul arată textul RESTAURAT, nu pe cel înlocuit', async () => {
+    // Altfel ecranul ar spune că versiunea veche e publicată, dar ar arăta
+    // conținutul celei noi — iar următoarea salvare l-ar scrie înapoi peste
+    // restaurare, anulând-o în tăcere.
+    listWeeklyWorkout.mockResolvedValue(cuVersiune());
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
+    expect(camp(/Antrenamentul/).value).toBe('corp 2');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Revino la ea' }));
+
+    await waitFor(() => expect(camp(/Antrenamentul/).value).toBe('corp vechi'));
+    expect(camp(/Titlu/).value).toBe('S2 vechi');
   });
 });
 

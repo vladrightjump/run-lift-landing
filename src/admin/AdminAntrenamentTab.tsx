@@ -75,6 +75,16 @@ export const AdminAntrenamentTab = () => {
    */
   const atinsRef = useRef(false);
 
+  /**
+   * Câte atingeri a primit formularul. Crește la fiecare tastă și la fiecare
+   * comutare, și nu se resetează niciodată.
+   *
+   * Nu e o a doua gardă, ci ceasul primeia: `atinsRef` spune DACĂ s-a scris,
+   * generația spune CÂND, iar peste un `await` doar a doua întrebare are răspuns
+   * corect.
+   */
+  const generatieRef = useRef(0);
+
   const incarca = useCallback(() => {
     listWeeklyWorkout(token)
       .then((r) => setRanduri(r))
@@ -139,9 +149,40 @@ export const AdminAntrenamentTab = () => {
 
   const trimite = async () => {
     setSalveaza(true);
+    /**
+     * Generația de dinainte de `await`. La întoarcere spune dacă s-a mai tastat
+     * ceva cât timp cererea era în zbor.
+     *
+     * Contor, nu o copie a valorilor: după `await`, `titlu`/`corp`/`vizibil` din
+     * corpul funcției sunt cele din randarea în care a pornit salvarea, deci o
+     * comparație cu ele ar compara vechiul cu vechiul și ar răspunde mereu „nu
+     * s-a schimbat nimic". Ref-ul e citit în clipa întoarcerii.
+     */
+    const generatia = generatieRef.current;
     try {
-      await saveWeeklyWorkout(token, deschis.fel === 'noua' ? null : deschis.id, titlu, corp, vizibil);
-      atinsRef.current = false;
+      /**
+       * Id-ul întors NU se aruncă.
+       *
+       * O editare de conținut trece rândul `p_id` în `superseded` și inserează
+       * unul nou, cu alt uuid. Fără re-ancorare, `deschis` ar rămâne pe rândul
+       * înlocuit: legenda ar deveni „Săptămâna —", panoul de versiuni ar
+       * dispărea, iar a doua salvare ar fi refuzată cu `not_found` — adică exact
+       * drumul „corectez o greșeală, apoi încă una".
+       *
+       * Corect pe amândouă căile serverului: peticul de vizibilitate întoarce
+       * `p_id` neschimbat, editarea de conținut întoarce id-ul nou.
+       */
+      const idNou = await saveWeeklyWorkout(
+        token,
+        deschis.fel === 'noua' ? null : deschis.id,
+        titlu,
+        corp,
+        vizibil
+      );
+      // Golim garda de text nesalvat DOAR dacă nimeni n-a mai scris între timp.
+      // Altfel ce s-a tastat în timpul salvării ar fi trecut drept salvat, iar
+      // schimbarea săptămânii l-ar fi aruncat fără să întrebe.
+      if (generatieRef.current === generatia) atinsRef.current = false;
       showToast({
         kind: 'success',
         msg:
@@ -153,6 +194,7 @@ export const AdminAntrenamentTab = () => {
       });
       // După o săptămână nouă, editorul se pregătește pentru următoarea.
       if (deschis.fel === 'noua') puneInEditor(null);
+      else setDeschis({ fel: 'existenta', id: idNou });
       incarca();
     } catch (err) {
       if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuzAntrenament(err) });
@@ -197,12 +239,23 @@ export const AdminAntrenamentTab = () => {
   };
 
   const revinoLa = async (id: string) => {
+    /**
+     * Versiunea la care revenim, citită ÎNAINTE de cerere.
+     *
+     * `incarca()` nu mai scrie în câmpurile editorului — `puneInEditor` e singurul
+     * care o face. Fără linia asta, revenirea ar reîmprospăta lista și ar lăsa în
+     * textarea textul tocmai înlocuit: ecranul ar spune că versiunea veche e
+     * publicată, dar ar arăta conținutul celei noi, iar următoarea salvare l-ar
+     * fi scris înapoi peste restaurare.
+     */
+    const versiune = (randuri ?? []).find((r) => r.id === id) ?? null;
     try {
       await restoreWeeklyWorkout(token, id);
-      atinsRef.current = false;
       showToast({ kind: 'success', msg: 'Versiunea aceea e din nou publicată.' });
-      // Rândul publicat al săptămânii are acum alt id.
-      setDeschis({ fel: 'existenta', id });
+      // Rândul acela e acum cel publicat al săptămânii. `puneInEditor` golește și
+      // garda de text nesalvat.
+      if (versiune) puneInEditor({ ...versiune, status: 'published' });
+      else setDeschis({ fel: 'existenta', id });
       incarca();
     } catch (err) {
       if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuzAntrenament(err) });
@@ -221,6 +274,7 @@ export const AdminAntrenamentTab = () => {
 
   const atinge = <T,>(set: (v: T) => void) => (v: T) => {
     atinsRef.current = true;
+    generatieRef.current += 1;
     set(v);
   };
 
@@ -306,6 +360,7 @@ export const AdminAntrenamentTab = () => {
                     type="button"
                     className="admin-btn-ghost"
                     onClick={() => void comutaVizibilitatea(s)}
+                    aria-label={`${s.vizibil ? 'Ascunde' : 'Arată'} săptămâna ${s.numar}`}
                   >
                     {s.vizibil ? 'Ascunde' : 'Arată'}
                   </button>

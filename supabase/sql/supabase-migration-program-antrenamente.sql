@@ -15,7 +15,32 @@
 -- primul antrenament real, vezi pasul 2 — e un `update` în plus, nu alt plan.
 
 -- ---------------------------------------------------------------------------
--- 1. Întâi șterge funcțiile care NU pot fi înlocuite pe loc
+-- 0. TOT fișierul rulează într-o singură tranzacție
+-- ---------------------------------------------------------------------------
+--
+-- Fără ea, ordinea din fișier e o capcană: secțiunea 1 șterge trei funcții VII,
+-- iar secțiunea 2 face `add column … not null` fără `default` — exact
+-- instrucțiunea care eșuează dacă tabelul nu mai e gol. Drop-urile s-ar fi comis
+-- deja, iar rezultatul ar fi fost `/antrenament` și ecranul de admin fără nicio
+-- funcție de chemat, până la o intervenție manuală.
+--
+-- Tot ce urmează e DDL tranzacțional în Postgres, deci `rollback` e complet.
+
+begin;
+
+-- Premisa care ține toată migrarea, verificată AICI, nu doar în proză: dacă
+-- tabelul nu mai e gol, oprește-te zgomotos și atomic, în loc să lași
+-- `add column … not null` să pice după ce funcțiile au dispărut.
+do $$
+begin
+  if exists (select 1 from runlift.weekly_workout) then
+    raise exception
+      'weekly_workout nu mai e gol: foloseste calea de backfill din sectiunea 2 (coloana fara not null, update, apoi not null)';
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 1. Apoi șterge funcțiile care NU pot fi înlocuite pe loc
 -- ---------------------------------------------------------------------------
 --
 -- `create or replace` nu schimbă tipul de retur al unei funcții și nu
@@ -197,11 +222,16 @@ language plpgsql
 security definer
 set search_path to 'runlift'
 as $function$
-declare v_numar int;
+declare
+  v_numar int;
+  v_titlu text;
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
 
-  select w.numar into v_numar from weekly_workout w
+  -- Titlul se citește ÎNAINTE de ștergere, pentru jurnal: după compactare,
+  -- `numar` arată deja spre altă săptămână, deci singur n-ar mai identifica
+  -- nimic pentru cine citește `admin_events` peste o lună.
+  select w.numar, w.titlu into v_numar, v_titlu from weekly_workout w
   where w.id = p_id and w.status = 'published';
   if v_numar is null then raise exception 'not_found'; end if;
 
@@ -220,7 +250,8 @@ begin
   update weekly_workout set numar = (0 - numar) - 1 where numar < 0;
 
   insert into admin_events (tip, detaliu)
-  values ('workout_delete', jsonb_build_object('numar', v_numar));
+  values ('workout_delete',
+          jsonb_build_object('id', p_id, 'numar', v_numar, 'titlu', v_titlu));
 
   return v_numar;
 end;
@@ -346,3 +377,12 @@ revoke all on function runlift.public_weekly_workouts()
   from public, anon, authenticated, service_role;
 grant execute on function runlift.public_weekly_workouts()
   to anon, authenticated, service_role;
+
+-- ---------------------------------------------------------------------------
+-- 8. Gata
+-- ---------------------------------------------------------------------------
+--
+-- Dacă orice verificare de după aplicare pică ÎNAINTE de `commit`, un `rollback`
+-- e complet și fără urme: nimic din migrare n-a fost vizibil altor sesiuni.
+
+commit;
