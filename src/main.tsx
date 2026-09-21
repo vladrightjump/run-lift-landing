@@ -60,12 +60,15 @@ const page =
 /**
  * `/despre-noi` și `/antrenament` NU primesc provider-ul, deliberat.
  *
- * `/despre-noi` arată doar locul antrenamentelor și linkurile de social — lucruri
- * care rămân în cod pentru că nu țin de ediție. Nu afișează nimic derivat din
- * ediție, deci n-are ce reconcilia, iar `tests/despre-noi.spec.ts` păzește de mai
- * demult proprietatea că se încarcă fără NICIUN request către Supabase. Un
- * provider pus peste tot ar fi rupt-o tăcut, pentru un fetch de care pagina n-are
- * nevoie.
+ * `/despre-noi` arată locul antrenamentelor și linkurile de social — lucruri care
+ * rămân în cod pentru că nu țin de ediție. Nu afișează nimic derivat din ediție,
+ * deci n-are ce reconcilia, iar un provider pus peste tot ar fi adăugat un fetch
+ * de care pagina n-are nevoie.
+ *
+ * Pagina cere totuși un singur lucru de la server, prin hook propriu: clipurile
+ * de antrenament (`public_training_reels`), fiindcă banda se administrează din
+ * `/admin`. E aceeași formă ca `/antrenament` de mai jos — RPC propriu, nu
+ * documentul ediției — nu o excepție de la regula asta.
  *
  * `/antrenament` e în aceeași situație, dintr-un alt motiv: antrenamentul
  * săptămânii nu aparține niciunei ediții. Își cere singur datele, dintr-un RPC

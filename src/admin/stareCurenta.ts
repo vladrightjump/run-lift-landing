@@ -22,6 +22,7 @@ export type TabAdmin =
   | 'lansare'
   | 'sabloane'
   | 'eveniment'
+  | 'clipuri'
   | 'coming-soon';
 
 /**

@@ -16,13 +16,27 @@ import type { Page } from '@playwright/test';
  */
 
 const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
+const CONFIG_ROUTE = '**/rest/v1/rpc/public_config';
 const EMPTY = { count: 0, participants: [], waitlist: 0 };
 
-/** Landing-ul cere statisticile la montare — le mock-uim ca să nu atingem DB-ul. */
+/**
+ * Landing-ul cere statisticile ȘI configul publicat la montare — le mock-uim pe
+ * amândouă ca să nu atingem DB-ul.
+ *
+ * Configul nu e un amănunt: pagina pornește pe instantaneul de build și se
+ * RE-RANDEAZĂ când răspunde `public_config()`. Un răspuns real, sosit între
+ * verificarea de acționabilitate a lui Playwright și click, înlocuiește nodul
+ * din antet — clicul cade pe elementul vechi, ancora navighează, iar dialogul
+ * nu se mai deschide. Mock-uit, momentul e determinist.
+ */
 const mockStats = (page: Page) =>
-  page.route(STATS_ROUTE, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY) })
-  );
+  Promise.all([
+    page.route(STATS_ROUTE, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY) })
+    ),
+    // Fără corp: clientul păstrează instantaneul de build, deci nicio re-randare.
+    page.route(CONFIG_ROUTE, (route) => route.abort()),
+  ]);
 
 test.describe('Tabul „Despre noi" — Coming Soon', () => {
   test('e prezent în antet și trimite către /despre-noi', async ({ page }) => {

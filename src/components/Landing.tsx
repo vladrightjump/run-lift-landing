@@ -20,6 +20,7 @@ import { RegistrationOverlay } from './landing/RegistrationOverlay';
 import { SignupBanner } from './landing/SignupBanner';
 import { ParticipantsSection } from './landing/ParticipantsSection';
 import { ReelsSection } from './landing/ReelsSection';
+import { useTrainingReels } from '../hooks/useTrainingReels';
 import { Footer } from './landing/Footer';
 
 type Props = {
@@ -59,8 +60,11 @@ export const Landing = ({ mode = 'full' }: Props) => {
   // nu prin `return null` în componentă: numerotarea se derivă din poziția în
   // lista asta, deci o secțiune care se randează gol ar lăsa un număr sărit
   // (01, 03, 04) — exact ce evită filtrarea pe vizibilitate.
+  // Clipurile se cer AICI, nu în secțiune: filtrarea de mai jos are nevoie de
+  // lungime, iar numărul secțiunii se derivă din poziția în lista filtrată.
+  const reels = useTrainingReels();
   const sectiuniVizibile = layout.filter(
-    (s) => s.visible && (s.key !== 'reels' || config.reels.items.length > 0)
+    (s) => s.visible && (s.key !== 'reels' || reels.length > 0)
   );
   const cd = useCountdown(EVENT_DATE);
   const { stats, refresh } = useStats();
@@ -154,7 +158,7 @@ export const Landing = ({ mode = 'full' }: Props) => {
             case 'participants':
               return <ParticipantsSection key={key} stats={stats} num={num} />;
             case 'reels':
-              return <ReelsSection key={key} num={num} />;
+              return <ReelsSection key={key} num={num} reels={reels} />;
             default:
               return null;
           }

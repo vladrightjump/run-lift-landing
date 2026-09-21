@@ -304,6 +304,62 @@ export const fetchWeeklyWorkouts = async (signal?: AbortSignal): Promise<WeeklyW
   return program.sort((a, b) => a.numar - b.numar);
 };
 
+/**
+ * Un clip de antrenament, așa cum îl arată pagina.
+ *
+ * FIȘIERELE nu vin de aici: `video` și `poster` sunt căi către fișiere proprii,
+ * servite de pe aceeași origine, produse cu `npm run reel` și adăugate printr-un
+ * commit. Din backend vine doar PREZENTAREA lor — ordinea, legenda, linkul și
+ * dacă se văd — fiindcă alea sunt editările frecvente.
+ */
+export type Reel = { video: string; poster: string; caption: string; url: string };
+
+/**
+ * Clipurile vizibile, în ordinea din bandă.
+ *
+ * Aceeași formă ca `fetchWeeklyWorkouts`: RPC stabil peste un tabel închis, cu
+ * cheia publicabilă. Clipurile nu aparțin niciunei ediții — antrenamentele nu se
+ * mută odată cu cursa — deci nu trec prin documentul de configurare.
+ *
+ * Tolerant ca `parseEventConfig`: o intrare stricată se sare, în loc să rupă
+ * secțiunea. Lista goală e o stare validă și normală — atunci banda dispare
+ * complet, fără să lase un număr de secțiune sărit.
+ */
+export const fetchTrainingReels = async (signal?: AbortSignal): Promise<Reel[]> => {
+  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/public_training_reels`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE.publishableKey,
+      'Content-Type': 'application/json',
+      'Content-Profile': SUPABASE.schema,
+    },
+    body: '{}',
+    signal,
+  });
+  if (!res.ok) {
+    throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
+  }
+  const raw: unknown = await res.json();
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((element): Reel[] => {
+    if (typeof element !== 'object' || element === null) return [];
+    const { video, poster, caption, url } = element as Record<string, unknown>;
+    // `video` și `url` sunt singurele obligatorii: fără ele cardul n-are ce reda
+    // și n-are unde trimite. Serverul le validează deja prin constrângeri; asta
+    // e apărarea în adâncime pentru o scriere directă în DB.
+    if (typeof video !== 'string' || !video.startsWith('/reels/')) return [];
+    if (typeof url !== 'string' || !url.startsWith('https://www.instagram.com/')) return [];
+    return [
+      {
+        video,
+        poster: typeof poster === 'string' ? poster : '',
+        caption: typeof caption === 'string' ? caption : '',
+        url,
+      },
+    ];
+  });
+};
+
 export type ConfirmResult = 'confirmat' | 'deja_confirmat' | 'invalid';
 
 /**

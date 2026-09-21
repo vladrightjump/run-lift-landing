@@ -77,16 +77,10 @@ describe('diferenteFataDePublicat', () => {
     expect(lista[0].inainte).not.toContain('(Cine vine)');
   });
 
-  it('un clip adăugat e o diferență pe „Clipurile din bandă"', () => {
-    const lista = dif({
-      ...publicat,
-      reels: {
-        ...publicat.reels,
-        items: [{ code: 'ABC12345', kind: 'reel', poster: '', caption: '' }],
-      },
-    });
-    expect(etichete(lista)).toEqual(['Clipurile din bandă']);
-    expect(lista[0].acum).toContain('ABC12345');
+  it('titlul secțiunii Instagram e o diferență', () => {
+    const lista = dif({ ...publicat, reels: { ...publicat.reels, headline: 'Cum arată la noi' } });
+    expect(etichete(lista)).toEqual(['Titlul secțiunii Instagram']);
+    expect(lista[0].acum).toBe('Cum arată la noi');
   });
 
   it('reminderele se scriu în ordinea plecării, cu cele oprite în paranteze', () => {

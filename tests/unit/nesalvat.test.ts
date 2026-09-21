@@ -55,23 +55,6 @@ describe('esteNesalvat', () => {
     expect(esteNesalvat(doc, invers)).toBe(true);
   });
 
-  it('ordinea clipurilor e informație la fel ca ordinea secțiunilor', () => {
-    const cuClipuri = {
-      ...doc,
-      reels: {
-        ...doc.reels,
-        items: [
-          { code: 'AAAAA', kind: 'reel' as const, poster: '', caption: 'unu' },
-          { code: 'BBBBB', kind: 'reel' as const, poster: '', caption: 'doi' },
-        ],
-      },
-    };
-    const inversate = {
-      ...cuClipuri,
-      reels: { ...cuClipuri.reels, items: [...cuClipuri.reels.items].reverse() },
-    };
-    expect(esteNesalvat(cuClipuri, inversate)).toBe(true);
-  });
 
   it('un câmp opțional absent și același câmp `undefined` sînt același document', () => {
     // `JSON.stringify` scoate `undefined` la scriere, deci serverul primește

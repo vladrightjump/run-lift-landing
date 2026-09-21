@@ -122,6 +122,9 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
     // Întoarce doar săptămânile publicate ȘI vizibile, deci exact ce arată
     // pagina. Versiunile înlocuite și săptămânile ascunse nu ies niciodată.
     'public_weekly_workouts',
+    // Întoarce doar clipurile VIZIBILE, deci exact ce arată banda. Un clip
+    // ascuns din `/admin` nu iese niciodată prin funcția asta.
+    'public_training_reels',
     'confirm_signup',
     'decline_spot',
     'unsubscribe',
@@ -156,6 +159,8 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
       'admin_undelete_registration', 'admin_undelete_waitlist', 'admin_update_registration',
       'admin_save_weekly_workout', 'admin_list_weekly_workout', 'admin_restore_weekly_workout',
       'admin_move_weekly_workout', 'admin_delete_weekly_workout',
+      'admin_list_training_reels', 'admin_save_training_reel',
+      'admin_move_training_reel', 'admin_delete_training_reel',
     ],
   ];
 

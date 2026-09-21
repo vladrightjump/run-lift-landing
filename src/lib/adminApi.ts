@@ -239,6 +239,67 @@ export const restoreEventConfig = (token: string, id: string): Promise<string> =
   rpc<string>('admin_restore_event_config', { p_token: token, p_id: id });
 
 /**
+ * Un clip din bandă, așa cum îl vede backoffice-ul.
+ *
+ * Fără versionare, spre deosebire de program: nu există ciornă și nici „revino
+ * la versiunea trecută" pentru o legendă. Un istoric aici ar fi fost ceremonie.
+ */
+export type AdminReelRow = {
+  id: string;
+  /** Poziția în bandă, 1…N. Poziție, nu identificator: mutarea renumerotează. */
+  numar: number;
+  video: string;
+  poster: string;
+  caption: string;
+  url: string;
+  vizibil: boolean;
+};
+
+/** Clipurile, în ordinea din bandă, inclusiv cele ascunse. */
+export const listTrainingReels = (token: string, signal?: AbortSignal): Promise<AdminReelRow[]> =>
+  rpc<AdminReelRow[]>('admin_list_training_reels', { p_token: token }, signal);
+
+/**
+ * Salvează un clip. Efect imediat pe site — nu trece prin ciornă.
+ *
+ * `id` null înseamnă „clip nou": serverul îi pune numărul următor, deci
+ * organizatorul nu tastează și nu alege niciun număr.
+ */
+export const saveTrainingReel = (
+  token: string,
+  id: string | null,
+  video: string,
+  poster: string,
+  caption: string,
+  url: string,
+  vizibil: boolean
+): Promise<string> =>
+  rpc<string>('admin_save_training_reel', {
+    p_token: token,
+    p_id: id,
+    p_video: video,
+    p_poster: poster,
+    p_caption: caption,
+    p_url: url,
+    p_vizibil: vizibil,
+  });
+
+/**
+ * Mută un clip cu o poziție. Întoarce numărul lui de după mutare — la capăt de
+ * bandă e același, fiindcă nu există vecin și asta nu e o eroare.
+ */
+export const moveTrainingReel = (token: string, id: string, directie: -1 | 1): Promise<number> =>
+  rpc<number>('admin_move_training_reel', { p_token: token, p_id: id, p_directie: directie });
+
+/**
+ * Scoate un clip din bandă și compactează numerele. Fișierul rămâne în repo:
+ * ștergerea din listă nu e o ștergere de pe disc, iar un clip repus mai târziu
+ * nu trebuie re-encodat.
+ */
+export const deleteTrainingReel = (token: string, id: string): Promise<number> =>
+  rpc<number>('admin_delete_training_reel', { p_token: token, p_id: id });
+
+/**
  * Un rând din programul de antrenamente: fie o săptămână publicată, fie o
  * versiune înlocuită a ei. Le leagă `numar` — versiunile îl poartă pe cel al
  * săptămânii lor, deci „Versiuni anterioare" e per săptămână.
@@ -358,6 +419,39 @@ export const mesajRefuzAntrenament = (err: unknown): string => {
   // Neutru ca verb: aceeași traducere servește și mutarea, și ștergerea, nu doar
   // salvarea. „Nu am putut salva" pe o ștergere eșuată ar fi trimis omul să caute
   // problema în formular.
+  return 'Nu a mers. Încearcă din nou.';
+};
+
+/**
+ * Refuzul serverului pentru clipuri, în cuvintele organizatorului.
+ *
+ * Constrângerile din DB sînt ultima linie, nu prima: formularul verifică deja
+ * aceleași forme. Ce ajunge aici e ori o cale lipită greșit, ori un ecran rămas
+ * în urmă — iar diferența contează pentru ce-i spui omului să facă.
+ */
+export const mesajRefuzClip = (err: unknown): string => {
+  const text = err instanceof Error ? err.message : String(err);
+  if (text.includes('training_reels_fisier_ok')) {
+    return 'Calea clipului trebuie să arate ca „/reels/nume-clip.mp4". Rulează `npm run reel` și copiază ce-ți tipărește.';
+  }
+  if (text.includes('training_reels_poster_ok')) {
+    return 'Calea posterului trebuie să arate ca „/reels/nume-clip.jpg", sau să fie goală.';
+  }
+  if (text.includes('training_reels_url_ok')) {
+    return 'Linkul trebuie să fie o adresă Instagram curată, fără „?" la coadă — ex. https://www.instagram.com/reel/ABC12345/';
+  }
+  if (text.includes('training_reels_caption_ok')) {
+    return 'Legenda nu poate fi goală: ea e ce citește cineva care folosește un cititor de ecran.';
+  }
+  if (text.includes('training_reels_un_fisier')) {
+    return 'Clipul ăsta e deja în bandă. Două carduri cu același fișier sînt o greșeală de lipit.';
+  }
+  if (text.includes('not_found')) {
+    return 'Clipul acela nu mai există. Reîncarcă pagina.';
+  }
+  if (text.includes('directie_invalida')) {
+    return 'Nu am putut muta clipul. Reîncarcă pagina.';
+  }
   return 'Nu a mers. Încearcă din nou.';
 };
 

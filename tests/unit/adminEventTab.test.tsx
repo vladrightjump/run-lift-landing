@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent, within, act } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { AdminEventTab } from '../../src/admin/AdminEventTab';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
@@ -514,62 +514,6 @@ describe('versiuni anterioare', () => {
   });
 });
 
-describe('clipurile din bandă', () => {
-  const adauga = async () => {
-    await deschideCiorna();
-    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
-  };
-
-  it('lipirea unui link umple codul și îl arată în ecou', async () => {
-    await adauga();
-    fireEvent.change(camp('Linkul clipului'), {
-      target: { value: 'https://www.instagram.com/reel/ABC12345/?igsh=xyz' },
-    });
-    expect(screen.getByText(/cod: ABC12345/)).toBeTruthy();
-  });
-
-  // Timeout explicit: testul tastează patruzeci de caractere și re-randează tot
-  // tabul după fiecare, deci durează ~1,4 s pe o mașină de dezvoltare și trece
-  // de pragul implicit de 5 s pe un runner de CI încărcat. Nu e blocaj, e
-  // lungime reală — a picat în CI abia după ce suita a crescut la 725 de teste.
-  it('TASTAREA nu se autodistruge', async () => {
-    // Regresia păzită: câmpul era controlat de URL-ul RECOMPUS din codul
-    // parsat, iar la tastare fiecare caracter în parte e un URL invalid — deci
-    // câmpul se golea singur la prima literă și nu se putea scrie nimic în el.
-    await adauga();
-    const input = camp('Linkul clipului');
-
-    let text = '';
-    for (const ch of 'https://www.instagram.com/reel/ABC12345/') {
-      text += ch;
-      fireEvent.change(input, { target: { value: text } });
-      expect(camp('Linkul clipului').value).toBe(text);
-    }
-    expect(screen.getByText(/cod: ABC12345/)).toBeTruthy();
-  }, 20_000);
-
-  it('la ieșirea din câmp rămâne forma canonică, fără query-ul de tracking', async () => {
-    await adauga();
-    const input = camp('Linkul clipului');
-    fireEvent.change(input, {
-      target: { value: 'https://www.instagram.com/reels/ABC12345/?igsh=xyz' },
-    });
-    fireEvent.blur(input);
-    // `/reels/` s-a normalizat la `/reel/`, iar query-ul a dispărut.
-    expect(camp('Linkul clipului').value).toBe('https://www.instagram.com/reel/ABC12345/');
-  });
-
-  it('un link fără cod lasă rândul semnalat, nu publicabil', async () => {
-    await adauga();
-    fireEvent.change(camp('Linkul clipului'), {
-      target: { value: 'https://tiktok.com/@x/video/1' },
-    });
-    expect((screen.getByRole('button', { name: 'Publică' }) as HTMLButtonElement).disabled).toBe(
-      true
-    );
-  });
-});
-
 describe('grupurile pliate comprimă documentul, nu îl ascund', () => {
   /** Capacele grupurilor, cu textul lor (titlu + rezumat când e pliat). */
   const capace = (): string[] =>
@@ -921,21 +865,15 @@ describe('lacătul acoperă ambele scrieri, nu doar publicarea', () => {
     elibereaza();
   });
 
-  it('controalele de reels și de layout sînt inerte în zbor', async () => {
+  it('controalele de layout sînt inerte în zbor', async () => {
     // Ele nu trec prin `Camp`, deci nu le atinge contextul — au nevoie de
     // propria gardă, iar un control nou adăugat aici e ușor de uitat.
     const elibereaza = tinePeLoc(publishEventConfig);
     await deschideCiorna();
-    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
-    // Un clip fără cod e invalid, iar „Publică" ar rămâne dezactivat.
-    fireEvent.change(camp('Linkul clipului'), {
-      target: { value: 'https://www.instagram.com/reel/ABC12345/' },
-    });
     fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
     fireEvent.click(screen.getByRole('button', { name: /Da, publică/ }));
 
     await waitFor(() => expect(publishEventConfig).toHaveBeenCalledTimes(1));
-    expect(camp('Linkul clipului').hasAttribute('disabled')).toBe(true);
     expect(
       screen.getByRole('button', { name: /Mută „Locația” mai sus/ }).hasAttribute('disabled')
     ).toBe(true);
@@ -1667,41 +1605,12 @@ describe('dialogurile tabului au tastatură', () => {
   });
 });
 
-/** Ștergerea unui clip se aplica pe loc, fără cale înapoi. */
-describe('ștergerea unui clip se poate anula', () => {
-  const adaugaClip = async (link: string) => {
-    await deschideCiorna();
-    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
-    fireEvent.change(screen.getByLabelText('Linkul clipului'), { target: { value: link } });
-  };
-
-  it('ștergerea oferă undo, iar undo-ul repune clipul cu tot cu codul lui', async () => {
-    await adaugaClip('https://www.instagram.com/reel/ABC12345/');
-    expect((screen.getByLabelText('Linkul clipului') as HTMLInputElement).value).toContain(
-      'ABC12345'
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Șterge clipul 1' }));
-    expect(screen.queryByLabelText('Linkul clipului')).toBeNull();
-
-    const toast = showToast.mock.calls.at(-1)?.[0];
-    expect(typeof toast.undo).toBe('function');
-    // `act`: undo-ul vine din toast, adică din afara arborelui — fără el,
-    // schimbarea de stare n-ar fi aplicată până la următoarea randare.
-    act(() => toast.undo());
-
-    expect((screen.getByLabelText('Linkul clipului') as HTMLInputElement).value).toContain(
-      'ABC12345'
-    );
-  });
-});
-
 /**
  * Clipurile și secțiunile stăteau în afara grupurilor, la capătul
  * formularului: grupul „Instagram" își rezuma pliat („3 clipuri") un conținut
  * pe care nu-l conținea, iar rândurile rămâneau pe ecran cu grupul închis.
  */
-describe('clipurile și secțiunile stau în grupurile lor', () => {
+describe('textele și secțiunile stau în grupurile lor', () => {
   /** Grupul cu titlul dat, ca element — ca să putem căuta ÎN el. */
   const grupul = (titlu: string): HTMLElement => {
     const cap = [...document.querySelectorAll('.admin-config-grup-cap')].find((c) =>
@@ -1715,7 +1624,7 @@ describe('clipurile și secțiunile stau în grupurile lor', () => {
     if (cap.getAttribute('aria-expanded') === 'false') fireEvent.click(cap);
   };
 
-  it('clipurile se editează din grupul „Instagram"', async () => {
+  it('textele secțiunii se editează din grupul „Instagram"', async () => {
     randeaza();
     fireEvent.click(
       await screen.findByRole('button', {
@@ -1725,8 +1634,9 @@ describe('clipurile și secțiunile stau în grupurile lor', () => {
     deschide('Instagram');
 
     const grup = grupul('Instagram');
-    fireEvent.click(within(grup).getByRole('button', { name: '+ Adaugă clip' }));
-    expect(within(grup).getByLabelText('Linkul clipului')).toBeDefined();
+    expect(within(grup).getByLabelText('Titlul secțiunii')).toBeDefined();
+    // Clipurile nu se mai editează de aici: sunt fișiere proprii, în cod.
+    expect(within(grup).queryByRole('button', { name: '+ Adaugă clip' })).toBeNull();
   });
 
   it('secțiunile se aranjează din grupul „Ce arată pagina"', async () => {
@@ -1751,43 +1661,7 @@ describe('clipurile și secțiunile stau în grupurile lor', () => {
       })
     );
     // Nimic nu s-a deschis: doar „Ediția" e deschis implicit.
-    expect(screen.queryByRole('button', { name: '+ Adaugă clip' })).toBeNull();
+    expect(screen.queryByLabelText('Titlul secțiunii')).toBeNull();
     expect(screen.queryByRole('button', { name: /Mută „Locația” mai sus/ })).toBeNull();
-  });
-
-  it('un clip cu link stricat deschide grupul „Instagram" de la sine', async () => {
-    await deschideCiorna();
-    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
-
-    // Rândul gol e invalid: grupul nu se mai poate închide peste el.
-    const cap = grupul('Instagram').querySelector('.admin-config-grup-cap') as HTMLElement;
-    fireEvent.click(cap);
-    expect(cap.getAttribute('aria-expanded')).toBe('true');
-  });
-});
-
-/**
- * Undo-ul unei ștergeri rulează din toast, deci mai târziu decât randarea care
- * l-a produs: dacă ar fi scris `{...ciorna.reels, items}` cu ciorna prinsă
- * atunci, ar fi revenit și titlul secțiunii editat între timp.
- */
-describe('undo-ul unui clip nu revine peste editările de după', () => {
-  it('titlul secțiunii editat după ștergere rămâne', async () => {
-    await deschideCiorna();
-    fireEvent.click(screen.getByRole('button', { name: '+ Adaugă clip' }));
-    fireEvent.change(screen.getByLabelText('Linkul clipului'), {
-      target: { value: 'https://www.instagram.com/reel/ABC12345/' },
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Șterge clipul 1' }));
-    const toast = showToast.mock.calls.at(-1)?.[0];
-
-    fireEvent.change(camp('Titlul secțiunii'), { target: { value: 'Din teren' } });
-    act(() => toast.undo());
-
-    expect(camp('Titlul secțiunii').value).toBe('Din teren');
-    expect((screen.getByLabelText('Linkul clipului') as HTMLInputElement).value).toContain(
-      'ABC12345'
-    );
   });
 });

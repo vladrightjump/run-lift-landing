@@ -106,6 +106,37 @@ const configPublicat = {
   published_at: cuZileInUrma(20),
 };
 
+/** Banda cu clipuri, cât să se vadă ordinea, un clip ascuns și unul fără poster. */
+const clipuri = [
+  {
+    id: 'c1',
+    numar: 1,
+    video: '/reels/marti-in-parc.mp4',
+    poster: '/reels/marti-in-parc.jpg',
+    caption: 'Marți seara, în parc',
+    url: 'https://www.instagram.com/reel/AAAAA11111/',
+    vizibil: true,
+  },
+  {
+    id: 'c2',
+    numar: 2,
+    video: '/reels/circuit.mp4',
+    poster: '',
+    caption: 'Circuit funcțional',
+    url: 'https://www.instagram.com/reel/BBBBB22222/',
+    vizibil: true,
+  },
+  {
+    id: 'c3',
+    numar: 3,
+    video: '/reels/finish.mp4',
+    poster: '/reels/finish.jpg',
+    caption: 'Ultimul tur',
+    url: 'https://www.instagram.com/p/CCCCC33333/',
+    vizibil: false,
+  },
+];
+
 const RASPUNSURI: Record<string, unknown> = {
   admin_check_token: true,
   admin_list_registrations: inscrieri,
@@ -116,6 +147,7 @@ const RASPUNSURI: Record<string, unknown> = {
   admin_list_launch_notifications: lansare,
   admin_list_email_templates: sabloane,
   admin_get_event_config: [configPublicat],
+  admin_list_training_reels: clipuri,
   admin_login: 'token-preview',
   admin_logout: null,
 };

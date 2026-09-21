@@ -560,8 +560,8 @@ stateDiagram-v2
 Grupurile formularului: **Ediția** (numere, nume, concept) · **Când** (start, deadline, lansare,
 următorul antrenament, check-in, durată, „cine vine" cu X ore înainte) · **Unde** (loc, oraș,
 coordonate) · **Locuri** (total, listă de așteptare) · **Remindere** (orarul: avans în ore +
-șablon + activ) · **Ce arată** (ordinea și vizibilitatea secțiunilor) · **Instagram** (clipuri, max
-`MAX_REELS`).
+șablon + activ) · **Ce arată** (ordinea și vizibilitatea secțiunilor) · **Instagram** (titlul și textul
+secțiunii; clipurile au tabul lor, „Clipuri", fiindcă nu țin de ediție).
 
 **Ce face „Publică" pe server** (o singură tranzacție):
 
@@ -690,7 +690,9 @@ Fiecare încercare lasă un rând în `email_log` (`log_emails`), vizibil în 4.
 | Coming Soon on/off, momentul anunțului | `/admin` → Coming Soon | nu |
 | Antrenamentul săptămânii, ordinea programului, ce se vede | `/admin` → blocul „în fiecare săptămână” | nu |
 | Textul oricărui email | `/admin` → Șabloane | nu |
-| Un clip Instagram | `/admin` → Evenimentul → Instagram | nu (posterul nou, da: `public/reels/`) |
+| Titlul/textul secțiunii Instagram | `/admin` → Evenimentul → Instagram | nu |
+| Ordinea/legenda/vizibilitatea unui clip | `/admin` → Clipuri | nu |
+| Un FIȘIER de clip nou | `npm run reel` + commit | **da** |
 | Meta de share (titlu/imagine WhatsApp/Facebook) | `src/content/edition.ts` → build | **da** |
 | Proza statică a paginii (texte care nu țin de ediție) | componentele din `src/components/` | da |
 | Ordinea fazelor / când comută pagina | `src/App.tsx`, `src/hooks/usePagePhase.ts`, derivatele din `src/lib/config.ts` | da |

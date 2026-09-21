@@ -157,57 +157,44 @@ describe('parseEventConfig respinge ce nu se poate randa', () => {
   });
 });
 
-describe('reels — tolerant, ca layout', () => {
+describe('reels — doar textele secțiunii', () => {
   const cuReels = (reels: unknown) => {
     const doc = valid();
     doc.reels = reels;
     return parseEventConfig(doc);
   };
-  const unClip = (patch: Record<string, unknown> = {}) => ({
-    code: 'ABC12345',
-    kind: 'reel',
-    poster: '/reels/a.jpg',
-    caption: 'Antrenament de marți',
-    ...patch,
-  });
 
   it('un document fără `reels` primește implicitul, nu `null`', () => {
     const doc = valid();
     delete doc.reels;
     const c = parseEventConfig(doc);
     expect(c).not.toBeNull();
-    expect(c!.reels.items).toEqual([]);
     expect(c!.reels.headline).toBe('Instagram');
+    expect(c!.reels.body).toBe('');
   });
 
-  it('un clip stricat cade, restul secțiunii rămâne', () => {
-    const c = cuReels({
-      headline: 'Instagram',
-      body: 'text',
-      items: [unClip(), { code: '', kind: 'reel', poster: '', caption: '' }],
-    });
-    expect(c!.reels.items).toHaveLength(1);
-    expect(c!.reels.items[0].code).toBe('ABC12345');
-  });
-
-  it('un `kind` necunoscut cade — Instagram n-are ruta aia', () => {
-    expect(cuReels({ items: [unClip({ kind: 'video' })] })!.reels.items).toHaveLength(0);
-  });
-
-  it('un cod cu caractere de URL cade, ca să nu schimbe adresa iframe-ului', () => {
-    for (const code of ['ABC/../x', 'ABC?a=1', 'AB', 'ABC 12345']) {
-      expect(cuReels({ items: [unClip({ code })] })!.reels.items).toHaveLength(0);
-    }
-  });
-
-  it('lista se plafonează — o bandă, nu un feed', () => {
-    const multe = Array.from({ length: 20 }, (_, i) => unClip({ code: `COD${i}0000` }));
-    expect(cuReels({ items: multe })!.reels.items).toHaveLength(12);
+  it('titlul și textul vin din document', () => {
+    const c = cuReels({ headline: 'Cum arată la noi', body: 'Filmate pe teren.' });
+    expect(c!.reels.headline).toBe('Cum arată la noi');
+    expect(c!.reels.body).toBe('Filmate pe teren.');
   });
 
   it('un `reels` care nu e obiect nu invalidează documentul', () => {
-    expect(cuReels('nu-i obiect')!.reels.items).toEqual([]);
-    expect(cuReels(null)!.reels.items).toEqual([]);
+    expect(cuReels('nu-i obiect')!.reels.headline).toBe('Instagram');
+    expect(cuReels(null)!.reels.headline).toBe('Instagram');
+  });
+
+  it('un document vechi cu `items` se parsează, iar clipurile lui sunt ignorate', () => {
+    // Documentele publicate înainte de mutarea clipurilor în cod încă poartă
+    // cheia. Validatorul din baza de date o tratează ca opțională, deci n-a fost
+    // nevoie de nicio migrare — dar parsarea trebuie să n-o expună.
+    const c = cuReels({
+      headline: 'Instagram',
+      body: '',
+      items: [{ code: 'ABC12345', kind: 'reel', poster: '', caption: 'vechi' }],
+    });
+    expect(c).not.toBeNull();
+    expect(c!.reels).toEqual({ headline: 'Instagram', body: '' });
   });
 });
 
@@ -227,29 +214,3 @@ describe('cheile de secțiune', () => {
     expect(DEFAULT_LAYOUT).toHaveLength(SECTION_KEYS.length);
   });
 });
-
-describe('reels — apărare în adâncime la duplicate', () => {
-  it('al doilea exemplar al aceluiași clip cade', () => {
-    // Validarea respinge duplicatele în amândouă capetele, deci asta e plasa
-    // pentru o scriere directă în DB. Fără ea: două carduri cu aceeași cheie
-    // React, iar un singur click ar porni clipul în amândouă.
-    const clip = { code: 'ABC12345', kind: 'reel', poster: '', caption: 'unu' };
-    const doc = valid();
-    doc.reels = { items: [clip, { ...clip, caption: 'doi' }] };
-    const c = parseEventConfig(doc);
-    expect(c!.reels.items).toHaveLength(1);
-    // Rămâne PRIMUL, nu ultimul: ordinea din document e ordinea din bandă.
-    expect(c!.reels.items[0].caption).toBe('unu');
-  });
-
-  it('coduri diferite nu se calcă între ele', () => {
-    const doc = valid();
-    doc.reels = {
-      items: [
-        { code: 'AAAAA1111', kind: 'reel', poster: '', caption: '' },
-        { code: 'BBBBB2222', kind: 'p', poster: '', caption: '' },
-      ],
-    };
-    expect(parseEventConfig(doc)!.reels.items).toHaveLength(2);
-  });
-})
