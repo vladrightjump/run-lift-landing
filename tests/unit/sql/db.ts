@@ -57,6 +57,7 @@ const TABELE = [
   'app_config',
   'event_config',
   'weekly_workout',
+  'training_reels',
 ];
 
 export const ADMIN_TOKEN = '11111111-1111-1111-1111-111111111111';

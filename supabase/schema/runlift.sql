@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 17 septembrie 2026 (după `runlift_turnstile_lockdown`).
+-- Ultima regenerare: 21 septembrie 2026 (după `clipuri_din_youtube`).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -2585,7 +2585,8 @@ grant execute on function runlift.public_weekly_workouts()
   to anon, authenticated, service_role;
 
 -- ===========================================================================
--- Clipurile de antrenament (`training_reels`) — adăugat 21 septembrie 2026
+-- Clipurile de antrenament (`training_reels`) — adăugat 21 septembrie 2026,
+-- mutat pe YouTube în aceeași zi (`clipuri_din_youtube`)
 -- ===========================================================================
 
 -- ---------------------------------------------------------------------------
@@ -2597,11 +2598,9 @@ grant execute on function runlift.public_weekly_workouts()
 -- cursa, iar o ediție nouă n-are de ce să moștenească sau să piardă banda.
 -- Aceeași situație ca `weekly_workout`, rezolvată la fel.
 --
--- FIȘIERELE nu stau aici. Clipul și poster-ul sunt fișiere proprii, servite de
--- pe aceeași origine ca pagina, produse cu `npm run reel` și adăugate printr-un
--- commit. Tabelul ăsta ține doar PREZENTAREA lor: ordinea, legenda, linkul spre
--- postare și dacă se văd. Alea sunt editările frecvente; adăugarea unui fișier
--- nou e rară și tot printr-un deploy intră.
+-- CLIPURILE nu stau aici. Sunt încărcate pe YouTube, iar tabelul ține doar
+-- identificatorul lor plus PREZENTAREA: ordinea, legenda, linkul spre postare
+-- și dacă se văd. Tot ce e aici se editează din `/admin`, fără deploy.
 --
 -- Fără versionare (spre deosebire de `weekly_workout`): nu există ciornă și nici
 -- „revino la versiunea trecută" pentru o legendă. Un istoric aici ar fi fost
@@ -2612,22 +2611,21 @@ create table if not exists runlift.training_reels (
   -- Poziția în bandă. Organizatorul n-o tastează niciodată: se atribuie la
   -- adăugare și se schimbă doar prin „mută".
   numar int not null,
-  -- Calea clipului, relativă la originea site-ului („/reels/marti.mp4").
-  fisier text not null,
-  -- Primul cadru. Gol e permis: cardul cade pe marcajul desenat.
-  poster text not null default '',
+  -- Identificatorul clipului pe YouTube (11 caractere), nu un link și nu o cale.
+  youtube_id text not null,
   -- O linie sub card. NU e opțională: e ce citește un cititor de ecran, fiindcă
-  -- elementul video e ascuns din arborele de accesibilitate.
+  -- elementul de redare e ascuns din arborele de accesibilitate.
   caption text not null,
-  -- Postarea reală, pentru cine vrea clipul întreg.
+  -- Postarea reală de pe Instagram, pentru cine vrea clipul întreg. Rămâne
+  -- Instagram și după mutarea găzduirii pe YouTube: un clip nelistat n-are unde
+  -- să trimită pe cineva, iar publicul e acolo.
   url text not null,
   vizibil boolean not null default true,
   creat_la timestamptz not null default now(),
 
   -- Aceleași forme ca gardele din client. Serverul rămâne autoritatea: o
-  -- scriere directă în DB n-are voie să pună în pagină o cale arbitrară.
-  constraint training_reels_fisier_ok check (fisier ~ '^/reels/[a-z0-9-]+\.mp4$'),
-  constraint training_reels_poster_ok check (poster = '' or poster ~ '^/reels/[a-z0-9-]+\.jpg$'),
+  -- scriere directă în DB n-are voie să pună în pagină un `src` arbitrar.
+  constraint training_reels_youtube_ok check (youtube_id ~ '^[A-Za-z0-9_-]{11}$'),
   constraint training_reels_caption_ok check (length(btrim(caption)) > 0),
   constraint training_reels_url_ok check (url ~ '^https://www\.instagram\.com/(reel|p)/[A-Za-z0-9_-]{5,32}/$')
 );
@@ -2637,10 +2635,10 @@ create table if not exists runlift.training_reels (
 create unique index if not exists training_reels_un_numar
   on runlift.training_reels (numar);
 
--- Un fișier o singură dată: două carduri cu același clip sunt o greșeală de
--- lipit, nu o intenție.
-create unique index if not exists training_reels_un_fisier
-  on runlift.training_reels (fisier);
+-- Un clip o singură dată: două carduri cu același identificator sunt o greșeală
+-- de lipit, nu o intenție.
+create unique index if not exists training_reels_un_youtube
+  on runlift.training_reels (youtube_id);
 
 -- RLS fără politici, ca la restul schemei: nimic nu se citește direct cu cheia
 -- publică. Fără asta, `anon` ar putea citi clipurile ascunse — adică exact ce
@@ -2666,8 +2664,7 @@ as $$
   select coalesce(
     jsonb_agg(
       jsonb_build_object(
-        'video', r.fisier,
-        'poster', r.poster,
+        'youtube', r.youtube_id,
         'caption', r.caption,
         'url', r.url
       )
@@ -2697,8 +2694,7 @@ begin
        jsonb_build_object(
          'id', r.id,
          'numar', r.numar,
-         'video', r.fisier,
-         'poster', r.poster,
+         'youtube', r.youtube_id,
          'caption', r.caption,
          'url', r.url,
          'vizibil', r.vizibil
@@ -2722,8 +2718,7 @@ $$;
 create or replace function runlift.admin_save_training_reel(
   p_token uuid,
   p_id uuid,
-  p_video text,
-  p_poster text,
+  p_youtube text,
   p_caption text,
   p_url text,
   p_vizibil boolean
@@ -2741,19 +2736,18 @@ begin
 
   if p_id is null then
     select coalesce(max(r.numar), 0) + 1 into v_numar from training_reels r;
-    insert into training_reels (numar, fisier, poster, caption, url, vizibil)
-    values (v_numar, p_video, coalesce(p_poster, ''), p_caption, p_url, coalesce(p_vizibil, true))
+    insert into training_reels (numar, youtube_id, caption, url, vizibil)
+    values (v_numar, p_youtube, p_caption, p_url, coalesce(p_vizibil, true))
     returning id into v_id;
 
     insert into admin_events (tip, detaliu)
-    values ('reel_add', jsonb_build_object('id', v_id, 'numar', v_numar, 'video', p_video));
+    values ('reel_add', jsonb_build_object('id', v_id, 'numar', v_numar, 'youtube', p_youtube));
 
     return v_id;
   end if;
 
   update training_reels
-  set fisier = p_video,
-      poster = coalesce(p_poster, ''),
+  set youtube_id = p_youtube,
       caption = p_caption,
       url = p_url,
       vizibil = coalesce(p_vizibil, true)
@@ -2763,7 +2757,7 @@ begin
   if v_id is null then raise exception 'not_found'; end if;
 
   insert into admin_events (tip, detaliu)
-  values ('reel_edit', jsonb_build_object('id', v_id, 'numar', v_numar, 'video', p_video));
+  values ('reel_edit', jsonb_build_object('id', v_id, 'numar', v_numar, 'youtube', p_youtube));
 
   return v_id;
 end;
@@ -2820,9 +2814,8 @@ $$;
 -- Ștergerea
 -- ---------------------------------------------------------------------------
 --
--- Definitivă, și compactează numerele ca să nu rămână o gaură în ordine.
--- Fișierul de sub ea rămâne în repo: ștergerea din listă nu e o ștergere de pe
--- disc, iar un clip repus mai târziu nu trebuie re-encodat.
+-- Definitivă, și compactează numerele ca să nu rămână o gaură în ordine. Clipul
+-- de pe YouTube nu se atinge: scoaterea din bandă nu e o ștergere de pe gazdă.
 
 create or replace function runlift.admin_delete_training_reel(p_token uuid, p_id uuid)
 returns int
@@ -2832,13 +2825,13 @@ set search_path to 'runlift'
 as $$
 declare
   v_numar int;
-  v_video text;
+  v_youtube text;
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
 
-  -- Fișierul se citește ÎNAINTE de ștergere: după compactare, `numar` arată deja
-  -- spre alt clip și singur n-ar mai identifica nimic în jurnal.
-  select r.numar, r.fisier into v_numar, v_video from training_reels r where r.id = p_id;
+  -- Identificatorul se citește ÎNAINTE de ștergere: după compactare, `numar`
+  -- arată deja spre alt clip și singur n-ar mai identifica nimic în jurnal.
+  select r.numar, r.youtube_id into v_numar, v_youtube from training_reels r where r.id = p_id;
   if v_numar is null then raise exception 'not_found'; end if;
 
   delete from training_reels where id = p_id;
@@ -2847,7 +2840,7 @@ begin
   update training_reels set numar = (0 - numar) - 1 where numar < 0;
 
   insert into admin_events (tip, detaliu)
-  values ('reel_delete', jsonb_build_object('id', p_id, 'numar', v_numar, 'video', v_video));
+  values ('reel_delete', jsonb_build_object('id', p_id, 'numar', v_numar, 'youtube', v_youtube));
 
   return v_numar;
 end;
@@ -2871,9 +2864,9 @@ revoke all on function runlift.admin_list_training_reels(uuid)
 grant execute on function runlift.admin_list_training_reels(uuid)
   to anon, authenticated, service_role;
 
-revoke all on function runlift.admin_save_training_reel(uuid, uuid, text, text, text, text, boolean)
+revoke all on function runlift.admin_save_training_reel(uuid, uuid, text, text, text, boolean)
   from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_save_training_reel(uuid, uuid, text, text, text, text, boolean)
+grant execute on function runlift.admin_save_training_reel(uuid, uuid, text, text, text, boolean)
   to anon, authenticated, service_role;
 
 revoke all on function runlift.admin_move_training_reel(uuid, uuid, int)

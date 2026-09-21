@@ -262,6 +262,35 @@ Verificat la aplicare (20 septembrie 2026), direct în `ironworks-gym`:
 
 Nu s-a scris niciun rând de test în producție — tabelul a rămas gol pentru prima săptămână reală.
 
+### `supabase/sql/supabase-migration-clipuri-youtube.sql` — APLICAT 21 septembrie 2026
+
+Clipurile de antrenament trec de la fișiere proprii la YouTube. `fisier` devine `youtube_id`,
+`poster` dispare, constrângerea de cale se înlocuiește cu una pe forma identificatorului
+(11 caractere), iar cheia din JSON-ul public devine `youtube`.
+
+`url` nu se atinge: linkul de sub card rămâne Instagram. Vezi
+`docs/plans/2026-09-21-1236-feat-clipuri-din-youtube-plan.md` (KD4).
+
+**Semnătura salvării se schimbă**, deci `create or replace` ar fi lăsat două supraîncărcări.
+`admin_save_training_reel` cu șapte argumente e ștearsă explicit înainte de a se crea cea cu
+șase, iar grant-ul se reface pe semnătura nouă.
+
+Aplicată cu tabelul GOL — verificat înainte (`select count(*) … → 0`), deci redenumirea n-a avut
+rânduri de convertit și constrângerea nouă n-a avut ce respinge.
+
+Verificat la aplicare (21 septembrie 2026), direct în `ironworks-gym`:
+
+| Ce | Așteptat | Găsit |
+|---|---|---|
+| Coloane | fără `fisier`, fără `poster` | `id, numar, youtube_id, caption, url, vizibil, creat_la` |
+| Constrângeri `check` | youtube + caption + url | exact cele trei |
+| Indecși | pkey + numar-unic + youtube-unic | 3 |
+| `admin_save_training_reel` | o singură semnătură | una, cu șase argumente |
+| `get_advisors` (security) | doar tiparele preexistente ale schemei | doar ele |
+
+Numele migrării în Supabase e `runlift_clipuri_din_youtube`. A fost aplicată întâi fără prefixul
+`runlift_` și redenumită imediat, ca să nu rupă convenția din runbook.
+
 ### `supabase/sql/supabase-migration-anunt-istoric.sql` — NEAPLICAT
 
 Anunțul de ediție nouă către toți participanții de până acum. Trei piese: `unsubscribe()` se
