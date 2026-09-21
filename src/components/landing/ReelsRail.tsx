@@ -50,6 +50,20 @@ const ReelCard = ({ reel, index, redă, miscareRedusa, comuta }: CardProps) => (
           src={sursaIncorporare(reel.youtube)}
           title={reel.caption}
           allow="autoplay; encrypted-media; picture-in-picture"
+          /* Ce NU e în listă contează mai mult decât ce e: fără
+             `allow-top-navigation`, playerul nu poate duce vizitatorul de pe
+             pagina noastră, iar fără `allow-forms` și `allow-downloads` n-are
+             ce trimite sau coborî.
+
+             Regula de lint cere să scoatem `allow-scripts` sau
+             `allow-same-origin`, fiindcă împreună lasă un cadru să-și șteargă
+             singur sandbox-ul. Aia e adevărat pentru un cadru de pe ACEEAȘI
+             origine; ăsta e pe `youtube-nocookie.com`, deci `allow-same-origin`
+             îi dă originea LUI, nu pe a noastră. Fără el gazda nu-și poate citi
+             storage-ul și playerul refuză să pornească; fără `allow-scripts`
+             n-are player deloc. */
+          // eslint-disable-next-line react/iframe-missing-sandbox
+          sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
         />
