@@ -12,9 +12,9 @@ import {
  * Wrapperele RPC ale benzii, plus traducerea refuzurilor.
  *
  * Testul de componentă mock-uiește tot modulul `adminApi`, deci fără fișierul
- * ăsta forma apelurilor n-ar fi verificată nicăieri: un `p_video` scris greșit
- * ar trece de typecheck (argumentele sînt un obiect liber) și ar pica abia în
- * fața organizatorului.
+ * ăsta forma apelurilor n-ar fi verificată nicăieri: un `p_youtube` scris
+ * greșit ar trece de typecheck (argumentele sînt un obiect liber) și ar pica
+ * abia în fața organizatorului.
  *
  * `mesajRefuzClip` merită testat separat fiindcă se potrivește pe NUMELE
  * constrângerilor din baza de date. O redenumire acolo, sau o literă greșită
@@ -60,8 +60,7 @@ describe('salvarea', () => {
     await saveTrainingReel(
       'tok',
       null,
-      '/reels/marti.mp4',
-      '/reels/marti.jpg',
+      'dQw4w9WgXcQ',
       'Marți în parc',
       'https://www.instagram.com/reel/AAAAA11111/',
       true
@@ -70,8 +69,7 @@ describe('salvarea', () => {
     expect(trimis()).toEqual({
       p_token: 'tok',
       p_id: null,
-      p_video: '/reels/marti.mp4',
-      p_poster: '/reels/marti.jpg',
+      p_youtube: 'dQw4w9WgXcQ',
       p_caption: 'Marți în parc',
       p_url: 'https://www.instagram.com/reel/AAAAA11111/',
       p_vizibil: true,
@@ -80,7 +78,7 @@ describe('salvarea', () => {
 
   it('editarea trimite id-ul clipului', async () => {
     raspunde('r1');
-    await saveTrainingReel('tok', 'r1', '/reels/x.mp4', '', 'X', 'https://www.instagram.com/p/B1/', false);
+    await saveTrainingReel('tok', 'r1', '_-Ab0123456', 'X', 'https://www.instagram.com/p/B1/', false);
     expect(trimis().p_id).toBe('r1');
     expect(trimis().p_vizibil).toBe(false);
   });
@@ -104,11 +102,10 @@ describe('mutarea și scoaterea', () => {
 
 describe('traducerea refuzurilor', () => {
   const cazuri: [string, RegExp][] = [
-    ['training_reels_fisier_ok', /npm run reel/],
-    ['training_reels_poster_ok', /\.jpg/],
+    ['training_reels_youtube_ok', /clip YouTube/],
     ['training_reels_url_ok', /fără „\?"/],
     ['training_reels_caption_ok', /cititor de ecran/],
-    ['training_reels_un_fisier', /deja în bandă/],
+    ['training_reels_un_youtube', /deja în bandă/],
     ['not_found', /nu mai există/],
     ['directie_invalida', /muta clipul|mutat clipul/],
   ];

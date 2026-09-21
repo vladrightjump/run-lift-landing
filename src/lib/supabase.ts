@@ -3,6 +3,7 @@ import { parseEventConfig, type EventConfig } from '../content/eventConfig';
 import { logClientError } from './monitoring';
 import { normalizePhone, numeComplet } from './validation';
 import type { FormData } from './validation';
+import { esteIdYouTube } from './youtube';
 
 export const SUBMIT_TIMEOUT_MS = 15_000;
 
@@ -307,12 +308,14 @@ export const fetchWeeklyWorkouts = async (signal?: AbortSignal): Promise<WeeklyW
 /**
  * Un clip de antrenament, așa cum îl arată pagina.
  *
- * FIȘIERELE nu vin de aici: `video` și `poster` sunt căi către fișiere proprii,
- * servite de pe aceeași origine, produse cu `npm run reel` și adăugate printr-un
- * commit. Din backend vine doar PREZENTAREA lor — ordinea, legenda, linkul și
- * dacă se văd — fiindcă alea sunt editările frecvente.
+ * CLIPUL nu vine de aici: `youtube` e identificatorul de pe gazdă, iar octeții
+ * lui îi servește ea. Din backend vine PREZENTAREA — ordinea, legenda, linkul
+ * postării și dacă se vede.
+ *
+ * `url` rămâne o adresă de Instagram, nu de YouTube: gazda ține fișierul, dar
+ * publicul e pe Instagram, iar acolo trimite cardul.
  */
-export type Reel = { video: string; poster: string; caption: string; url: string };
+export type Reel = { youtube: string; caption: string; url: string };
 
 /**
  * Clipurile vizibile, în ordinea din bandă.
@@ -343,16 +346,19 @@ export const fetchTrainingReels = async (signal?: AbortSignal): Promise<Reel[]> 
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((element): Reel[] => {
     if (typeof element !== 'object' || element === null) return [];
-    const { video, poster, caption, url } = element as Record<string, unknown>;
-    // `video` și `url` sunt singurele obligatorii: fără ele cardul n-are ce reda
-    // și n-are unde trimite. Serverul le validează deja prin constrângeri; asta
-    // e apărarea în adâncime pentru o scriere directă în DB.
-    if (typeof video !== 'string' || !video.startsWith('/reels/')) return [];
+    const { youtube, caption, url } = element as Record<string, unknown>;
+    // `youtube` și `url` sunt singurele obligatorii: fără ele cardul n-are ce
+    // reda și n-are unde trimite. Serverul le validează deja prin constrângeri;
+    // asta e apărarea în adâncime pentru o scriere directă în DB.
+    //
+    // Forma identificatorului se verifică, nu doar tipul: de aici iese un `src`
+    // de `iframe` spre o origine pe care CSP-ul o permite acum, deci un șir
+    // arbitrar n-are voie să ajungă până acolo.
+    if (typeof youtube !== 'string' || !esteIdYouTube(youtube)) return [];
     if (typeof url !== 'string' || !url.startsWith('https://www.instagram.com/')) return [];
     return [
       {
-        video,
-        poster: typeof poster === 'string' ? poster : '',
+        youtube,
         caption: typeof caption === 'string' ? caption : '',
         url,
       },
