@@ -197,6 +197,26 @@ describe('CSP pentru Turnstile', () => {
   });
 });
 
+/**
+ * Shell-urile nu mai poartă scriptul de analitice.
+ *
+ * Amândouă au avut luni de zile un bloc comentat cu
+ * `<script src="/_vercel/insights/script.js">`, plus o invitație explicită în
+ * `BACKLOG.md` să-l decomentezi. Numărătoarea se pornește acum din
+ * `lib/analytics.ts`, iar decomentarea aceea ar însemna două încărcări ale
+ * aceluiași script și două numărători pentru fiecare vizită — fără ca nimic să
+ * crape vizibil. De-aia proprietatea e verificată, nu doar documentată.
+ */
+describe('shell-urile HTML nu încarcă singure analiticele', () => {
+  it.each(['index.html', 'antrenament.html'])('%s nu pomenește `_vercel/insights`', (shell) => {
+    expect(readRepoFile(shell)).not.toContain('_vercel/insights');
+  });
+
+  it.each(['index.html', 'antrenament.html'])('%s nu pomenește `speed-insights`', (shell) => {
+    expect(readRepoFile(shell)).not.toContain('speed-insights');
+  });
+});
+
 describe('vercel.json — deploy doar via CI', () => {
   it('auto-deploy-ul git pe main e dezactivat (CI e singurul care face deploy)', () => {
     const vercel = JSON.parse(realFiles().vercelJson) as {

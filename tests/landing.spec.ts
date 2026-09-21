@@ -136,3 +136,44 @@ test.describe('Landing — lista de participanți (din public_stats)', () => {
     await expect(page.getByText(/fii primul/i)).toBeVisible();
   });
 });
+
+/**
+ * Poarta de mediu a numărătorii de trafic.
+ *
+ * `pornesteAnalitice` cere scriptul DOAR când `__VERCEL_ENV__` e 'production'.
+ * Aici ștampila e 'development', deci nu trebuie să plece nimic — și contează că
+ * rulează pe `dist/`, fiindcă `import.meta.env.PROD` e adevărat exact acolo.
+ * Dacă cineva mută poarta pe el, testul pică, în loc să pice producția cu 404 la
+ * fiecare vizită (motivul pentru care blocurile de `<script>` au fost scoase în
+ * august).
+ *
+ * TEETH DOAR SUB `E2E_PREVIEW=1` — adică sub `npm run verify` și sub CI. Pe
+ * dev server (`npm run dev`, ținta implicită) `__VERCEL_ENV__` e 'development'
+ * orice s-ar întâmpla, deci testul trece vacuu. Verificat prin construirea
+ * dist-ului cu `VERCEL_ENV=production`: sub preview pică exact pe cererea
+ * `/_vercel/insights/script.js`, pe dev server trece oricum.
+ */
+test.describe('Analitice — tăcute în afara producției', () => {
+  test('la încărcare nu pleacă nicio cerere de analitice', async ({ page }) => {
+    const cereri: string[] = [];
+    page.on('request', (r) => {
+      const url = r.url();
+      if (url.includes('_vercel/insights') || url.includes('vercel-scripts.com')) {
+        cereri.push(url);
+      }
+    });
+
+    await page.goto('/?preview=landing');
+    await expect(page.locator('#inscriere')).toBeVisible();
+    await page.waitForTimeout(500);
+
+    expect(cereri).toEqual([]);
+  });
+
+  test('niciun shell nu poartă scriptul în HTML-ul servit', async ({ page }) => {
+    for (const cale of ['/', '/antrenament']) {
+      const raspuns = await page.request.get(cale);
+      expect(await raspuns.text()).not.toContain('_vercel/insights');
+    }
+  });
+});
