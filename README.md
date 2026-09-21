@@ -199,6 +199,20 @@ De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
   iar Postgres nu poate amâna verificarea unui index — numai constrângerile sunt `deferrable`, și
   o constrângere unică parțială nu există. Măsurat: un schimb dintr-un singur `update … case` pică
   cu „duplicate key". De asta ambele operații mută întâi rândurile în negativ.
+- **Analiticele sunt tăcute peste tot în afară de producție.** `pornesteAnalitice` (în
+  `src/lib/analytics.ts`) pornește Vercel Web Analytics doar când `__VERCEL_ENV__` e
+  `'production'`. Nu `import.meta.env.PROD`: acela e adevărat și sub `vite preview`, unde rulează
+  testele e2e și unde `/_vercel/insights/*` nu există — scriptul ar da 404 la fiecare rulare,
+  fix motivul pentru care blocurile de `<script>` au fost scoase din shell-uri în august. Mediul
+  se primește ca parametru, ca la `redirectCanonic`, fiindcă `__VERCEL_ENV__` e un `define` din
+  `vite.config.ts` și `vitest.config.ts` n-are `define`.
+- **URL-urile se curăță înainte să plece spre Vercel, printr-o listă albă.** `/confirmare`,
+  `/unsubscribe` și `/renunt` primesc tokenuri de unică folosință prin query string, iar Vercel
+  stochează URL-ul și parametrii ca atare — s-ar vedea în panoul de URL-uri al dashboard-ului.
+  Trec doar `utm_*` și `ref`; `/admin` se aruncă întreg. Listă albă, nu neagră, ca următorul
+  parametru secret adăugat să nu treacă din neatenție. Rămâne o portiță cunoscută: câmpul
+  *Referrer*, pe care `beforeSend` nu-l poate rescrie — vezi OQ2 în
+  `docs/plans/2026-09-21-1707-feat-analitice-vercel-plan.md`.
 - **Repo-ul nu deține ciclul de viață al bazei.** Proiectul Supabase e partajat cu gym-app și
   botul de Telegram, iar noi ținem strict schema `runlift`. Migrările se documentează în
   `MIGRATIONS.md` și se aplică manual; fișierele lor stau în `supabase/sql/`.

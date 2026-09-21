@@ -33,7 +33,10 @@ Ultima actualizare: 4 august 2026.
 
 ## Igienă / ops
 - [ ] **Reminder automat** (cron programat) în loc de broadcast manual.
-- [ ] **Vercel Analytics** — activează din dashboard (decomentează scripturile din `index.html`).
+- [x] **Vercel Analytics** — pornit din `src/lib/analytics.ts` (pachetul `@vercel/analytics`), nu
+      din `index.html`: blocurile comentate de acolo au fost șterse, iar un test le ține șterse.
+      Mai rămâne **o singură acțiune de operator**: activarea din dashboard-ul Vercel
+      (Analytics → Enable). Până atunci producția cere un script care returnează 404.
 - [ ] **Regenerare `og.png` din EDITION** — momentan asset manual (1200×630) per ediție.
 - [ ] **14 erori de linter, preexistente** — ieșite la iveală când `oxlint` a intrat în repo
       (5 sep 2026). Nu sunt regresii și nimic nu se vede rupt azi, dar niciuna nu e stilistică:
