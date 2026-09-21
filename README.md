@@ -210,9 +210,14 @@ De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
   `/unsubscribe` și `/renunt` primesc tokenuri de unică folosință prin query string, iar Vercel
   stochează URL-ul și parametrii ca atare — s-ar vedea în panoul de URL-uri al dashboard-ului.
   Trec doar `utm_*` și `ref`; `/admin` se aruncă întreg. Listă albă, nu neagră, ca următorul
-  parametru secret adăugat să nu treacă din neatenție. Rămâne o portiță cunoscută: câmpul
-  *Referrer*, pe care `beforeSend` nu-l poate rescrie — vezi OQ2 în
-  `docs/plans/2026-09-21-1707-feat-analitice-vercel-plan.md`.
+  parametru secret adăugat să nu treacă din neatenție.
+- **`Referrer-Policy: strict-origin` e a doua jumătate a redactării.** `beforeSend` rescrie
+  `event.url`, dar Vercel stochează și un câmp *Referrer*, pe care API-ul pachetului nu-l expune.
+  Sub `strict-origin-when-cross-origin` (politica de dinainte), o navigare **same-origin** trimite
+  URL-ul complet — iar cele trei pagini cu token au un logo `<a href="/">` în antet, deci un
+  singur click scotea tokenul pe ușa din dos. `strict-origin` schimbă exact acel caz: pe
+  cross-origin se trimitea deja doar originea, deci datele despre sursa traficului rămân
+  neatinse. Harta și playerul își poartă propria politică pe element, care bate antetul.
 - **Repo-ul nu deține ciclul de viață al bazei.** Proiectul Supabase e partajat cu gym-app și
   botul de Telegram, iar noi ținem strict schema `runlift`. Migrările se documentează în
   `MIGRATIONS.md` și se aplică manual; fișierele lor stau în `supabase/sql/`.

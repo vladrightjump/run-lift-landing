@@ -207,6 +207,46 @@ describe('CSP pentru Turnstile', () => {
  * aceluiași script și două numărători pentru fiecare vizită — fără ca nimic să
  * crape vizibil. De-aia proprietatea e verificată, nu doar documentată.
  */
+/**
+ * `Referrer-Policy` e a doua jumătate a redactării tokenurilor.
+ *
+ * `beforeSend` din `lib/analytics.ts` rescrie `event.url`, dar Vercel stochează
+ * și un câmp *Referrer*, pe care `BeforeSendEvent` nu-l expune — deci nu se
+ * poate rescrie din cod. Sub `strict-origin-when-cross-origin`, o navigare
+ * SAME-ORIGIN trimite URL-ul COMPLET ca referrer. Iar `/confirmare`,
+ * `/unsubscribe` și `/renunt` au toate un logo `<a href="/">` în antet: un
+ * click pe el de pe `?token=X` ar fi trimis tokenul ca referrer al vizualizării
+ * următoare, ocolind complet lista albă.
+ *
+ * `strict-origin` schimbă EXACT acel caz și nimic altceva: cross-origin trimitea
+ * deja doar originea sub politica veche, deci datele de referrer extern (de unde
+ * vine traficul) rămân identice. Cele două `iframe`-uri care au nevoie de altă
+ * politică — harta și playerul — o poartă ca atribut pe element, iar acela bate
+ * antetul de document.
+ */
+describe('Referrer-Policy nu lasă tokenurile să iasă pe ușa din dos', () => {
+  const referrerPolicy = (): string => {
+    const vercel = JSON.parse(readRepoFile('vercel.json')) as {
+      headers: Array<{ headers: Array<{ key: string; value: string }> }>;
+    };
+    return (
+      vercel.headers
+        .flatMap((h) => h.headers)
+        .find((h) => h.key.toLowerCase() === 'referrer-policy')?.value ?? ''
+    );
+  };
+
+  it('e `strict-origin` — originea, niciodată calea', () => {
+    expect(referrerPolicy()).toBe('strict-origin');
+  });
+
+  it('NU e politica din care scapă calea pe navigări same-origin', () => {
+    expect(referrerPolicy()).not.toBe('strict-origin-when-cross-origin');
+    expect(referrerPolicy()).not.toBe('unsafe-url');
+    expect(referrerPolicy()).not.toBe('no-referrer-when-downgrade');
+  });
+});
+
 describe('shell-urile HTML nu încarcă singure analiticele', () => {
   it.each(['index.html', 'antrenament.html'])('%s nu pomenește `_vercel/insights`', (shell) => {
     expect(readRepoFile(shell)).not.toContain('_vercel/insights');
