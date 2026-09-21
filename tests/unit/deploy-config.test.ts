@@ -51,14 +51,15 @@ describe('checkDeployConfig — fișierele reale din repo', () => {
 });
 
 /**
- * Antetele de care depinde banda „Instagram".
+ * Antetele de care depinde banda cu clipuri.
  *
  * Nu trec prin `checkDeployConfig` (aceea păzește `connect-src` ↔ Supabase), dar
  * au aceeași proprietate neplăcută: dacă lipsesc, nimic nu crapă la build și
- * nimic nu se vede în dev — cardurile se deschid într-un iframe gol, în
- * producție, unde antetele chiar se aplică.
+ * nimic nu se vede în dev — cardurile rămân goale abia în producție, unde
+ * antetele chiar se aplică. Blocul ăsta a păzit o vreme originea greșită:
+ * embed-urile Instagram au fost scoase, dar antetele lor au rămas.
  */
-describe('CSP-ul lasă embed-urile Instagram să intre', () => {
+describe('CSP-ul lasă gazda video să intre', () => {
   const antet = (nume: string): string => {
     const vercel = JSON.parse(readRepoFile('vercel.json')) as {
       headers: Array<{ headers: Array<{ key: string; value: string }> }>;
@@ -70,22 +71,36 @@ describe('CSP-ul lasă embed-urile Instagram să intre', () => {
     );
   };
 
-  it('`frame-src` permite instagram.com, fără să piardă harta', () => {
+  it('`frame-src` permite gazda video, fără să piardă harta', () => {
     const csp = antet('Content-Security-Policy');
     const frameSrc = /frame-src([^;]*)/.exec(csp)?.[1] ?? '';
-    expect(frameSrc).toContain('https://www.instagram.com');
+    expect(frameSrc).toContain('https://www.youtube-nocookie.com');
     // Regresia ușor de făcut: rescrii directiva și rămâi fără Google Maps.
     expect(frameSrc).toContain('https://www.google.com');
   });
 
-  it('`script-src` rămâne „self" — façade-ul există ca să nu ruleze cod terț', () => {
+  it('nu mai rămâne nicio origine Instagram în antete', () => {
+    expect(antet('Content-Security-Policy')).not.toContain('instagram');
+    expect(antet('Permissions-Policy')).not.toContain('instagram');
+  });
+
+  it('`script-src` rămâne „self" — playerul e un iframe, nu un script terț', () => {
     const csp = antet('Content-Security-Policy');
     const scriptSrc = /script-src([^;]*)/.exec(csp)?.[1] ?? '';
+    expect(scriptSrc).not.toContain('youtube');
     expect(scriptSrc).not.toContain('instagram');
   });
 
-  it('`Permissions-Policy` deleagă fullscreen embed-ului, altfel butonul lui e mort', () => {
-    expect(antet('Permissions-Policy')).toContain('fullscreen=(self "https://www.instagram.com")');
+  it('`Permissions-Policy` deleagă autoplay — altfel cardul central nu pornește', () => {
+    expect(antet('Permissions-Policy')).toContain(
+      'autoplay=(self "https://www.youtube-nocookie.com")'
+    );
+  });
+
+  it('`Permissions-Policy` deleagă fullscreen, altfel butonul playerului e mort', () => {
+    expect(antet('Permissions-Policy')).toContain(
+      'fullscreen=(self "https://www.youtube-nocookie.com")'
+    );
   });
 });
 
