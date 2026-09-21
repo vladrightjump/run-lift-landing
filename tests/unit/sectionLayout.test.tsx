@@ -17,8 +17,7 @@ vi.mock('../../src/hooks/useTrainingReels', () => ({
 }));
 
 const UN_CLIP: Reel = {
-  video: '/reels/marti.mp4',
-  poster: '/reels/marti.jpg',
+  youtube: 'dQw4w9WgXcQ',
   caption: 'Marți dimineața',
   url: 'https://www.instagram.com/reel/ABC12345/',
 };
@@ -183,16 +182,16 @@ describe('„Instagram" fără clipuri nu lasă gaură în numerotare', () => {
 });
 
 describe('secțiunea „Instagram" nu cere NIMIC de la Instagram', () => {
-  it('nu montează niciun iframe — clipurile sunt fișiere proprii', () => {
+  it('nu montează niciun player la randare — nici măcar spre gazda video', () => {
     cuClipuri(UN_CLIP);
     randeaza([{ key: 'reels', visible: true }]);
     expect(document.querySelectorAll('iframe')).toHaveLength(0);
   });
 
-  it('clipul e servit de pe aceeași origine', () => {
+  it('cardul e desenat cât timp nu redă, nu gol', () => {
     cuClipuri(UN_CLIP);
     randeaza([{ key: 'reels', visible: true }]);
-    expect(document.querySelector('.e3-reel-video')?.getAttribute('src')).toBe('/reels/marti.mp4');
+    expect(document.querySelector('.e3-reel-fallback')?.textContent).toBe('01');
   });
 
   it('linkul spre postare e singurul lucru care duce pe Instagram', () => {

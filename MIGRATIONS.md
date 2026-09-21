@@ -262,6 +262,66 @@ Verificat la aplicare (20 septembrie 2026), direct în `ironworks-gym`:
 
 Nu s-a scris niciun rând de test în producție — tabelul a rămas gol pentru prima săptămână reală.
 
+### `supabase/sql/supabase-migration-clipuri-youtube.sql` — APLICAT 21 septembrie 2026
+
+Clipurile de antrenament trec de la fișiere proprii la YouTube. `fisier` devine `youtube_id`,
+`poster` dispare, constrângerea de cale se înlocuiește cu una pe forma identificatorului
+(11 caractere), iar cheia din JSON-ul public devine `youtube`.
+
+`url` nu se atinge: linkul de sub card rămâne Instagram. Vezi
+`docs/plans/2026-09-21-1236-feat-clipuri-din-youtube-plan.md` (KD4).
+
+**Semnătura salvării se schimbă**, deci `create or replace` ar fi lăsat două supraîncărcări.
+`admin_save_training_reel` cu șapte argumente e ștearsă explicit înainte de a se crea cea cu
+șase, iar grant-ul se reface pe semnătura nouă.
+
+Aplicată cu tabelul GOL — verificat înainte (`select count(*) … → 0`), deci redenumirea n-a avut
+rânduri de convertit și constrângerea nouă n-a avut ce respinge.
+
+Verificat la aplicare (21 septembrie 2026), direct în `ironworks-gym`:
+
+| Ce | Așteptat | Găsit |
+|---|---|---|
+| Coloane | fără `fisier`, fără `poster` | `id, numar, youtube_id, caption, url, vizibil, creat_la` |
+| Constrângeri `check` | youtube + caption + url | exact cele trei |
+| Indecși | pkey + numar-unic + youtube-unic | 3 |
+| `admin_save_training_reel` | o singură semnătură | una, cu șase argumente |
+| `get_advisors` (security) | doar tiparele preexistente ale schemei | doar ele |
+
+Numele migrării în Supabase e `runlift_clipuri_din_youtube`. A fost aplicată întâi fără prefixul
+`runlift_` și redenumită imediat, ca să nu rupă convenția din runbook.
+
+**Fereastră de incompatibilitate, între aplicare și merge.** Migrarea a fost aplicată ÎNAINTE ca
+frontendul nou să ajungă pe site. Cât timp `main` n-a primit branch-ul `feat/clipuri-din-youtube`:
+
+- Pagina publică e neatinsă — banda e goală, deci RPC-ul întoarce `[]` indiferent de numele cheilor.
+- **`/admin` → „Clipuri" NU poate salva.** Adminul livrat cheamă supraîncărcarea cu șapte argumente,
+  care a fost ștearsă; PostgREST răspunde „function not found". Nu e o defecțiune de investigat, e
+  fereastra asta. Se închide la merge.
+
+Ordinea inversă (merge întâi, migrare după) ar fi rupt pagina publică în loc de un tab de admin pe
+care îl folosește o singură persoană, deci a fost preferată asta. Fereastra se ține scurtă.
+
+**Cum se dă înapoi.** Nu există migrare de retur separată, fiindcă tabelul era gol: nu se pierde
+nimic. Dacă totuși trebuie întors (de exemplu branch-ul nu mai ajunge pe `main`), ăsta e inversul,
+pas cu pas — de rulat ÎNTREG, într-o singură tranzacție:
+
+```sql
+alter table runlift.training_reels drop constraint training_reels_youtube_ok;
+alter table runlift.training_reels rename column youtube_id to fisier;
+alter table runlift.training_reels add column poster text not null default '';
+alter table runlift.training_reels
+  add constraint training_reels_fisier_ok check (fisier ~ '^/reels/[a-z0-9-]+\.mp4$'),
+  add constraint training_reels_poster_ok check (poster = '' or poster ~ '^/reels/[a-z0-9-]+\.jpg$');
+alter index runlift.training_reels_un_youtube rename to training_reels_un_fisier;
+drop function runlift.admin_save_training_reel(uuid, uuid, text, text, text, boolean);
+```
+
+Apoi se rulează din nou `supabase-migration-training-reels.sql` (creează la loc cele patru funcții
+cu forma veche și grant-urile lor; `create table if not exists` nu atinge tabelul existent) și se
+regenerează instantaneul. **Inversul e valid doar cât timp tabelul e gol** — un rând cu identificator
+YouTube n-ar trece constrângerea de cale.
+
 ### `supabase/sql/supabase-migration-anunt-istoric.sql` — NEAPLICAT
 
 Anunțul de ediție nouă către toți participanții de până acum. Trei piese: `unsubscribe()` se

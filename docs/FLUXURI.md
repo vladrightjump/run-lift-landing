@@ -692,7 +692,7 @@ Fiecare încercare lasă un rând în `email_log` (`log_emails`), vizibil în 4.
 | Textul oricărui email | `/admin` → Șabloane | nu |
 | Titlul/textul secțiunii Instagram | `/admin` → Evenimentul → Instagram | nu |
 | Ordinea/legenda/vizibilitatea unui clip | `/admin` → Clipuri | nu |
-| Un FIȘIER de clip nou | `npm run reel` + commit | **da** |
+| Un clip nou în bandă | `/admin` → Clipuri (link YouTube lipit) | nu |
 | Meta de share (titlu/imagine WhatsApp/Facebook) | `src/content/edition.ts` → build | **da** |
 | Proza statică a paginii (texte care nu țin de ediție) | componentele din `src/components/` | da |
 | Ordinea fazelor / când comută pagina | `src/App.tsx`, `src/hooks/usePagePhase.ts`, derivatele din `src/lib/config.ts` | da |

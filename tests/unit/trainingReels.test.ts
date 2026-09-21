@@ -5,9 +5,11 @@ import { fetchTrainingReels, SubmitHttpError } from '../../src/lib/supabase';
  * Citirea clipurilor din `public_training_reels()`.
  *
  * Ce se păzește aici e toleranța ȘI limita ei. O intrare stricată nu are de ce
- * să ascundă banda întreagă — dar o cale sau un link care nu arată a ce trebuie
- * NU intră în pagină, oricât de tolerant ar fi restul. Constrângerile din DB
- * sînt prima apărare; asta e a doua, pentru o scriere directă în bază.
+ * să ascundă banda întreagă — dar un identificator sau un link care nu arată a
+ * ce trebuie NU intră în pagină, oricât de tolerant ar fi restul. Din
+ * identificator iese un `src` de `iframe`, deci limita chiar contează.
+ * Constrângerile din DB sînt prima apărare; asta e a doua, pentru o scriere
+ * directă în bază.
  */
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -18,8 +20,7 @@ const raspunde = (corp: unknown, status = 200) => {
 };
 
 const CLIP = {
-  video: '/reels/marti.mp4',
-  poster: '/reels/marti.jpg',
+  youtube: 'dQw4w9WgXcQ',
   caption: 'Marți în parc',
   url: 'https://www.instagram.com/reel/ABC12345/',
 };
@@ -29,10 +30,10 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('lista publică', () => {
   it('păstrează ordinea primită de la server — ea E ordinea din bandă', async () => {
-    const al2lea = { ...CLIP, video: '/reels/joi.mp4', caption: 'Joi' };
+    const al2lea = { ...CLIP, youtube: '_-Ab0123456', caption: 'Joi' };
     raspunde([CLIP, al2lea]);
     const reels = await fetchTrainingReels();
-    expect(reels.map((r) => r.video)).toEqual(['/reels/marti.mp4', '/reels/joi.mp4']);
+    expect(reels.map((r) => r.youtube)).toEqual(['dQw4w9WgXcQ', '_-Ab0123456']);
   });
 
   it('lista goală e o stare validă, nu o eroare', async () => {
@@ -52,11 +53,16 @@ describe('lista publică', () => {
 });
 
 describe('intrarea stricată cade, restul rămâne', () => {
-  it('o cale care nu e sub /reels/ nu intră în pagină', async () => {
-    raspunde([{ ...CLIP, video: 'https://alt-domeniu.example/x.mp4' }, CLIP]);
+  it('un identificator de formă greșită nu intră în pagină', async () => {
+    raspunde([{ ...CLIP, youtube: 'https://alt-domeniu.example/x.mp4' }, CLIP]);
     const reels = await fetchTrainingReels();
     expect(reels).toHaveLength(1);
-    expect(reels[0].video).toBe('/reels/marti.mp4');
+    expect(reels[0].youtube).toBe('dQw4w9WgXcQ');
+  });
+
+  it('o cale de fișier — forma veche — nu mai intră în pagină', async () => {
+    raspunde([{ ...CLIP, youtube: '/reels/marti.mp4' }]);
+    expect(await fetchTrainingReels()).toEqual([]);
   });
 
   it('un link care nu duce pe Instagram nu intră în pagină', async () => {
@@ -69,10 +75,9 @@ describe('intrarea stricată cade, restul rămâne', () => {
     expect(await fetchTrainingReels()).toHaveLength(1);
   });
 
-  it('poster-ul și legenda lipsă sînt tolerate — cardul are rezerve pentru amândouă', async () => {
-    raspunde([{ video: CLIP.video, url: CLIP.url }]);
+  it('legenda lipsă e tolerată — cardul are o rezervă pentru ea', async () => {
+    raspunde([{ youtube: CLIP.youtube, url: CLIP.url }]);
     const [reel] = await fetchTrainingReels();
-    expect(reel.poster).toBe('');
     expect(reel.caption).toBe('');
   });
 });

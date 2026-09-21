@@ -151,45 +151,34 @@ paragraful în care e scrisă, ca să nu plece o frază care trimite spre nimic.
 
 ## Banda cu clipuri de antrenament
 
-Două locuri, împărțite după cine face ce: **fișierul** se produce pe calculatorul
-tău, **restul** se administrează din `/admin` → „Clipuri".
+Un singur loc: **`/admin` → „Clipuri"**. Nimic din tabul ăsta nu cere deploy.
 
-Motivul împărțirii e practic. Un reel exportat din Instagram are 150-250 MB la
-28-30 Mbps, iar un formular din browser n-are cum să-l transforme în ceva ce
-poate servi o pagină. Compresia stă unde poate rula; ordinea și legendele stau
-unde le schimbi des.
+### Cum adaugi un clip
 
-### O dată per clip nou (cere deploy)
-
-1. Exportă masterul din Instagram, sau ia-l de pe telefon.
-2. Rulează, dintr-un checkout al proiectului:
-
-   ```bash
-   npm run reel -- ~/Downloads/master.mp4 marti-in-parc
-   ```
-
-   Scrie `public/reels/marti-in-parc.mp4` și `public/reels/marti-in-parc.jpg`, și
-   îți spune cât cântărește. Peste 6 MB se oprește cu eroare — scurtează bucla
-   (`npm run reel -- <master> <slug> 10`) și încearcă din nou.
-3. Commit + merge în `main`, ca fișierele să ajungă pe site.
-
-### De fiecare dată după (fără deploy)
-
-Din **`/admin` → „Clipuri"**: lipești calea (`/reels/marti-in-parc.mp4`),
-posterul, legenda și linkul postării. Linkul poate fi lipit direct din Instagram
-— coada („?igsh=…") se taie singură.
+1. Încarcă filmarea pe YouTube, ca **nelistată**. De pe telefon, direct după
+   antrenament, e în regulă — nu trebuie să arate a producție.
+2. Apasă „Distribuie" și copiază linkul.
+3. În `/admin` → „Clipuri", lipește-l în „Linkul clipului de pe YouTube".
+   Orice formă merge (`youtu.be/…`, `/shorts/…`, `watch?v=…`), cu coada de
+   parametri cu tot — câmpul reține doar identificatorul.
+4. Scrie legenda și lipește linkul postării de pe Instagram. Și ăla își pierde
+   coada („?igsh=…") singur.
+5. „Adaugă în bandă". Se vede imediat pe amândouă paginile.
 
 Tot de acolo: reordonare cu ↑/↓, editarea legendei, și comutatorul „se vede pe
 pagină" pentru un clip pe care vrei să-l scoți temporar. Toate au efect imediat.
 
-„Scoate" îl elimină din bandă, dar **nu** șterge fișierul din repo — un clip
-repus mai târziu nu trebuie re-encodat.
+„Scoate" îl elimină din bandă, dar **nu** șterge clipul de pe YouTube.
 
 ### Ce e de reținut
 
-- **Legenda nu e opțională.** Elementul video e ascuns din arborele de
-  accesibilitate (un clip mut în buclă n-are ce anunța), deci legenda e tot ce
-  primește cineva care folosește un cititor de ecran.
+- **Nelistat, nu privat.** Un clip privat nu se poate reda în pagină. Nelistat
+  înseamnă „nu apare în căutări", exact ce vrei.
+- **Legenda nu e opțională.** E tot ce primește cineva care folosește un cititor
+  de ecran.
+- **Redă un singur card odată** — cel din mijlocul benzii. Restul sînt liniștite
+  până ajung ele în mijloc. E intenționat: patru playere pornite odată fac
+  pagina greoaie pe telefon.
 - Cât timp banda e goală, secțiunea nu apare — **nici pe landing, nici pe
   „Despre noi"** — și nu strică numerotarea celorlalte. Nu e un bug.
 - Aceeași listă hrănește ambele pagini. Nu există „clipurile de pe landing" și

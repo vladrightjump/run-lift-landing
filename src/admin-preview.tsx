@@ -15,6 +15,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { SNAPSHOT_CONFIG } from './content/eventConfig';
+import type { AdminReelRow } from './lib/adminApi';
 
 const ACUM = Date.now();
 const cuOreInUrma = (h: number) => new Date(ACUM - h * 3_600_000).toISOString();
@@ -106,13 +107,12 @@ const configPublicat = {
   published_at: cuZileInUrma(20),
 };
 
-/** Banda cu clipuri, cât să se vadă ordinea, un clip ascuns și unul fără poster. */
-const clipuri = [
+/** Banda cu clipuri, cât să se vadă ordinea și un clip ascuns. */
+const clipuri: AdminReelRow[] = [
   {
     id: 'c1',
     numar: 1,
-    video: '/reels/marti-in-parc.mp4',
-    poster: '/reels/marti-in-parc.jpg',
+    youtube: 'dQw4w9WgXcQ',
     caption: 'Marți seara, în parc',
     url: 'https://www.instagram.com/reel/AAAAA11111/',
     vizibil: true,
@@ -120,8 +120,7 @@ const clipuri = [
   {
     id: 'c2',
     numar: 2,
-    video: '/reels/circuit.mp4',
-    poster: '',
+    youtube: '_-Ab0123456',
     caption: 'Circuit funcțional',
     url: 'https://www.instagram.com/reel/BBBBB22222/',
     vizibil: true,
@@ -129,8 +128,7 @@ const clipuri = [
   {
     id: 'c3',
     numar: 3,
-    video: '/reels/finish.mp4',
-    poster: '/reels/finish.jpg',
+    youtube: 'ZZZZ9999888',
     caption: 'Ultimul tur',
     url: 'https://www.instagram.com/p/CCCCC33333/',
     vizibil: false,

@@ -248,9 +248,10 @@ export type AdminReelRow = {
   id: string;
   /** Poziția în bandă, 1…N. Poziție, nu identificator: mutarea renumerotează. */
   numar: number;
-  video: string;
-  poster: string;
+  /** Identificatorul clipului pe YouTube, nu un link și nu o cale. */
+  youtube: string;
   caption: string;
+  /** Postarea de pe Instagram, unde duce cardul. */
   url: string;
   vizibil: boolean;
 };
@@ -268,8 +269,7 @@ export const listTrainingReels = (token: string, signal?: AbortSignal): Promise<
 export const saveTrainingReel = (
   token: string,
   id: string | null,
-  video: string,
-  poster: string,
+  youtube: string,
   caption: string,
   url: string,
   vizibil: boolean
@@ -277,8 +277,7 @@ export const saveTrainingReel = (
   rpc<string>('admin_save_training_reel', {
     p_token: token,
     p_id: id,
-    p_video: video,
-    p_poster: poster,
+    p_youtube: youtube,
     p_caption: caption,
     p_url: url,
     p_vizibil: vizibil,
@@ -292,9 +291,8 @@ export const moveTrainingReel = (token: string, id: string, directie: -1 | 1): P
   rpc<number>('admin_move_training_reel', { p_token: token, p_id: id, p_directie: directie });
 
 /**
- * Scoate un clip din bandă și compactează numerele. Fișierul rămâne în repo:
- * ștergerea din listă nu e o ștergere de pe disc, iar un clip repus mai târziu
- * nu trebuie re-encodat.
+ * Scoate un clip din bandă și compactează numerele. Clipul de pe YouTube nu se
+ * atinge: scoaterea din bandă nu e o ștergere de pe gazdă.
  */
 export const deleteTrainingReel = (token: string, id: string): Promise<number> =>
   rpc<number>('admin_delete_training_reel', { p_token: token, p_id: id });
@@ -431,11 +429,8 @@ export const mesajRefuzAntrenament = (err: unknown): string => {
  */
 export const mesajRefuzClip = (err: unknown): string => {
   const text = err instanceof Error ? err.message : String(err);
-  if (text.includes('training_reels_fisier_ok')) {
-    return 'Calea clipului trebuie să arate ca „/reels/nume-clip.mp4". Rulează `npm run reel` și copiază ce-ți tipărește.';
-  }
-  if (text.includes('training_reels_poster_ok')) {
-    return 'Calea posterului trebuie să arate ca „/reels/nume-clip.jpg", sau să fie goală.';
+  if (text.includes('training_reels_youtube_ok')) {
+    return 'Nu am recunoscut un clip YouTube în ce ai lipit. Apasă „Distribuie" pe clip și lipește linkul de acolo.';
   }
   if (text.includes('training_reels_url_ok')) {
     return 'Linkul trebuie să fie o adresă Instagram curată, fără „?" la coadă — ex. https://www.instagram.com/reel/ABC12345/';
@@ -443,8 +438,8 @@ export const mesajRefuzClip = (err: unknown): string => {
   if (text.includes('training_reels_caption_ok')) {
     return 'Legenda nu poate fi goală: ea e ce citește cineva care folosește un cititor de ecran.';
   }
-  if (text.includes('training_reels_un_fisier')) {
-    return 'Clipul ăsta e deja în bandă. Două carduri cu același fișier sînt o greșeală de lipit.';
+  if (text.includes('training_reels_un_youtube')) {
+    return 'Clipul ăsta e deja în bandă. Două carduri cu același clip sînt o greșeală de lipit.';
   }
   if (text.includes('not_found')) {
     return 'Clipul acela nu mai există. Reîncarcă pagina.';

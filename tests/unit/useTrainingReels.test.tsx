@@ -21,8 +21,7 @@ vi.mock('../../src/lib/supabase', () => ({ fetchTrainingReels, isAbortError }));
 vi.mock('../../src/lib/monitoring', () => ({ logClientError }));
 
 const CLIP = {
-  video: '/reels/marti.mp4',
-  poster: '',
+  youtube: 'dQw4w9WgXcQ',
   caption: 'Marți',
   url: 'https://www.instagram.com/reel/AAAAA11111/',
 };
@@ -42,7 +41,7 @@ afterEach(cleanup);
 
 describe('drumul fericit', () => {
   it('pornește gol și se umple după răspuns', async () => {
-    fetchTrainingReels.mockResolvedValue([CLIP, { ...CLIP, video: '/reels/joi.mp4' }]);
+    fetchTrainingReels.mockResolvedValue([CLIP, { ...CLIP, youtube: '_-Ab0123456' }]);
     render(<Proba />);
     // Primul cadru e gol: nu există instantaneu de build pentru clipuri.
     expect(n()).toBe('0');

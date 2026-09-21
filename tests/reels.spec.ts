@@ -24,11 +24,19 @@ const REELS_ROUTE = '**/rest/v1/rpc/public_training_reels';
 
 /** Un clip valid, așa cum îl dă RPC-ul public. */
 const UN_CLIP = {
-  video: '/reels/marti.mp4',
-  poster: '/reels/marti.jpg',
+  youtube: 'dQw4w9WgXcQ',
   caption: 'Marți dimineața',
   url: 'https://www.instagram.com/reel/AAAAA11111/',
 };
+
+/** Originea de la care banda cere playerul. */
+const GAZDA = 'youtube-nocookie.com';
+
+const TREI = [
+  UN_CLIP,
+  { ...UN_CLIP, youtube: '_-Ab0123456', caption: 'Stația de cărat' },
+  { ...UN_CLIP, youtube: 'ZZZZ9999888', caption: 'Finish' },
+];
 
 const configCu = (layout: { key: string; visible: boolean }[]) => ({
   ...SNAPSHOT_CONFIG,
@@ -68,18 +76,18 @@ const mock = (
     ),
   ]);
 
-/** Toate cererile spre Instagram, în ordinea în care au plecat. */
-const urmaresteInstagram = (page: Page): string[] => {
+/** Toate cererile spre o gazdă, în ordinea în care au plecat. */
+const urmareste = (page: Page, gazda: string): string[] => {
   const cereri: string[] = [];
   page.on('request', (r) => {
-    if (r.url().includes('instagram.com')) cereri.push(r.url());
+    if (r.url().includes(gazda)) cereri.push(r.url());
   });
   return cereri;
 };
 
 test.describe('nimic de la Instagram, niciodată', () => {
   test('la încărcare, zero cereri spre instagram.com', async ({ page }) => {
-    const cereri = urmaresteInstagram(page);
+    const cereri = urmareste(page, 'instagram.com');
     await mock(page);
     await page.goto('/?preview=landing');
 
@@ -90,9 +98,31 @@ test.describe('nimic de la Instagram, niciodată', () => {
   });
 
   test('nu există niciun iframe către Instagram pe pagină', async ({ page }) => {
-    await mock(page);
+    await mock(page, [UN_CLIP]);
     await page.goto('/?preview=landing');
     await expect(page.locator('iframe[src*="instagram.com"]')).toHaveCount(0);
+  });
+
+  test('singurul drum spre Instagram e legătura de sub card', async ({ page }) => {
+    await mock(page, [UN_CLIP]);
+    await page.goto('/?preview=landing');
+    const link = page.getByRole('link', { name: /Deschide pe Instagram/ }).first();
+    await expect(link).toHaveAttribute('href', UN_CLIP.url);
+  });
+});
+
+test.describe('nimic de la gazda video înainte de ecran', () => {
+  test('la încărcare, banda nu cere nimic de la gazdă', async ({ page }) => {
+    // Banda stă sub fold pe landing, deci la încărcare nu are de ce să pornească
+    // niciun player. Asta e proprietatea care înlocuiește vechiul „zero cereri
+    // terțe": granița s-a mutat, nu a dispărut.
+    const cereri = urmareste(page, GAZDA);
+    await mock(page, TREI);
+    await page.goto('/?preview=landing');
+
+    await expect(page.getByRole('heading', { name: 'Formatul' })).toBeVisible();
+    await page.waitForTimeout(1000);
+    expect(cereri).toEqual([]);
   });
 });
 
@@ -119,12 +149,6 @@ test.describe('lista goală nu lasă gaură în numerotare', () => {
 });
 
 test.describe('cu clipuri în bandă', () => {
-  const TREI = [
-    UN_CLIP,
-    { ...UN_CLIP, video: '/reels/joi.mp4', poster: '', caption: 'Stația de cărat' },
-    { ...UN_CLIP, video: '/reels/finish.mp4', poster: '', caption: 'Finish' },
-  ];
-
   test('secțiunea apare și își ia numărul din poziția ei', async ({ page }) => {
     await mock(page, TREI);
     await page.goto('/?preview=landing');
@@ -141,45 +165,33 @@ test.describe('cu clipuri în bandă', () => {
     await expect(linkuri).toHaveCount(3);
   });
 
-  test('clipurile chiar pornesc singure la intrarea în ecran', async ({ page }) => {
-    // Se numără APELURILE de `play()`, nu starea `paused`. Fișierele nu există
-    // în `dist` (sînt conținut, nu cod), deci încărcarea eșuează și `paused`
-    // revine la `true` imediat — o verificare pe stare ar fi vânat o fereastră
-    // de câteva milisecunde. Contractul păzit e legătura observator → `play()`,
-    // iar asta se vede direct.
-    await page.addInitScript(() => {
-      (window as unknown as { playCalls: string[] }).playCalls = [];
-      const original = HTMLMediaElement.prototype.play;
-      HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
-        if (this.classList.contains('e3-reel-video')) {
-          (window as unknown as { playCalls: string[] }).playCalls.push(this.getAttribute('src') ?? '');
-        }
-        return original.call(this);
-      };
-    });
-    await mock(page, TREI);
-    await page.goto('/?preview=landing');
-
-    await page.locator('.e3-reel-video').first().scrollIntoViewIfNeeded();
-    await expect
-      .poll(async () => page.evaluate(() => (window as unknown as { playCalls: string[] }).playCalls), {
-        timeout: 5000,
-      })
-      .toContain('/reels/marti.mp4');
-  });
-
-  test('nimic nu se descarcă înainte de ecran', async ({ page }) => {
+  test('derularea până la bandă pornește exact un player', async ({ page }) => {
     await mock(page, TREI);
     await page.goto('/?preview=landing');
 
     // Clipurile vin prin RPC, deci banda se randează asincron: fără așteptarea
-    // asta, `evaluateAll` prinde un DOM în care secțiunea încă nu există și
-    // întoarce o listă goală, care ar fi trecut drept „niciun preload greșit".
-    await expect(page.locator('.e3-reel-video')).toHaveCount(3);
-    const preloads = await page
-      .locator('.e3-reel-video')
-      .evaluateAll((els) => els.map((e) => e.getAttribute('preload')));
-    expect(preloads).toEqual(['none', 'none', 'none']);
+    // asta, verificarea ar prinde un DOM în care secțiunea încă nu există.
+    await expect(page.locator('.e3-reel')).toHaveCount(3);
+    await expect(page.locator(`iframe[src*="${GAZDA}"]`)).toHaveCount(0);
+
+    await page.locator('.e3-reel').first().scrollIntoViewIfNeeded();
+
+    // UNUL, nu trei. Ăsta e contractul care ține pagina în picioare pe telefon.
+    await expect(page.locator(`iframe[src*="${GAZDA}"]`)).toHaveCount(1, { timeout: 5000 });
+  });
+
+  test('playerul pornește mut și în buclă', async ({ page }) => {
+    await mock(page, TREI);
+    await page.goto('/?preview=landing');
+    await expect(page.locator('.e3-reel')).toHaveCount(3);
+    await page.locator('.e3-reel').first().scrollIntoViewIfNeeded();
+
+    const player = page.locator(`iframe[src*="${GAZDA}"]`).first();
+    await expect(player).toHaveCount(1, { timeout: 5000 });
+    const src = (await player.getAttribute('src')) ?? '';
+    expect(src).toContain('autoplay=1');
+    expect(src).toContain('mute=1');
+    expect(src).toContain('loop=1');
   });
 });
 
@@ -187,7 +199,7 @@ test.describe('mobil', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test('textul vine ÎNAINTEA șinei, iar pagina nu derulează orizontal', async ({ page }) => {
-    await mock(page, [UN_CLIP, { ...UN_CLIP, video: '/reels/joi.mp4', caption: 'Joi' }]);
+    await mock(page, [UN_CLIP, { ...UN_CLIP, youtube: '_-Ab0123456', caption: 'Joi' }]);
     await page.goto('/?preview=landing');
 
     const titlu = page.getByRole('heading', { name: 'Instagram' });
@@ -207,7 +219,7 @@ test.describe('mobil', () => {
   });
 
   test('decalajul dispare — la un card și jumătate ar arăta ca un bug', async ({ page }) => {
-    await mock(page, [UN_CLIP, { ...UN_CLIP, video: '/reels/joi.mp4', caption: 'Joi' }]);
+    await mock(page, [UN_CLIP, { ...UN_CLIP, youtube: '_-Ab0123456', caption: 'Joi' }]);
     await page.goto('/?preview=landing');
 
     await expect(page.locator('.e3-reels-item')).toHaveCount(2);

@@ -8,17 +8,17 @@ import {
   type AdminReelRow,
 } from '../lib/adminApi';
 import { useSesiuneAdmin } from './adminSession';
+import { idYouTube, esteIdYouTube } from '../lib/youtube';
 
 /**
  * Banda cu clipuri de antrenament — ordinea, legendele și ce se vede.
  *
- * Ce NU se face de aici: nu se încarcă fișiere. Un reel exportat din Instagram
- * are 150-250 MB la 28-30 Mbps, iar un formular din browser n-are cum să-l
- * transforme în ceva ce poate servi o pagină. Compresia se face pe mașina
- * organizatorului, cu `npm run reel`, care tipărește exact căile de lipit aici.
+ * Un clip se adaugă lipind linkul lui de pe YouTube. Nu se încarcă fișiere și
+ * nu mai există un pas pe laptop: pașii ăia — export, `ffmpeg`, commit — sînt
+ * motivul pentru care banda n-a avut niciodată conținut.
  *
- * Ce se face de aici e restul — și restul e partea frecventă: reordonarea,
- * legenda greșită, ascunderea unui clip. Alea nu mai cer deploy.
+ * Restul e la fel și rămâne partea frecventă: reordonarea, legenda greșită,
+ * ascunderea unui clip. Nimic de aici nu cere deploy.
  *
  * Efect imediat, ca la „Coming Soon" și la programul de antrenamente: e o
  * manetă, nu o ediție. Scurtătura e de PAȘI, nu de verificări — constrângerile
@@ -40,7 +40,7 @@ type Props = {
 /** Ce e deschis în editor: un clip existent, sau unul nou încă nescris. */
 type Deschis = { fel: 'nou' } | { fel: 'existent'; id: string };
 
-const GOL = { video: '', poster: '', caption: '', url: '' };
+const GOL = { youtube: '', caption: '', url: '' };
 
 /**
  * Linkul lipit din Instagram vine cu coadă („?igsh=…"). O tăiem la lipire, în
@@ -60,9 +60,7 @@ const curataUrl = (brut: string): string => {
   return text;
 };
 
-/** Aceleași forme ca gardele din DB. Serverul rămâne autoritatea. */
-const VIDEO_RE = /^\/reels\/[a-z0-9-]+\.mp4$/;
-const POSTER_RE = /^\/reels\/[a-z0-9-]+\.jpg$/;
+/** Aceeași formă ca garda din DB. Serverul rămâne autoritatea. */
 const URL_RE = /^https:\/\/www\.instagram\.com\/(reel|p)\/[A-Za-z0-9_-]{5,32}\/$/;
 
 export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
@@ -107,18 +105,15 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
 
   const deschideExistent = (r: AdminReelRow) => {
     setDeschis({ fel: 'existent', id: r.id });
-    setCamp({ video: r.video, poster: r.poster, caption: r.caption, url: r.url });
+    setCamp({ youtube: r.youtube, caption: r.caption, url: r.url });
     setVizibil(r.vizibil);
     setProblema('');
   };
 
   /** Problema din formular, înainte de a deranja serverul. */
   const validare = (): string => {
-    if (!VIDEO_RE.test(camp.video)) {
-      return 'Calea clipului trebuie să arate ca „/reels/nume-clip.mp4". Rulează `npm run reel` și copiază ce-ți tipărește.';
-    }
-    if (camp.poster !== '' && !POSTER_RE.test(camp.poster)) {
-      return 'Calea posterului trebuie să arate ca „/reels/nume-clip.jpg", sau să fie goală.';
+    if (!esteIdYouTube(camp.youtube)) {
+      return 'Nu am recunoscut un clip YouTube în ce ai lipit. Apasă „Distribuie" pe clip și lipește linkul de acolo.';
     }
     if (camp.caption.trim() === '') {
       return 'Scrie o legendă: ea e ce citește cineva care folosește un cititor de ecran.';
@@ -142,8 +137,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
       await saveTrainingReel(
         token,
         deschis.fel === 'existent' ? deschis.id : null,
-        camp.video,
-        camp.poster,
+        camp.youtube,
         camp.caption.trim(),
         camp.url,
         vizibil
@@ -194,8 +188,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
   };
 
   /** Editor atins, dar netrimis: exact ce s-ar pierde la schimbarea tabului. */
-  const nesalvat =
-    camp.video !== '' || camp.poster !== '' || camp.caption !== '' || camp.url !== '';
+  const nesalvat = camp.youtube !== '' || camp.caption !== '' || camp.url !== '';
 
   const potPleca = (): boolean =>
     !nesalvat ||
@@ -217,8 +210,8 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
         <h2>Clipuri de antrenament</h2>
         <p className="admin-config-hint">
           Banda de pe pagina principală și de pe „Despre noi" — aceeași listă în amândouă.
-          Fișierele se produc cu <code>npm run reel</code> și intră printr-un commit; de aici se
-          schimbă ordinea, legendele și ce se vede, fără deploy.
+          Încarcă clipul pe YouTube ca nelistat, lipește linkul aici și gata. Nimic din tabul
+          ăsta nu cere deploy.
         </p>
       </header>
 
@@ -243,10 +236,10 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
                 <span className="admin-layout-nr">{String(r.numar).padStart(2, '0')}</span>
                 <div className="admin-cell-name">
                   <strong>{r.caption}</strong>
-                  {/* `div`, nu `span`: pe un element inline calea se lipea de
-                      legendă și rândul se citea „Marți în parc/reels/x.mp4". */}
+                  {/* `div`, nu `span`: pe un element inline identificatorul se
+                      lipea de legendă și rândul se citea „Marți în parcdQw4…". */}
                   <div className="admin-config-hint">
-                    {r.video}
+                    {r.youtube}
                     {r.vizibil ? '' : ' · ascuns'}
                   </div>
                 </div>
@@ -291,25 +284,23 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
         </h3>
 
         <label className="admin-config-camp">
-          <span className="admin-config-eticheta">Calea clipului</span>
+          <span className="admin-config-eticheta">Linkul clipului de pe YouTube</span>
           <input
-            value={camp.video}
-            placeholder="/reels/marti-in-parc.mp4"
+            value={camp.youtube}
+            placeholder="https://www.youtube.com/shorts/dQw4w9WgXcQ"
             disabled={ocupat}
-            onChange={(e) => setCamp({ ...camp, video: e.target.value.trim() })}
-          />
-        </label>
-
-        <label className="admin-config-camp">
-          <span className="admin-config-eticheta">Calea posterului</span>
-          <input
-            value={camp.poster}
-            placeholder="/reels/marti-in-parc.jpg"
-            disabled={ocupat}
-            onChange={(e) => setCamp({ ...camp, poster: e.target.value.trim() })}
+            /* Normalizează doar când RECUNOAȘTE ceva. Cu `idYouTube` aplicat
+               necondiționat, tastarea era imposibilă: fiecare caracter dădea un
+               text incomplet, deci șirul gol, deci câmpul se golea la fiecare
+               apăsare. Iar un link de pe altă gazdă dispărea fără explicație, în
+               loc să ajungă la validare, care are un mesaj pentru exact asta. */
+            onChange={(e) =>
+              setCamp({ ...camp, youtube: idYouTube(e.target.value) || e.target.value.trim() })
+            }
           />
           <small className="admin-config-hint">
-            Opțional. Fără el, cardul se randează cu cifra lui mare în locul imaginii.
+            Lipește ce-ți dă „Distribuie" — orice formă (youtu.be, /shorts/, watch?v=), cu coada
+            de parametri cu tot. Câmpul reține doar identificatorul clipului.
           </small>
         </label>
 

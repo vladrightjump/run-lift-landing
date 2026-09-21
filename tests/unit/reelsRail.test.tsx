@@ -1,31 +1,40 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { ReelsRail } from '../../src/components/landing/ReelsRail';
 import type { Reel } from '../../src/lib/supabase';
 
 /**
- * Banda cu clipurile de antrenament.
+ * Caruselul cu clipurile de antrenament.
  *
  * Ce se păzește aici e comportamentul pe care nicio poartă e2e nu-l prinde cât
- * timp lista de clipuri livrată e goală: pornirea la intrarea în ecran, oprirea
- * la ieșire, și faptul că NIMIC nu se descarcă înainte de asta.
+ * timp banda livrată e goală: UN SINGUR player viu la un moment dat, pe cardul
+ * centrat, montat abia când șina se apropie de ecran și demontat când pleacă.
  *
- * jsdom n-are nici `IntersectionObserver`, nici `HTMLMediaElement.prototype.play`.
- * Amândouă sunt stub-uite, după tiparul din `sectionLayout.test.tsx`.
+ * „Demontat", nu „ascuns": un player YouTube costă în jurul unui megaoctet, iar
+ * patru carduri care redau simultan coboară pagina la ~37 fps. Numărul de
+ * `iframe`-uri din DOM E contractul, de aceea se numără direct.
+ *
+ * jsdom n-are `IntersectionObserver` și nici dimensiuni reale, deci ambele sunt
+ * stub-uite: observatoarele ca în `sectionLayout.test.tsx`, iar
+ * `getBoundingClientRect` cu o geometrie în care fiecare card ocupă o fâșie
+ * previzibilă, ca alegerea centrului să fie verificabilă.
  */
 
 const CLIPURI: Reel[] = [
   {
-    video: '/reels/unu.mp4',
-    poster: '/reels/unu.jpg',
+    youtube: 'dQw4w9WgXcQ',
     caption: 'Marți în parc',
     url: 'https://www.instagram.com/reel/AAAAA11111/',
   },
   {
-    video: '/reels/doi.mp4',
-    poster: '',
+    youtube: '_-Ab0123456',
     caption: 'Circuit funcțional',
     url: 'https://www.instagram.com/reel/BBBBB22222/',
+  },
+  {
+    youtube: 'ZZZZ9999888',
+    caption: 'Forță pe scări',
+    url: 'https://www.instagram.com/reel/CCCCC33333/',
   },
 ];
 
@@ -72,40 +81,71 @@ const monteazaStuburi = (miscareRedusa: boolean) => {
   }));
 };
 
-const play = vi.fn();
-const pause = vi.fn();
+/**
+ * Geometrie falsă: șina e lată de 300, fiecare card de 100. Cardul `i` ocupă
+ * [i*100 - scrollLeft, …], deci cu `scrollLeft = 0` centrul șinei (150) cade pe
+ * cardul 1, iar derularea mută centrul previzibil.
+ */
+const geometrie = (container: HTMLElement) => {
+  const sina = container.querySelector('.e3-reels-rail') as HTMLElement | null;
+  if (!sina) return null;
+  sina.getBoundingClientRect = () =>
+    ({ left: 0, width: 300, right: 300, top: 0, height: 500, bottom: 500 }) as DOMRect;
+  const carduri = Array.from(container.querySelectorAll('.e3-reels-item')) as HTMLElement[];
+  carduri.forEach((card, i) => {
+    card.getBoundingClientRect = () =>
+      ({
+        left: i * 100 - sina.scrollLeft,
+        width: 100,
+        right: i * 100 + 100 - sina.scrollLeft,
+        top: 0,
+        height: 500,
+        bottom: 500,
+      }) as DOMRect;
+  });
+  return sina;
+};
 
 beforeEach(() => {
-  play.mockReset();
-  pause.mockReset();
-  // jsdom declară media elements dar aruncă „Not implemented" pe play/pause.
-  HTMLMediaElement.prototype.play = play as unknown as HTMLMediaElement['play'];
-  HTMLMediaElement.prototype.pause = pause as unknown as HTMLMediaElement['pause'];
+  vi.useFakeTimers({ shouldAdvanceTime: true });
 });
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 const randeaza = (reels: Reel[] = CLIPURI, miscareRedusa = false) => {
   monteazaStuburi(miscareRedusa);
-  return render(<ReelsRail reels={reels} num="05" headline="Instagram" body="Filmate pe teren." />);
+  const r = render(
+    <ReelsRail reels={reels} num="05" headline="Instagram" body="Filmate pe teren." />
+  );
+  geometrie(r.container);
+  return r;
 };
 
-/** Trece toate elementele observate prin viewport, într-o direcție sau alta. */
+/**
+ * Trece toate elementele observate prin viewport, într-o direcție sau alta.
+ *
+ * `act`: observatorul schimbă STARE, spre deosebire de versiunea cu `<video>`,
+ * unde apela `play()` imperativ. Fără el, randarea nu se aplică până la
+ * următoarea aserțiune și numărătoarea de `iframe`-uri e mereu zero.
+ */
 const intersecteaza = (isIntersecting: boolean) => {
-  for (const o of observatoare) {
-    o.cb(o.elemente.map((target) => ({ target, isIntersecting })));
-  }
+  act(() => {
+    for (const o of observatoare) {
+      o.cb(o.elemente.map((target) => ({ target, isIntersecting })));
+    }
+  });
 };
 
-const videouri = (c: HTMLElement) => Array.from(c.querySelectorAll('video'));
+const iframeuri = (c: HTMLElement) => Array.from(c.querySelectorAll('iframe'));
 
 describe('randarea', () => {
-  it('randează un card per clip', () => {
+  it('un card per clip', () => {
     const { container } = randeaza();
-    expect(videouri(container)).toHaveLength(2);
+    expect(container.querySelectorAll('.e3-reels-item')).toHaveLength(3);
   });
 
   it('lista goală nu randează nimic', () => {
@@ -113,121 +153,140 @@ describe('randarea', () => {
     expect(container.querySelector('.e3-reels')).toBeNull();
   });
 
-  it('legenda și linkul apar sub card, nu peste imagine', () => {
+  it('legenda și linkul stau sub card, nu peste imagine', () => {
     const { container } = randeaza();
-    const caption = container.querySelector('.e3-reel-caption');
-    expect(caption?.textContent).toContain('Marți în parc');
-    // `<figcaption>` e frate cu cardul, nu copil al lui.
-    expect(caption?.closest('.e3-reel')).toBeNull();
+    const legenda = container.querySelector('.e3-reel-caption');
+    expect(legenda?.textContent).toContain('Marți în parc');
   });
 
-  it('fiecare card duce spre postarea reală', () => {
+  it('fiecare card duce spre postarea de pe Instagram, nu spre YouTube', () => {
     randeaza();
-    const linkuri = screen.getAllByRole('link', { name: /Deschide pe Instagram/ });
-    expect(linkuri.map((a) => a.getAttribute('href'))).toEqual([
-      'https://www.instagram.com/reel/AAAAA11111/',
-      'https://www.instagram.com/reel/BBBBB22222/',
-    ]);
+    const link = screen.getAllByRole('link', { name: /Deschide pe Instagram/ })[0];
+    expect(link.getAttribute('href')).toBe('https://www.instagram.com/reel/AAAAA11111/');
+    expect(link.getAttribute('href')).not.toContain('youtube');
   });
 
-  it('un clip fără poster cade pe marcajul desenat, nu pe o casetă goală', () => {
+  it('cardul care nu redă poartă marcajul desenat, nu o casetă goală', () => {
     const { container } = randeaza();
-    const carduri = container.querySelectorAll('.e3-reel');
-    expect(carduri[0].querySelector('.e3-reel-poster')).not.toBeNull();
-    expect(carduri[1].querySelector('.e3-reel-poster')).toBeNull();
-    expect(carduri[1].querySelector('.e3-reel-fallback')?.textContent).toBe('02');
+    expect(container.querySelectorAll('.e3-reel-fallback')).toHaveLength(3);
   });
 });
 
 describe('nimic nu se descarcă înainte de ecran', () => {
-  it('clipul are preload="none"', () => {
+  it('la montare nu există niciun player', () => {
     const { container } = randeaza();
-    for (const v of videouri(container)) expect(v.getAttribute('preload')).toBe('none');
+    expect(iframeuri(container)).toHaveLength(0);
   });
 
-  it('poster-ul e un <img loading="lazy">, nu atributul `poster`', () => {
+  it('niciun card nu poartă `src` spre gazdă înainte de intersecție', () => {
     const { container } = randeaza();
-    const poster = container.querySelector('.e3-reel-poster');
-    expect(poster?.tagName).toBe('IMG');
-    expect(poster?.getAttribute('loading')).toBe('lazy');
-    // Atributul n-are echivalent de încărcare leneșă: l-ar cere pe toate la randare.
-    expect(videouri(container)[0].hasAttribute('poster')).toBe(false);
-  });
-
-  it('nu pornește nimic înainte de intersecție', () => {
-    randeaza();
-    expect(play).not.toHaveBeenCalled();
+    expect(container.innerHTML).not.toContain('youtube');
   });
 });
 
-describe('redarea', () => {
-  it('clipul e mut, în buclă, inline și ascuns de cititoarele de ecran', () => {
+describe('un singur player, pe cardul centrat', () => {
+  it('intersecția pornește exact un player', () => {
     const { container } = randeaza();
-    const v = videouri(container)[0];
-    expect(v.muted).toBe(true);
-    expect(v.hasAttribute('loop')).toBe(true);
-    expect(v.hasAttribute('playsinline')).toBe(true);
-    expect(v.getAttribute('aria-hidden')).toBe('true');
+    intersecteaza(true);
+    expect(iframeuri(container)).toHaveLength(1);
   });
 
-  it('pornește la intrarea în ecran', () => {
-    randeaza();
+  it('playerul se montează pe cardul din centrul șinei', () => {
+    const { container } = randeaza();
     intersecteaza(true);
-    expect(play).toHaveBeenCalledTimes(2);
+    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    expect(carduri[1].querySelector('iframe')).not.toBeNull();
+    expect(carduri[0].querySelector('iframe')).toBeNull();
+    expect(carduri[2].querySelector('iframe')).toBeNull();
   });
 
-  it('se oprește la ieșirea din ecran', () => {
-    randeaza();
+  it('derularea mută playerul, fără să adauge altul', () => {
+    const { container } = randeaza();
     intersecteaza(true);
+    const sina = container.querySelector('.e3-reels-rail') as HTMLElement;
+
+    sina.scrollLeft = 100;
+    act(() => {
+      fireEvent.scroll(sina);
+      vi.advanceTimersByTime(200);
+    });
+
+    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    expect(iframeuri(container)).toHaveLength(1);
+    expect(carduri[2].querySelector('iframe')).not.toBeNull();
+    expect(carduri[1].querySelector('iframe')).toBeNull();
+  });
+
+  it('ieșirea șinei de pe ecran demontează playerul', () => {
+    const { container } = randeaza();
+    intersecteaza(true);
+    expect(iframeuri(container)).toHaveLength(1);
     intersecteaza(false);
-    expect(pause).toHaveBeenCalledTimes(2);
+    expect(iframeuri(container)).toHaveLength(0);
+  });
+});
+
+describe('forma playerului', () => {
+  const player = () => {
+    const { container } = randeaza();
+    intersecteaza(true);
+    return iframeuri(container)[0];
+  };
+
+  it('merge pe gazda fără cookie, cu identificatorul cardului centrat', () => {
+    const src = player().getAttribute('src') ?? '';
+    expect(src).toContain('https://www.youtube-nocookie.com/embed/_-Ab0123456');
   });
 
-  it('poster-ul dispare după primul cadru redat', () => {
-    const { container } = randeaza();
-    expect(container.querySelector('.e3-reel-poster')).not.toBeNull();
-    fireEvent.playing(videouri(container)[0]);
-    expect(container.querySelectorAll('.e3-reel-poster')).toHaveLength(0);
+  it('pornește mut și în buclă', () => {
+    const src = player().getAttribute('src') ?? '';
+    expect(src).toContain('autoplay=1');
+    expect(src).toContain('mute=1');
+    expect(src).toContain('loop=1');
+  });
+
+  it('deleagă autoplay — fără asta antetul paginii îl blochează', () => {
+    expect(player().getAttribute('allow')).toContain('autoplay');
+  });
+
+  it('are un titlu: e conținut focalizabil, nu decor', () => {
+    expect(player().getAttribute('title')).toBe('Circuit funcțional');
   });
 });
 
 describe('la mișcare redusă', () => {
-  it('niciun clip nu pornește singur', () => {
-    randeaza(CLIPURI, true);
+  it('nimic nu pornește singur, nici după intersecție', () => {
+    const { container } = randeaza(CLIPURI, true);
     intersecteaza(true);
-    expect(play).not.toHaveBeenCalled();
+    expect(iframeuri(container)).toHaveLength(0);
   });
 
-  it('butonul de pornire e prezent și pornește clipul', () => {
-    randeaza(CLIPURI, true);
-    const buton = screen.getByRole('button', { name: /Redă clipul: Marți în parc/ });
-    fireEvent.click(buton);
-    expect(play).toHaveBeenCalledTimes(1);
-  });
-
-  it('butonul RĂMÂNE după pornire și devine oprire — clipul e în buclă', () => {
+  it('butonul de pornire montează playerul cardului lui', () => {
     const { container } = randeaza(CLIPURI, true);
-    fireEvent.click(screen.getByRole('button', { name: /Redă clipul: Marți în parc/ }));
-    // Fără asta, cine a cerut mai puțină mișcare rămâne cu un clip care se
-    // reia la nesfârșit și niciun control cu care să-l oprească.
-    fireEvent.playing(videouri(container)[0]);
-
-    const oprire = screen.getByRole('button', { name: /Oprește clipul: Marți în parc/ });
-    fireEvent.click(oprire);
-    expect(pause).toHaveBeenCalledTimes(1);
+    intersecteaza(true);
+    fireEvent.click(screen.getByLabelText(/Redă clipul: Marți în parc/));
+    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    expect(carduri[0].querySelector('iframe')).not.toBeNull();
+    expect(iframeuri(container)).toHaveLength(1);
   });
 
-  it('după oprire redevine buton de pornire', () => {
+  it('a doua apăsare îl demontează — un clip în buclă trebuie să poată fi oprit', () => {
     const { container } = randeaza(CLIPURI, true);
-    const video = videouri(container)[0];
-    fireEvent.click(screen.getByRole('button', { name: /Redă clipul: Marți în parc/ }));
-    fireEvent.playing(video);
-    fireEvent.pause(video);
-    expect(screen.getByRole('button', { name: /Redă clipul: Marți în parc/ })).toBeDefined();
+    fireEvent.click(screen.getByLabelText(/Redă clipul: Marți în parc/));
+    expect(iframeuri(container)).toHaveLength(1);
+    fireEvent.click(screen.getByLabelText(/Oprește clipul: Marți în parc/));
+    expect(iframeuri(container)).toHaveLength(0);
   });
 
-  it('fără mișcare redusă, butonul nu există — nu e nimic de apăsat', () => {
-    randeaza();
-    expect(screen.queryByRole('button', { name: /Redă clipul/ })).toBeNull();
+  it('pornirea altui card nu lasă două playere', () => {
+    const { container } = randeaza(CLIPURI, true);
+    fireEvent.click(screen.getByLabelText(/Redă clipul: Marți în parc/));
+    fireEvent.click(screen.getByLabelText(/Redă clipul: Forță pe scări/));
+    expect(iframeuri(container)).toHaveLength(1);
+  });
+
+  it('fără mișcare redusă nu există buton — nu e nimic de apăsat', () => {
+    randeaza(CLIPURI, false);
+    expect(screen.queryByLabelText(/Redă clipul/)).toBeNull();
   });
 });

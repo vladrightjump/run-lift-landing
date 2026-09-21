@@ -7,10 +7,11 @@ import type { AdminReelRow } from '../../src/lib/adminApi';
 /**
  * Ecranul benzii cu clipuri.
  *
- * Contractul păzit aici: ecranul NU acceptă o cale care n-arată a fișier din
- * `public/reels/`, linkul lipit din Instagram își pierde coada singur, iar
- * refuzul serverului ajunge la om în cuvintele lui. Numărul clipului nu se
- * tastează niciodată — îl pune serverul, iar butonul îl arată dinainte.
+ * Contractul păzit aici: linkul de YouTube se normalizează la identificator
+ * indiferent de forma lipită, ecranul NU acceptă altceva, linkul de Instagram
+ * își pierde coada singur, iar refuzul serverului ajunge la om în cuvintele
+ * lui. Numărul clipului nu se tastează niciodată — îl pune serverul, iar
+ * butonul îl arată dinainte.
  *
  * Validarea din formular nu e apărarea reală: constrângerile din baza de date
  * sînt. Rostul ei e să nu trimită omul la server ca să afle ce vede ecranul.
@@ -23,7 +24,7 @@ const { listTrainingReels, saveTrainingReel, moveTrainingReel, deleteTrainingRee
     moveTrainingReel: vi.fn(),
     deleteTrainingReel: vi.fn(),
     mesajRefuzClip: vi.fn((e: unknown) =>
-      String(e).includes('training_reels_un_fisier') ? 'Clipul e deja în bandă.' : 'eroare'
+      String(e).includes('training_reels_un_youtube') ? 'Clipul e deja în bandă.' : 'eroare'
     ),
   }));
 
@@ -41,8 +42,7 @@ const onAuthError = vi.fn(() => false);
 const rand = (over: Partial<AdminReelRow> = {}): AdminReelRow => ({
   id: 'r1',
   numar: 1,
-  video: '/reels/marti.mp4',
-  poster: '/reels/marti.jpg',
+  youtube: 'dQw4w9WgXcQ',
   caption: 'Marți în parc',
   url: 'https://www.instagram.com/reel/AAAAA11111/',
   vizibil: true,
@@ -88,12 +88,12 @@ describe('banda goală', () => {
 });
 
 describe('lista', () => {
-  it('arată clipurile cu numărul și fișierul lor', async () => {
-    listTrainingReels.mockResolvedValue([rand(), rand({ id: 'r2', numar: 2, caption: 'Joi', video: '/reels/joi.mp4' })]);
+  it('arată clipurile cu numărul și identificatorul lor', async () => {
+    listTrainingReels.mockResolvedValue([rand(), rand({ id: 'r2', numar: 2, caption: 'Joi', youtube: '_-Ab0123456' })]);
     randeaza();
     expect(await screen.findByText('Marți în parc')).toBeDefined();
     expect(screen.getByText('Joi')).toBeDefined();
-    expect(screen.getByText('/reels/marti.mp4')).toBeDefined();
+    expect(screen.getByText('dQw4w9WgXcQ')).toBeDefined();
   });
 
   it('un clip ascuns e marcat ca atare', async () => {
@@ -104,7 +104,7 @@ describe('lista', () => {
   });
 
   it('primul clip nu se poate muta mai sus, ultimul nu mai jos', async () => {
-    listTrainingReels.mockResolvedValue([rand(), rand({ id: 'r2', numar: 2, caption: 'Joi', video: '/reels/joi.mp4' })]);
+    listTrainingReels.mockResolvedValue([rand(), rand({ id: 'r2', numar: 2, caption: 'Joi', youtube: '_-Ab0123456' })]);
     randeaza();
     await screen.findByText('Marți în parc');
     expect(screen.getByLabelText(/Mută „Marți în parc” mai sus/).hasAttribute('disabled')).toBe(
@@ -115,27 +115,27 @@ describe('lista', () => {
   });
 
   it('mutarea cere serverului direcția, nu lista întreagă', async () => {
-    listTrainingReels.mockResolvedValue([rand(), rand({ id: 'r2', numar: 2, caption: 'Joi', video: '/reels/joi.mp4' })]);
+    listTrainingReels.mockResolvedValue([rand(), rand({ id: 'r2', numar: 2, caption: 'Joi', youtube: '_-Ab0123456' })]);
     randeaza();
     await screen.findByText('Joi');
     fireEvent.click(screen.getByLabelText(/Mută „Joi” mai sus/));
     await waitFor(() => expect(moveTrainingReel).toHaveBeenCalledWith('tok', 'r2', -1));
   });
 
-  it('scoaterea spune explicit că fișierul rămâne în repo', async () => {
+  it('scoaterea nu pretinde că a șters clipul de pe gazdă', async () => {
     listTrainingReels.mockResolvedValue([rand()]);
     randeaza();
     await screen.findByText('Marți în parc');
     fireEvent.click(screen.getByLabelText(/Scoate clipul „Marți în parc”/));
     await waitFor(() => expect(deleteTrainingReel).toHaveBeenCalledWith('tok', 'r1'));
-    expect(showToast.mock.calls.at(-1)?.[0].msg).toMatch(/rămâne în repo/);
+    expect(showToast.mock.calls.at(-1)?.[0].msg).toMatch(/a ieșit din bandă/);
   });
 });
 
 describe('formularul refuză înainte să deranjeze serverul', () => {
   const completeaza = (over: Partial<Record<string, string>> = {}) => {
-    fireEvent.change(camp('Calea clipului'), {
-      target: { value: over.video ?? '/reels/marti.mp4' },
+    fireEvent.change(camp('Linkul clipului de pe YouTube'), {
+      target: { value: over.youtube ?? 'https://www.youtube.com/shorts/dQw4w9WgXcQ' },
     });
     fireEvent.change(camp('Legenda'), { target: { value: over.caption ?? 'Marți' } });
     fireEvent.change(camp('Linkul postării'), {
@@ -143,13 +143,13 @@ describe('formularul refuză înainte să deranjeze serverul', () => {
     });
   };
 
-  it('o cale care nu e /reels/*.mp4 nu pleacă la server', async () => {
+  it('un link care nu e YouTube nu pleacă la server', async () => {
     randeaza();
     await screen.findByText(/Niciun clip/);
-    completeaza({ video: 'https://alt-domeniu.example/x.mp4' });
+    completeaza({ youtube: 'https://alt-domeniu.example/x.mp4' });
     fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
     expect(saveTrainingReel).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert').textContent).toMatch(/npm run reel/);
+    expect(screen.getByRole('alert').textContent).toMatch(/clip YouTube/);
   });
 
   it('legenda goală nu pleacă la server — ea e ce citește un cititor de ecran', async () => {
@@ -161,13 +161,56 @@ describe('formularul refuză înainte să deranjeze serverul', () => {
     expect(screen.getByRole('alert').textContent).toMatch(/cititor de ecran/);
   });
 
-  it('posterul gol e permis — cardul are marcajul desenat ca rezervă', async () => {
+  it('un link valid pleacă la server ca identificator, nu ca adresă', async () => {
     randeaza();
     await screen.findByText(/Niciun clip/);
     completeaza();
     fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
     await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
-    expect(saveTrainingReel.mock.calls[0][3]).toBe('');
+    expect(saveTrainingReel.mock.calls[0][2]).toBe('dQw4w9WgXcQ');
+  });
+});
+
+describe('linkul lipit din YouTube', () => {
+  const link = () => camp('Linkul clipului de pe YouTube');
+
+  it.each([
+    ['https://youtu.be/dQw4w9WgXcQ?si=abc', 'linkul scurt de pe telefon'],
+    ['https://www.youtube.com/shorts/dQw4w9WgXcQ?feature=share', 'pagina de Shorts'],
+    ['https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=15', 'partajarea de pe desktop'],
+  ])('%s se reduce la identificator (%s)', async (lipit) => {
+    randeaza();
+    await screen.findByText(/Niciun clip/);
+    fireEvent.change(link(), { target: { value: lipit } });
+    expect(link().value).toBe('dQw4w9WgXcQ');
+  });
+
+  it('un link de pe altă gazdă rămâne în câmp și cade la validare', async () => {
+    // Nu se golește: un text care dispare fără explicație e mai rău decât unul
+    // care ajunge la validare, unde există un mesaj pentru exact cazul ăsta.
+    randeaza();
+    await screen.findByText(/Niciun clip/);
+    fireEvent.change(link(), { target: { value: 'https://vimeo.com/123456789' } });
+    expect(link().value).toBe('https://vimeo.com/123456789');
+
+    fireEvent.change(camp('Legenda'), { target: { value: 'Marți' } });
+    fireEvent.change(camp('Linkul postării'), {
+      target: { value: 'https://www.instagram.com/reel/AAAAA11111/' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
+    expect(saveTrainingReel).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/clip YouTube/);
+  });
+
+  it('se poate TASTA un link, nu doar lipi — caracterele nu se mai pierd', async () => {
+    randeaza();
+    await screen.findByText(/Niciun clip/);
+    // Tastarea trimite un `change` per caracter, cu text incomplet de fiecare
+    // dată. Înainte, fiecare dintre ele golea câmpul.
+    fireEvent.change(link(), { target: { value: 'https://yout' } });
+    expect(link().value).toBe('https://yout');
+    fireEvent.change(link(), { target: { value: 'https://youtu.be/dQw4w9WgXcQ' } });
+    expect(link().value).toBe('dQw4w9WgXcQ');
   });
 });
 
@@ -204,7 +247,9 @@ describe('salvarea', () => {
   it('un clip nou pleacă fără id — numărul îl pune serverul', async () => {
     randeaza();
     await screen.findByText(/Niciun clip/);
-    fireEvent.change(camp('Calea clipului'), { target: { value: '/reels/marti.mp4' } });
+    fireEvent.change(camp('Linkul clipului de pe YouTube'), {
+      target: { value: 'https://www.youtube.com/shorts/dQw4w9WgXcQ' },
+    });
     fireEvent.change(camp('Legenda'), { target: { value: 'Marți' } });
     fireEvent.change(camp('Linkul postării'), {
       target: { value: 'https://www.instagram.com/reel/AAAAA11111/' },
@@ -225,14 +270,16 @@ describe('salvarea', () => {
 
     await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
     expect(saveTrainingReel.mock.calls[0][1]).toBe('r1');
-    expect(saveTrainingReel.mock.calls[0][4]).toBe('Altă legendă');
+    expect(saveTrainingReel.mock.calls[0][3]).toBe('Altă legendă');
   });
 
   it('refuzul serverului ajunge la om, în cuvintele lui', async () => {
-    saveTrainingReel.mockRejectedValue(new Error('training_reels_un_fisier'));
+    saveTrainingReel.mockRejectedValue(new Error('training_reels_un_youtube'));
     randeaza();
     await screen.findByText(/Niciun clip/);
-    fireEvent.change(camp('Calea clipului'), { target: { value: '/reels/marti.mp4' } });
+    fireEvent.change(camp('Linkul clipului de pe YouTube'), {
+      target: { value: 'https://www.youtube.com/shorts/dQw4w9WgXcQ' },
+    });
     fireEvent.change(camp('Legenda'), { target: { value: 'Marți' } });
     fireEvent.change(camp('Linkul postării'), {
       target: { value: 'https://www.instagram.com/reel/AAAAA11111/' },
@@ -265,7 +312,9 @@ describe('garda de ieșire', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     randeaza();
     await screen.findByText(/Niciun clip/);
-    fireEvent.change(camp('Calea clipului'), { target: { value: '/reels/marti.mp4' } });
+    fireEvent.change(camp('Linkul clipului de pe YouTube'), {
+      target: { value: 'https://www.youtube.com/shorts/dQw4w9WgXcQ' },
+    });
 
     expect(garda()()).toBe(true);
     confirm.mockRestore();
