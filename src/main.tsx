@@ -9,6 +9,7 @@ import { Unsubscribe } from './components/Unsubscribe';
 import { Renunt } from './components/Renunt';
 import { Antrenament } from './components/Antrenament';
 import { installGlobalMonitoring } from './lib/monitoring';
+import { pornesteAnalitice } from './lib/analytics';
 import { EventConfigProvider } from './hooks/useEventConfig';
 import { redirectCanonic } from './lib/canonicalHost';
 import './index.css';
@@ -27,6 +28,11 @@ if (canonic) window.location.replace(canonic);
 // Prinde violările CSP, erorile globale și promisiunile respinse — indiferent de
 // pagina randată mai jos. Fără asta, un blocaj CSP (ca cel din 4 august) e mut.
 installGlobalMonitoring();
+
+// Numărătoarea de trafic. Tăcută peste tot în afară de producție — `env` vine
+// de la build, ca la `redirectCanonic` de mai sus. Scriptul se încarcă de pe
+// același origin, deci CSP-ul (`script-src 'self'`) nu are nevoie de nimic nou.
+pornesteAnalitice(__VERCEL_ENV__);
 
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('Root element #root not found');
