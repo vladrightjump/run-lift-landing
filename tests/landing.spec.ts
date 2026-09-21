@@ -173,6 +173,9 @@ test.describe('Analitice — tăcute în afara producției', () => {
   test('niciun shell nu poartă scriptul în HTML-ul servit', async ({ page }) => {
     for (const cale of ['/', '/antrenament']) {
       const raspuns = await page.request.get(cale);
+      // Fără asta, un 404 ar fi trecut testul: corpul lui nu conține nici el
+      // „_vercel/insights". Adică exact un test care nu verifică nimic.
+      expect(raspuns.ok(), `${cale} trebuie servit, nu 404`).toBe(true);
       expect(await raspuns.text()).not.toContain('_vercel/insights');
     }
   });

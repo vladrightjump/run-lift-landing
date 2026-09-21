@@ -39,8 +39,9 @@ const PARAMETRI_PERMISI = new Set([
 ]);
 
 /**
- * Origine folosită DOAR ca bază pentru `new URL` când primim o cale relativă.
- * Nu ajunge în ce se trimite: din URL-ul rezultat păstrăm doar calea și query-ul.
+ * Bază pentru `new URL` când primim o cale relativă. În practică `event.url` e
+ * mereu absolut — documentația Vercel face `new URL(event.url)` fără bază, ceea
+ ce ar arunca altfel — dar o bază costă nimic și scoate o presupunere din joc.
  */
 const BAZA = 'https://parktraining.fit';
 
@@ -49,6 +50,13 @@ const BAZA = 'https://parktraining.fit';
  *
  * Aruncă `/admin` (backoffice, nu trafic public — l-ar umfla panourile) și taie
  * fragmentul (`#s2`, pus de `Antrenament.tsx` la derulare).
+ *
+ * Întoarce un URL ABSOLUT, nu o cale. Exemplul canonic de redactare din
+ * documentația Vercel întoarce `url.toString()`, iar scriptul care consumă
+ * valoarea rulează la ei, nu aici — deci nu se poate verifica local ce face cu
+ * o cale. O abatere de la contract ar fi eșuat tăcut, vizibilă abia peste 24 h
+ * într-un dashboard gol. Nu merită, cu atât mai mult cu cât redactarea e la fel
+ * de completă în ambele forme.
  */
 export const curataEveniment = (url: string): string | null => {
   let adresa: URL;
@@ -68,11 +76,12 @@ export const curataEveniment = (url: string): string | null => {
   }
 
   const query = pastrati.toString();
-  return query ? `${cale}?${query}` : cale;
+  return `${adresa.origin}${cale}${query ? `?${query}` : ''}`;
 };
 
 let pornit = false;
-let ultimulUrl: string | null = null;
+/** Ultima pereche tip+URL emisă, pentru dedublarea consecutivă. */
+let ultimulEveniment: string | null = null;
 
 /**
  * Pornește numărătoarea. Tăcută în orice mediu în afară de producție, și
@@ -90,11 +99,19 @@ export const pornesteAnalitice = (env: string): void => {
       const url = curataEveniment(eveniment.url);
       if (url === null) return null;
 
-      // Două evenimente consecutive cu același URL se reduc la unul. Ține în
-      // frâu `replaceState`-ul cu fragment din `/antrenament`, care altfel ar
-      // putea trimite câte un eveniment la fiecare secțiune derulată.
-      if (url === ultimulUrl) return null;
-      ultimulUrl = url;
+      // Două evenimente consecutive identice se reduc la unul. Ține în frâu
+      // `replaceState`-ul cu fragment din `/antrenament`, care altfel ar putea
+      // trimite câte un eveniment la fiecare secțiune derulată.
+      //
+      // Cheia include TIPUL, nu doar URL-ul: `beforeSend` primește și
+      // `pageview`, și `event`. Fără tip, primul `track()` adăugat pe o pagină
+      // a cărei vizualizare tocmai plecase ar fi fost înghițit ca duplicat —
+      // fără nicio urmă nicăieri. Nu se poate întâmpla azi (nu există `track()`,
+      // iar Hobby n-are evenimente custom), dar capcana ar fi fost invizibilă
+      // pentru cine adaugă primul.
+      const cheie = `${eveniment.type} ${url}`;
+      if (cheie === ultimulEveniment) return null;
+      ultimulEveniment = cheie;
 
       return { ...eveniment, url };
     },
@@ -104,5 +121,5 @@ export const pornesteAnalitice = (env: string): void => {
 /** Doar pentru teste: readuce modulul la starea de dinainte de pornire. */
 export const reseteazaAnaliticePentruTeste = (): void => {
   pornit = false;
-  ultimulUrl = null;
+  ultimulEveniment = null;
 };
