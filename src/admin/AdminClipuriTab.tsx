@@ -289,7 +289,14 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
             value={camp.youtube}
             placeholder="https://www.youtube.com/shorts/dQw4w9WgXcQ"
             disabled={ocupat}
-            onChange={(e) => setCamp({ ...camp, youtube: idYouTube(e.target.value) })}
+            /* Normalizează doar când RECUNOAȘTE ceva. Cu `idYouTube` aplicat
+               necondiționat, tastarea era imposibilă: fiecare caracter dădea un
+               text incomplet, deci șirul gol, deci câmpul se golea la fiecare
+               apăsare. Iar un link de pe altă gazdă dispărea fără explicație, în
+               loc să ajungă la validare, care are un mesaj pentru exact asta. */
+            onChange={(e) =>
+              setCamp({ ...camp, youtube: idYouTube(e.target.value) || e.target.value.trim() })
+            }
           />
           <small className="admin-config-hint">
             Lipește ce-ți dă „Distribuie" — orice formă (youtu.be, /shorts/, watch?v=), cu coada

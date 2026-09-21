@@ -185,11 +185,32 @@ describe('linkul lipit din YouTube', () => {
     expect(link().value).toBe('dQw4w9WgXcQ');
   });
 
-  it('un link de pe altă gazdă nu lasă nimic în câmp', async () => {
+  it('un link de pe altă gazdă rămâne în câmp și cade la validare', async () => {
+    // Nu se golește: un text care dispare fără explicație e mai rău decât unul
+    // care ajunge la validare, unde există un mesaj pentru exact cazul ăsta.
     randeaza();
     await screen.findByText(/Niciun clip/);
     fireEvent.change(link(), { target: { value: 'https://vimeo.com/123456789' } });
-    expect(link().value).toBe('');
+    expect(link().value).toBe('https://vimeo.com/123456789');
+
+    fireEvent.change(camp('Legenda'), { target: { value: 'Marți' } });
+    fireEvent.change(camp('Linkul postării'), {
+      target: { value: 'https://www.instagram.com/reel/AAAAA11111/' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
+    expect(saveTrainingReel).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/clip YouTube/);
+  });
+
+  it('se poate TASTA un link, nu doar lipi — caracterele nu se mai pierd', async () => {
+    randeaza();
+    await screen.findByText(/Niciun clip/);
+    // Tastarea trimite un `change` per caracter, cu text incomplet de fiecare
+    // dată. Înainte, fiecare dintre ele golea câmpul.
+    fireEvent.change(link(), { target: { value: 'https://yout' } });
+    expect(link().value).toBe('https://yout');
+    fireEvent.change(link(), { target: { value: 'https://youtu.be/dQw4w9WgXcQ' } });
+    expect(link().value).toBe('dQw4w9WgXcQ');
   });
 });
 
