@@ -156,8 +156,7 @@ test.describe('Despre noi — conținut', () => {
         contentType: 'application/json',
         body: JSON.stringify([
           {
-            video: '/reels/marti.mp4',
-            poster: '',
+            youtube: 'dQw4w9WgXcQ',
             caption: 'Marți în parc',
             url: 'https://www.instagram.com/reel/AAAAA11111/',
           },
@@ -169,7 +168,7 @@ test.describe('Despre noi — conținut', () => {
     // Banda vine prin RPC, deci se randează asincron. Fără așteptarea asta,
     // numerele se citesc dintr-un DOM în care banda încă nu există — adică din
     // exact starea pe care o verifică celălalt test.
-    await expect(page.locator('.e3-reel-video')).toHaveCount(1);
+    await expect(page.locator('.e3-reel')).toHaveCount(1);
 
     // Numerotarea rămâne continuă și cu banda în mijloc.
     const numere = await page
