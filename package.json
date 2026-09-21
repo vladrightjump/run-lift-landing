@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "check:deploy-config": "tsx scripts/check-deploy-config.ts",
-    "reel": "tsx scripts/encode-reel.ts",
     "build": "tsx scripts/check-deploy-config.ts && tsc -b && vite build && tsx scripts/write-version.ts",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",

@@ -149,21 +149,29 @@ E singura pagină cu **shell propriu de build** (`antrenament.html`). Meta de sh
 build, deci un card per pagină cere un fișier per pagină — altfel linkul ar arăta cardul ediției, cu
 o dată posibil trecută. Cardul e fix: spune „Antrenamentul săptămânii", nu conținutul săptămânii.
 
-## Banda „Instagram"
+## Banda cu clipuri de antrenament
 
-Secțiune configurabilă ca oricare alta (ordonabilă și ascunsă din tabul „Eveniment"). Clipurile se
-adaugă lipind linkul din Instagram — codul se extrage singur.
+Secțiune configurabilă ca oricare alta (ordonabilă și ascunsă din tabul „Eveniment"), dar clipurile
+nu țin de ediție: stau în `training_reels` și se administrează din tabul „Clipuri". Aceeași listă
+hrănește landing-ul și `/despre-noi`.
 
-Cardurile sunt **façade**: până când vizitatorul nu apasă pe unul, pagina nu cere nimic de la
-`instagram.com` (nici script, nici imagine, nici cookie — util și pentru punctul GDPR din
-`BACKLOG.md`). Clicul montează iframe-ul oficial în locul cardului, unul singur odată. Sub fiecare
-card rămâne linkul canonic, ca un iframe blocat să nu însemne conținut inaccesibil.
+Clipurile sunt găzduite pe YouTube, nelistate. Se adaugă lipind linkul în `/admin` — orice formă
+dă „Distribuie" — și nu mai există niciun pas pe laptop. Asta e schimbarea: banda a stat goală o
+lună sub un panou care cerea un link, și încă o zi sub o conductă care cerea `ffmpeg` și un commit.
 
-Fără niciun clip, secțiunea nu se randează **și** nu consumă un număr de secțiune. Posterele sunt
-assets locale (`public/reels/`), deci un poster nou cere deploy; un clip nou, nu.
+Banda e un **carusel**: redă un singur card, cel din centrul șinei, mut și în buclă. Cardurile care
+nu redau n-au niciun `iframe` în DOM — demontate, nu ascunse. Patru playere pornite simultan
+coboară pagina la ~37 fps, iar un player ascuns costă la fel de mult ca unul vizibil. Nimic nu
+pleacă spre gazdă până când șina nu se apropie de ecran.
 
-CSP-ul trebuie să păstreze `https://www.instagram.com` în `frame-src`, iar `Permissions-Policy`
-delegarea de fullscreen. Există teste care păzesc ambele.
+Fără niciun clip, secțiunea nu se randează **și** nu consumă un număr de secțiune.
+
+Linkul de sub fiecare card duce spre postarea de pe **Instagram**, nu spre YouTube: gazda ține
+fișierul, dar publicul e pe Instagram.
+
+Antetele de care depinde: `frame-src` și delegările de `autoplay` și `fullscreen` din
+`Permissions-Policy`, toate spre `https://www.youtube-nocookie.com`. `script-src` rămâne `'self'` —
+playerul e un iframe, nu API-ul de player al gazdei. Există teste care păzesc fiecare dintre ele.
 
 ## Decizii de arhitectură
 

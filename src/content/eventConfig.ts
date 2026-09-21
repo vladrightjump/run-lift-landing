@@ -190,8 +190,8 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 /**
  * `reels` din document — DOAR textele secțiunii.
  *
- * Clipurile nu mai trec pe aici: fișierele stau în `public/reels/`, iar
- * prezentarea lor în tabelul `training_reels`. Documentele publicate mai vechi încă poartă un `items`;
+ * Clipurile nu trec pe aici: sunt găzduite pe YouTube, iar prezentarea lor stă
+ * în tabelul `training_reels`. Documentele publicate mai vechi încă poartă un `items`;
  * e ignorat, iar validatorul din baza de date îl tratează ca opțional, deci
  * n-a fost nevoie de nicio migrare.
  */

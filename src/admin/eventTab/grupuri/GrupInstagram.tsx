@@ -9,10 +9,8 @@ type Props = {
 /**
  * „Instagram": textele secțiunii.
  *
- * Clipurile NU se mai editează de aici. Sunt fișiere proprii, servite de pe
- * aceeași origine, administrate din tabul „Clipuri" — pentru că nu țin de
- * ediție. Fișierul în sine se produce cu `npm run reel`: partea grea n-a fost
- * niciodată lista, ci un master de 200 MB pe care nicio pagină nu-l servește.
+ * Clipurile NU se editează de aici. Sunt găzduite pe YouTube și administrate
+ * din tabul „Clipuri" — pentru că nu țin de ediție.
  *
  * Ce a rămas aici chiar ține de ediție și chiar funcționează: titlul și textul
  * de lângă bandă. Un panou care ar fi păstrat rânduri de clipuri ar fi arătat
