@@ -23,6 +23,7 @@ const TOATE_CHEILE: TabAdmin[] = [
   'lansare',
   'sabloane',
   'eveniment',
+  'clipuri',
   'coming-soon',
 ];
 

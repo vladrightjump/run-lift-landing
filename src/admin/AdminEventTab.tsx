@@ -379,21 +379,6 @@ export const AdminEventTab = ({
     setCiorna((c) => (c ? { ...c, [cheie]: valoare } : c));
   };
 
-  /**
-   * Clipurile, scrise din starea CURENTĂ a ciornei.
-   *
-   * Funcțional, nu `seteaza('reels', {...ciorna.reels, items})`: undo-ul unei
-   * ștergeri pleacă din toast, deci rulează mai târziu, cu `ciorna` prinsă la
-   * randarea în care s-a apăsat „Șterge". Un titlu de secțiune editat între
-   * timp ar fi fost revenit odată cu clipul.
-   */
-  const seteazaReels = (items: EventConfig['reels']['items']) => {
-    setCiorna((c) => {
-      atinsa.current = true;
-      return c ? { ...c, reels: { ...c.reels, items } } : c;
-    });
-  };
-
   const seteazaRemindere = (reminders: EventConfig['reminders']) => {
     setCiorna((c) => {
       atinsa.current = true;
@@ -817,12 +802,7 @@ export const AdminEventTab = ({
             seteaza={seteaza}
           />
 
-          <GrupInstagram
-            ciorna={ciorna}
-            seteaza={seteaza}
-            seteazaReels={seteazaReels}
-            erori={erori}
-          />
+          <GrupInstagram ciorna={ciorna} seteaza={seteaza} />
 
         </div>
         </Blocat.Provider>

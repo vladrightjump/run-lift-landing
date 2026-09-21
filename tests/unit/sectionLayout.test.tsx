@@ -1,8 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { Landing } from '../../src/components/Landing';
 import { EventConfigProvider } from '../../src/hooks/useEventConfig';
 import { SNAPSHOT_CONFIG, type SectionLayoutEntry } from '../../src/content/eventConfig';
+import type { Reel } from '../../src/lib/supabase';
+
+/**
+ * Clipurile nu mai vin din configul publicat, ci din `public_training_reels()`.
+ * Se mock-uiește HOOK-UL, nu `fetch`: testul verifică numerotarea secțiunilor,
+ * nu drumul prin rețea, iar un hook mock-uit randează sincron — fără el fiecare
+ * assert ar fi trebuit să aștepte o promisiune.
+ */
+const { clipuriMock } = vi.hoisted(() => ({ clipuriMock: [] as Reel[] }));
+vi.mock('../../src/hooks/useTrainingReels', () => ({
+  useTrainingReels: () => clipuriMock,
+}));
+
+const UN_CLIP: Reel = {
+  video: '/reels/marti.mp4',
+  poster: '/reels/marti.jpg',
+  caption: 'Marți dimineața',
+  url: 'https://www.instagram.com/reel/ABC12345/',
+};
+
+/** Pune exact clipurile date în lista pe care o văd componentele. */
+const cuClipuri = (...reels: Reel[]) => {
+  clipuriMock.length = 0;
+  clipuriMock.push(...reels);
+};
 
 /**
  * Ordinea și vizibilitatea secțiunilor vin din configul publicat.
@@ -12,22 +37,12 @@ import { SNAPSHOT_CONFIG, type SectionLayoutEntry } from '../../src/content/even
  * („01, 03, 04") sau două secțiuni ar purta același număr.
  */
 
-const randeaza = (
-  layout: SectionLayoutEntry[],
-  mode?: 'full' | 'leaderboard',
-  reels = SNAPSHOT_CONFIG.reels
-) =>
+const randeaza = (layout: SectionLayoutEntry[], mode?: 'full' | 'leaderboard') =>
   render(
-    <EventConfigProvider override={{ ...SNAPSHOT_CONFIG, layout, reels }}>
+    <EventConfigProvider override={{ ...SNAPSHOT_CONFIG, layout }}>
       <Landing mode={mode} />
     </EventConfigProvider>
   );
-
-/** Un clip valid, pentru testele în care secțiunea „Instagram" trebuie să apară. */
-const CU_CLIPURI = {
-  ...SNAPSHOT_CONFIG.reels,
-  items: [{ code: 'ABC12345', kind: 'reel' as const, poster: '', caption: 'Marți dimineața' }],
-};
 
 /** Titlurile secțiunilor, în ordinea în care apar în DOM, cu numărul lor. */
 const sectiuniDinPagina = (): string[] =>
@@ -65,6 +80,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Lista de clipuri e un tablou PARTAJAT între teste. Fără golirea asta, un
+  // test adăugat la coadă ar moșteni clipurile ultimului test care a cerut
+  // unele — o dependență de ordine, adică exact ce nu vrei într-o suită.
+  clipuriMock.length = 0;
   // Fără asta, arborii randați se adună în `document` și interogările de mai
   // jos (care merg pe tot documentul) ar vedea și secțiunile testului anterior.
   cleanup();
@@ -142,57 +161,45 @@ describe('„Instagram" fără clipuri nu lasă gaură în numerotare', () => {
     // Capcana pe care o păzește testul: dacă secțiunea s-ar filtra prin
     // `return null` în componentă, ea AR CONSUMA poziția din lista filtrată,
     // iar „Locația" ar primi 03 în loc de 02.
+    cuClipuri();
     randeaza(CU_REELS);
     expect(sectiuniDinPagina()).toEqual(['01 Formatul', '02 Locația']);
   });
 
   it('cu un clip, își ia numărul din poziția ei', () => {
-    randeaza(CU_REELS, undefined, CU_CLIPURI);
+    cuClipuri(UN_CLIP);
+    randeaza(CU_REELS);
     expect(sectiuniDinPagina()).toEqual(['01 Formatul', '02 Instagram', '03 Locația']);
   });
 
   it('ascunsă din layout nu apare, chiar dacă are clipuri', () => {
-    randeaza(
-      [
-        { key: 'format', visible: true },
-        { key: 'reels', visible: false },
-      ],
-      undefined,
-      CU_CLIPURI
-    );
+    cuClipuri(UN_CLIP);
+    randeaza([
+      { key: 'format', visible: true },
+      { key: 'reels', visible: false },
+    ]);
     expect(sectiuniDinPagina()).toEqual(['01 Formatul']);
   });
 });
 
-describe('secțiunea „Instagram" nu cere nimic de la Instagram până la click', () => {
-  it('la randare nu există niciun iframe — doar façade-uri', () => {
-    randeaza([{ key: 'reels', visible: true }], undefined, CU_CLIPURI);
+describe('secțiunea „Instagram" nu cere NIMIC de la Instagram', () => {
+  it('nu montează niciun iframe — clipurile sunt fișiere proprii', () => {
+    cuClipuri(UN_CLIP);
+    randeaza([{ key: 'reels', visible: true }]);
     expect(document.querySelectorAll('iframe')).toHaveLength(0);
   });
 
-  it('clicul pe card montează iframe-ul, pe ruta cerută de `kind`', () => {
-    randeaza([{ key: 'reels', visible: true }], undefined, CU_CLIPURI);
-    fireEvent.click(screen.getByRole('button', { name: /Redă clipul/ }));
-    const frame = document.querySelector('iframe');
-    expect(frame?.getAttribute('src')).toBe(
-      'https://www.instagram.com/reel/ABC12345/embed/'
-    );
+  it('clipul e servit de pe aceeași origine', () => {
+    cuClipuri(UN_CLIP);
+    randeaza([{ key: 'reels', visible: true }]);
+    expect(document.querySelector('.e3-reel-video')?.getAttribute('src')).toBe('/reels/marti.mp4');
   });
 
-  it('linkul canonic e prezent de la început, ca plasă dacă iframe-ul e blocat', () => {
-    randeaza([{ key: 'reels', visible: true }], undefined, CU_CLIPURI);
+  it('linkul spre postare e singurul lucru care duce pe Instagram', () => {
+    cuClipuri(UN_CLIP);
+    randeaza([{ key: 'reels', visible: true }]);
     const link = screen.getByRole('link', { name: /Deschide pe Instagram/ });
     expect(link.getAttribute('href')).toBe('https://www.instagram.com/reel/ABC12345/');
-  });
-
-  it('un clip de tip „p" folosește ruta „p", nu „reel"', () => {
-    randeaza([{ key: 'reels', visible: true }], undefined, {
-      ...CU_CLIPURI,
-      items: [{ code: 'XYZ98765', kind: 'p' as const, poster: '', caption: '' }],
-    });
-    expect(screen.getByRole('link', { name: /Deschide pe Instagram/ }).getAttribute('href')).toBe(
-      'https://www.instagram.com/p/XYZ98765/'
-    );
   });
 });
 

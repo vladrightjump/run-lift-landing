@@ -76,6 +76,11 @@ export const GRUPURI: GrupNav[] = [
         descriere: 'Data, locul, locurile și ce arată pagina — se publică fără deploy',
       },
       {
+        cheie: 'clipuri',
+        eticheta: 'Clipuri',
+        descriere: 'Banda cu clipuri de antrenament — ordine, legende, ce se vede',
+      },
+      {
         cheie: 'coming-soon',
         eticheta: 'Coming Soon',
         descriere: 'Comutatorul ecranului de dinainte de lansare și țintele numărătorilor',

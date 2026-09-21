@@ -33,6 +33,7 @@ import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminEventTab } from './AdminEventTab';
 import { AdminComingSoonTab } from './AdminComingSoonTab';
 import { AdminAntrenamentTab } from './AdminAntrenamentTab';
+import { AdminClipuriTab } from './AdminClipuriTab';
 import { BlocSaptamanal } from './BlocSaptamanal';
 import { AdminNav } from './AdminNav';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
@@ -348,6 +349,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     livrare: null,
     lansare: null,
     eveniment: null,
+    clipuri: null,
     'coming-soon': null,
     sabloane: null,
   };
@@ -754,6 +756,10 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             deschideDialogNou={deschideDialogEditie}
             onDialogNouDeschis={() => setDeschideDialogEditie(false)}
           />
+        )}
+
+        {tab === 'clipuri' && (
+          <AdminClipuriTab inregistreazaGardaIesire={inregistreazaGardaIesire} />
         )}
 
         {tab === 'coming-soon' && (

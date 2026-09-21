@@ -100,16 +100,82 @@ test.describe('Despre noi — conținut', () => {
     await expect(ig).toHaveAttribute('rel', /noopener/);
   });
 
-  test('nu face requesturi către Supabase la încărcare', async ({ page }) => {
-    let hits = 0;
+  test('cere de la Supabase EXACT un lucru: clipurile', async ({ page }) => {
+    // Pagina a fost cândva complet fără backend. Acum banda cu clipuri se
+    // administrează din `/admin`, deci cere `public_training_reels` — și numai
+    // atât. Testul păzește granița, nu absența: un provider de config pus din
+    // greșeală peste pagină ar aduce `public_config` și ar cădea aici.
+    const rute: string[] = [];
     await page.route('**/rest/v1/**', (route) => {
-      hits += 1;
-      return route.abort();
+      rute.push(new URL(route.request().url()).pathname);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
     await page.goto('/despre-noi');
     await expect(page.locator('.dn-root')).toBeVisible();
     await page.waitForTimeout(1000);
-    expect(hits).toBe(0);
+
+    expect([...new Set(rute)]).toEqual(['/rest/v1/rpc/public_training_reels']);
+  });
+
+  test('nu cere nimic de la instagram.com la încărcare', async ({ page }) => {
+    // Clipurile de antrenament sunt fișiere proprii, servite de pe aceeași
+    // origine. Singurul lucru care duce pe Instagram e linkul de sub card.
+    const cereri: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().includes('instagram.com')) cereri.push(r.url());
+    });
+    await page.goto('/despre-noi');
+    await expect(page.locator('.dn-root')).toBeVisible();
+    await page.waitForTimeout(1000);
+    expect(cereri).toEqual([]);
+  });
+
+  test('numerotarea secțiunilor e continuă, cu sau fără clipuri', async ({ page }) => {
+    // Banda dispare când nu are clipuri. Numerele NU sunt scrise de mână, deci
+    // secțiunile de după ea se strâng singure în loc să lase 01, 02, 03, 05.
+    //
+    // Se citesc AMBELE clase, în ordinea din DOM: secțiunile paginii poartă
+    // `.dn-section-num`, iar banda își aduce numărul în `.e3-title-num`. Un
+    // test care le-ar citi doar pe primele ar începe să pice exact în ziua în
+    // care se adaugă primul clip real.
+    await page.route('**/rest/v1/rpc/public_training_reels', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+    );
+    await page.goto('/despre-noi');
+    const numere = await page.locator('.dn-section-num, .e3-reels .e3-title-num').allTextContents();
+    const asteptate = numere.map((_, i) => String(i + 1).padStart(2, '0'));
+    expect(numere.map((n) => n.trim())).toEqual(asteptate);
+  });
+
+  test('cu clipuri, banda apare între „Cum arată un antrenament" și „Unde ne antrenăm"', async ({
+    page,
+  }) => {
+    await page.route('**/rest/v1/rpc/public_training_reels', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            video: '/reels/marti.mp4',
+            poster: '',
+            caption: 'Marți în parc',
+            url: 'https://www.instagram.com/reel/AAAAA11111/',
+          },
+        ]),
+      })
+    );
+    await page.goto('/despre-noi');
+
+    // Banda vine prin RPC, deci se randează asincron. Fără așteptarea asta,
+    // numerele se citesc dintr-un DOM în care banda încă nu există — adică din
+    // exact starea pe care o verifică celălalt test.
+    await expect(page.locator('.e3-reel-video')).toHaveCount(1);
+
+    // Numerotarea rămâne continuă și cu banda în mijloc.
+    const numere = await page
+      .locator('.dn-section-num, .e3-reels .e3-title-num')
+      .allTextContents();
+    expect(numere.map((n) => n.trim())).toEqual(['01', '02', '03', '04', '05', '06']);
   });
 
   test('fără scroll orizontal pe mobil', async ({ page }) => {

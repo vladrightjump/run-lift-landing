@@ -10,5 +10,6 @@
     "src/**/*.{ts,tsx}",
     "scripts/**/*.{ts,mjs}",
     "tests/**/*.{ts,tsx}"
-  ]
+  ],
+  "ignoreBinaries": ["ffmpeg"]
 }

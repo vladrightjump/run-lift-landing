@@ -49,12 +49,6 @@ const remindere = (lista: ReminderEntry[]): string => {
     .join(' · ');
 };
 
-/** Clipurile, în ordinea din bandă — codul e singurul lucru care le identifică. */
-const clipuri = (c: EventConfig): string =>
-  c.reels.items.length === 0
-    ? 'niciunul'
-    : c.reels.items.map((r) => r.code || '(gol)').join(' · ');
-
 /**
  * Documentul, aplatizat în perechi citibile.
  *
@@ -90,7 +84,6 @@ const aplatizeaza = (
   ['Secțiunile paginii', sectiuni(c.layout, etichete)],
   ['Titlul secțiunii Instagram', c.reels.headline],
   ['Textul de lângă bandă', c.reels.body],
-  ['Clipurile din bandă', clipuri(c)],
   ['Ordinal scris manual', c.ordinalOverride ? c.ordinalOverride : 'derivat automat'],
 ];
 

@@ -149,23 +149,53 @@ paragraful în care e scrisă, ca să nu plece o frază care trimite spre nimic.
 
 ---
 
-## Banda „Instagram"
+## Banda cu clipuri de antrenament
 
-Din **`/admin` → „Eveniment" → grupul „Instagram"**, în ciornă ca orice altceva.
+Două locuri, împărțite după cine face ce: **fișierul** se produce pe calculatorul
+tău, **restul** se administrează din `/admin` → „Clipuri".
 
-1. Pe telefon: **Copiază linkul** la clipul dorit.
-2. „+ Adaugă clip" → lipești linkul în „Linkul clipului". Sub câmp apare ecoul
-   („cod: ABC12345 · reel") — dacă apare, l-am înțeles.
-3. Textul de sub card e opțional, dar e singurul lucru care spune ce se vede în clip.
-4. Posterul e opțional. Fără el, cardul se randează cu cifra lui mare — arată intenționat, nu
-   stricat. **Cu** poster: pui fișierul în `public/reels/` și scrii calea (`/reels/marti.jpg`).
-   Asta cere deploy; clipul în sine, nu.
+Motivul împărțirii e practic. Un reel exportat din Instagram are 150-250 MB la
+28-30 Mbps, iar un formular din browser n-are cum să-l transforme în ceva ce
+poate servi o pagină. Compresia stă unde poate rula; ordinea și legendele stau
+unde le schimbi des.
 
-**Prima dată când adaugi un clip**, secțiunea apare **jos de tot**: layout-ul completează
-secțiunile noi la final. Mut-o unde vrei cu ↑ din „Secțiunile paginii".
+### O dată per clip nou (cere deploy)
 
-Cât timp n-are niciun clip, secțiunea nu apare pe pagină, oricât ar fi de „vizibilă" în listă.
-Nu e un bug și nu strică numerotarea celorlalte.
+1. Exportă masterul din Instagram, sau ia-l de pe telefon.
+2. Rulează, dintr-un checkout al proiectului:
+
+   ```bash
+   npm run reel -- ~/Downloads/master.mp4 marti-in-parc
+   ```
+
+   Scrie `public/reels/marti-in-parc.mp4` și `public/reels/marti-in-parc.jpg`, și
+   îți spune cât cântărește. Peste 6 MB se oprește cu eroare — scurtează bucla
+   (`npm run reel -- <master> <slug> 10`) și încearcă din nou.
+3. Commit + merge în `main`, ca fișierele să ajungă pe site.
+
+### De fiecare dată după (fără deploy)
+
+Din **`/admin` → „Clipuri"**: lipești calea (`/reels/marti-in-parc.mp4`),
+posterul, legenda și linkul postării. Linkul poate fi lipit direct din Instagram
+— coada („?igsh=…") se taie singură.
+
+Tot de acolo: reordonare cu ↑/↓, editarea legendei, și comutatorul „se vede pe
+pagină" pentru un clip pe care vrei să-l scoți temporar. Toate au efect imediat.
+
+„Scoate" îl elimină din bandă, dar **nu** șterge fișierul din repo — un clip
+repus mai târziu nu trebuie re-encodat.
+
+### Ce e de reținut
+
+- **Legenda nu e opțională.** Elementul video e ascuns din arborele de
+  accesibilitate (un clip mut în buclă n-are ce anunța), deci legenda e tot ce
+  primește cineva care folosește un cititor de ecran.
+- Cât timp banda e goală, secțiunea nu apare — **nici pe landing, nici pe
+  „Despre noi"** — și nu strică numerotarea celorlalte. Nu e un bug.
+- Aceeași listă hrănește ambele pagini. Nu există „clipurile de pe landing" și
+  „clipurile de pe Despre noi".
+- Titlul și textul de lângă bandă rămân în `/admin` → „Evenimentul" → grupul
+  „Instagram": alea țin de ediție.
 
 ---
 

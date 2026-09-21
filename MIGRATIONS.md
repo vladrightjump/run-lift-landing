@@ -3,7 +3,7 @@
 Catalog al migrărilor care ating Run + Lift, cu granița clară față de aplicația vecină
 (gym-app + botul de Telegram) care împarte același proiect Supabase.
 
-Ultima actualizare: 19 septembrie 2026.
+Ultima actualizare: 21 septembrie 2026.
 
 ---
 
@@ -40,6 +40,7 @@ prefix `runlift_`:
 | 20260720092534 | `runlift_05_functions` | runlift | Funcțiile (`public_stats`, `confirm_signup`, `template_lookup`, `admin_*`, …) |
 | 20260720092558 | `runlift_06_triggers_rls_grants` | runlift | Triggere, RLS, grants |
 | 20260804113546 | `runlift_align_dynamic_event_edition` | runlift | Ediția curentă citită dinamic din `app_config` |
+| 20260921… | `runlift_training_reels` | runlift | Tabel `training_reels` (clipurile de antrenament — ordine, legendă, link, vizibilitate) + `public_training_reels()` și RPC-urile `admin_*_training_reel(s)`. Fișierele rămân în `public/reels/`, produse cu `npm run reel`. Vezi `supabase/sql/supabase-migration-training-reels.sql` |
 | 20260807… | `runlift_waitlist_autopromote` | runlift | Auto-promovare din waitlist la ștergerea unei înscrieri (trigger + `event_capacity` + email via pg_net). Vezi `supabase/sql/supabase-migration-waitlist-autopromote.sql` |
 | 2026…      | `runlift_registration_guards` | runlift | Cap capacitate + deadline pe `registrations` (trigger BEFORE INSERT → `event_full`/`registration_closed`), doar pt. formularul public; add/promote/auto-promote sar prin flag de bypass. `app_config.registration_deadline`. Vezi `supabase/sql/supabase-migration-registration-guards.sql` |
 | 2026…      | `runlift_admin_events_and_edit` | runlift | Tabel `admin_events` (audit) + logare în auto-promovare; RPC `admin_list_events` (feed backoffice) + `admin_update_registration` (editare in-place, păstrează `created_at`). Vezi `supabase/sql/supabase-migration-admin-events-edit.sql` |

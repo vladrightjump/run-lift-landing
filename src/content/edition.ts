@@ -133,14 +133,13 @@ export const EDITION = {
   },
 
   /**
-   * Secțiunea „Instagram" de pe landing. `items` gol e starea normală a
-   * instantaneului: clipurile se adaugă din `/admin`, nu de aici. Cât timp lista
-   * e goală, secțiunea nu se randează și nu consumă un număr de secțiune.
+   * Doar TEXTELE secțiunii „Instagram". Clipurile se administrează din
+   * `/admin` → Clipuri și nu trec prin documentul ediției. Cât timp banda n-are
+   * niciun clip, secțiunea nu se randează și nu consumă un număr de secțiune.
    */
   reels: {
     headline: 'Instagram',
     body: '',
-    items: [] as { code: string; kind: 'reel' | 'p'; poster: string; caption: string }[],
   },
 
   urls: {

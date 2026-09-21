@@ -17,6 +17,8 @@ import {
 } from '../content/format';
 import { EDITION } from '../content/edition';
 import { HERO_POSTER, heroVideoSrc } from '../lib/media';
+import { useTrainingReels } from '../hooks/useTrainingReels';
+import { ReelsRail } from './landing/ReelsRail';
 
 const POVESTE = [
   'Am început antrenamentele în parc, în trei prieteni, cu un scop simplu: să devenim mai fit și mai funcționali.',
@@ -64,9 +66,13 @@ const ORAR = [
 ];
 
 /**
- * Banda de sub hero. Constante de build (antrenamentele nu se mută odată cu
- * ediția), deci pagina rămâne fără NICIUN request către Supabase — proprietate
- * păzită de `tests/despre-noi.spec.ts`.
+ * Banda de sub hero. Constante de build: antrenamentele nu se mută odată cu
+ * ediția, deci nimic de aici nu cere nimic de la server.
+ *
+ * Pagina NU mai e complet fără backend, însă. Cere exact un lucru —
+ * `public_training_reels()` — fiindcă banda cu clipuri se administrează din
+ * `/admin`. Restul paginii rămâne cod. `tests/despre-noi.spec.ts` păzește acum
+ * granița asta: un request, nu zero, și numai acela.
  */
 const MARQUEE = [
   'Alergare',
@@ -77,9 +83,38 @@ const MARQUEE = [
   TRAINING_WHERE,
 ];
 
+type CheieSectiune = 'poveste' | 'comunitate' | 'antrenament' | 'clipuri' | 'unde' | 'info';
+
+/**
+ * Numerele secțiunilor, derivate din ce chiar se randează.
+ *
+ * Banda cu clipuri dispare când lista e goală, iar numere scrise de mână ar
+ * lăsa atunci o gaură (01, 02, 03, 05).
+ *
+ * Compromisul, spus pe față: lista e goală până răspunde `public_training_reels()`,
+ * deci secțiunile de după bandă se renumerotează o dată, la sosirea răspunsului
+ * (04→05, 05→06). Alternativa — să rezervăm numărul dinainte — ar fi lăsat
+ * exact gaura de mai sus când banda chiar e goală, adică starea normală. Saltul
+ * e vizibil doar dacă ești deja derulat acolo în prima secundă.
+ */
+const numerotare = (areClipuri: boolean) => {
+  const sectiuni: CheieSectiune[] = [
+    'poveste',
+    'comunitate',
+    'antrenament',
+    ...(areClipuri ? (['clipuri'] as const) : []),
+    'unde',
+    'info',
+  ];
+  return (cheie: CheieSectiune): string =>
+    String(sectiuni.indexOf(cheie) + 1).padStart(2, '0');
+};
+
 export const DespreNoi = () => {
   const { draft, setField: setFieldBase, errors, state, submit, hpProps } = useLaunchForm('despre-noi');
   const [eroare, setEroare] = useState('');
+  const reels = useTrainingReels();
+  const nr = numerotare(reels.length > 0);
   const [emailTrimis, setEmailTrimis] = useState('');
 
   // Același strat de mișcare ca pe landing — pagina asta rămăsese cu un hero
@@ -165,7 +200,7 @@ export const DespreNoi = () => {
       <section className="dn-section">
         <div className="dn-container">
           <div className="dn-section-head">
-            <span className="dn-section-num e3-title-num">01</span>
+            <span className="dn-section-num e3-title-num">{nr('poveste')}</span>
             <h2 className="e3-title">Povestea noastră</h2>
           </div>
           <div className="dn-story">
@@ -191,7 +226,7 @@ export const DespreNoi = () => {
       <section className="dn-section">
         <div className="dn-container">
           <div className="dn-section-head">
-            <span className="dn-section-num e3-title-num">02</span>
+            <span className="dn-section-num e3-title-num">{nr('comunitate')}</span>
             <h2 className="e3-title">Comunitatea</h2>
           </div>
           <div className="dn-stats">
@@ -209,7 +244,7 @@ export const DespreNoi = () => {
       <section className="dn-section">
         <div className="dn-container">
           <div className="dn-section-head">
-            <span className="dn-section-num e3-title-num">03</span>
+            <span className="dn-section-num e3-title-num">{nr('antrenament')}</span>
             <h2 className="e3-title">Cum arată un antrenament</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
@@ -226,10 +261,21 @@ export const DespreNoi = () => {
         </div>
       </section>
 
+      {/* Clipurile vin imediat după descrierea antrenamentului: secțiunea de
+          deasupra îl spune în cuvinte, banda îl arată. Aceeași listă ca pe
+          landing, administrată din `/admin` → Clipuri. Lista goală nu randează
+          nimic, iar numerotarea de mai sus se strânge singură. */}
+      <ReelsRail
+        reels={reels}
+        num={nr('clipuri')}
+        headline="Cum arată la noi"
+        body="Antrenamentele, filmate pe teren. Dacă vrei să vezi cum e înainte să vii, aici e."
+      />
+
       <section className="dn-section">
         <div className="dn-container">
           <div className="dn-section-head">
-            <span className="dn-section-num e3-title-num">04</span>
+            <span className="dn-section-num e3-title-num">{nr('unde')}</span>
             <h2 className="e3-title">Unde ne antrenăm</h2>
           </div>
           <div
@@ -320,7 +366,7 @@ export const DespreNoi = () => {
         <div className="dn-form-grid">
           <div>
             <div className="dn-section-head">
-              <span className="dn-section-num e3-title-num">05</span>
+              <span className="dn-section-num e3-title-num">{nr('info')}</span>
               <h2 className="e3-title">Vrei mai multe informații?</h2>
             </div>
             <p className="dn-form-intro" data-reveal>

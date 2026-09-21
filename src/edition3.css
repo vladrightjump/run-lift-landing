@@ -552,20 +552,34 @@
   width: 100%;
   aspect-ratio: 9 / 16;
   overflow: hidden;
-  /* Resetul de `<button>`: fără el, UA-ul adaugă padding și bordură proprie. */
-  padding: 0;
   border-radius: 0;
-  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.e3-reel-poster {
+/* Clipul umple cardul. Stă SUB poster cât timp acesta e încă pe ecran, de aceea
+   amândouă sunt absolute pe același inset. */
+.e3-reel-video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  /* Fotografiile vin de pe Instagram, deci nu-s calibrate pentru paleta asta.
-     Le temperăm ca să stea în bandă; la hover își recapătă culoarea. */
+  /* Filmările nu-s calibrate pentru paleta asta. Le temperăm ca să stea în
+     bandă; la hover își recapătă culoarea. */
+  filter: saturate(0.9) brightness(0.86);
+  transition: filter 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.e3-reel:hover .e3-reel-video { filter: none; transform: scale(1.03); }
+
+/* Poster-ul acoperă clipul până la primul cadru redat. Dispare din DOM după. */
+.e3-reel-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
   filter: saturate(0.9) brightness(0.82);
   transition: filter 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -585,6 +599,9 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Butonul de pornire. Apare DOAR la mișcare redusă, unde nimic nu pornește
+   singur: fără el, R5 ar cere o acțiune a vizitatorului pe un element care
+   n-are niciun control. Restul timpului cardul n-are ce apăsa. */
 .e3-reel-play {
   position: absolute;
   top: 50%;
@@ -595,6 +612,8 @@
   display: grid;
   place-items: center;
   padding-left: 3px; /* triunghiul optic nu e centrat geometric */
+  border: 0;
+  cursor: pointer;
   background: var(--e3-accent);
   color: var(--e3-bg);
   font-size: 15px;
@@ -604,11 +623,6 @@
   background: var(--e3-accent-hover);
   transform: translate(-50%, -50%) scale(1.12);
 }
-
-/* Cardul după click: iframe-ul Instagram, în locul façade-ului. Fundalul alb e
-   al lor și nu se poate stiliza — e cross-origin. */
-.e3-reel--live { background: #fff; border: 1px solid var(--e3-accent); }
-.e3-reel-frame { width: 100%; height: 100%; border: 0; display: block; }
 
 .e3-reel-caption {
   display: grid;
@@ -679,8 +693,9 @@
   /* Cardurile rămân clicabile; dispar doar zoomul și virajul de culoare.
      Butonul de play NU primește `transform: none` — centrarea lui ESTE un
      transform, iar anularea l-ar muta în colț. Se anulează doar creșterea. */
-  .e3-reel-poster, .e3-reel-play { transition: none !important; }
+  .e3-reel-poster, .e3-reel-video, .e3-reel-play { transition: none !important; }
   .e3-reel:hover .e3-reel-poster { transform: none; filter: saturate(0.9) brightness(0.82); }
+  .e3-reel:hover .e3-reel-video { transform: none; filter: saturate(0.9) brightness(0.86); }
   .e3-reel:hover .e3-reel-play { transform: translate(-50%, -50%); }
   /* Fără mișcare: ascundem clipul, rămâne fundalul întunecat + overlay. */
   .e3-hero-video { display: none; }
