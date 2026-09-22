@@ -5,7 +5,7 @@ import {
   semnaleDeAtentie,
   NODURI_DESFASURARE,
   type SemnaleAdmin,
-  type TabAdmin,
+  type EcranAdmin,
 } from './stareCurenta';
 import { reperele, type Reper } from './reperele';
 import { descrieMoment } from './eventConfigFields';
@@ -13,7 +13,7 @@ import { descrieMoment } from './eventConfigFields';
 type Props = {
   semnale: SemnaleAdmin;
   /** Saltul spre tabul unde se rezolvă un nod sau un semnal. */
-  onTab: (tab: TabAdmin) => void;
+  onTab: (tab: EcranAdmin) => void;
   /** Calea scurtă de creare a ediției următoare. */
   onEditieNoua: () => void;
   /** Ediție încheiată: nodurile se văd, scrierile nu se oferă. */
@@ -29,7 +29,7 @@ type Props = {
  * consumat deja, ce mai e de făcut, și unde se rezolvă fiecare.
  *
  * Linia de timp e forma pe care organizatorul o are oricum în minte. Meniul îl
- * obliga s-o traducă în taburi: „reminderele" e un grup din tabul
+ * obliga s-o traducă în ecrane: „reminderele" e un grup din tabul
  * „Evenimentul", „cine s-a înscris" e alt tab, „ediția următoare" e un dialog
  * ascuns în al treilea. Aici fiecare acțiune stă pe nodul de care ține.
  *
@@ -37,12 +37,12 @@ type Props = {
  */
 
 /** Ce acțiune stă pe fiecare nod, și dacă e o scriere. */
-const ACTIUNI: Partial<Record<Reper['cheie'], { eticheta: string; tab: TabAdmin; scrie: boolean }>> =
+const ACTIUNI: Partial<Record<Reper['cheie'], { eticheta: string; ecran: EcranAdmin; scrie: boolean }>> =
   {
-    launchAt: { eticheta: 'Schimbă momentul', tab: 'coming-soon', scrie: true },
-    registrationDeadline: { eticheta: 'Vezi lista', tab: 'participanti', scrie: false },
-    reminder: { eticheta: 'Schimbă orarul', tab: 'eveniment', scrie: true },
-    start: { eticheta: 'Editează ediția', tab: 'eveniment', scrie: true },
+    launchAt: { eticheta: 'Schimbă momentul', ecran: 'coming-soon', scrie: true },
+    registrationDeadline: { eticheta: 'Vezi lista', ecran: 'participanti', scrie: false },
+    reminder: { eticheta: 'Schimbă orarul', ecran: 'eveniment', scrie: true },
+    start: { eticheta: 'Editează ediția', ecran: 'eveniment', scrie: true },
   };
 
 /**
@@ -119,7 +119,7 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
                   <button
                     type="button"
                     className="admin-btn-ghost admin-linie-actiune"
-                    onClick={() => onTab(actiune.tab)}
+                    onClick={() => onTab(actiune.ecran)}
                   >
                     {actiune.eticheta}
                   </button>
@@ -159,13 +159,13 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
           // încarce". Spunem explicit că am verificat.
           <span className="admin-linie-ok">Nimic care să ceară atenție.</span>
         ) : (
-          atentie.map(({ cheie, text, tab, urgent }) =>
-            tab ? (
+          atentie.map(({ cheie, text, ecran, urgent }) =>
+            ecran ? (
               <button
                 key={cheie}
                 type="button"
                 className={`admin-linie-atentie-semnal${urgent ? ' urgent' : ''}`}
-                onClick={() => onTab(tab)}
+                onClick={() => onTab(ecran)}
               >
                 {text}
                 <span aria-hidden="true"> →</span>

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { AdminNav } from '../../src/admin/AdminNav';
 import { AdminEditionTabs } from '../../src/admin/AdminEditionTabs';
-import type { TabAdmin } from '../../src/admin/stareCurenta';
+import type { EcranAdmin } from '../../src/admin/stareCurenta';
 import type { AdminEdition } from '../../src/lib/adminApi';
 
 /**
@@ -17,66 +17,84 @@ import type { AdminEdition } from '../../src/lib/adminApi';
 afterEach(cleanup);
 
 const CONTOARE = {
+  desfasurare: null,
   participanti: 20,
   email: null,
   livrare: null,
   lansare: 41,
   sabloane: null,
   eveniment: null,
+  clipuri: null,
+  antrenament: null,
   'coming-soon': null,
-} as Record<TabAdmin, number | null>;
+} as Record<EcranAdmin, number | null>;
 
-const randeazaNav = (tab: TabAdmin, onTab = vi.fn()) => {
-  render(<AdminNav tab={tab} onTab={onTab} contorTab={CONTOARE} nelivrate={0} />);
-  return onTab;
+const randeazaNav = (onEcran = vi.fn()) => {
+  render(<AdminNav onEcran={onEcran} contorEcran={CONTOARE} nelivrate={0} />);
+  return onEcran;
 };
 
-describe('navigația nu promite un widget pe care nu-l implementează', () => {
+describe('registrul arată ce e în fiecare ecran, fără să-l deschizi', () => {
   it('nu declară semantică de tab fără tabpanel-uri', () => {
     // A fost `role="tab"` + `aria-selected`, dar fără `aria-controls`, fără
     // `tabpanel` și fără navigare cu săgeți. Un cititor de ecran anunța
     // „tab 1 din 3" și săgeata nu făcea nimic.
-    randeazaNav('participanti');
+    randeazaNav();
     expect(document.querySelectorAll('[role="tab"]')).toHaveLength(0);
     expect(document.querySelectorAll('[role="tablist"]')).toHaveLength(0);
   });
 
-  it('marchează unde ești prin `aria-current`', () => {
-    randeazaNav('livrare');
-    const curente = [...document.querySelectorAll('[aria-current="true"]')].map((e) =>
-      e.textContent?.trim()
-    );
-    // Grupul care conține tabul, plus tabul însuși.
-    expect(curente.some((t) => t?.startsWith('Comunicare'))).toBe(true);
-    expect(curente.some((t) => t?.startsWith('Livrare'))).toBe(true);
+  it('este o navigație cu nume, nu butoane răzlețe', () => {
+    randeazaNav();
+    expect(screen.getByRole('navigation', { name: /Toate ecranele/ })).toBeTruthy();
+    expect(document.querySelectorAll('.admin-registru-lista').length).toBeGreaterThan(0);
   });
 
-  it('este o listă de navigație, nu butoane răzlețe', () => {
-    randeazaNav('participanti');
-    expect(screen.getByRole('navigation', { name: /Secțiunile/ })).toBeTruthy();
-    expect(document.querySelectorAll('.admin-nav ul').length).toBeGreaterThan(0);
-  });
-});
-
-describe('clicul pe grupul în care ești deja nu te mută', () => {
-  it('grupul activ e inert', () => {
-    // Aflat pe „Livrare" și apăsând „Comunicare" (ca să-l pliezi, sau din
-    // reflex), erai aruncat pe „Trimite emailuri" și pierdeai rândul citit.
-    const onTab = randeazaNav('livrare');
-    fireEvent.click(screen.getByRole('button', { name: /Comunicare/ }));
-    expect(onTab).not.toHaveBeenCalled();
+  it('arată descrierea fiecărui ecran, nu doar numele', () => {
+    // Descrierile existau și înainte, dar ajungeau doar în `title`: se citeau
+    // numai la hover, numai cu mouse, niciodată de un cititor de ecran.
+    randeazaNav();
+    expect(screen.getByText('Ce email a ajuns la cine și ce n-a ajuns')).toBeTruthy();
+    expect(
+      screen.getByText('Programul săptămânal — ce scrie pe pagina de antrenament')
+    ).toBeTruthy();
   });
 
-  it('un grup închis deschide prima lui frunză', () => {
-    const onTab = randeazaNav('livrare');
-    fireEvent.click(screen.getByRole('button', { name: /Oameni/ }));
-    expect(onTab).toHaveBeenCalledWith('participanti');
+  it('toate grupurile sînt deschise odată — nimic nu cere un clic ca să se vadă', () => {
+    randeazaNav();
+    for (const nume of ['Oameni', 'Comunicare', 'Conținutul site-ului']) {
+      expect(screen.getByText(nume)).toBeTruthy();
+    }
+    expect(screen.getByRole('button', { name: /Trimite emailuri/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Clipuri/ })).toBeTruthy();
   });
 
-  it('frunzele grupului activ rămân clicabile', () => {
-    const onTab = randeazaNav('livrare');
+  it('nu se listează pe sine — registrul stă deja pe ecranul de pornire', () => {
+    randeazaNav();
+    expect(screen.queryByRole('button', { name: /Desfășurarea ediției/ })).toBeNull();
+  });
+
+  it('un clic deschide ecranul', () => {
+    const onEcran = randeazaNav();
     fireEvent.click(screen.getByRole('button', { name: /Trimite emailuri/ }));
-    expect(onTab).toHaveBeenCalledWith('email');
+    expect(onEcran).toHaveBeenCalledWith('email');
+  });
+
+  it('antrenamentele se deschid din registru, nu dintr-o manetă a cromului', () => {
+    const onEcran = randeazaNav();
+    fireEvent.click(screen.getByRole('button', { name: /Antrenamente/ }));
+    expect(onEcran).toHaveBeenCalledWith('antrenament');
+  });
+
+  it('contorul spune ce e înăuntru fără să deschizi', () => {
+    randeazaNav();
+    expect(screen.getByRole('button', { name: /Participanți/ }).textContent).toContain('20');
+  });
+
+  it('emailurile nelivrate sînt o alertă, nu un contor', () => {
+    render(<AdminNav onEcran={vi.fn()} contorEcran={CONTOARE} nelivrate={3} />);
+    const livrare = screen.getByRole('button', { name: /Livrare/ });
+    expect(livrare.querySelector('.admin-tab-alert')?.textContent).toBe('3');
   });
 });
 

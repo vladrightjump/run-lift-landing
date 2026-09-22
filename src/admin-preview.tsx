@@ -135,6 +135,51 @@ const clipuri: AdminReelRow[] = [
   },
 ];
 
+/**
+ * Programul săptămânal.
+ *
+ * Trei săptămâni publicate, una dintre ele ascunsă, plus o versiune înlocuită
+ * — ca ecranul să arate și istoricul, nu doar lista curată.
+ */
+const antrenamente = [
+  {
+    id: 'w1',
+    numar: 1,
+    status: 'published' as const,
+    titlu: 'Bază aerobă',
+    corp: '3 × 8 min alergare ușoară\nPauză 2 min între blocuri',
+    vizibil: true,
+    creat_la: cuZileInUrma(21),
+  },
+  {
+    id: 'w2',
+    numar: 2,
+    status: 'published' as const,
+    titlu: 'Forță și tempo',
+    corp: '5 × 3 min tempo\nGenuflexiuni 4 × 12\nPlank 3 × 45s',
+    vizibil: true,
+    creat_la: cuZileInUrma(14),
+  },
+  {
+    id: 'w2-vechi',
+    numar: 2,
+    status: 'superseded' as const,
+    titlu: 'Forță și tempo',
+    corp: '4 × 3 min tempo\nGenuflexiuni 3 × 12',
+    vizibil: true,
+    creat_la: cuZileInUrma(16),
+  },
+  {
+    id: 'w3',
+    numar: 3,
+    status: 'published' as const,
+    titlu: 'Săptămâna cursei',
+    corp: 'Doar alergare ușoară\nOdihnă cu o zi înainte',
+    vizibil: false,
+    creat_la: cuZileInUrma(3),
+  },
+];
+
 const RASPUNSURI: Record<string, unknown> = {
   admin_check_token: true,
   admin_list_registrations: inscrieri,
@@ -146,6 +191,7 @@ const RASPUNSURI: Record<string, unknown> = {
   admin_list_email_templates: sabloane,
   admin_get_event_config: [configPublicat],
   admin_list_training_reels: clipuri,
+  admin_list_weekly_workout: antrenamente,
   admin_login: 'token-preview',
   admin_logout: null,
 };

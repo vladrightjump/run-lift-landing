@@ -260,7 +260,12 @@ describe('editarea unei săptămâni', () => {
     );
 
     // Săptămâna deschisă e tot 2, nu „—": ancorarea a urmat id-ul nou.
-    await waitFor(() => expect(screen.getByText(/Săptămâna 2$/)).toBeDefined());
+    // Legenda editorului, nu bara: identitatea apare acum în amândouă.
+    await waitFor(() =>
+      expect(
+        [...document.querySelectorAll('legend')].some((l) => l.textContent === 'Săptămâna 2')
+      ).toBe(true)
+    );
 
     fireEvent.change(camp(/Antrenamentul/), { target: { value: 'a doua corectură' } });
     fireEvent.click(butonSalveaza());
@@ -273,6 +278,41 @@ describe('editarea unei săptămâni', () => {
         'a doua corectură',
         true
       )
+    );
+  });
+});
+
+describe('verbele comune ale ecranelor de conținut', () => {
+  const butonPublica = () => screen.getByRole('button', { name: 'Publică' });
+
+  it('„Publică" salvează ȘI arată săptămâna pe pagină', async () => {
+    // Aici săptămânile sînt un program, iar `vizibil` alege care se vede: de
+    // asta verbul nu poate însemna același lucru ca pe clipuri.
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'text nou' } });
+    fireEvent.click(butonPublica());
+
+    await waitFor(() =>
+      expect(saveWeeklyWorkout).toHaveBeenLastCalledWith('t', 's2', 'S2', 'text nou', true)
+    );
+  });
+
+  it('„Salvează" păstrează vizibilitatea de acum, n-o schimbă', async () => {
+    // O săptămână ascunsă rămâne ascunsă: salvarea e despre text, nu despre
+    // ce se vede pe pagină.
+    listWeeklyWorkout.mockResolvedValue(
+      programDe(3).map((s) => (s.id === 's3' ? { ...s, vizibil: false } : s))
+    );
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S3' })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: 'S3' }));
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'corectură' } });
+    fireEvent.click(butonSalveaza());
+
+    await waitFor(() =>
+      expect(saveWeeklyWorkout).toHaveBeenLastCalledWith('t', 's3', 'S3', 'corectură', false)
     );
   });
 });

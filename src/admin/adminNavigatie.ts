@@ -1,36 +1,48 @@
-import type { TabAdmin } from './stareCurenta';
+import type { EcranAdmin } from './stareCurenta';
 
 /**
- * Gruparea taburilor, ca modul pur.
+ * Registrul de ecrane, ca modul pur.
  *
- * De ce a fost nevoie: cele șapte taburi erau o listă plată care amesteca
- * OAMENI cu SETĂRI („Participanți", „Livrare", „Eveniment", „Coming Soon"…).
- * Ca să găsești ceva trebuia să știi deja în care dintre ele stă, iar căutarea
- * trecea de regulă prin două înainte să nimerească.
+ * Gruparea urmează ce FACE ecranul, nu tabelul din spate. Organizatorul vine cu
+ * una din patru întrebări: „unde e ediția?", „cine vine?", „ce le scriu?",
+ * „cum arată pagina?". Grupurile sînt exact astea patru.
  *
- * Gruparea urmează treaba, nu tabelul din spate. Organizatorul vine cu una din
- * trei întrebări: „cine vine?", „ce le scriu?", „cum arată pagina?". Grupurile
- * sînt exact astea trei.
+ * Ce s-a schimbat față de versiunea cu taburi: „desfășurarea" era un bloc
+ * permanent deasupra tuturor taburilor, iar antrenamentele o manetă a cromului.
+ * Amândouă sînt acum ecrane obișnuite — au adresă, contor și pot fi ținta unui
+ * semnal de atenție, ceea ce niciuna nu putea înainte.
  *
- * Frunzele au rămas ACELEAȘI taburi ca înainte — nu s-a mutat conținut, doar
- * s-a pus un acoperiș peste el. Așa muscle memory-ul nu se rupe: ce era în
- * „Livrare" e tot în „Livrare", doar că sub „Comunicare".
+ * `descriere` nu mai e decorativă. Era scrisă și până acum, dar ajungea doar în
+ * `title`, deci se vedea numai la hover, numai cu mouse. Registrul o dă mai
+ * departe ecranului care o arată.
  */
 
 export type GrupNav = {
-  cheie: 'oameni' | 'comunicare' | 'setup';
+  cheie: 'desfasurare' | 'oameni' | 'comunicare' | 'continut';
   eticheta: string;
   /** Ce răspunde grupul, în cuvintele organizatorului. */
   intrebare: string;
-  taburi: { cheie: TabAdmin; eticheta: string; descriere: string }[];
+  ecrane: { cheie: EcranAdmin; eticheta: string; descriere: string }[];
 };
 
 export const GRUPURI: GrupNav[] = [
   {
+    cheie: 'desfasurare',
+    eticheta: 'Desfășurarea',
+    intrebare: 'Unde e ediția?',
+    ecrane: [
+      {
+        cheie: 'desfasurare',
+        eticheta: 'Desfășurarea ediției',
+        descriere: 'Reperele ediției, ce urmează și ce cere atenție acum',
+      },
+    ],
+  },
+  {
     cheie: 'oameni',
     eticheta: 'Oameni',
     intrebare: 'Cine vine?',
-    taburi: [
+    ecrane: [
       {
         cheie: 'participanti',
         eticheta: 'Participanți',
@@ -47,7 +59,7 @@ export const GRUPURI: GrupNav[] = [
     cheie: 'comunicare',
     eticheta: 'Comunicare',
     intrebare: 'Ce le scriu?',
-    taburi: [
+    ecrane: [
       {
         cheie: 'email',
         eticheta: 'Trimite emailuri',
@@ -66,10 +78,10 @@ export const GRUPURI: GrupNav[] = [
     ],
   },
   {
-    cheie: 'setup',
-    eticheta: 'Setup',
+    cheie: 'continut',
+    eticheta: 'Conținutul site-ului',
     intrebare: 'Cum arată pagina?',
-    taburi: [
+    ecrane: [
       {
         cheie: 'eveniment',
         eticheta: 'Evenimentul',
@@ -81,6 +93,11 @@ export const GRUPURI: GrupNav[] = [
         descriere: 'Banda cu clipuri de antrenament — ordine, legende, ce se vede',
       },
       {
+        cheie: 'antrenament',
+        eticheta: 'Antrenamente',
+        descriere: 'Programul săptămânal — ce scrie pe pagina de antrenament',
+      },
+      {
         cheie: 'coming-soon',
         eticheta: 'Coming Soon',
         descriere: 'Comutatorul ecranului de dinainte de lansare și țintele numărătorilor',
@@ -90,34 +107,40 @@ export const GRUPURI: GrupNav[] = [
 ];
 
 /** Toate frunzele, în ordinea de pe ecran. */
-export const TOATE_TABURILE = GRUPURI.flatMap((g) => g.taburi);
+export const TOATE_ECRANELE = GRUPURI.flatMap((g) => g.ecrane);
 
-/** Grupul în care stă un tab. Fără el, deschiderea unui tab n-ar deschide grupul. */
-export const grupulTabului = (tab: TabAdmin): GrupNav['cheie'] => {
-  const grup = GRUPURI.find((g) => g.taburi.some((t) => t.cheie === tab));
-  // Un tab care nu e în nicio grupă e o greșeală de configurare, nu o stare de
-  // rulare: cade pe primul grup ca să nu rămână ecranul gol.
+/** Grupul în care stă un ecran. Fără el, deschiderea unui ecran n-ar deschide grupul. */
+export const grupulEcranului = (ecran: EcranAdmin): GrupNav['cheie'] => {
+  const grup = GRUPURI.find((g) => g.ecrane.some((e) => e.cheie === ecran));
+  // Un ecran care nu e în niciun grup e o greșeală de configurare, nu o stare
+  // de rulare: cade pe primul grup ca să nu rămână ecranul gol.
   return grup?.cheie ?? GRUPURI[0].cheie;
 };
 
-/** Eticheta unei frunze, pentru titluri și „ești aici". */
-export const etichetaTabului = (tab: TabAdmin): string =>
-  TOATE_TABURILE.find((t) => t.cheie === tab)?.eticheta ?? '';
+/** Un șir oarecare (dintr-un fragment de URL) e cheia unui ecran real? */
+export const esteEcran = (cheie: string): cheie is EcranAdmin =>
+  TOATE_ECRANELE.some((e) => e.cheie === cheie);
+
+/** Eticheta unui ecran, pentru titluri și „ești aici". */
+export const etichetaEcranului = (ecran: EcranAdmin): string =>
+  TOATE_ECRANELE.find((e) => e.cheie === ecran)?.eticheta ?? '';
 
 /**
  * Contorul unui grup = suma frunzelor lui.
  *
  * Rostul: dacă grupul e închis, numărul de pe el trebuie să spună tot ce e
  * înăuntru. Altfel gruparea ar ascunde exact informația pentru care existau
- * contoarele pe taburi.
+ * contoarele pe ecrane.
  *
  * `null` (date încă nesosite) nu contează ca zero: un „0" în timpul încărcării
  * e o minciună scurtă, dar tocmai pe aia o citește organizatorul când intră.
  */
 export const contorGrup = (
   grup: GrupNav,
-  contorTab: Record<TabAdmin, number | null>
+  contorEcran: Record<EcranAdmin, number | null>
 ): number | null => {
-  const valori = grup.taburi.map((t) => contorTab[t.cheie]).filter((v): v is number => v !== null);
+  const valori = grup.ecrane
+    .map((e) => contorEcran[e.cheie])
+    .filter((v): v is number => v !== null);
   return valori.length === 0 ? null : valori.reduce((a, b) => a + b, 0);
 };

@@ -41,18 +41,33 @@ const { SNAPSHOT_CONFIG } = await import('../../src/content/eventConfig');
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  window.location.hash = '';
 });
+
+/**
+ * Randează dashboardul deja aflat pe un ecran anume.
+ *
+ * De ce prin fragment și nu prin clicuri: aterizarea e acum pe „Desfășurarea",
+ * iar majoritatea testelor de mai jos sînt despre participanți, nu despre
+ * drumul până la ei. Fragmentul e drumul scurt — și, în trecere, dovedește că
+ * adresa chiar alege ecranul.
+ */
+const randeaza = (ecran = 'participanti') => {
+  window.location.hash = `#${ecran}`;
+  return render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+};
+
 
 describe('AdminDashboard', () => {
   it('randează un rând pentru fiecare participant al ediției', async () => {
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
 
     expect(await screen.findByText('Ana Popescu')).toBeDefined();
     expect(screen.getByText('Mihai Ionescu')).toBeDefined();
   });
 
   it('cere lista pentru ediția curentă, nu pentru toate edițiile', async () => {
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
 
     await waitFor(() => {
       expect(api.current?.listRegistrations).toHaveBeenCalled();
@@ -64,17 +79,21 @@ describe('AdminDashboard', () => {
   it('numără emailurile nelivrate prin logica din deliveryLog, nu printr-o copie', async () => {
     // Un eșec pe „Reminder" trebuie să rămână numărat chiar dacă aceeași adresă
     // are o trimitere reușită pe alt subiect. Cheia e adresă+subiect.
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza('desfasurare');
 
-    expect(await screen.findByText('Ana Popescu')).toBeDefined();
-    const alerta = document.querySelector('.admin-tab-alert');
+    await screen.findByLabelText('Desfășurarea ediției');
+    const alerta = await waitFor(() => {
+      const el = document.querySelector('.admin-tab-alert');
+      expect(el).not.toBeNull();
+      return el;
+    });
     expect(alerta?.textContent).toBe('1');
   });
 
   it('insigna NU raportează „complet" cât timp o comunicare datorată lipsește', async () => {
     // Regresia pe care o ascundea harta cheiată doar pe adresă: Ana are o
     // confirmare reușită, dar niciun reminder. Insigna veche arăta „✓ trimis".
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
 
     await screen.findByText('Ana Popescu');
     const insigne = [...document.querySelectorAll('.admin-mail-badge')];
@@ -87,10 +106,36 @@ describe('AdminDashboard', () => {
   });
 });
 
+describe('AdminDashboard — alerta de livrare', () => {
+  it('te găsește pe orice ecran, nu doar acasă', async () => {
+    // Cât timp navigația era permanentă, alerta călătorea cu ea. De când
+    // registrul stă pe ecranul de pornire, o alertă lăsată acolo s-ar vedea
+    // numai dacă te întorci — exact pe dos față de ce cere un email nelivrat.
+    randeaza('sabloane');
+    await screen.findByText('Șabloane de email');
+    const alerta = await screen.findByRole('button', { name: /emailuri n-au ajuns|email n-a ajuns/ });
+    expect(alerta.textContent).toContain('1');
+  });
+
+  it('un clic pe ea duce la ecranul unde se rezolvă', async () => {
+    randeaza('sabloane');
+    await screen.findByText('Șabloane de email');
+    fireEvent.click(await screen.findByRole('button', { name: /email n-a ajuns/ }));
+    await waitFor(() => expect(window.location.hash).toBe('#livrare'));
+  });
+
+  it('fără emailuri nelivrate nu apare deloc', async () => {
+    api.current!.listEmailLog.mockResolvedValue([]);
+    randeaza('sabloane');
+    await screen.findByText('Șabloane de email');
+    expect(screen.queryByRole('button', { name: /n-a ajuns|n-au ajuns/ })).toBeNull();
+  });
+});
+
 describe('AdminDashboard — undo la ștergere', () => {
   /** Șterge primul participant și întoarce funcția de undo din toast. */
   const stergePrimul = async () => {
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
     await screen.findByText('Ana Popescu');
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Șterge' })[0]);
@@ -144,38 +189,40 @@ describe('AdminDashboard — undo la ștergere', () => {
 
 describe('AdminDashboard — navigarea între taburi', () => {
   /**
-   * Deschide un tab așa cum o face organizatorul: întâi grupul, apoi tabul.
-   * Navigația are două niveluri, iar taburile unui grup inactiv nici nu sunt
-   * randate — de asta clicul direct pe „Șabloane" n-ar găsi nimic.
+   * Deschide un ecran așa cum o face organizatorul: din registrul de pe
+   * ecranul de pornire. Toate grupurile sînt deschise, deci ecranul se alege
+   * dintr-un singur clic.
    */
-  const deschide = async (grup: string, eticheta: string) => {
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
-    await screen.findByText('Ana Popescu');
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(grup) }));
+  const deschide = async (eticheta: string) => {
+    randeaza('desfasurare');
+    await screen.findByLabelText('Desfășurarea ediției');
     fireEvent.click(await screen.findByRole('button', { name: new RegExp(eticheta) }));
   };
 
-  it('pornește pe „Participanți", cu tabelul lor', async () => {
+  it('aterizarea e pe desfășurare, nu pe tabelul de participanți', async () => {
+    // R4: prima întrebare la deschiderea backoffice-ului e „unde e ediția?",
+    // nu „cine s-a înscris".
+    window.location.hash = '';
     render(<AdminDashboard token="token-test" onLogout={() => {}} />);
-    expect(await screen.findByText('Ana Popescu')).toBeDefined();
-    expect(screen.getByLabelText('Caută în lista de participanți')).toBeDefined();
+    expect(await screen.findByLabelText('Desfășurarea ediției')).toBeDefined();
+    expect(screen.queryByLabelText('Caută în lista de participanți')).toBeNull();
   });
 
   it('deschiderea „Șabloane" schimbă vederea și lasă participanții în urmă', async () => {
-    await deschide('Comunicare', 'Șabloane');
+    await deschide('Șabloane');
     expect(await screen.findByText('Șabloane de email')).toBeDefined();
     expect(screen.queryByLabelText('Caută în lista de participanți')).toBeNull();
   });
 
   it('deschiderea „Livrare" schimbă vederea', async () => {
-    await deschide('Comunicare', 'Livrare');
+    await deschide('Livrare');
     await waitFor(() =>
       expect(screen.queryByLabelText('Caută în lista de participanți')).toBeNull()
     );
   });
 
   it('un singur tab e randat odată — vederile nu se suprapun', async () => {
-    await deschide('Comunicare', 'Șabloane');
+    await deschide('Șabloane');
     await screen.findByText('Șabloane de email');
     expect(screen.queryByRole('button', { name: 'Export CSV' })).toBeNull();
   });
@@ -185,7 +232,7 @@ describe('AdminDashboard — navigarea între taburi', () => {
     // nimic din celelalte taburi. Fără ea, o condiție de randare stricată
     // (`{true && …}` în loc de `{tab === '…' && …}`) ar trece neobservată,
     // pentru că testul de mai sus se uită doar la tabul deschis.
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
     await screen.findByText('Ana Popescu');
 
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDefined();
@@ -212,9 +259,8 @@ describe('AdminDashboard — ciorna nesalvată din tabul „Evenimentul"', () =>
         published_at: '2026-08-01T10:00:00Z',
       },
     ]);
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
-    await screen.findByText('Ana Popescu');
-    fireEvent.click(screen.getByRole('button', { name: /Setup/ }));
+    randeaza('desfasurare');
+    await screen.findByLabelText('Desfășurarea ediției');
     fireEvent.click(await screen.findByRole('button', { name: /Evenimentul/ }));
     // Pornirea unei ciorne din ediția publicată: din clipa asta există ceva de
     // pierdut.
@@ -226,36 +272,35 @@ describe('AdminDashboard — ciorna nesalvată din tabul „Evenimentul"', () =>
     await screen.findByRole('button', { name: 'Renunță' });
   };
 
-  it('plecarea din tab întreabă, iar „nu" păstrează tabul și ciorna', async () => {
+  /** Calea de întoarcere din cadru — drumul obișnuit de ieșire dintr-un ecran. */
+  const inapoi = () =>
+    fireEvent.click(screen.getByRole('button', { name: /Desfășurarea ediției/ }));
+
+  it('plecarea de pe ecran întreabă, iar „nu" păstrează ecranul și ciorna', async () => {
     const confirma = vi.spyOn(window, 'confirm').mockReturnValue(false);
     await deschideEvenimentul();
 
-    // Clicul pe grupul „Oameni" duce pe prima lui frunză, „Participanți" —
-    // adică e chiar o plecare din tabul „Evenimentul".
-    fireEvent.click(screen.getByRole('button', { name: /Oameni/ }));
+    inapoi();
 
     expect(confirma).toHaveBeenCalled();
     // Tot pe „Evenimentul", cu ciorna deschisă.
     expect(screen.getByRole('button', { name: 'Renunță' })).toBeDefined();
-    expect(screen.queryByLabelText('Caută în lista de participanți')).toBeNull();
   });
 
-  it('plecarea confirmată schimbă tabul', async () => {
+  it('plecarea confirmată schimbă ecranul', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     await deschideEvenimentul();
 
-    fireEvent.click(screen.getByRole('button', { name: /Oameni/ }));
+    inapoi();
 
-    await waitFor(() =>
-      expect(screen.getByLabelText('Caută în lista de participanți')).toBeDefined()
-    );
+    await waitFor(() => expect(screen.getByLabelText('Desfășurarea ediției')).toBeDefined());
     expect(screen.queryByRole('button', { name: 'Renunță' })).toBeNull();
   });
 });
 
 describe('AdminDashboard — căutarea în participanți', () => {
   const cauta = async (text: string) => {
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
     await screen.findByText('Ana Popescu');
     fireEvent.change(screen.getByLabelText('Caută în lista de participanți'), {
       target: { value: text },
@@ -306,7 +351,7 @@ describe('AdminDashboard — exportul CSV', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => {});
 
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
     await screen.findByText('Ana Popescu');
     fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
 
@@ -330,6 +375,7 @@ describe('AdminDashboard — sesiunea expirată', () => {
     api.current!.listRegistrations.mockRejectedValue(new InvalidTokenError());
     const onLogout = vi.fn();
 
+    window.location.hash = '#participanti';
     render(<AdminDashboard token="token-test" onLogout={onLogout} />);
 
     await waitFor(() => expect(onLogout).toHaveBeenCalled());
@@ -349,7 +395,7 @@ describe('AdminDashboard — lista de așteptare', () => {
   /** Șterge singurul rând de pe listă și întoarce butonul de undo din toast. */
   const stergeDeAsteptare = async () => {
     api.current!.listWaitlist.mockResolvedValue([PE_LISTA]);
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
     await screen.findByText('Elena Rusu');
 
     const rand = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
@@ -400,7 +446,7 @@ describe('AdminDashboard — lista de așteptare', () => {
 
   it('dublu-clicul pe „Promovează" nu trimite două cereri', async () => {
     api.current!.listWaitlist.mockResolvedValue([PE_LISTA]);
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
     await screen.findByText('Elena Rusu');
 
     const rand = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
@@ -419,7 +465,7 @@ describe('AdminDashboard — lista de așteptare', () => {
     // scoaterea optimistă dispare — nu prima.
     api.current!.listWaitlist.mockResolvedValue([PE_LISTA]);
     api.current!.promoteWaitlist.mockImplementationOnce(() => new Promise(() => {}));
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
     await screen.findByText('Elena Rusu');
 
     const rand = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
@@ -432,7 +478,7 @@ describe('AdminDashboard — lista de așteptare', () => {
     const alta = { ...PE_LISTA, id: 'w2', nume: 'Radu Vasile', email: 'radu@exemplu.ro' };
     api.current!.listWaitlist.mockResolvedValue([PE_LISTA, alta]);
     api.current!.promoteWaitlist.mockImplementationOnce(() => new Promise(() => {}));
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
     await screen.findByText('Elena Rusu');
 
     const primul = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
@@ -447,7 +493,7 @@ describe('AdminDashboard — lista de așteptare', () => {
   it('butonul redevine activ după un eșec, ca acțiunea să poată fi reîncercată', async () => {
     api.current!.listWaitlist.mockResolvedValue([PE_LISTA]);
     api.current!.promoteWaitlist.mockRejectedValueOnce(new Error('Supabase 500: boom'));
-    render(<AdminDashboard token="token-test" onLogout={() => {}} />);
+    randeaza();
     await screen.findByText('Elena Rusu');
 
     const rand = screen.getByText('Elena Rusu').closest('.admin-row') as HTMLElement;
