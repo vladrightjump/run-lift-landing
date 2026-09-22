@@ -224,3 +224,19 @@ describe('AdminEmailTab — reminderele nu se mai difuzează de mână', () => {
     expect(await screen.findByRole('button', { name: /Trimite email/ })).toBeTruthy();
   });
 });
+
+describe('alegerea audienței', () => {
+  it('e un grup radio, nu butoane a căror selecție se vede doar prin culoare', () => {
+    // Erau cinci butoane cu clasa `active`: un cititor de ecran nu putea spune
+    // care audiență e aleasă, iar săgețile nu parcurgeau setul.
+    monteaza([]);
+    expect(screen.getByRole('group', { name: 'Cui trimiți' })).toBeTruthy();
+    const alese = screen.getAllByRole('radio').filter((r) => (r as HTMLInputElement).checked);
+    expect(alese).toHaveLength(1);
+  });
+
+  it('descrierea variantei „toți de până acum" se vede, nu stă în `title`', () => {
+    monteaza([]);
+    expect(screen.getByText(/înscriși vreodată la o ediție/)).toBeTruthy();
+  });
+});

@@ -16,6 +16,7 @@ import {
 } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
 import { ziLunaOra } from '../lib/formatare';
+import { GrupRadio } from './controale/GrupRadio';
 import { useSesiuneAdmin } from './adminSession';
 
 type Props = {
@@ -377,24 +378,25 @@ export const AdminDeliveryTab = ({
         </div>
       </section>
 
+      {/* Patru variante exclusive, deci un grup radio. Erau butoane a caror
+          selectie se vedea numai prin clasa `activ`: un cititor de ecran nu
+          putea spune care filtru e pornit. */}
       <div className="admin-sursa-tabs">
-        {(
-          [
-            ['toate', `Toate (${intrari.length})`],
-            ['trimise', `Trimise (${nrTrimise})`],
-            ['esuate', `Nelivrate (${nelivrate.length})`],
-            ['fara-email', `Fără niciun email (${fataDeEmail.length})`],
-          ] as const
-        ).map(([val, eticheta]) => (
-          <button
-            key={val}
-            type="button"
-            className={`admin-sursa-tab${filtru === val ? ' activ' : ''}`}
-            onClick={() => setFiltru(val)}
-          >
-            {eticheta}
-          </button>
-        ))}
+        <GrupRadio
+          eticheta="Ce arăți"
+          valoare={filtru}
+          onSchimba={setFiltru}
+          optiuni={[
+            { valoare: 'toate', eticheta: `Toate (${intrari.length})` },
+            { valoare: 'trimise', eticheta: `Trimise (${nrTrimise})` },
+            { valoare: 'esuate', eticheta: `Nelivrate (${nelivrate.length})` },
+            {
+              valoare: 'fara-email',
+              eticheta: `Fără niciun email (${fataDeEmail.length})`,
+              descriere: 'Participanți care n-au primit nimic — nu rânduri de jurnal',
+            },
+          ]}
+        />
       </div>
 
       {!readOnly && nerezolvabile > 0 && (

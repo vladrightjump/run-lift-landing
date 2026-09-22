@@ -14,6 +14,7 @@ import type {
 } from '../lib/adminApi';
 import { cheieDifuzare, ultimaDifuzare, audienteAmbigue } from './sendLock';
 import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
+import { GrupRadio } from './controale/GrupRadio';
 import type { Audience, Recipient } from './emailAudience';
 import { useEventConfig } from '../hooks/useEventConfig';
 import { ziLunaOra, ziSiLuna } from '../lib/formatare';
@@ -310,44 +311,33 @@ export const AdminEmailTab = ({
     }
   };
 
+  /*
+   * Cinci variante exclusive, deci un grup radio — nu cinci butoane.
+   *
+   * Erau butoane a caror selectie se vedea numai prin clasa `active`: un
+   * cititor de ecran nu putea spune care e aleasa, iar sagetile nu parcurgeau
+   * setul. Descrierea ultimei variante statea in `title`, deci se citea numai
+   * la hover, numai cu mouse.
+   */
   const butoaneAudienta = (
     <div className="admin-email-audience">
-      <button
-        type="button"
-        className={`admin-email-template${audience === 'participanti' ? ' active' : ''}`}
-        onClick={() => switchAudience('participanti')}
-      >
-        Participanți ({rows.length})
-      </button>
-      <button
-        type="button"
-        className={`admin-email-template${audience === 'eveniment' ? ' active' : ''}`}
-        onClick={() => switchAudience('eveniment')}
-      >
-        Listă de așteptare ({waitlist.length})
-      </button>
-      <button
-        type="button"
-        className={`admin-email-template${audience === 'lansare' ? ' active' : ''}`}
-        onClick={() => switchAudience('lansare')}
-      >
-        Anunță-mă la lansare ({launchRows.length})
-      </button>
-      <button
-        type="button"
-        className={`admin-email-template${audience === 'toti' ? ' active' : ''}`}
-        onClick={() => switchAudience('toti')}
-      >
-        Toți ({totiRecipients.length})
-      </button>
-      <button
-        type="button"
-        className={`admin-email-template${audience === 'istoric' ? ' active' : ''}`}
-        onClick={() => switchAudience('istoric')}
-        title="Toți cei înscriși vreodată la o ediție, o dată pe persoană — pentru anunțul unei ediții noi"
-      >
-        Toți de până acum
-      </button>
+      <GrupRadio
+        eticheta="Cui trimiți"
+        valoare={audience}
+        onSchimba={switchAudience}
+        optiuni={[
+          { valoare: 'participanti', eticheta: `Participanți (${rows.length})` },
+          { valoare: 'eveniment', eticheta: `Listă de așteptare (${waitlist.length})` },
+          { valoare: 'lansare', eticheta: `Anunță-mă la lansare (${launchRows.length})` },
+          { valoare: 'toti', eticheta: `Toți (${totiRecipients.length})` },
+          {
+            valoare: 'istoric',
+            eticheta: 'Toți de până acum',
+            descriere:
+              'Toți cei înscriși vreodată la o ediție, o dată pe persoană — pentru anunțul unei ediții noi',
+          },
+        ]}
+      />
     </div>
   );
 
