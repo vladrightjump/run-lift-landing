@@ -73,7 +73,16 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
   const [randuri, setRanduri] = useState<AdminReelRow[] | null>(null);
   const [deschis, setDeschis] = useState<Deschis>({ fel: 'nou' });
   const [camp, setCamp] = useState(GOL);
+  /**
+   * S-a TASTAT ceva de la deschidere încoace.
+   *
+   * Separat de „are conținut": la deschiderea unui clip existent câmpurile se
+   * umplu, deci un „nesalvat" dedus din ele ar fi mințit din prima clipă și ar
+   * fi cerut confirmare la plecare fără ca nimic să se fi schimbat.
+   */
+  const [atins, setAtins] = useState(false);
   const [ocupat, setOcupat] = useState(false);
+  const [scrieAcum, setScrieAcum] = useState<'salvare' | 'publicare' | null>(null);
   const [refuz, setRefuz] = useState<string | null>(null);
 
   // Reîncărcarea listei nu trebuie să calce peste ce tocmai s-a tastat în
@@ -102,13 +111,21 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
   const deschideNou = () => {
     setDeschis({ fel: 'nou' });
     setCamp(GOL);
+    setAtins(false);
     setRefuz(null);
   };
 
   const deschideExistent = (r: AdminReelRow) => {
     setDeschis({ fel: 'existent', id: r.id });
     setCamp({ youtube: r.youtube, caption: r.caption, url: r.url });
+    setAtins(false);
     setRefuz(null);
+  };
+
+  /** Scrie într-un câmp, marcând editorul ca atins. */
+  const scrieCamp = (parte: Partial<typeof GOL>) => {
+    setCamp((c) => ({ ...c, ...parte }));
+    setAtins(true);
   };
 
   /** Câmpurile stricate, ca listă — bara arată câte sînt. */
@@ -126,8 +143,10 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
   }
   const probleme = Object.keys(problemeCampuri);
 
+  /** Există ceva de salvat — spre deosebire de „s-a schimbat ceva". */
+  const areContinut = camp.youtube !== '' || camp.caption !== '' || camp.url !== '';
   /** Editor atins, dar netrimis: exact ce s-ar pierde la schimbarea ecranului. */
-  const nesalvat = camp.youtube !== '' || camp.caption !== '' || camp.url !== '';
+  const nesalvat = atins;
 
   /**
    * Un editor neatins n-are „probleme" — are câmpuri goale.
@@ -136,11 +155,12 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
    * tastat ceva: exact pe dos față de ajutorul care trebuie să ajungă ÎNAINTE
    * de a greși.
    */
-  const problemeAfisate = nesalvat ? probleme : [];
+  const problemeAfisate = areContinut ? probleme : [];
 
   const scrie = async (vizibil: boolean) => {
     if (!token || ocupat || probleme.length > 0) return;
     setOcupat(true);
+    setScrieAcum(vizibil ? 'publicare' : 'salvare');
     setRefuz(null);
     try {
       await saveTrainingReel(
@@ -163,6 +183,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
       if (!onAuthError(err)) setRefuz(mesajRefuzClip(err));
     } finally {
       setOcupat(false);
+      setScrieAcum(null);
     }
   };
 
@@ -190,6 +211,10 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
       await incarca();
     } catch (err) {
       if (!onAuthError(err)) setRefuz(mesajRefuzClip(err));
+      // Mutarea nu e atomică: dacă s-a oprit la jumătate, serverul a aplicat
+      // deja o parte din pași. Fără reîncărcare, ecranul ar arăta ordinea de
+      // dinainte, iar următoarea mutare ar porni dintr-o poziție greșită.
+      await incarca();
     } finally {
       setOcupat(false);
     }
@@ -253,11 +278,11 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
         probleme: problemeAfisate,
         refuz,
         ocupat,
-        poatePublica: nesalvat && probleme.length === 0,
+        poatePublica: areContinut && probleme.length === 0,
         onSalveaza: () => scrie(false),
         onPublica: () => scrie(true),
-        seSalveaza: ocupat,
-        sePublica: ocupat,
+        seSalveaza: scrieAcum === 'salvare',
+        sePublica: scrieAcum === 'publicare',
       }}
     >
       {randuri === null ? (
@@ -324,7 +349,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
                apăsare. Iar un link de pe altă gazdă dispărea fără explicație, în
                loc să ajungă la validare, care are un mesaj pentru exact asta. */
             onChange={(e) =>
-              setCamp({ ...camp, youtube: idYouTube(e.target.value) || e.target.value.trim() })
+              scrieCamp({ youtube: idYouTube(e.target.value) || e.target.value.trim() })
             }
           />
         </CampEditare>
@@ -339,7 +364,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
             value={camp.caption}
             placeholder="Marți seara, în parc"
             disabled={ocupat}
-            onChange={(e) => setCamp({ ...camp, caption: e.target.value })}
+            onChange={(e) => scrieCamp({ caption: e.target.value })}
           />
         </CampEditare>
 
@@ -355,7 +380,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
             value={camp.url}
             placeholder="https://www.instagram.com/reel/ABC12345/"
             disabled={ocupat}
-            onChange={(e) => setCamp({ ...camp, url: curataUrl(e.target.value) })}
+            onChange={(e) => scrieCamp({ url: curataUrl(e.target.value) })}
           />
         </CampEditare>
 

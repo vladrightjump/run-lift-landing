@@ -268,6 +268,26 @@ describe('salvarea', () => {
     expect(saveTrainingReel.mock.calls[0][1]).toBeNull();
   });
 
+  it('deschiderea unui clip existent nu-l declară nesalvat', async () => {
+    // Câmpurile se umplu la deschidere. Un „nesalvat" dedus din ele ar minți
+    // din prima clipă și ar cere confirmare la plecare fără nicio schimbare.
+    listTrainingReels.mockResolvedValue([rand()]);
+    randeaza();
+    await screen.findByText('Marți în parc');
+    fireEvent.click(screen.getByRole('button', { name: 'Editează' }));
+    expect(screen.queryByText('Nesalvat')).toBeNull();
+    expect(garda()()).toBe(true);
+  });
+
+  it('după o tastare, clipul deschis devine nesalvat', async () => {
+    listTrainingReels.mockResolvedValue([rand()]);
+    randeaza();
+    await screen.findByText('Marți în parc');
+    fireEvent.click(screen.getByRole('button', { name: 'Editează' }));
+    fireEvent.change(camp('Legenda'), { target: { value: 'Altceva' } });
+    expect(screen.getByText('Nesalvat')).toBeDefined();
+  });
+
   it('editarea unui clip existent îi trimite id-ul', async () => {
     listTrainingReels.mockResolvedValue([rand()]);
     randeaza();

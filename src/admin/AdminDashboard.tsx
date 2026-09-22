@@ -648,6 +648,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         countdown={
           cd.done ? null : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`
         }
+        nelivrate={nelivrate}
         onLogout={onLogout}
       >
         {/* Selectorul de ediție apare DOAR pe ecranele care filtrează pe

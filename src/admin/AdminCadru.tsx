@@ -10,6 +10,8 @@ type Props = {
   faza: FazaSite;
   /** Numărătoarea spre anunț, cât timp n-a trecut. */
   countdown: string | null;
+  /** Emailuri nelivrate — alerta care trebuie să te găsească pe orice ecran. */
+  nelivrate: number;
   onLogout: () => void;
   children: ReactNode;
 };
@@ -40,6 +42,7 @@ export const AdminCadru = ({
   onEcran,
   faza,
   countdown,
+  nelivrate,
   onLogout,
   children,
 }: Props) => (
@@ -76,6 +79,21 @@ export const AdminCadru = ({
               <span className="countdown-dot" />
               {countdown}
             </span>
+          )}
+
+          {/* Cât timp navigația era permanentă, alerta de livrare călătorea cu
+              ea. De când registrul stă pe ecranul de pornire, o alertă lăsată
+              acolo s-ar vedea numai dacă te întorci acasă — exact pe dos față
+              de ce cere un email care n-a ajuns. */}
+          {nelivrate > 0 && (
+            <button
+              type="button"
+              className="admin-alerta-livrare"
+              onClick={() => onEcran('livrare')}
+            >
+              <span className="admin-tab-alert">{nelivrate}</span>
+              {nelivrate === 1 ? 'email n-a ajuns' : 'emailuri n-au ajuns'}
+            </button>
           )}
 
           <div className="admin-comutator">

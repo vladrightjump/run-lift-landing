@@ -106,6 +106,32 @@ describe('AdminDashboard', () => {
   });
 });
 
+describe('AdminDashboard — alerta de livrare', () => {
+  it('te găsește pe orice ecran, nu doar acasă', async () => {
+    // Cât timp navigația era permanentă, alerta călătorea cu ea. De când
+    // registrul stă pe ecranul de pornire, o alertă lăsată acolo s-ar vedea
+    // numai dacă te întorci — exact pe dos față de ce cere un email nelivrat.
+    randeaza('sabloane');
+    await screen.findByText('Șabloane de email');
+    const alerta = await screen.findByRole('button', { name: /emailuri n-au ajuns|email n-a ajuns/ });
+    expect(alerta.textContent).toContain('1');
+  });
+
+  it('un clic pe ea duce la ecranul unde se rezolvă', async () => {
+    randeaza('sabloane');
+    await screen.findByText('Șabloane de email');
+    fireEvent.click(await screen.findByRole('button', { name: /email n-a ajuns/ }));
+    await waitFor(() => expect(window.location.hash).toBe('#livrare'));
+  });
+
+  it('fără emailuri nelivrate nu apare deloc', async () => {
+    api.current!.listEmailLog.mockResolvedValue([]);
+    randeaza('sabloane');
+    await screen.findByText('Șabloane de email');
+    expect(screen.queryByRole('button', { name: /n-a ajuns|n-au ajuns/ })).toBeNull();
+  });
+});
+
 describe('AdminDashboard — undo la ștergere', () => {
   /** Șterge primul participant și întoarce funcția de undo din toast. */
   const stergePrimul = async () => {

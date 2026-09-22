@@ -1113,6 +1113,16 @@
   }
   .admin-previz-legenda { font-size: 13px; color: var(--e3-text); }
 
+  /* Alerta de livrare, in antet: un email care n-a ajuns trebuie sa te
+     gaseasca pe orice ecran, nu doar daca te intorci acasa. */
+  .admin-alerta-livrare {
+    display: flex; align-items: center; gap: 4px; cursor: pointer;
+    background: none; border: 1px solid var(--e3-danger); padding: 5px 10px;
+    color: var(--e3-danger); font-family: Archivo, sans-serif;
+    font-size: 12px; font-weight: 700;
+  }
+  .admin-alerta-livrare:hover { background: var(--e3-surface); }
+
   /* ---- Calea de intoarcere ----
      Apare doar cand ai unde sa te intorci. Pe ecranul de pornire ar fi un
      buton care nu duce nicaieri. */
