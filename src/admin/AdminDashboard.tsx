@@ -54,7 +54,7 @@ import { AdminAsteptare } from './AdminAsteptare';
 import { AdminCifre } from './AdminCifre';
 import { AdminRandAdaugare } from './AdminRandAdaugare';
 import { DialogPrezenta } from './DialogPrezenta';
-import { fazaSite, ETICHETA_FAZA, type TabAdmin } from './stareCurenta';
+import { fazaSite, ETICHETA_FAZA, type EcranAdmin } from './stareCurenta';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
 import { ziSiLuna } from '../lib/formatare';
@@ -100,7 +100,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
   const [prezentaRow, setPrezentaRow] = useState<AdminRegistration | null>(null);
-  const [tab, setTab] = useState<TabAdmin>('participanti');
+  const [tab, setTab] = useState<EcranAdmin>('participanti');
   /**
    * Garda tabului curent: „pot pleca de aici?".
    *
@@ -112,7 +112,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
    * sferturi de gaură.
    */
   const gardaIesire = useRef<(() => boolean) | null>(null);
-  const schimbaTab = useCallback((urmator: TabAdmin) => {
+  const schimbaTab = useCallback((urmator: EcranAdmin) => {
     setTab((curent) => {
       if (urmator === curent) return curent;
       if (gardaIesire.current && !gardaIesire.current()) return curent;
@@ -343,13 +343,15 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
    * afișat cât timp datele se încarcă e o minciună scurtă — dar exact aia o
    * citește organizatorul în clipa în care intră.
    */
-  const contorTab: Record<TabAdmin, number | null> = {
+  const contorEcran: Record<EcranAdmin, number | null> = {
+    desfasurare: null,
     participanti: rows === null ? null : all.length,
     email: null,
     livrare: null,
     lansare: null,
     eveniment: null,
     clipuri: null,
+    antrenament: null,
     'coming-soon': null,
     sabloane: null,
   };
@@ -724,7 +726,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             le deschizi. Contorul lipsește cât timp datele nu au sosit — un „0"
             afișat în timpul încărcării ar fi o minciună scurtă, dar tocmai pe
             aia o citește organizatorul când intră. */}
-        <AdminNav tab={tab} onTab={schimbaTab} contorTab={contorTab} nelivrate={nelivrate} />
+        <AdminNav ecran={tab} onTab={schimbaTab} contorEcran={contorEcran} nelivrate={nelivrate} />
 
         {tab === 'sabloane' && (
           <AdminTemplatesTab />

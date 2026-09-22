@@ -102,7 +102,7 @@ describe('semnalele de atenție', () => {
   it('emailurile nelivrate sunt urgente și duc la tabul „Livrare"', () => {
     const [semnal] = semnaleDeAtentie({ ...fara, nelivrate: 3 }, 'landing');
     expect(semnal.urgent).toBe(true);
-    expect(semnal.tab).toBe('livrare');
+    expect(semnal.ecran).toBe('livrare');
     expect(semnal.text).toContain('3 emailuri');
   });
 

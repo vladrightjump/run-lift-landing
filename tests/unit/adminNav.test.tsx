@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { AdminNav } from '../../src/admin/AdminNav';
 import { AdminEditionTabs } from '../../src/admin/AdminEditionTabs';
-import type { TabAdmin } from '../../src/admin/stareCurenta';
+import type { EcranAdmin } from '../../src/admin/stareCurenta';
 import type { AdminEdition } from '../../src/lib/adminApi';
 
 /**
@@ -17,17 +17,20 @@ import type { AdminEdition } from '../../src/lib/adminApi';
 afterEach(cleanup);
 
 const CONTOARE = {
+  desfasurare: null,
   participanti: 20,
   email: null,
   livrare: null,
   lansare: 41,
   sabloane: null,
   eveniment: null,
+  clipuri: null,
+  antrenament: null,
   'coming-soon': null,
-} as Record<TabAdmin, number | null>;
+} as Record<EcranAdmin, number | null>;
 
-const randeazaNav = (tab: TabAdmin, onTab = vi.fn()) => {
-  render(<AdminNav tab={tab} onTab={onTab} contorTab={CONTOARE} nelivrate={0} />);
+const randeazaNav = (ecran: EcranAdmin, onTab = vi.fn()) => {
+  render(<AdminNav ecran={ecran} onTab={onTab} contorEcran={CONTOARE} nelivrate={0} />);
   return onTab;
 };
 

@@ -1,10 +1,10 @@
-import type { TabAdmin } from './stareCurenta';
-import { GRUPURI, grupulTabului, contorGrup } from './adminNavigatie';
+import type { EcranAdmin } from './stareCurenta';
+import { GRUPURI, grupulEcranului, contorGrup } from './adminNavigatie';
 
 type Props = {
-  tab: TabAdmin;
-  onTab: (tab: TabAdmin) => void;
-  contorTab: Record<TabAdmin, number | null>;
+  ecran: EcranAdmin;
+  onTab: (ecran: EcranAdmin) => void;
+  contorEcran: Record<EcranAdmin, number | null>;
   /** Emailuri nelivrate — singurul contor care e o alertă, nu o informație. */
   nelivrate: number;
 };
@@ -28,8 +28,8 @@ type Props = {
  * ecran care aude „tab 1 din 3" și apasă săgeata așteaptă să se schimbe ceva.
  * Mai bine o navigație corectă decât un widget pe jumătate.
  */
-export const AdminNav = ({ tab, onTab, contorTab, nelivrate }: Props) => {
-  const grupActiv = grupulTabului(tab);
+export const AdminNav = ({ ecran, onTab, contorEcran, nelivrate }: Props) => {
+  const grupActiv = grupulEcranului(ecran);
 
   return (
     <nav className="admin-nav" aria-label="Secțiunile backoffice-ului">
@@ -44,11 +44,11 @@ export const AdminNav = ({ tab, onTab, contorTab, nelivrate }: Props) => {
       <ul className="admin-nav-grupuri">
         {GRUPURI.map((g) => {
           const activ = g.cheie === grupActiv;
-          const contor = contorGrup(g, contorTab);
+          const contor = contorGrup(g, contorEcran);
           // Alerta urcă la grup: dacă „Livrare" are emailuri nelivrate, trebuie
           // să se vadă și cu grupul „Comunicare" închis — altfel gruparea ar
           // ascunde exact ce cere atenție.
-          const alerta = g.taburi.some((t) => t.cheie === 'livrare') && nelivrate > 0;
+          const alerta = g.ecrane.some((t) => t.cheie === 'livrare') && nelivrate > 0;
           return (
             <li key={g.cheie}>
               <button
@@ -60,7 +60,7 @@ export const AdminNav = ({ tab, onTab, contorTab, nelivrate }: Props) => {
                 // reflex), ai fi aruncat pe „Trimite emailuri" și ai pierde
                 // rândul pe care tocmai îl citeai.
                 onClick={() => {
-                  if (!activ) onTab(g.taburi[0].cheie);
+                  if (!activ) onTab(g.ecrane[0].cheie);
                 }}
               >
                 <span className="admin-nav-grup-nume">
@@ -81,15 +81,15 @@ export const AdminNav = ({ tab, onTab, contorTab, nelivrate }: Props) => {
 
       <ul className="admin-nav-taburi">
         {GRUPURI.filter((g) => g.cheie === grupActiv).flatMap((g) =>
-          g.taburi.map(({ cheie, eticheta, descriere }) => {
-            const contor = contorTab[cheie];
+          g.ecrane.map(({ cheie, eticheta, descriere }) => {
+            const contor = contorEcran[cheie];
             const alerta = cheie === 'livrare' && nelivrate > 0;
             return (
               <li key={cheie}>
                 <button
                   type="button"
-                  aria-current={tab === cheie ? true : undefined}
-                  className={`admin-nav-tab${tab === cheie ? ' activ' : ''}`}
+                  aria-current={ecran === cheie ? true : undefined}
+                  className={`admin-nav-tab${ecran === cheie ? ' activ' : ''}`}
                   title={descriere}
                   onClick={() => onTab(cheie)}
                 >

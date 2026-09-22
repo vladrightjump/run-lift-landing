@@ -214,7 +214,7 @@ describe('AdminDashboard — ciorna nesalvată din tabul „Evenimentul"', () =>
     ]);
     render(<AdminDashboard token="token-test" onLogout={() => {}} />);
     await screen.findByText('Ana Popescu');
-    fireEvent.click(screen.getByRole('button', { name: /Setup/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Conținutul site-ului/ }));
     fireEvent.click(await screen.findByRole('button', { name: /Evenimentul/ }));
     // Pornirea unei ciorne din ediția publicată: din clipa asta există ceva de
     // pierdut.

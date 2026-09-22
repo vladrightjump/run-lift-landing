@@ -14,8 +14,19 @@ import { reperele, type Reper } from './reperele';
 
 export type FazaSite = 'coming-soon' | 'landing' | 'cine-vine' | 'dupa-cursa';
 
-/** Tabul spre care duce un semnal de atenție. Ține de UI, nu de logică. */
-export type TabAdmin =
+/**
+ * Ecranele backoffice-ului — lista canonică.
+ *
+ * A fost `TabAdmin` cât timp adminul era o pagină cu taburi. Numele vechi
+ * mințea de îndată ce ecranele au început să se excludă: un tab e o filă peste
+ * același ecran, iar astea sînt ecrane întregi, cu adresă proprie.
+ *
+ * `desfasurare` și `antrenament` sînt noi. Al doilea exista deja ca ecran, dar
+ * se ajungea la el dintr-o manetă a cromului paginii, nu din registru — deci
+ * n-avea contor, n-avea adresă și nu putea fi ținta unui semnal de atenție.
+ */
+export type EcranAdmin =
+  | 'desfasurare'
   | 'participanti'
   | 'email'
   | 'livrare'
@@ -23,6 +34,7 @@ export type TabAdmin =
   | 'sabloane'
   | 'eveniment'
   | 'clipuri'
+  | 'antrenament'
   | 'coming-soon';
 
 /**
@@ -38,7 +50,7 @@ export type Atentie = {
   cheie: string;
   text: string;
   /** Unde se rezolvă. Fără ea, semnalul e doar informativ. */
-  tab?: TabAdmin;
+  ecran?: EcranAdmin;
   /** `true` → ceva chiar nu funcționează; `false` → doar de știut. */
   urgent: boolean;
 };
@@ -124,7 +136,7 @@ export const semnaleDeAtentie = (s: SemnaleAdmin, faza: FazaSite): Atentie[] => 
     out.push({
       cheie: 'nelivrate',
       text: `${s.nelivrate} ${s.nelivrate === 1 ? 'email n-a ajuns' : 'emailuri n-au ajuns'} la destinatar`,
-      tab: 'livrare',
+      ecran: 'livrare',
       urgent: true,
     });
   }
@@ -141,7 +153,7 @@ export const semnaleDeAtentie = (s: SemnaleAdmin, faza: FazaSite): Atentie[] => 
     out.push({
       cheie: 'ciorna',
       text: 'Ai o ciornă salvată care n-a ajuns încă pe site',
-      tab: 'eveniment',
+      ecran: 'eveniment',
       urgent: false,
     });
   }
@@ -150,7 +162,7 @@ export const semnaleDeAtentie = (s: SemnaleAdmin, faza: FazaSite): Atentie[] => 
     out.push({
       cheie: 'meta',
       text: 'Share preview-ul (WhatsApp/Facebook) e în urma configului publicat — cere un deploy',
-      tab: 'eveniment',
+      ecran: 'eveniment',
       urgent: false,
     });
   }
@@ -163,7 +175,7 @@ export const semnaleDeAtentie = (s: SemnaleAdmin, faza: FazaSite): Atentie[] => 
     out.push({
       cheie: 'asteptare',
       text: `${s.asteptare} ${s.asteptare === 1 ? 'persoană așteaptă' : 'persoane așteaptă'} un loc liber`,
-      tab: 'participanti',
+      ecran: 'participanti',
       urgent: false,
     });
   }
