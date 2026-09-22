@@ -36,7 +36,13 @@ Ultima actualizare: 4 august 2026.
 - [x] **Vercel Analytics** — pornit din `src/lib/analytics.ts` (pachetul `@vercel/analytics`), nu
       din `index.html`: blocurile comentate de acolo au fost șterse, iar un test le ține șterse.
       Mai rămâne **o singură acțiune de operator**: activarea din dashboard-ul Vercel
-      (Analytics → Enable). Până atunci producția cere un script care returnează 404.
+      (Analytics → Enable), sau `vercel project web-analytics enable` dintr-un terminal
+      interactiv — CLI-ul refuză să confirme non-interactiv.
+      Până atunci nu se strică nimic: verificat pe live în 22 sept. 2026, ruta
+      `/_vercel/insights/script.js` întoarce **200** (edge-ul o servește indiferent de comutator),
+      iar `/_vercel/insights/view` întoarce 400 la un POST gol, deci există. Evenimentele pleacă,
+      dar nu sunt reținute — API-ul de raportare răspunde `Web Analytics not found` până la
+      activare. Fără erori în consolă și fără 404.
 - [ ] **Regenerare `og.png` din EDITION** — momentan asset manual (1200×630) per ediție.
 - [ ] **14 erori de linter, preexistente** — ieșite la iveală când `oxlint` a intrat în repo
       (5 sep 2026). Nu sunt regresii și nimic nu se vede rupt azi, dar niciuna nu e stilistică:
