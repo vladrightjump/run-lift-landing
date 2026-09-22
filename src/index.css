@@ -1072,6 +1072,30 @@
     font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600;
   }
 
+  /* ---- Invelisul de editare ----
+     Cele patru ecrane care schimba ce vede vizitatorul se comportau ca trei
+     lucruri diferite. Invelisul tine succesiunea si verbele; cimpurile raman
+     ale fiecarui ecran. */
+  .admin-invelis-titlu { display: grid; gap: 4px; }
+  .admin-invelis-titlu h2 { margin: 0; }
+
+  /* Un cimp: eticheta legata, ajutor vizibil, problema in cuvinte.
+     Formularul de clipuri cerea un link de Instagram obligatoriu sub eticheta
+     „Linkul postarii", iar DE CE aflai abia cind validarea refuza salvarea. */
+  .admin-camp { display: grid; gap: 6px; }
+  .admin-camp-eticheta {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--e3-muted-dim);
+  }
+  .admin-camp-obligatoriu {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: none; color: var(--e3-muted-strong);
+    border: 1px solid var(--e3-border); padding: 1px 6px;
+  }
+  .admin-camp-ajutor { font-size: 12px; line-height: 1.45; color: var(--e3-muted-dim); }
+  .admin-camp-problema { font-size: 12px; line-height: 1.45; color: var(--e3-danger); }
+
   /* ---- Calea de intoarcere ----
      Apare doar cand ai unde sa te intorci. Pe ecranul de pornire ar fi un
      buton care nu duce nicaieri. */

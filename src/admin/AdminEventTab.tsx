@@ -30,6 +30,7 @@ import { GrupRemindere } from './eventTab/grupuri/GrupRemindere';
 import { GrupInstagram } from './eventTab/grupuri/GrupInstagram';
 import { GrupCand } from './eventTab/grupuri/GrupCand';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
+import { InvelisEditare } from './continut/InvelisEditare';
 import { descrieMoment, problemePeCamp } from './eventConfigFields';
 import {
   reperele,
@@ -600,11 +601,8 @@ export const AdminEventTab = ({
     );
   }
 
-  return (
-    <section className="admin-table-section">
-      <div className="admin-table-head">
-        <h2>Eveniment</h2>
-        <div className="admin-table-actions">
+  const actiuni = (
+    <>
           {ciorna === null ? (
             <>
               <button type="button" className="admin-btn-ghost" onClick={porneteDinPublicat}>
@@ -640,14 +638,15 @@ export const AdminEventTab = ({
                 Renunță
               </button>
               {/* Salveaza / Previzualizeaza / Publica traiesc DOAR in bara
-                  lipita jos. Aceleasi trei butoane si sus, si jos, inseamna ca
-                  la fiecare apasare intrebi care set e cel „real". */}
+                  lipita jos, prin inveliș. Aceleasi trei butoane si sus, si
+                  jos, inseamna ca la fiecare apasare intrebi care set e cel
+                  „real". */}
             </>
           )}
-        </div>
-      </div>
+    </>
+  );
 
-      {publicat && (
+  const rezumat = publicat && (
         <div className="admin-stats">
           <div className="admin-stat">
             <span className="admin-stat-label">Publicat acum</span>
@@ -674,8 +673,35 @@ export const AdminEventTab = ({
             </span>
           </div>
         </div>
-      )}
+      );
 
+  return (
+    <InvelisEditare
+      titlu="Evenimentul"
+      descriere="Data, locul, locurile și ce arată pagina — se publică fără deploy."
+      actiuni={actiuni}
+      rezumat={rezumat}
+      bara={
+        ciorna === null
+          ? null
+          : {
+              identitate: <strong>Ediția {ciorna.number}</strong>,
+              detaliu: descrieMoment(ciorna.start, ciorna.tz, acum) || ciorna.start,
+              nesalvat,
+              probleme: probleme.map((p) => p.camp),
+              onPrimaProblema: laPrimaEroare,
+              refuz,
+              ocupat,
+              poatePublica,
+              onPreviz: previzualizeaza,
+              urlPreviz: PREVIEW_URL,
+              onSalveaza: salveazaCiorna,
+              onPublica: () => setConfirmPublicare(true),
+              seSalveaza: salveaza,
+              sePublica: publica,
+            }
+      }
+    >
       {/* Două ciorne pe server înseamnă că un număr de ediție schimbat a
           bifurcat documentul. Tabul o încarcă pe cea mai nouă și publica din
           câmpul „Numărul ediției" — deci se putea lucra la una și publica
@@ -808,89 +834,6 @@ export const AdminEventTab = ({
         </Blocat.Provider>
       )}
 
-      {/* Bara lipita jos.
-          „Salveaza" si „Publica" stateau doar in capul tabului, adica la doua
-          ecrane si jumatate deasupra locului in care editezi ultimul camp. Ca sa
-          publici trebuia sa derulezi inapoi, iar starea ciornei (salvata sau nu)
-          nu se vedea deloc de jos. */}
-      {ciorna !== null && (
-        <div className="admin-bara-actiuni" role="status">
-          <span className="admin-bara-stare">
-            {/* Problemele de validare au întâietate: ele dezactivează „Publică",
-                deci un refuz vechi n-are ce concura cu ele. */}
-            {probleme.length > 0 ? (
-              // Buton, nu text: numărul spunea CÂTE, niciodată CARE.
-              <button
-                type="button"
-                className="admin-bara-problema admin-bara-problema--link"
-                onClick={laPrimaEroare}
-              >
-                {probleme.length === 1
-                  ? '1 câmp de reparat'
-                  : `${probleme.length} câmpuri de reparat`}
-              </button>
-            ) : refuz ? (
-              <span className="admin-bara-problema">{refuz}</span>
-            ) : (
-              <>
-                <strong>Ediția {ciorna.number}</strong>
-                <span className="admin-bara-detaliu">
-                  {descrieMoment(ciorna.start, ciorna.tz, acum) || ciorna.start}
-                </span>
-                {/* După detaliu, nu în locul lui: „nesalvat" e o stare a
-                    documentului, nu o problemă a lui, iar ediția și startul
-                    rămân lucrurile pe care le verifici din bară. */}
-                {nesalvat && <span className="admin-bara-nesalvat">Nesalvat</span>}
-              </>
-            )}
-          </span>
-          <div className="admin-bara-butoane">
-            {/* Cu diferențe nesalvate previzualizarea SCRIE întâi, deci e un
-                buton; fără ele rămâne ce era, o ancoră — cu Cmd-click și click
-                de mijloc cu tot. */}
-            {nesalvat ? (
-              <button
-                type="button"
-                className="admin-btn-ghost"
-                onClick={previzualizeaza}
-                // Aceeași gardă ca „Salvează": previzualizarea unui config pe
-                // care serverul l-ar refuza n-are ce arăta.
-                disabled={ocupat || !poatePublica}
-              >
-                {salveaza ? 'Se salvează…' : 'Salvează și previzualizează'}
-              </button>
-            ) : (
-              <a
-                className="admin-btn-ghost"
-                href={PREVIEW_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Previzualizează
-              </a>
-            )}
-            <button
-              type="button"
-              className="admin-btn-ghost"
-              onClick={salveazaCiorna}
-              // `publica` la fel de mult ca `salveaza`: publicarea salvează ea
-              // însăși, deci un al doilea „Salvează" din zbor ar scrie peste.
-              disabled={ocupat || !poatePublica}
-            >
-              {salveaza ? 'Se salvează…' : 'Salvează'}
-            </button>
-            <button
-              type="button"
-              className="admin-btn-accent"
-              onClick={() => setConfirmPublicare(true)}
-              disabled={ocupat || !poatePublica}
-            >
-              {publica ? 'Se publică…' : 'Publică'}
-            </button>
-          </div>
-        </div>
-      )}
-
       {versiuni.length > 0 && (
         <>
           <h3>Versiuni anterioare</h3>
@@ -990,7 +933,7 @@ export const AdminEventTab = ({
             </div>
         </Dialog>
       )}
-    </section>
+    </InvelisEditare>
   );
 };
 
