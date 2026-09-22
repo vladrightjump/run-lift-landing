@@ -1096,6 +1096,23 @@
   .admin-camp-ajutor { font-size: 12px; line-height: 1.45; color: var(--e3-muted-dim); }
   .admin-camp-problema { font-size: 12px; line-height: 1.45; color: var(--e3-danger); }
 
+  /* ---- Previzualizarea vie, in editor ----
+     Un clip nepublicat nu apare pe banda publica, deci un buton spre pagina
+     n-ar avea ce arata. Acelasi iframe pe care-l foloseste pagina. */
+  .admin-previz { display: grid; gap: 8px; margin-top: 16px; }
+  .admin-previz-eticheta {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--e3-muted-dim);
+  }
+  .admin-previz-card {
+    display: grid; gap: 8px; max-width: 280px;
+    border: 1px solid var(--e3-border); background: var(--e3-surface); padding: 10px;
+  }
+  .admin-previz-card iframe {
+    width: 100%; aspect-ratio: 9 / 16; border: 0; display: block; background: var(--e3-bg);
+  }
+  .admin-previz-legenda { font-size: 13px; color: var(--e3-text); }
+
   /* ---- Calea de intoarcere ----
      Apare doar cand ai unde sa te intorci. Pe ecranul de pornire ar fi un
      buton care nu duce nicaieri. */

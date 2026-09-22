@@ -100,7 +100,11 @@ export const InvelisEditare = ({
                 : `${bara.probleme.length} câmpuri de reparat`}
             </button>
           ) : bara.refuz ? (
-            <span className="admin-bara-problema">{bara.refuz}</span>
+            // `alert`, nu doar `status`: un refuz al serverului e o eroare, nu
+            // o schimbare de stare pe care o afli când ajungi la ea.
+            <span className="admin-bara-problema" role="alert">
+              {bara.refuz}
+            </span>
           ) : (
             <>
               {bara.identitate}

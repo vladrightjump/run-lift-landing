@@ -103,23 +103,31 @@ describe('lista', () => {
     expect(screen.getByText(/ascuns/)).toBeDefined();
   });
 
-  it('primul clip nu se poate muta mai sus, ultimul nu mai jos', async () => {
+  it('reordonarea se face alegând poziția, nu ciocănind rând cu rând', async () => {
+    // Erau două butoane de direcție pe FIECARE rând, unul mereu dezactivat la
+    // capete. Zece clipuri însemnau douăzeci de butoane.
     listTrainingReels.mockResolvedValue([rand(), rand({ id: 'r2', numar: 2, caption: 'Joi', youtube: '_-Ab0123456' })]);
     randeaza();
     await screen.findByText('Marți în parc');
-    expect(screen.getByLabelText(/Mută „Marți în parc” mai sus/).hasAttribute('disabled')).toBe(
-      true
-    );
-    expect(screen.getByLabelText(/Mută „Joi” mai jos/).hasAttribute('disabled')).toBe(true);
-    expect(screen.getByLabelText(/Mută „Joi” mai sus/).hasAttribute('disabled')).toBe(false);
+    expect(screen.queryByLabelText(/mai sus/)).toBeNull();
+    expect(screen.queryByLabelText(/mai jos/)).toBeNull();
+    expect(screen.getByLabelText('Poziția pentru „Joi”')).toBeDefined();
   });
 
-  it('mutarea cere serverului direcția, nu lista întreagă', async () => {
-    listTrainingReels.mockResolvedValue([rand(), rand({ id: 'r2', numar: 2, caption: 'Joi', youtube: '_-Ab0123456' })]);
+  it('mutarea pe o poziție se traduce în pași de câte unul', async () => {
+    // Serverul mută cu un singur pas. O mutare de pe 3 pe 1 e două apeluri.
+    listTrainingReels.mockResolvedValue([
+      rand(),
+      rand({ id: 'r2', numar: 2, caption: 'Joi', youtube: '_-Ab0123456' }),
+      rand({ id: 'r3', numar: 3, caption: 'Sâmbătă', youtube: 'ZZbb1122334' }),
+    ]);
     randeaza();
-    await screen.findByText('Joi');
-    fireEvent.click(screen.getByLabelText(/Mută „Joi” mai sus/));
-    await waitFor(() => expect(moveTrainingReel).toHaveBeenCalledWith('tok', 'r2', -1));
+    await screen.findByText('Sâmbătă');
+    fireEvent.change(screen.getByLabelText('Poziția pentru „Sâmbătă”'), {
+      target: { value: '1' },
+    });
+    await waitFor(() => expect(moveTrainingReel).toHaveBeenCalledTimes(2));
+    expect(moveTrainingReel).toHaveBeenCalledWith('tok', 'r3', -1);
   });
 
   it('scoaterea nu pretinde că a șters clipul de pe gazdă', async () => {
@@ -147,25 +155,25 @@ describe('formularul refuză înainte să deranjeze serverul', () => {
     randeaza();
     await screen.findByText(/Niciun clip/);
     completeaza({ youtube: 'https://alt-domeniu.example/x.mp4' });
-    fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
     expect(saveTrainingReel).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert').textContent).toMatch(/clip YouTube/);
+    expect(screen.getAllByRole('alert').map((a) => a.textContent).join(' ')).toMatch(/clip YouTube/);
   });
 
   it('legenda goală nu pleacă la server — ea e ce citește un cititor de ecran', async () => {
     randeaza();
     await screen.findByText(/Niciun clip/);
     completeaza({ caption: '   ' });
-    fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
     expect(saveTrainingReel).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert').textContent).toMatch(/cititor de ecran/);
+    expect(screen.getAllByRole('alert').map((a) => a.textContent).join(' ')).toMatch(/cititor de ecran/);
   });
 
   it('un link valid pleacă la server ca identificator, nu ca adresă', async () => {
     randeaza();
     await screen.findByText(/Niciun clip/);
     completeaza();
-    fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
     await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
     expect(saveTrainingReel.mock.calls[0][2]).toBe('dQw4w9WgXcQ');
   });
@@ -197,9 +205,9 @@ describe('linkul lipit din YouTube', () => {
     fireEvent.change(camp('Linkul postării'), {
       target: { value: 'https://www.instagram.com/reel/AAAAA11111/' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
     expect(saveTrainingReel).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert').textContent).toMatch(/clip YouTube/);
+    expect(screen.getAllByRole('alert').map((a) => a.textContent).join(' ')).toMatch(/clip YouTube/);
   });
 
   it('se poate TASTA un link, nu doar lipi — caracterele nu se mai pierd', async () => {
@@ -254,7 +262,7 @@ describe('salvarea', () => {
     fireEvent.change(camp('Linkul postării'), {
       target: { value: 'https://www.instagram.com/reel/AAAAA11111/' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
 
     await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
     expect(saveTrainingReel.mock.calls[0][1]).toBeNull();
@@ -284,7 +292,7 @@ describe('salvarea', () => {
     fireEvent.change(camp('Linkul postării'), {
       target: { value: 'https://www.instagram.com/reel/AAAAA11111/' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Adaugă în bandă' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
 
     expect((await screen.findByRole('alert')).textContent).toBe('Clipul e deja în bandă.');
   });
