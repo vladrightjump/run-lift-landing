@@ -62,6 +62,22 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+describe('excepția declarată', () => {
+  it('spune pe ecran că are efect imediat', async () => {
+    // R15: celelalte ecrane de conținut au ciornă și publicare. Ăsta n-are, și
+    // o spune — nu o lasă dedusă din lipsa unui buton.
+    randeaza();
+    expect(await screen.findByText(/efect imediat/i)).toBeDefined();
+    expect(screen.getByText(/nu există ciornă/i)).toBeDefined();
+  });
+
+  it('nu oferă „Publică" — n-ar avea ce publica', async () => {
+    randeaza();
+    await screen.findByText(/efect imediat/i);
+    expect(screen.queryByRole('button', { name: 'Publică' })).toBeNull();
+  });
+});
+
 describe('spune ce vede vizitatorul ACUM', () => {
   it('cu Coming Soon pornit și anunțul în viitor, arată „Coming Soon"', async () => {
     randeaza();

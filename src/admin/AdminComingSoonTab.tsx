@@ -185,7 +185,18 @@ export const AdminComingSoonTab = () => {
       )}
 
       <div className="admin-table-head">
-        <h2>Coming Soon</h2>
+        <div className="admin-invelis-titlu">
+          <h2>Coming Soon</h2>
+          {/* Excepția se SCRIE, nu se deduce din lipsa unui buton „Publică".
+              Celelalte ecrane de conținut au ciornă și publicare; ăsta e o
+              manetă, iar o manetă cu un pas de publicare ar însemna s-o
+              armezi și apoi s-o tragi. */}
+          <p className="admin-config-hint">
+            <strong>Ecranul ăsta are efect imediat.</strong> Spre deosebire de „Evenimentul",
+            „Clipuri" sau „Antrenamente", aici nu există ciornă: ce schimbi se vede pe site de
+            îndată ce salvezi. E o manetă, nu un document.
+          </p>
+        </div>
         <div className="admin-table-actions">
           <a
             className="admin-btn-ghost"

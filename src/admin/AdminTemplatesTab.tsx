@@ -6,6 +6,7 @@ import {
   saveEmailTemplate,
 } from '../lib/adminApi';
 import type { AdminEmailTemplate, EmailPreview } from '../lib/adminApi';
+import { InvelisEditare } from './continut/InvelisEditare';
 import { useSesiuneAdmin } from './adminSession';
 import { useAdminResource } from './useAdminResource';
 import {
@@ -208,11 +209,21 @@ export const AdminTemplatesTab = () => {
     }
   };
 
+  /*
+   * Bara de jos rămâne `null` aici, deliberat.
+   *
+   * Celelalte ecrane de conținut editează UN document: bara poate spune ce e
+   * deschis și ce se întâmplă cu el. Ecranul ăsta editează mai multe deodată —
+   * confirmarea, reminderul, anunțul, badge-ul — iar o bară unică ar trebui să
+   * ghicească pe care dintre ele lucrezi. Verbele rămân pe fiecare șablon, dar
+   * sînt aceleași verbe.
+   */
   return (
-    <section className="admin-table-section">
-      <div className="admin-table-head">
-        <h2>Șabloane de email</h2>
-      </div>
+    <InvelisEditare
+      titlu="Șabloane de email"
+      descriere="Textul emailurilor de confirmare, reminder, anunț și badge. Fiecare se salvează și se previzualizează separat."
+      bara={null}
+    >
 
       {mesaj && (
         <p className={`admin-tpl-msg${mesaj.kind === 'err' ? ' err' : ''}`} role="status">
@@ -364,6 +375,6 @@ export const AdminTemplatesTab = () => {
           </div>
         );
       })}
-    </section>
+    </InvelisEditare>
   );
 };
