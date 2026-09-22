@@ -117,6 +117,10 @@ export const grupulEcranului = (ecran: EcranAdmin): GrupNav['cheie'] => {
   return grup?.cheie ?? GRUPURI[0].cheie;
 };
 
+/** Un șir oarecare (dintr-un fragment de URL) e cheia unui ecran real? */
+export const esteEcran = (cheie: string): cheie is EcranAdmin =>
+  TOATE_ECRANELE.some((e) => e.cheie === cheie);
+
 /** Eticheta unui ecran, pentru titluri și „ești aici". */
 export const etichetaEcranului = (ecran: EcranAdmin): string =>
   TOATE_ECRANELE.find((e) => e.cheie === ecran)?.eticheta ?? '';

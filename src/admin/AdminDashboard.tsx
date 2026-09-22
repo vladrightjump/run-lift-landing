@@ -36,6 +36,8 @@ import { AdminAntrenamentTab } from './AdminAntrenamentTab';
 import { AdminClipuriTab } from './AdminClipuriTab';
 import { BlocSaptamanal } from './BlocSaptamanal';
 import { AdminNav } from './AdminNav';
+import { AdminCadru } from './AdminCadru';
+import { useEcranCurent } from './useEcranCurent';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
@@ -54,7 +56,7 @@ import { AdminAsteptare } from './AdminAsteptare';
 import { AdminCifre } from './AdminCifre';
 import { AdminRandAdaugare } from './AdminRandAdaugare';
 import { DialogPrezenta } from './DialogPrezenta';
-import { fazaSite, ETICHETA_FAZA, type EcranAdmin } from './stareCurenta';
+import { fazaSite, type EcranAdmin } from './stareCurenta';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
 import { ziSiLuna } from '../lib/formatare';
@@ -73,13 +75,20 @@ type AdminToast = {
 };
 
 /**
- * Tab-urile, cu etichete scrise ca sarcini, nu ca nume de tabel.
+ * Ecranele care filtrează pe ediție — singurele care arată selectorul.
  *
- * „Anunță-mă la lansare" era numele butonului de pe pagina publică, nu al
- * lucrului din spatele tabului: lista celor care au cerut să fie anunțați.
- * `descriere` ajunge în `title` — răspunsul la „ce e aici?" fără să dai click.
+ * Banda de clipuri, programul săptămânal și Coming Soon nu aparțin niciunei
+ * ediții: pe ele selectorul n-ar filtra nimic, iar un control care nu face
+ * nimic pe ecranul unde stă e exact blocul permanent pentru care s-a desfăcut
+ * pagina.
  */
-// Gruparea taburilor stă în `adminNavigatie.ts`, ca modul pur.
+const ECRANE_PE_EDITIE: ReadonlySet<EcranAdmin> = new Set<EcranAdmin>([
+  'participanti',
+  'lansare',
+  'email',
+  'livrare',
+  'eveniment',
+]);
 
 
 export const AdminDashboard = ({ token, onLogout }: Props) => {
@@ -100,28 +109,12 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [toast, setToast] = useState<AdminToast | null>(null);
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
   const [prezentaRow, setPrezentaRow] = useState<AdminRegistration | null>(null);
-  const [tab, setTab] = useState<EcranAdmin>('participanti');
-  /**
-   * Garda tabului curent: „pot pleca de aici?".
-   *
-   * Un tab se randează condiționat (`{tab === 'eveniment' && …}`), deci
-   * schimbarea tabului îl DEMONTEAZĂ — iar ce era în el, nesalvat, dispărea
-   * fără să întrebe. Registrul stă aici, unde trăiește `tab`, nu în `AdminNav`:
-   * navigația se face din trei locuri (bara de taburi, panoul „Acum", linkul
-   * spre „Livrare"), iar o gardă pusă pe unul singur ar fi fost o gardă cu trei
-   * sferturi de gaură.
-   */
-  const gardaIesire = useRef<(() => boolean) | null>(null);
-  const schimbaTab = useCallback((urmator: EcranAdmin) => {
-    setTab((curent) => {
-      if (urmator === curent) return curent;
-      if (gardaIesire.current && !gardaIesire.current()) return curent;
-      return urmator;
-    });
-  }, []);
-  const inregistreazaGardaIesire = useCallback((garda: (() => boolean) | null) => {
-    gardaIesire.current = garda;
-  }, []);
+  // Ecranul curent, garda de ieșire și fragmentul din adresă trăiesc împreună
+  // în `useEcranCurent`: se navighează din trei locuri (registrul de ecrane,
+  // acțiunile liniei de timp, semnalele de atenție), iar o gardă pusă pe unul
+  // singur ar fi o gardă cu trei sferturi de gaură.
+  const { ecran: tab, schimba: schimbaTab, inregistreazaGardaIesire } =
+    useEcranCurent('desfasurare');
   // Semnalele pentru panoul „Acum". Ciorna și amprenta de build trăiesc în
   // tabul „Eveniment"; aici le citim doar ca să putem spune, din prima pagină,
   // că a rămas ceva nepublicat.
@@ -129,10 +122,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // Cerere venită de pe linia de timp: deschide tabul „Evenimentul" cu dialogul
   // de ediție nouă pe ecran. Se stinge imediat ce tabul a onorat-o.
   const [deschideDialogEditie, setDeschideDialogEditie] = useState(false);
-  // Antrenamentul nu mai e un tab: n-are de ce să stea în structura pe ediții,
-  // fiindcă nu ține de nicio ediție. Se deschide din blocul de sub linia de
-  // timp și se randează acolo, sub el.
-  const [antrenamentDeschis, setAntrenamentDeschis] = useState(false);
   const [metaInUrma, setMetaInUrma] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
   // Ediția și capacitatea vin din configul PUBLICAT, nu din bundle: după ce
@@ -654,53 +643,31 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
   return (
     <FurnizorSesiuneAdmin token={token} onAuthError={handleAuthError} showToast={showToast}>
-      <header className="admin-topbar">
-        <div className="brand">
-          <span className="admin-logo">
-            Run <span className="accent">+</span> Lift
-          </span>
-          <span className="admin-badge">Backoffice</span>
-        </div>
-        <div className="admin-topbar-meta">
-          {/* Ce vede un vizitator ACUM, in antetul lipit. Intrebarea nu se pune
-              o data la deschidere: se pune de fiecare data cand te pregatesti sa
-              schimbi ceva, iar panoul din capul paginii dispare la primul scroll. */}
-          <a
-            className={`admin-faza faza-${fazaAcum}`}
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Deschide site-ul public intr-un tab nou"
-          >
-            <span className="admin-faza-punct" aria-hidden="true" />
-            <span className="admin-faza-eticheta">Pe site</span>
-            <span className="admin-faza-valoare">{ETICHETA_FAZA[fazaAcum]}</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          {/* Numaratoarea spre anunt dispare dupa ce trece: un „Anuntul e live"
-              lipit permanent in antet e zgomot, nu informatie. */}
-          {!cd.done && (
-            <span className="admin-cd">
-              <span className="countdown-dot" />
-              {`Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`}
-            </span>
-          )}
-          <button type="button" className="admin-logout" onClick={onLogout}>
-            Ieși din cont
-          </button>
-        </div>
-      </header>
+      <AdminCadru
+        ecran={tab}
+        onEcran={schimbaTab}
+        faza={fazaAcum}
+        countdown={
+          cd.done ? null : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`
+        }
+        onLogout={onLogout}
+      >
+        {/* Selectorul de ediție apare DOAR pe ecranele care filtrează pe
+            ediție. Pe „Clipuri" sau „Antrenamente" nu filtra nimic: banda și
+            programul săptămânal nu aparțin niciunei ediții, iar un control care
+            nu face nimic pe ecranul pe care stă e exact genul de bloc permanent
+            pentru care s-a desfăcut pagina. */}
+        {ECRANE_PE_EDITIE.has(tab) && (
+          <AdminEditionTabs
+            editions={editions}
+            selected={editie}
+            onSelect={setEditie}
+            onCreate={handleCreateEdition}
+            creating={creatingEdition}
+          />
+        )}
 
-      <main className="admin-main">
-        <AdminEditionTabs
-          editions={editions}
-          selected={editie}
-          onSelect={setEditie}
-          onCreate={handleCreateEdition}
-          creating={creatingEdition}
-        />
-
-        {arhiva && (
+        {arhiva && ECRANE_PE_EDITIE.has(tab) && (
           <div className="admin-banner" role="status">
             <strong>Ediția {editie} e încheiată.</strong> O vezi ca arhivă: datele rămân
             întregi, dar nu se mai poate adăuga, edita sau șterge nimic. Exportul CSV
@@ -708,25 +675,36 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </div>
         )}
 
-        {/* Desfășurarea stă ÎNAINTEA tabelelor și a tab-urilor: prima întrebare
-            cu care se deschide backoffice-ul e „unde suntem?", nu „cine s-a
-            înscris". */}
-        <LiniaDeTimp
-          semnale={{ nelivrate, asteptare: waitAll.length, ciornaNepublicata, metaInUrma, arhiva }}
-          onTab={schimbaTab}
-          onEditieNoua={porneșteEditiaUrmatoare}
-          arhiva={arhiva}
-        />
+        {tab === 'desfasurare' && (
+          <>
+            <LiniaDeTimp
+              semnale={{
+                nelivrate,
+                asteptare: waitAll.length,
+                ciornaNepublicata,
+                metaInUrma,
+                arhiva,
+              }}
+              onTab={schimbaTab}
+              onEditieNoua={porneșteEditiaUrmatoare}
+              arhiva={arhiva}
+            />
 
-        <BlocSaptamanal onDeschide={() => setAntrenamentDeschis((v) => !v)} />
+            <BlocSaptamanal onDeschide={() => schimbaTab('antrenament')} />
 
-        {antrenamentDeschis && <AdminAntrenamentTab />}
+            {/* Registrul de ecrane trăiește pe ecranul de pornire. Contorul
+                spune ce e în spatele fiecăruia fără să-l deschizi; lipsește cât
+                timp datele n-au sosit, fiindcă un „0" în timpul încărcării e
+                tocmai ce citește organizatorul când intră. */}
+            <AdminNav
+              onEcran={schimbaTab}
+              contorEcran={contorEcran}
+              nelivrate={nelivrate}
+            />
+          </>
+        )}
 
-        {/* Tab-urile poartă un contor, ca să știi ce e în spatele lor fără să
-            le deschizi. Contorul lipsește cât timp datele nu au sosit — un „0"
-            afișat în timpul încărcării ar fi o minciună scurtă, dar tocmai pe
-            aia o citește organizatorul când intră. */}
-        <AdminNav ecran={tab} onTab={schimbaTab} contorEcran={contorEcran} nelivrate={nelivrate} />
+        {tab === 'antrenament' && <AdminAntrenamentTab />}
 
         {tab === 'sabloane' && (
           <AdminTemplatesTab />
@@ -938,7 +916,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         <AdminActivitate events={events} />
         </>
         )}
-      </main>
+      </AdminCadru>
 
       {prezentaRow && (
         <DialogPrezenta

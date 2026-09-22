@@ -998,65 +998,81 @@
     font-size: 12px; color: var(--e3-muted); font-variant-numeric: tabular-nums; flex: none;
   }
 
-  /* ---- Tabs ---- */
-  /* Șase tab-uri intră pe lat, dar nu și pe un laptop mic — deci se derulează
-     lateral în loc să se rupă pe două rânduri, care mută tot ce e sub ele. */
-  /* ---- Navigatia: trei grupuri, frunzele grupului deschis dedesubt ----
-     Sapte taburi plate cereau sa stii dinainte in care sta ce cauti. Trei
-     intrebari se aleg fara sa cunosti structura aplicatiei. */
-  .admin-nav { display: grid; gap: 0; }
-  .admin-nav ul { list-style: none; margin: 0; padding: 0; }
-  .admin-nav-grupuri > li { display: grid; }
-  .admin-nav-grupuri > li > button { width: 100%; height: 100%; }
-  .admin-nav-grupuri {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
-    background: var(--e3-border); border: 1px solid var(--e3-border);
+  /* ---- Comutatorul de ecrane, in antet ----
+     Zece ecrane in butoane se rup pe doua randuri si mananca din nou capul
+     paginii. O lista are aceeasi inaltime oricate ecrane s-ar aduna. */
+  .admin-comutator { display: flex; align-items: center; gap: 8px; }
+  .admin-comutator-eticheta {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--e3-muted-dim);
   }
-  .admin-nav-grup {
-    display: grid; gap: 2px; justify-items: start; text-align: left;
-    background: var(--e3-bg); border: none; cursor: pointer;
-    padding: 12px 16px; min-height: 62px;
-    transition: background 0.2s ease, box-shadow 0.2s ease;
+  .admin-comutator-select {
+    background: var(--e3-surface); color: var(--e3-text);
+    border: 1px solid var(--e3-border); padding: 7px 10px;
+    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600;
   }
-  .admin-nav-grup:hover { background: var(--e3-surface); }
-  .admin-nav-grup.activ {
-    background: var(--e3-surface);
-    /* Muchia lime pe interior, nu bordura: bordura ar muta continutul cu 1px. */
-    box-shadow: inset 0 3px 0 var(--e3-accent);
+  .admin-comutator-select:focus-visible {
+    outline: 2px solid var(--e3-accent); outline-offset: 2px;
   }
-  .admin-nav-grup-nume {
-    font-family: Anton, sans-serif; font-size: 16px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted);
-    transition: color 0.2s ease;
-  }
-  .admin-nav-grup.activ .admin-nav-grup-nume { color: var(--e3-accent); }
-  /* Intrebarea e ce alege organizatorul; numele grupului e doar eticheta ei. */
-  .admin-nav-grup-intrebare { font-size: 12px; color: var(--e3-muted-dim); }
-  .admin-nav-grup.activ .admin-nav-grup-intrebare { color: var(--e3-muted); }
 
-  .admin-nav-taburi {
-    display: flex; gap: 4px; border-bottom: 1px solid var(--e3-border);
-    overflow-x: auto; scrollbar-width: none;
+  /* ---- Calea de intoarcere ----
+     Apare doar cand ai unde sa te intorci. Pe ecranul de pornire ar fi un
+     buton care nu duce nicaieri. */
+  .admin-cale { display: flex; align-items: center; gap: 10px; }
+  .admin-cale-inapoi {
+    background: none; border: none; cursor: pointer; padding: 4px 0;
+    color: var(--e3-muted-strong); font-family: Archivo, sans-serif;
+    font-size: 13px; font-weight: 600;
   }
-  .admin-nav-taburi::-webkit-scrollbar { display: none; }
-  .admin-nav-tab {
-    position: relative;
-    background: transparent; border: none;
-    color: var(--e3-muted); cursor: pointer; white-space: nowrap; flex: none;
-    font-family: Archivo, sans-serif; font-size: 14px; font-weight: 600;
-    letter-spacing: 0.5px; padding: 12px 16px 14px;
-    transition: color 0.2s ease, background 0.2s ease;
+  .admin-cale-inapoi:hover { color: var(--e3-accent); }
+  .admin-cale-separator { color: var(--e3-muted-dim); }
+  .admin-cale-aici {
+    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--e3-text);
   }
-  /* Sublinierea se desface din stanga - miscarea spune in ce directie ai mers. */
-  .admin-nav-tab::after {
-    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
-    background: var(--e3-accent);
-    transform: scaleX(0); transform-origin: 0 50%;
-    transition: transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* ---- Registrul de ecrane, pe ecranul de pornire ----
+     A fost o bara cu doua niveluri. Nivelul al doilea cumpara spatiu cat timp
+     bara statea deasupra fiecarui ecran; de cand registrul are ecranul lui,
+     ascunderea a sapte ecrane dupa un grup inchis cumpara doar un clic in
+     plus si intrebarea "in care dintre ele sta?". */
+  .admin-registru { display: grid; gap: 28px; }
+  .admin-registru-grup { display: grid; gap: 12px; }
+  .admin-registru-titlu {
+    display: flex; align-items: baseline; gap: 12px; margin: 0;
+    font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--e3-text);
   }
-  .admin-nav-tab:hover { color: var(--e3-text); background: var(--e3-surface); }
-  .admin-nav-tab.activ { color: var(--e3-accent); }
-  .admin-nav-tab.activ::after { transform: scaleX(1); }
+  .admin-registru-intrebare {
+    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 500;
+    letter-spacing: 0; text-transform: none; color: var(--e3-muted-dim);
+  }
+  .admin-registru-lista {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+  /* Tinta e tot cardul, nu numele din el: un buton de marimea unui rand de
+     text e greu de nimerit pe telefon si imposibil de nimerit grabit. */
+  .admin-registru-ecran {
+    display: grid; gap: 4px; width: 100%; height: 100%; text-align: left;
+    cursor: pointer; padding: 14px 16px;
+    background: var(--e3-surface); border: 1px solid var(--e3-border);
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .admin-registru-ecran:hover { border-color: var(--e3-accent); }
+  .admin-registru-ecran:focus-visible {
+    outline: 2px solid var(--e3-accent); outline-offset: 2px;
+  }
+  .admin-registru-nume {
+    font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700;
+    color: var(--e3-text);
+  }
+  /* Descrierea e raspunsul la "ce e aici?". Statea in `title`, deci se citea
+     numai la hover, numai cu mouse, si niciodata de un cititor de ecran. */
+  .admin-registru-descriere {
+    font-size: 12px; line-height: 1.45; color: var(--e3-muted-dim);
+  }
 
   /* Badge de alerta (ex. emailuri nelivrate). */
   .admin-tab-alert {
@@ -1073,10 +1089,6 @@
     font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
     vertical-align: middle; font-variant-numeric: tabular-nums;
     transition: background 0.2s ease, color 0.2s ease;
-  }
-  .admin-nav-tab.activ .admin-tab-contor,
-  .admin-nav-grup.activ .admin-tab-contor {
-    background: var(--e3-accent); color: var(--e3-bg);
   }
 
   /* ---- Selectorul de editie ----
@@ -1452,12 +1464,10 @@
        si trei puncte, adica nicio informatie. */
     .admin-config-grup-rezumat { flex-basis: 100%; white-space: normal; }
 
-    /* Grupurile de navigatie: intrebarea se ascunde, numele ramane. Trei
-       coloane la 390px inseamna ~120px fiecare, iar „COMUNICARE" nu incape
-       langa o a doua linie de text. */
-    .admin-nav-grup { padding: 10px 10px; min-height: 0; }
-    .admin-nav-grup-nume { font-size: 13px; letter-spacing: 0.5px; }
-    .admin-nav-grup-intrebare { display: none; }
+    /* Registrul trece pe o coloana: doua carduri de 260px nu incap pe 390px,
+       iar unul rupt pe jumatate se citeste mai greu decat unul lat. */
+    .admin-registru-lista { grid-template-columns: 1fr; }
+    .admin-registru { gap: 20px; }
 
     /* Lista de editii ocupa toata latimea; 260px fixi ar iesi din ecran. */
     .admin-editions { padding: 12px 14px; gap: 10px; }
@@ -2734,17 +2744,3 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
-  /* ---- Navigația ca al doilea nivel ----
-     De când linia de timp e primul ecran, bara de grupuri nu mai e punctul de
-     pornire. Aceleași grupuri, aceleași frunze, același comportament — doar
-     greutatea vizuală scade, ca să nu concureze cu desfășurarea de deasupra. */
-  .admin-nav-eticheta {
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--e3-muted);
-    padding: 4px 2px 8px;
-  }
-  .admin-nav-grupuri { background: var(--e3-border); }
-  .admin-nav-grup { min-height: 54px; padding: 10px 14px; }
-  /* Muchia activă se subțiază: marchează în continuare unde ești, fără să
-     revendice atenția pe care o cere acum linia de timp. */
-  .admin-nav-grup.activ { box-shadow: inset 0 2px 0 var(--e3-accent); }
