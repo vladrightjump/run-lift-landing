@@ -8,6 +8,7 @@ import {
   mesajRefuzAntrenament,
   type AdminWorkoutRow,
 } from '../lib/adminApi';
+import { InvelisEditare } from './continut/InvelisEditare';
 import { useSesiuneAdmin } from './adminSession';
 import { Dialog } from './eventTab/Dialog';
 
@@ -56,6 +57,14 @@ export const AdminAntrenamentTab = () => {
   const [salveaza, setSalveaza] = useState(false);
   const [deSters, setDeSters] = useState<AdminWorkoutRow | null>(null);
   const [deParasit, setDeParasit] = useState<Deschis | null>(null);
+  /**
+   * Oglinda lui `atinsRef`, pentru randare.
+   *
+   * Ref-ul rămâne autoritatea în cursa de peste `await` (vezi mai jos); starea
+   * există fiindcă bara trebuie să ARATE „Nesalvat", iar un ref citit în timpul
+   * randării nu declanșează o re-randare când se schimbă.
+   */
+  const [atins, setAtins] = useState(false);
 
   /**
    * Formularul a fost atins de om.
@@ -115,6 +124,7 @@ export const AdminAntrenamentTab = () => {
 
   const puneInEditor = (s: AdminWorkoutRow | null) => {
     atinsRef.current = false;
+    setAtins(false);
     if (s === null) {
       setDeschis({ fel: 'noua' });
       setTitlu('');
@@ -147,7 +157,7 @@ export const AdminAntrenamentTab = () => {
     );
   };
 
-  const trimite = async () => {
+  const trimite = async (vizibilDupa: boolean) => {
     setSalveaza(true);
     /**
      * Generația de dinainte de `await`. La întoarcere spune dacă s-a mai tastat
@@ -177,24 +187,30 @@ export const AdminAntrenamentTab = () => {
         deschis.fel === 'noua' ? null : deschis.id,
         titlu,
         corp,
-        vizibil
+        vizibilDupa
       );
       // Golim garda de text nesalvat DOAR dacă nimeni n-a mai scris între timp.
       // Altfel ce s-a tastat în timpul salvării ar fi trecut drept salvat, iar
       // schimbarea săptămânii l-ar fi aruncat fără să întrebe.
-      if (generatieRef.current === generatia) atinsRef.current = false;
+      if (generatieRef.current === generatia) {
+        atinsRef.current = false;
+        setAtins(false);
+      }
       showToast({
         kind: 'success',
         msg:
           deschis.fel === 'noua'
             ? `Săptămâna ${urmatorul} e salvată.`
-            : vizibil
-              ? 'Salvat. Pagina arată deja textul nou.'
-              : 'Salvat. Săptămâna e ascunsă.',
+            : vizibilDupa
+              ? 'Publicat. Pagina arată textul nou.'
+              : 'Salvat. Săptămâna rămâne ascunsă.',
       });
       // După o săptămână nouă, editorul se pregătește pentru următoarea.
       if (deschis.fel === 'noua') puneInEditor(null);
-      else setDeschis({ fel: 'existenta', id: idNou });
+      else {
+        setDeschis({ fel: 'existenta', id: idNou });
+        setVizibil(vizibilDupa);
+      }
       incarca();
     } catch (err) {
       if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuzAntrenament(err) });
@@ -274,6 +290,7 @@ export const AdminAntrenamentTab = () => {
 
   const atinge = <T,>(set: (v: T) => void) => (v: T) => {
     atinsRef.current = true;
+    setAtins(true);
     generatieRef.current += 1;
     set(v);
   };
@@ -281,8 +298,7 @@ export const AdminAntrenamentTab = () => {
   const vizibile = program.filter((s) => s.vizibil);
   const curenta = vizibile.length === 0 ? null : vizibile[vizibile.length - 1];
 
-  return (
-    <section className="admin-table-section">
+  const rezumat = (
       <div className="admin-stats">
         <div className="admin-stat">
           <span className="admin-stat-label">Programul are</span>
@@ -301,18 +317,47 @@ export const AdminAntrenamentTab = () => {
           <span className="admin-stat-value">{program.length - vizibile.length}</span>
         </div>
       </div>
+  );
 
-      <div className="admin-table-head">
-        <h2>Antrenamentul săptămânii</h2>
-        <div className="admin-table-actions">
+  return (
+    <InvelisEditare
+      titlu="Antrenamentele"
+      descriere="Programul săptămânal — ce scrie pe pagina de antrenament. Nu ține de nicio ediție: se schimbă săptămânal și rămâne valabil între ele."
+      rezumat={rezumat}
+      actiuni={
+        <>
           <button type="button" className="admin-btn-ghost" onClick={copiaza}>
             Copiază linkul
           </button>
           <a className="admin-btn-ghost" href={LINK} target="_blank" rel="noopener noreferrer">
             Vezi pagina ↗
           </a>
-        </div>
-      </div>
+        </>
+      }
+      bara={{
+        identitate: (
+          <strong>
+            {deschis.fel === 'noua'
+              ? `Săptămâna ${urmatorul} (nouă)`
+              : `Săptămâna ${saptamanaDeschisa?.numar ?? '—'}`}
+          </strong>
+        ),
+        detaliu: titlu || undefined,
+        nesalvat: atins,
+        probleme: [],
+        refuz: null,
+        ocupat: salveaza,
+        poatePublica: titlu.trim() !== '' || corp.trim() !== '',
+        /* „Publică" înseamnă aici salvează ȘI arată săptămâna asta.
+           Săptămânile sînt un program, iar `vizibil` alege care se vede —
+           deci verbul nu putea însemna același lucru ca pe clipuri fără să se
+           lovească de controlul de vizibilitate al programului. */
+        onSalveaza: () => trimite(vizibil),
+        onPublica: () => trimite(true),
+        seSalveaza: salveaza,
+        sePublica: false,
+      }}
+    >
 
       <div className="admin-config-form">
         <fieldset className="admin-config-grup">
@@ -452,15 +497,6 @@ export const AdminAntrenamentTab = () => {
           </div>
         </fieldset>
 
-        <div className="admin-table-actions">
-          <button type="button" className="admin-btn-accent" disabled={salveaza} onClick={trimite}>
-            {salveaza
-              ? 'Se salvează…'
-              : deschis.fel === 'noua'
-                ? `Adaugă Săptămâna ${urmatorul}`
-                : 'Salvează'}
-          </button>
-        </div>
       </div>
 
       {istoric.length > 0 && saptamanaDeschisa && (
@@ -536,6 +572,6 @@ export const AdminAntrenamentTab = () => {
           </div>
         </Dialog>
       )}
-    </section>
+    </InvelisEditare>
   );
 };
