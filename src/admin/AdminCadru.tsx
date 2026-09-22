@@ -47,6 +47,22 @@ export const AdminCadru = ({
   children,
 }: Props) => (
     <>
+      {/* Prima oprire de tabulare pe orice ecran. Fără ea, tastatura trece de
+          fiecare dată prin fază, numărătoare, alertă, comutator și ieșirea din
+          cont înainte să ajungă la treaba pentru care ai deschis ecranul.
+
+          Buton, nu ancoră cu `href="#ecran"`: fragmentul e ocupat — el ține
+          ecranul curent. O ancoră ar fi scris „#ecran" în adresă, pe care
+          `useEcranCurent` l-ar fi citit ca ecran necunoscut și te-ar fi trimis
+          acasă. Adică pe dos față de ce promite butonul. */}
+      <button
+        type="button"
+        className="admin-sari"
+        onClick={() => document.getElementById('ecran')?.focus()}
+      >
+        Sari la ecran
+      </button>
+
       <header className="admin-topbar">
         <div className="brand">
           <span className="admin-logo">
@@ -114,7 +130,7 @@ export const AdminCadru = ({
         </div>
       </header>
 
-      <main className="admin-main">
+      <main className="admin-main" id="ecran" tabIndex={-1}>
         {/* Calea de întoarcere apare doar când ai unde să te întorci. Pe ecranul
             de pornire ar fi un buton care nu duce nicăieri. */}
         {ecran !== ACASA && (
