@@ -200,7 +200,9 @@ export const AdminAntrenamentTab = () => {
         kind: 'success',
         msg:
           deschis.fel === 'noua'
-            ? `Săptămâna ${urmatorul} e salvată.`
+            ? vizibilDupa
+              ? `Săptămâna ${urmatorul} e publicată — pagina o arată.`
+              : `Săptămâna ${urmatorul} e salvată, încă ascunsă.`
             : vizibilDupa
               ? 'Publicat. Pagina arată textul nou.'
               : 'Salvat. Săptămâna rămâne ascunsă.',
