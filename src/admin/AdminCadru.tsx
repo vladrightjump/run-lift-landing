@@ -1,7 +1,8 @@
-import { useId, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { EcranAdmin, FazaSite } from './stareCurenta';
 import { ETICHETA_FAZA } from './stareCurenta';
 import { GRUPURI, etichetaEcranului } from './adminNavigatie';
+import { ListaDerulanta } from './controale/ListaDerulanta';
 
 type Props = {
   ecran: EcranAdmin;
@@ -41,10 +42,7 @@ export const AdminCadru = ({
   countdown,
   onLogout,
   children,
-}: Props) => {
-  const id = useId();
-
-  return (
+}: Props) => (
     <>
       <header className="admin-topbar">
         <div className="brand">
@@ -80,25 +78,17 @@ export const AdminCadru = ({
             </span>
           )}
 
-          <label className="admin-comutator" htmlFor={id}>
-            <span className="admin-comutator-eticheta">Ecran</span>
-            <select
-              id={id}
-              className="admin-comutator-select"
-              value={ecran}
-              onChange={(e) => onEcran(e.target.value as EcranAdmin)}
-            >
-              {GRUPURI.map((g) => (
-                <optgroup key={g.cheie} label={`${g.eticheta} — ${g.intrebare}`}>
-                  {g.ecrane.map((e) => (
-                    <option key={e.cheie} value={e.cheie}>
-                      {e.eticheta}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
+          <div className="admin-comutator">
+            <ListaDerulanta
+              eticheta="Ecran"
+              valoare={ecran}
+              onSchimba={onEcran}
+              optiuni={GRUPURI.map((g) => ({
+                eticheta: `${g.eticheta} — ${g.intrebare}`,
+                optiuni: g.ecrane.map((e) => ({ valoare: e.cheie, eticheta: e.eticheta })),
+              }))}
+            />
+          </div>
 
           <button type="button" className="admin-logout" onClick={onLogout}>
             Ieși din cont
@@ -127,4 +117,3 @@ export const AdminCadru = ({
       </main>
     </>
   );
-};

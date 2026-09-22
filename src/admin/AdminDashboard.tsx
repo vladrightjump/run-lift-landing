@@ -34,9 +34,8 @@ import { AdminEventTab } from './AdminEventTab';
 import { AdminComingSoonTab } from './AdminComingSoonTab';
 import { AdminAntrenamentTab } from './AdminAntrenamentTab';
 import { AdminClipuriTab } from './AdminClipuriTab';
-import { BlocSaptamanal } from './BlocSaptamanal';
-import { AdminNav } from './AdminNav';
 import { AdminCadru } from './AdminCadru';
+import { EcranPornire } from './EcranPornire';
 import { useEcranCurent } from './useEcranCurent';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
@@ -50,7 +49,6 @@ import { useCountdown } from '../hooks/useCountdown';
 import { useNow } from '../hooks/useNow';
 import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
 import { AdminSkeleton } from './AdminSkeleton';
-import { LiniaDeTimp } from './LiniaDeTimp';
 import { AdminActivitate } from './AdminActivitate';
 import { AdminAsteptare } from './AdminAsteptare';
 import { AdminCifre } from './AdminCifre';
@@ -676,32 +674,20 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         )}
 
         {tab === 'desfasurare' && (
-          <>
-            <LiniaDeTimp
-              semnale={{
-                nelivrate,
-                asteptare: waitAll.length,
-                ciornaNepublicata,
-                metaInUrma,
-                arhiva,
-              }}
-              onTab={schimbaTab}
-              onEditieNoua={porneșteEditiaUrmatoare}
-              arhiva={arhiva}
-            />
-
-            <BlocSaptamanal onDeschide={() => schimbaTab('antrenament')} />
-
-            {/* Registrul de ecrane trăiește pe ecranul de pornire. Contorul
-                spune ce e în spatele fiecăruia fără să-l deschizi; lipsește cât
-                timp datele n-au sosit, fiindcă un „0" în timpul încărcării e
-                tocmai ce citește organizatorul când intră. */}
-            <AdminNav
-              onEcran={schimbaTab}
-              contorEcran={contorEcran}
-              nelivrate={nelivrate}
-            />
-          </>
+          <EcranPornire
+            semnale={{
+              nelivrate,
+              asteptare: waitAll.length,
+              ciornaNepublicata,
+              metaInUrma,
+              arhiva,
+            }}
+            onEcran={schimbaTab}
+            onEditieNoua={porneșteEditiaUrmatoare}
+            arhiva={arhiva}
+            contorEcran={contorEcran}
+            nelivrate={nelivrate}
+          />
         )}
 
         {tab === 'antrenament' && <AdminAntrenamentTab />}

@@ -1001,18 +1001,75 @@
   /* ---- Comutatorul de ecrane, in antet ----
      Zece ecrane in butoane se rup pe doua randuri si mananca din nou capul
      paginii. O lista are aceeasi inaltime oricate ecrane s-ar aduna. */
-  .admin-comutator { display: flex; align-items: center; gap: 8px; }
-  .admin-comutator-eticheta {
-    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
-    color: var(--e3-muted-dim);
+  /* Comutatorul foloseste primitiva comuna; aici ramane doar asezarea lui in
+     antet, pe un rand in loc de doua. */
+  .admin-comutator .admin-control { display: flex; align-items: center; gap: 8px; }
+
+  /* ---- Primitivele de control ----
+     Controlul se alege dupa FORMA alegerii, nu dupa ce e mai rapid de randat.
+     In tot src/admin/ erau 108 butoane fata de 9 liste derulante si un singur
+     buton radio — inclusiv acolo unde alegerea era vadit „una dintre acestea". */
+  .admin-control { display: grid; gap: 6px; }
+  .admin-control-eticheta {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--e3-muted-dim); padding: 0;
   }
-  .admin-comutator-select {
+  .admin-control-select {
     background: var(--e3-surface); color: var(--e3-text);
-    border: 1px solid var(--e3-border); padding: 7px 10px;
+    border: 1px solid var(--e3-border); padding: 8px 10px;
     font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600;
   }
-  .admin-comutator-select:focus-visible {
+  .admin-control-select:focus-visible {
     outline: 2px solid var(--e3-accent); outline-offset: 2px;
+  }
+  .admin-control-select[aria-invalid='true'] { border-color: var(--e3-danger); }
+  /* Descrierea si problema se VAD. O eroare semnalata doar prin culoare nu
+     exista pentru cine n-o vede. */
+  .admin-control-descriere { font-size: 12px; line-height: 1.45; color: var(--e3-muted-dim); }
+  .admin-control-problema { font-size: 12px; line-height: 1.45; color: var(--e3-danger); }
+
+  /* Grupul radio: o alegere dintre putine variante exclusive. */
+  .admin-radio { border: none; margin: 0; padding: 0; }
+  .admin-radio-optiune {
+    display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+    padding: 8px 10px; border: 1px solid var(--e3-border);
+    background: var(--e3-surface); margin-top: 6px;
+  }
+  .admin-radio-optiune:hover { border-color: var(--e3-accent); }
+  .admin-radio-optiune:has(input:focus-visible) {
+    outline: 2px solid var(--e3-accent); outline-offset: 2px;
+  }
+  .admin-radio-optiune:has(input:checked) { border-color: var(--e3-accent); }
+  .admin-radio-text { display: grid; gap: 2px; }
+  .admin-radio-nume {
+    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--e3-text);
+  }
+  .admin-radio-descriere { font-size: 12px; color: var(--e3-muted-dim); }
+
+  /* Lista ordonabila: pozitia se alege, nu se ciocaneste rand cu rand.
+     Erau doua butoane pe FIECARE rand, unul mereu dezactivat la capete, iar
+     mutarea ultimului element pe primul loc cerea noua clicuri. */
+  .admin-ordonabila { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .admin-ordonabila-rand {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    padding: 10px 14px;
+  }
+  .admin-ordonabila-nr {
+    font-family: Anton, sans-serif; font-size: 14px; color: var(--e3-muted-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .admin-ordonabila-continut { flex: 1; min-width: 0; }
+  .admin-ordonabila-pozitie { display: flex; align-items: center; gap: 6px; }
+  .admin-ordonabila-eticheta {
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--e3-muted-dim);
+  }
+  .admin-ordonabila-pozitie select {
+    background: var(--e3-bg); color: var(--e3-text);
+    border: 1px solid var(--e3-border); padding: 4px 6px;
+    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600;
   }
 
   /* ---- Calea de intoarcere ----
