@@ -92,10 +92,12 @@ test.describe('Landing — conținut', () => {
   test('footer: organizatorii și Instagramul comunității', async ({ page }) => {
     await page.goto('/?preview=landing');
     await expect(page.getByText('+373 69 509 949')).toBeVisible();
-    await expect(page.getByRole('link', { name: '@we_run_and_lift' })).toHaveAttribute(
-      'href',
-      /instagram\.com\/we_run_and_lift/
-    );
+    // Căutarea e ancorată în footer: banda de clipuri poartă ACELAȘI handle în
+    // linkul ei, deci un `getByRole` pe toată pagina devine ambiguu în ziua în
+    // care intră primul clip real — exact ce s-a și întâmplat.
+    await expect(
+      page.getByRole('contentinfo').getByRole('link', { name: '@we_run_and_lift' })
+    ).toHaveAttribute('href', /instagram\.com\/we_run_and_lift/);
   });
 
   test('nu are scroll orizontal pe mobil (375px)', async ({ page }) => {
