@@ -24,17 +24,18 @@ export default defineConfig({
       // Praguri de CLICHET: coborâte sub valoarea măsurată, ca să prindă o
       // regresie fără să blocheze un PR pentru zgomot. Se URCĂ pe măsură ce
       // acoperirea crește; nu se coboară niciodată. Vezi `CI-CD.md`.
-      // Măsurate pe 21 septembrie 2026, după
-      // `docs/plans/2026-09-21-1707-feat-analitice-vercel-plan.md`:
-      // linii 75,36 · instrucțiuni 73,55 · funcții 69,65 · ramuri 66,42.
+      // Măsurate pe 22 septembrie 2026, după
+      // `docs/plans/2026-09-22-1328-feat-admin-pe-ecrane-plan.md`:
+      // linii 75,99 · instrucțiuni 74,13 · funcții 70,77 · ramuri 67,20.
+      // (Anterior, 21 septembrie: 75,36 · 73,55 · 69,65 · 66,42.)
       // (Anterior, 18 septembrie: 74,35 · 72,9 · 69,75 · 65,71. „Funcții" a
       // scăzut cu o zecime — `analytics.ts` aduce funcții noi, nu toate atinse
       // de teste — deci pragul ei rămâne pe loc. Clichetul nu coboară.)
       thresholds: {
         lines: 75,
-        statements: 73,
-        functions: 69,
-        branches: 66,
+        statements: 74,
+        functions: 70,
+        branches: 67,
       },
     },
   },
