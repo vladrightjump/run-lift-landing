@@ -166,7 +166,7 @@ describe('randarea', () => {
     expect(link.getAttribute('href')).not.toContain('youtube');
   });
 
-  it('cardul care nu redă poartă marcajul desenat, nu o casetă goală', () => {
+  it('sub poster rămâne marcajul desenat, pentru când gazda nu dă miniatura', () => {
     const { container } = randeaza();
     expect(container.querySelectorAll('.e3-reel-fallback')).toHaveLength(3);
   });
@@ -285,8 +285,85 @@ describe('la mișcare redusă', () => {
     expect(iframeuri(container)).toHaveLength(1);
   });
 
-  it('fără mișcare redusă nu există buton — nu e nimic de apăsat', () => {
+  it('fără mișcare redusă, cardul care redă n-are buton de oprire', () => {
     randeaza(CLIPURI, false);
-    expect(screen.queryByLabelText(/Redă clipul/)).toBeNull();
+    intersecteaza(true);
+    expect(screen.queryByLabelText(/Oprește clipul/)).toBeNull();
+  });
+});
+
+describe('caruselul', () => {
+  it('fiecare card arată posterul clipului lui, nu o casetă goală', () => {
+    const { container } = randeaza();
+    const postere = Array.from(container.querySelectorAll('img.e3-reel-poster'));
+    expect(postere).toHaveLength(3);
+    expect(postere[0].getAttribute('src')).toBe('https://i.ytimg.com/vi/dQw4w9WgXcQ/oar2.jpg');
+    expect(postere[0].getAttribute('loading')).toBe('lazy');
+  });
+
+  it('posterul care lipsește cade pe rezervă, apoi dispare', () => {
+    const { container } = randeaza();
+    const poster = () => container.querySelector('img.e3-reel-poster') as HTMLImageElement | null;
+    fireEvent.error(poster()!);
+    expect(poster()!.getAttribute('src')).toBe(
+      'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
+    );
+    fireEvent.error(poster()!);
+    expect(container.querySelectorAll('img.e3-reel-poster')).toHaveLength(2);
+  });
+
+  it('cardurile care nu redă sunt butoane; apăsat, unul ia locul celui care reda', () => {
+    const { container } = randeaza();
+    intersecteaza(true);
+    // Cardul 1 redă, deci doar celelalte două au buton.
+    expect(screen.getAllByLabelText(/Redă clipul/)).toHaveLength(2);
+
+    fireEvent.click(screen.getByLabelText(/Redă clipul: Forță pe scări/));
+    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    expect(iframeuri(container)).toHaveLength(1);
+    expect(carduri[2].querySelector('iframe')).not.toBeNull();
+    expect(container.querySelector('.e3-reels-count-now')?.textContent).toBe('03');
+  });
+
+  it('pornește pe clipul din mijlocul listei', () => {
+    const { container } = randeaza();
+    const centrat = container.querySelector('.e3-reels-item[data-centrat]');
+    expect(centrat?.textContent).toContain('Circuit funcțional');
+  });
+
+  it('săgețile mută centrul și playerul, iar la capăt se opresc', () => {
+    const { container } = randeaza();
+    intersecteaza(true);
+    const urmator = screen.getByLabelText('Clipul următor');
+    const anterior = screen.getByLabelText('Clipul anterior');
+
+    fireEvent.click(urmator);
+    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    expect(carduri[2].querySelector('iframe')).not.toBeNull();
+    expect(urmator).toHaveProperty('disabled', true);
+
+    fireEvent.click(anterior);
+    fireEvent.click(anterior);
+    expect(carduri[0].querySelector('iframe')).not.toBeNull();
+    expect(anterior).toHaveProperty('disabled', true);
+    expect(iframeuri(container)).toHaveLength(1);
+  });
+
+  it('segmentele duc direct la un clip și îl marchează pe cel curent', () => {
+    randeaza();
+    const segment = screen.getByLabelText('Clipul 1: Marți în parc');
+    fireEvent.click(segment);
+    expect(segment.getAttribute('aria-current')).toBe('true');
+  });
+
+  it('un singur clip n-are navigare', () => {
+    randeaza([CLIPURI[0]]);
+    expect(screen.queryByLabelText('Clipul următor')).toBeNull();
+  });
+
+  it('la mișcare redusă, săgețile mută doar centrul — nimic nu pornește', () => {
+    const { container } = randeaza(CLIPURI, true);
+    fireEvent.click(screen.getByLabelText('Clipul următor'));
+    expect(iframeuri(container)).toHaveLength(0);
   });
 });

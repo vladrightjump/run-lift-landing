@@ -517,38 +517,74 @@
   gap: clamp(32px, 6vw, 88px);
 }
 
-/* Șina. `overflow-x` fără bară vizibilă: pe desktop cu 3 clipuri nu are ce
-   derula, iar bara ar desena o linie sub carduri degeaba. */
+/* Media: șina + navigarea de sub ea. `min-width: 0`, altfel o șină care
+   derulează lărgește coloana din grilă în loc să deruleze.
+
+   Container, ca lățimea cardului să se măsoare din coloana în care stă, nu
+   din ecran: pe desktop coloana de media e o fracție din grilă, iar un card
+   calculat în `vw` ieșea prea lat la 1000px și prea îngust la 1600px. */
+.e3-reels-media {
+  min-width: 0;
+  container-type: inline-size;
+}
+
+/* Lățimea unui card. Pe telefon încape un card și câte o margine din vecini —
+   destul cât să spună că se derulează. Declarată pe copiii containerului:
+   `cqi` se rezolvă față de containerul STRĂMOȘ, deci pe `.e3-reels-media`
+   însăși ar măsura altceva. */
+.e3-reels-rail,
+.e3-reels-nav {
+  --reel-gap: clamp(12px, 2vw, 20px);
+  --reel-w: min(64cqi, 300px);
+}
+
+/* Șina. Fără bară vizibilă: navigarea de dedesubt e bara. */
 .e3-reels-rail {
+  position: relative; /* referința pentru `offsetLeft` din `aduInCentru` */
   display: flex;
-  gap: clamp(14px, 2vw, 22px);
+  gap: var(--reel-gap);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
+  overscroll-behavior-x: contain;
   /* Spațiu pentru `translateY(-4px)` din `.e3-card:hover`, altfel hover-ul e
      tăiat de marginea containerului care derulează. */
   padding: 6px 0;
   margin: -6px 0;
-  /* Marginea din dreapta se stinge, ca un card tăiat de capătul șinei să
-     citească drept „mai sunt”, nu drept card rupt. CSS-ul nu poate ști dacă
-     lista chiar depășește lățimea; o stingere permanentă pe ultimii 6% nu
-     strică nimic când nu depășește, pentru că acolo nu e niciun card. */
-  -webkit-mask-image: linear-gradient(to right, #000 94%, transparent 100%);
-  mask-image: linear-gradient(to right, #000 94%, transparent 100%);
+  /* Marginile se sting la ambele capete: vecinii citesc „mai sunt", nu
+     „card rupt". */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
 }
 .e3-reels-rail::-webkit-scrollbar { display: none; }
 
-/* `center`, nu `start`: cardul care redă e ales din centrul șinei, deci punctul
-   de oprire al derulării trebuie să fie același lucru. Cu `start`, degetul
-   lăsa cardul lipit de marginea stângă, iar playerul sărea pe vecinul lui. */
+/* Distanțiere, nu `padding`: fără ele primul și ultimul card n-ar putea ajunge
+   în centru, deci n-ar putea reda niciodată. Pseudo-elemente, ca să nu fie
+   copii ai șinei — alegerea centrului numără `children`. `padding-inline`
+   ar face același lucru, dar capătul din dreapta e ignorat de unele Safari
+   într-un container flex care derulează. */
+.e3-reels-rail::before,
+.e3-reels-rail::after {
+  content: '';
+  flex: 0 0 calc(50% - var(--reel-w) / 2 - var(--reel-gap));
+}
+
+/* `center`: cardul care redă e ales din centrul șinei, deci și punctul de
+   oprire al derulării e centrul. */
 .e3-reels-item {
-  flex: 0 0 72vw;
+  flex: 0 0 var(--reel-w);
   margin: 0;
   scroll-snap-align: center;
+  scroll-snap-stop: always;
 }
 
 /* Cardul. Colțuri drepte ca tot restul paginii; `.e3-card` aduce suprafața,
-   bordura și hover-ul. */
+   bordura și hover-ul.
+
+   Accentul pe cardul din centru trece prin `scale`, nu prin `transform`:
+   proprietatea separată se compune cu `translateY` din hover în loc să-l
+   calce. Și se aplică pe card, nu pe `<figure>` — cutia figurii rămâne pe
+   loc, deci rândul nu se decalează. */
 .e3-reel {
   display: block;
   position: relative;
@@ -557,14 +593,39 @@
   overflow: hidden;
   border-radius: 0;
   -webkit-tap-highlight-color: transparent;
+  scale: 0.9;
+  opacity: 0.5;
+  transition:
+    scale 0.55s var(--e3-spring),
+    opacity 0.4s ease,
+    background 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s var(--e3-spring),
+    box-shadow 0.25s ease;
+}
+.e3-reels-item[data-centrat] .e3-reel {
+  scale: 1;
+  opacity: 1;
+  border-color: var(--e3-accent);
+  box-shadow: 0 24px 48px -12px rgba(10, 14, 8, 0.7);
+}
+.e3-reels-item:not([data-centrat]) .e3-reel:hover { opacity: 0.8; }
+
+/* Posterul: fiecare card arată clipul lui, nu o casetă goală. */
+.e3-reel-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-/* Playerul umple cardul. Montat doar pe cardul care redă, deci acoperă
-   marcajul desenat de dedesubt.
+/* Playerul umple cardul, peste poster.
 
-   Fără `filter`, spre deosebire de vechiul `<video>`: peste un `iframe` de pe
-   altă origine un filtru se aplică și peste controalele gazdei, iar butoanele
-   temperate arată a interfață stricată, nu a stil. */
+   Fără `filter`: peste un `iframe` de pe altă origine un filtru se aplică și
+   peste controalele gazdei, iar butoanele temperate arată a interfață
+   stricată, nu a stil. */
 .e3-reel-player {
   position: absolute;
   inset: 0;
@@ -572,10 +633,13 @@
   height: 100%;
   border: 0;
   display: block;
+  opacity: 0;
+  transition: opacity 0.4s ease;
 }
+.e3-reel-player[data-gata] { opacity: 1; }
 
-/* Cardul care nu redă rămâne desenat, nu gol. Gazda nu oferă un poster
-   vertical utilizabil, deci marcajul ăsta e tot ce acoperă cardul. */
+/* Marcajul desenat, sub poster. Se vede doar dacă gazda nu dă nicio
+   miniatură. */
 .e3-reel-fallback {
   position: absolute;
   inset: 0;
@@ -589,14 +653,28 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Butonul de pornire. Apare DOAR la mișcare redusă, unde nimic nu pornește
-   singur: fără el, R5 ar cere o acțiune a vizitatorului pe un element care
-   n-are niciun control. Restul timpului cardul n-are ce apăsa. */
+/* Cardul care nu redă, ca buton întreg. Umbra de jos ține butonul lizibil pe
+   orice poster, fără să întunece tot cadrul. */
+.e3-reel-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background: linear-gradient(to top, rgba(12, 14, 10, 0.55), transparent 45%);
+  -webkit-tap-highlight-color: transparent;
+}
+.e3-reel-select:focus-visible { outline: 2px solid var(--e3-accent); outline-offset: -2px; }
+
+/* Glyful de pornire. Pe cardurile laterale e mic și discret; pe cel din centru
+   (la mișcare redusă, singurul care nu pornește singur) crește. */
 .e3-reel-play {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  translate: -50% -50%;
   width: 44px;
   height: 44px;
   display: grid;
@@ -607,12 +685,89 @@
   background: var(--e3-accent);
   color: var(--e3-bg);
   font-size: 15px;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease;
+  transition: scale 0.25s var(--e3-spring), background 0.25s ease;
 }
-.e3-reel:hover .e3-reel-play {
+.e3-reel-stop { padding-left: 0; font-size: 12px; letter-spacing: -1px; }
+.e3-reel-select:hover .e3-reel-play,
+.e3-reel-select:focus-visible .e3-reel-play,
+.e3-reel-stop:hover {
   background: var(--e3-accent-hover);
-  transform: translate(-50%, -50%) scale(1.12);
+  scale: 1.12;
 }
+.e3-reel-select:active .e3-reel-play { scale: 0.96; }
+
+/* Navigarea: două săgeți, contorul și segmentele. */
+.e3-reels-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  /* Aliniată cu cardul din centru, nu cu marginea șinei stinse. */
+  padding-inline: max(0px, calc(50% - var(--reel-w) / 2 - 56px));
+}
+.e3-reels-arrow {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--e3-border);
+  background: transparent;
+  color: var(--e3-text);
+  font-size: 18px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+.e3-reels-arrow:hover:not(:disabled) { border-color: var(--e3-accent); color: var(--e3-accent); }
+.e3-reels-arrow:active:not(:disabled) { transform: translateY(1px); }
+.e3-reels-arrow:disabled { opacity: 0.3; cursor: default; }
+
+.e3-reels-count {
+  flex: none;
+  margin: 0 6px 0 10px;
+  font-family: Anton, sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--e3-text);
+}
+.e3-reels-count-now { color: var(--e3-accent); }
+.e3-reels-count-sep { margin: 0 4px; color: var(--e3-muted-dim); }
+.e3-reels-count-total { color: var(--e3-muted-dim); }
+
+/* Segmentele: o linie subțire per clip, cu zona de apăsare mai înaltă decât
+   linia desenată (44px e ținta minimă pe telefon). */
+.e3-reels-segments {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+.e3-reels-segment {
+  flex: 1;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+}
+.e3-reels-segment::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  translate: 0 -50%;
+  background: var(--e3-border);
+  transition: background 0.3s ease, height 0.3s ease;
+}
+.e3-reels-segment:hover::before { background: var(--e3-muted-dim); }
+.e3-reels-segment[aria-current]::before { background: var(--e3-accent); height: 3px; }
+.e3-reels-segment:focus-visible { outline: 2px solid var(--e3-accent); outline-offset: -8px; }
 
 .e3-reel-caption {
   display: grid;
@@ -655,27 +810,23 @@
   color: var(--e3-accent);
 }
 
-/* Peste 900px banda se așază ca în referință: media în stânga, text în dreapta,
-   cardurile decalate pe doi timpi. Sub prag rămâne o coloană cu TEXTUL PRIMUL —
-   o secțiune care începe cu imagini fără titlu nu se citește. */
+/* Peste 900px banda se așază ca în referință: media în stânga, text în dreapta.
+   Sub prag rămâne o coloană cu TEXTUL PRIMUL — o secțiune care începe cu
+   imagini fără titlu nu se citește. */
 @media (min-width: 900px) {
   .e3-reels-inner {
     grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
     align-items: center;
   }
-  /* Calibrat ca trei carduri să încapă întregi în coloana de media, iar al
-     patrulea să se vadă pe jumătate: exact cât să spună că șina continuă. */
-  .e3-reels-item { flex-basis: clamp(164px, 16vw, 200px); }
-  /* Decalajul pe doi timpi, nu rampa în trei trepte a „Formatului”. */
-  .e3-reels-item:nth-child(2n) { margin-top: clamp(20px, 4vw, 52px); }
+  /* Trei carduri întregi în coloana de media — centrul și cei doi vecini —
+     plus o fâșie de aer la capete, unde se stinge marginea. */
+  .e3-reels-rail,
+  .e3-reels-nav { --reel-w: min(calc((100cqi - 2 * var(--reel-gap)) / 3.25), 240px); }
   .e3-reels-text { position: sticky; top: 96px; }
 }
 
-/* Pe ecran mic un card și jumătate încap în lățime, iar o treaptă acolo arată
-   ca un bug de layout, nu ca ritm. */
 @media (max-width: 899px) {
   .e3-reels-text { order: -1; }
-  .e3-reels-item { margin-top: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -683,8 +834,7 @@
   /* Cardurile rămân clicabile; dispar doar zoomul și virajul de culoare.
      Butonul de play NU primește `transform: none` — centrarea lui ESTE un
      transform, iar anularea l-ar muta în colț. Se anulează doar creșterea. */
-  .e3-reel-play { transition: none !important; }
-  .e3-reel:hover .e3-reel-play { transform: translate(-50%, -50%); }
+  .e3-reel, .e3-reel-play, .e3-reels-segment::before { transition: none !important; }
   /* Fără mișcare: ascundem clipul, rămâne fundalul întunecat + overlay. */
   .e3-hero-video { display: none; }
   /* Animațiile de scroll lasă elementele la starea finală, nu la cea inițială. */
