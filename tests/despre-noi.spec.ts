@@ -177,6 +177,41 @@ test.describe('Despre noi — conținut', () => {
     expect(numere.map((n) => n.trim())).toEqual(['01', '02', '03', '04', '05', '06']);
   });
 
+  /**
+   * Regresie: pe landing banda e montată abia după ce sosesc clipurile, deci
+   * observatorul ei prindea șina. Aici componenta se randează de la primul
+   * cadru, cu lista goală — întoarce `null`, efectul nu găsește șina și nu se
+   * mai reia când lista sosește. Rezultatul, în producție: trei carduri cu
+   * numerele desenate și niciun player, oricât ai derula.
+   */
+  test('derularea până la bandă pornește exact un player', async ({ page }) => {
+    await page.route('**/rest/v1/rpc/public_training_reels', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          ['dQw4w9WgXcQ', '_-Ab0123456', 'ZZZZ9999888'].map((youtube, i) => ({
+            youtube,
+            caption: `Clip ${i + 1}`,
+            url: 'https://www.instagram.com/reel/AAAAA11111/',
+          }))
+        ),
+      })
+    );
+    await page.goto('/despre-noi');
+
+    await expect(page.locator('.e3-reel')).toHaveCount(3);
+    // Banda stă sub fold: nimic nu pleacă spre gazdă înainte de derulare.
+    await expect(page.locator('iframe[src*="youtube-nocookie.com"]')).toHaveCount(0);
+
+    await page.locator('.e3-reel').first().scrollIntoViewIfNeeded();
+
+    // UNUL, ca pe landing: cardul din centrul șinei.
+    await expect(page.locator('iframe[src*="youtube-nocookie.com"]')).toHaveCount(1, {
+      timeout: 5000,
+    });
+  });
+
   test('fără scroll orizontal pe mobil', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
     await page.goto('/despre-noi');

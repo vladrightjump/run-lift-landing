@@ -143,6 +143,10 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
     // La mișcare redusă nu se montează niciun observator: nimic nu pornește
     // singur, iar butonul de pe card e singura cale.
     if (miscareRedusa) return;
+    // Fără clipuri componenta întoarce `null`, deci n-are șină de observat.
+    // Condiția e scrisă pe `reels.length`, nu pe `sinaRef`, tocmai ca lista să
+    // fie o dependență adevărată a efectului — vezi nota de la dependențe.
+    if (reels.length === 0) return;
     const sina = sinaRef.current;
     if (!sina || typeof IntersectionObserver === 'undefined') return;
 
@@ -175,7 +179,13 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
       clearTimeout(asteapta);
       sina.removeEventListener('scroll', laDerulare);
     };
-  }, [miscareRedusa, alegeCentrul]);
+    // `reels.length` E o dependență: cu lista goală componenta întoarce `null`,
+    // deci efectul iese fără să observe nimic. Clipurile sosesc după prima
+    // randare (RPC), iar fără reluarea asta observatorul nu s-ar mai atașa
+    // niciodată — carduri cu numărul desenat și niciun player, la nesfârșit.
+    // Pe landing nu se vedea: acolo apelantul montează banda abia când are
+    // clipuri, deci primul efect prindea deja șina.
+  }, [miscareRedusa, alegeCentrul, reels.length]);
 
   // Apelantul filtrează deja lista goală (altfel numerotarea ar sări peste un
   // număr), dar componenta nu se bazează pe asta.
