@@ -92,3 +92,21 @@ export const sursaIncorporare = (id: string): string =>
     playsinline: '1',
     rel: '0',
   }).toString();
+
+/**
+ * Posterul vertical al unui clip, pentru cardurile care nu redau.
+ *
+ * `oar2.jpg` e miniatura pe care YouTube o generează pentru Shorts: 1080×1920,
+ * exact forma cardului, ~100KB. Nu e documentată, deci nu ne bazăm doar pe ea —
+ * vezi `posterClipRezerva`.
+ */
+export const posterClip = (id: string): string => `https://i.ytimg.com/vi/${id}/oar2.jpg`;
+
+/**
+ * Rezerva, dacă `oar2.jpg` lipsește. `hqdefault.jpg` există pentru orice clip:
+ * e 4:3, dar pentru un Short cadrul vertical stă centrat între bare negre, iar
+ * `object-fit: cover` pe un card 9:16 taie exact barele. Mai puțin clară, nu
+ * greșită.
+ */
+export const posterClipRezerva = (id: string): string =>
+  `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;

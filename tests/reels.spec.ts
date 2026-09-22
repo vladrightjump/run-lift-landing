@@ -29,6 +29,12 @@ const UN_CLIP = {
   url: 'https://www.instagram.com/reel/AAAAA11111/',
 };
 
+/** Un PNG transparent de 1×1, ca poster servit local. */
+const PIXEL = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64'
+);
+
 /** Originea de la care banda cere playerul. */
 const GAZDA = 'youtube-nocookie.com';
 
@@ -53,6 +59,11 @@ const mock = (
   ]
 ) =>
   Promise.all([
+    // Posterele vin de la gazda de miniaturi. Servite local, ca testele să nu
+    // depindă de rețea și ca un identificator inventat să aibă totuși poster.
+    page.route('https://i.ytimg.com/**', (route: Route) =>
+      route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL })
+    ),
     page.route(REELS_ROUTE, (route: Route) =>
       route.fulfill({
         status: 200,
@@ -192,6 +203,34 @@ test.describe('cu clipuri în bandă', () => {
     expect(src).toContain('autoplay=1');
     expect(src).toContain('mute=1');
     expect(src).toContain('loop=1');
+  });
+});
+
+test.describe('caruselul', () => {
+  test('săgeata mută playerul pe cardul următor, tot unul singur', async ({ page }) => {
+    await mock(page, TREI);
+    await page.goto('/?preview=landing');
+    await expect(page.locator('.e3-reel')).toHaveCount(3);
+    await page.locator('.e3-reels-rail').scrollIntoViewIfNeeded();
+
+    // Pornește pe clipul din mijloc.
+    const player = page.locator(`iframe[src*="${GAZDA}"]`);
+    await expect(player).toHaveCount(1, { timeout: 5000 });
+    await expect(player).toHaveAttribute('src', /_-Ab0123456/);
+    await expect(page.locator('.e3-reels-count-now')).toHaveText('02');
+
+    await page.getByRole('button', { name: 'Clipul următor' }).click();
+
+    await expect(player).toHaveAttribute('src', /ZZZZ9999888/);
+    await expect(player).toHaveCount(1);
+    await expect(page.locator('.e3-reels-count-now')).toHaveText('03');
+    await expect(page.getByRole('button', { name: 'Clipul următor' })).toBeDisabled();
+  });
+
+  test('fiecare card are poster; niciunul nu e casetă goală', async ({ page }) => {
+    await mock(page, TREI);
+    await page.goto('/?preview=landing');
+    await expect(page.locator('.e3-reel-poster')).toHaveCount(3);
   });
 });
 
