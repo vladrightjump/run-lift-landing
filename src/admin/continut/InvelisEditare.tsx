@@ -23,7 +23,14 @@ export type StareBara = {
   /** Lipsește pe ecranele care n-au ce previzualiza. */
   onPreviz?: () => void;
   urlPreviz?: string;
-  onSalveaza: () => void;
+  /**
+   * Lipsește când documentul deschis e deja public și n-are o ciornă separată.
+   *
+   * Pe un clip vizibil sau pe o săptămână arătată, rândul public e singurul
+   * loc de scriere: „Salvează" ar fi fie tot o publicare, fără previzualizare,
+   * fie o ascundere. Rămâne doar „Publică", după previzualizarea din editor.
+   */
+  onSalveaza?: () => void;
   onPublica: () => void;
   seSalveaza: boolean;
   sePublica: boolean;
@@ -144,16 +151,18 @@ export const InvelisEditare = ({
               </a>
             ))}
 
-          <button
-            type="button"
-            className="admin-btn-ghost"
-            onClick={bara.onSalveaza}
-            // `sePublica` la fel de mult ca `seSalveaza`: publicarea salvează
-            // ea însăși, deci un al doilea „Salvează" din zbor ar scrie peste.
-            disabled={bara.ocupat || !bara.poatePublica}
-          >
-            {bara.seSalveaza ? 'Se salvează…' : 'Salvează'}
-          </button>
+          {bara.onSalveaza && (
+            <button
+              type="button"
+              className="admin-btn-ghost"
+              onClick={bara.onSalveaza}
+              // `sePublica` la fel de mult ca `seSalveaza`: publicarea salvează
+              // ea însăși, deci un al doilea „Salvează" din zbor ar scrie peste.
+              disabled={bara.ocupat || !bara.poatePublica}
+            >
+              {bara.seSalveaza ? 'Se salvează…' : 'Salvează'}
+            </button>
+          )}
 
           <button
             type="button"

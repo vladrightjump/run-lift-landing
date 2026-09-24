@@ -56,6 +56,12 @@ describe('verbele sînt aceleași pe orice ecran de conținut', () => {
     expect(screen.getByRole('button', { name: 'Publică' })).toHaveProperty('disabled', true);
   });
 
+  it('un document deja public oferă doar „Publică" — nicio salvare fără previzualizare', () => {
+    randeaza({ onSalveaza: undefined });
+    expect(screen.queryByRole('button', { name: 'Salvează' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Publică' })).toBeTruthy();
+  });
+
   it('fără bară, ecranul nu oferă verbe — cazul „n-ai deschis nimic"', () => {
     render(
       <InvelisEditare titlu="Evenimentul" bara={null}>

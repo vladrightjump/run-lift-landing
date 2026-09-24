@@ -294,11 +294,57 @@ describe('salvarea', () => {
     await screen.findByText('Marți în parc');
     fireEvent.click(screen.getByRole('button', { name: 'Editează' }));
     fireEvent.change(camp('Legenda'), { target: { value: 'Altă legendă' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
 
     await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
     expect(saveTrainingReel.mock.calls[0][1]).toBe('r1');
     expect(saveTrainingReel.mock.calls[0][3]).toBe('Altă legendă');
+  });
+
+  it('un clip vizibil nu oferă „Salvează" — editarea lui se scrie doar prin „Publică"', async () => {
+    // „Salvează" scria clipul ascuns, deci o legendă corectată pe un clip de pe
+    // pagină îl scotea de pe pagină. Pe un clip vizibil nu există ciornă
+    // separată: rândul public e singurul loc de scriere.
+    listTrainingReels.mockResolvedValue([rand({ vizibil: true })]);
+    randeaza();
+    await screen.findByText('Marți în parc');
+    fireEvent.click(screen.getByRole('button', { name: 'Editează' }));
+    fireEvent.change(camp('Legenda'), { target: { value: 'Legendă corectată' } });
+
+    expect(screen.queryByRole('button', { name: 'Salvează' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+
+    await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
+    expect(saveTrainingReel.mock.calls[0][5]).toBe(true);
+  });
+
+  it('„Salvează" pe un clip ascuns îl lasă ascuns', async () => {
+    listTrainingReels.mockResolvedValue([rand({ vizibil: false })]);
+    randeaza();
+    await screen.findByText('Marți în parc');
+    fireEvent.click(screen.getByRole('button', { name: 'Editează' }));
+    fireEvent.change(camp('Legenda'), { target: { value: 'Încă nu' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+
+    await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
+    expect(saveTrainingReel.mock.calls[0][1]).toBe('r1');
+    expect(saveTrainingReel.mock.calls[0][5]).toBe(false);
+  });
+
+  it('un clip nou se poate salva ascuns, înainte de publicare', async () => {
+    randeaza();
+    await screen.findByText(/Niciun clip/);
+    fireEvent.change(camp('Linkul clipului de pe YouTube'), {
+      target: { value: 'https://www.youtube.com/shorts/dQw4w9WgXcQ' },
+    });
+    fireEvent.change(camp('Legenda'), { target: { value: 'Marți' } });
+    fireEvent.change(camp('Linkul postării'), {
+      target: { value: 'https://www.instagram.com/reel/AAAAA11111/' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvează' }));
+
+    await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
+    expect(saveTrainingReel.mock.calls[0][5]).toBe(false);
   });
 
   it('refuzul serverului ajunge la om, în cuvintele lui', async () => {
