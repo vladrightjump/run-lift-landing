@@ -471,6 +471,10 @@ Deno.serve(async (req: Request) => {
       html: renderHtml(tpl.subiect, text, badge, unsubPage),
       subiect: tpl.subiect,
       pentru: { email: row.email, nume: row.nume },
+      // Confirmarea că s-a randat ciorna, nu șablonul din DB. O funcție mai
+      // veche n-o trimite, iar clientul refuză atunci să prezinte rezultatul
+      // drept ciornă — funcția se deployează de mână, separat de site.
+      ciorna: areCiorna,
     });
   }
 

@@ -719,6 +719,12 @@ describe('preview — ce se vede înainte de trimitere', () => {
     expect(jurnal(f)).toHaveLength(0);
   });
 
+  it('fără ciornă, răspunsul nu pretinde că a randat una', async () => {
+    const f = await incarca({ stare: stare() });
+    const { body } = await cere(f, { mode: 'preview', token: 'x', template: 'bulk_participant_reminder' });
+    expect(body.ciorna).toBe(false);
+  });
+
   it('randează pe un destinatar real, cu linkurile lui', async () => {
     const f = await incarca({ stare: stare() });
     const { body } = await cere(f, {
@@ -791,6 +797,8 @@ describe('preview — ce se vede înainte de trimitere', () => {
       });
       expect(res.status).toBe(200);
       expect(body.subiect).toBe('Subiect din ciornă');
+      // Confirmarea explicită: clientul refuză o previzualizare de ciornă fără ea.
+      expect(body.ciorna).toBe(true);
       expect(body.html as string).toContain('Salut Ana, textul încă nesalvat.');
       expect(trimise(f)).toHaveLength(0);
       expect(jurnal(f)).toHaveLength(0);

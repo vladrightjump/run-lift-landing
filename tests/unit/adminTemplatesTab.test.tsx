@@ -321,3 +321,59 @@ describe('AdminTemplatesTab — verbul de finalizare', () => {
     );
   });
 });
+
+describe('AdminTemplatesTab — previzualizarea nu rămâne în urma ciornei', () => {
+  it('o editare după randare retrage previzualizarea — ar arăta alt text decât cel publicat', async () => {
+    randeaza();
+    fireEvent.click(await screen.findByRole('button', { name: 'Previzualizează' }));
+    await waitFor(() => expect(cadru()).not.toBeNull());
+
+    fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
+      target: { value: 'Alt subiect' },
+    });
+    expect(cadru()).toBeNull();
+  });
+
+  it('„Anulează" retrage și el previzualizarea ciornei', async () => {
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
+      target: { value: 'Alt subiect' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Previzualizează' }));
+    await waitFor(() => expect(cadru()).not.toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anulează' }));
+    expect(cadru()).toBeNull();
+  });
+
+  it('o randare pornită înaintea editării nu mai aterizează după ea', async () => {
+    let elibereaza: (v: typeof PREVIEW) => void = () => {};
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    previewEmailHtml.mockReturnValueOnce(new Promise((res) => { elibereaza = res; }));
+    fireEvent.click(screen.getByRole('button', { name: 'Previzualizează' }));
+
+    fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
+      target: { value: 'Alt subiect' },
+    });
+    elibereaza(PREVIEW);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(cadru()).toBeNull();
+  });
+});
+
+describe('AdminTemplatesTab — funcția de email rămasă în urmă', () => {
+  it('spune că ciorna nu s-a putut randa, în loc să arate șablonul vechi', async () => {
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    previewEmailHtml.mockRejectedValueOnce(new Error('draft_not_rendered'));
+    fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
+      target: { value: 'Alt subiect' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Previzualizează' }));
+
+    expect(await screen.findByText(/nu știe încă să randeze ciorne/)).toBeTruthy();
+    expect(cadru()).toBeNull();
+  });
+});

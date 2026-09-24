@@ -186,6 +186,21 @@ export const AdminTemplatesTab = () => {
    */
   const cerereaCurenta = useRef(0);
 
+  /**
+   * Scrie în ciornă și retrage previzualizarea ei.
+   *
+   * Previzualizarea arată ciorna de la momentul randării. După încă o
+   * editare ar arăta alt text decât cel pe care-l scrie „Publică", deci
+   * dispare — iar o randare încă în zbor nu mai are voie să aterizeze.
+   */
+  const scrieCiorna = (cheie: string, ciorna: { subiect: string; text: string }) => {
+    setDraft((p) => ({ ...p, [cheie]: ciorna }));
+    if (previzualizare?.cheie === cheie) {
+      cerereaCurenta.current += 1;
+      setPrevizualizare(null);
+    }
+  };
+
   const previzualizeaza = async (t: AdminEmailTemplate, pentru = destinatar) => {
     const { cheie } = t;
     const aMea = ++cerereaCurenta.current;
@@ -210,7 +225,9 @@ export const AdminTemplatesTab = () => {
           ? 'Persoana aleasă nu mai e destinatar al ediției — s-a dezabonat sau a fost ștearsă. Alege pe altcineva.'
           : text.includes('no_recipient')
             ? 'Ediția n-are niciun destinatar înscris, deci variabilele n-au cu ce fi completate.'
-            : 'Nu am putut randa previzualizarea.',
+            : text.includes('draft_not_rendered')
+              ? 'Funcția de email de pe server nu știe încă să randeze ciorne — trebuie deployată. Până atunci, previzualizarea ar arăta textul vechi, nu ciorna.'
+              : 'Nu am putut randa previzualizarea.',
       });
     }
   };
@@ -261,9 +278,7 @@ export const AdminTemplatesTab = () => {
               <input
                 type="text"
                 value={d.subiect}
-                onChange={(e) =>
-                  setDraft((p) => ({ ...p, [t.cheie]: { ...d, subiect: e.target.value } }))
-                }
+                onChange={(e) => scrieCiorna(t.cheie, { ...d, subiect: e.target.value })}
               />
             </label>
 
@@ -272,9 +287,7 @@ export const AdminTemplatesTab = () => {
               <textarea
                 rows={14}
                 value={d.text}
-                onChange={(e) =>
-                  setDraft((p) => ({ ...p, [t.cheie]: { ...d, text: e.target.value } }))
-                }
+                onChange={(e) => scrieCiorna(t.cheie, { ...d, text: e.target.value })}
               />
             </label>
 
@@ -307,7 +320,7 @@ export const AdminTemplatesTab = () => {
                 type="button"
                 className="admin-btn-ghost"
                 disabled={!modificat(t) || saving === t.cheie}
-                onClick={() => setDraft((p) => ({ ...p, [t.cheie]: { subiect: t.subiect, text: t.text_email } }))}
+                onClick={() => scrieCiorna(t.cheie, { subiect: t.subiect, text: t.text_email })}
               >
                 Anulează
               </button>

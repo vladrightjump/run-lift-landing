@@ -751,6 +751,8 @@ export type EmailPreview = {
   subiect: string;
   /** Destinatarul real pentru care s-au completat variabilele. */
   pentru: { email: string; nume: string };
+  /** `true` când s-a randat ciorna trimisă, nu șablonul din bază. */
+  ciorna?: boolean;
 };
 
 /**
@@ -783,6 +785,11 @@ export const previewEmailHtml = async (
   if (!res.ok) {
     if (res.status === 401) throw new InvalidTokenError();
     throw new SubmitHttpError(res.status, JSON.stringify(body));
+  }
+  // O funcție `send-email` mai veche decât site-ul ignoră ciorna și randează
+  // șablonul din bază. Fără confirmare, ecranul l-ar prezenta drept ciornă.
+  if (ciorna && (body as EmailPreview).ciorna !== true) {
+    throw new Error('draft_not_rendered');
   }
   return body as EmailPreview;
 };
