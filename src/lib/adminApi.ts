@@ -764,11 +764,15 @@ export type EmailPreview = {
 export const previewEmailHtml = async (
   token: string,
   template: string,
-  email?: string,
-  signal?: AbortSignal,
-  /** Textul din editor, încă nepublicat. Lipsă: se randează șablonul din bază. */
-  ciorna?: { subiect: string; text: string }
+  optiuni: {
+    /** Destinatarul ale cărui date completează variabilele. Lipsă: primul înscris. */
+    email?: string;
+    /** Textul din editor, încă nepublicat. Lipsă: se randează șablonul din bază. */
+    ciorna?: { subiect: string; text: string };
+  } = {},
+  signal?: AbortSignal
 ): Promise<EmailPreview> => {
+  const { email, ciorna } = optiuni;
   const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
     method: 'POST',
     headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },

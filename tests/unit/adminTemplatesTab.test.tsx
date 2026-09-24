@@ -122,7 +122,7 @@ describe('AdminTemplatesTab — previzualizarea HTML', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'ana@exemplu.ro' } });
 
     await waitFor(() => expect(previewEmailHtml).toHaveBeenCalledTimes(2));
-    const [, , email] = previewEmailHtml.mock.calls.at(-1)!;
+    const [, , { email }] = previewEmailHtml.mock.calls.at(-1)!;
     expect(email).toBe('ana@exemplu.ro');
   });
 
@@ -139,7 +139,7 @@ describe('AdminTemplatesTab — previzualizarea HTML', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Previzualizează' }));
 
     await waitFor(() => expect(previewEmailHtml).toHaveBeenCalled());
-    expect(previewEmailHtml.mock.calls.at(-1)![4]).toBeUndefined();
+    expect(previewEmailHtml.mock.calls.at(-1)![2].ciorna).toBeUndefined();
   });
 
   it('cu modificări nepublicate, randează ciorna — înainte să ajungă în bază', async () => {
@@ -153,7 +153,7 @@ describe('AdminTemplatesTab — previzualizarea HTML', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Previzualizează' }));
 
     await waitFor(() => expect(previewEmailHtml).toHaveBeenCalled());
-    expect(previewEmailHtml.mock.calls.at(-1)![4]).toEqual({
+    expect(previewEmailHtml.mock.calls.at(-1)![2].ciorna).toEqual({
       subiect: 'Alt subiect',
       text: SABLON.text_email,
     });

@@ -114,6 +114,9 @@ export const AdminAntrenamentTab = () => {
   const saptamanaDeschisa =
     deschis.fel === 'existenta' ? (program.find((s) => s.id === deschis.id) ?? null) : null;
 
+  /** Numărul săptămânii din editor — cel pe care-l va primi, dacă e nouă. */
+  const numarDeschis = deschis.fel === 'noua' ? urmatorul : (saptamanaDeschisa?.numar ?? '—');
+
   /** Versiunile înlocuite ale săptămânii deschise — nu ale întregului program. */
   const istoric =
     saptamanaDeschisa === null
@@ -339,9 +342,7 @@ export const AdminAntrenamentTab = () => {
       bara={{
         identitate: (
           <strong>
-            {deschis.fel === 'noua'
-              ? `Săptămâna ${urmatorul} (nouă)`
-              : `Săptămâna ${saptamanaDeschisa?.numar ?? '—'}`}
+            {`Săptămâna ${numarDeschis}${deschis.fel === 'noua' ? ' (nouă)' : ''}`}
           </strong>
         ),
         detaliu: titlu || undefined,
@@ -441,9 +442,7 @@ export const AdminAntrenamentTab = () => {
 
         <fieldset className="admin-config-grup">
           <legend>
-            {deschis.fel === 'noua'
-              ? `Săptămâna ${urmatorul} (nouă)`
-              : `Săptămâna ${saptamanaDeschisa?.numar ?? '—'}`}
+            {`Săptămâna ${numarDeschis}${deschis.fel === 'noua' ? ' (nouă)' : ''}`}
           </legend>
           <p className="admin-config-hint">
             Rândurile pe care le scrii aici sunt rândurile de pe pagină — nu e nevoie de nicio
@@ -512,8 +511,7 @@ export const AdminAntrenamentTab = () => {
             </span>
             <article className="an-card">
               <p className="an-eticheta">
-                Săptămâna{' '}
-                {deschis.fel === 'noua' ? urmatorul : (saptamanaDeschisa?.numar ?? '—')}
+                Săptămâna {numarDeschis}
               </p>
               <h3 className="an-titlu">{titlu}</h3>
               <p className="an-corp">{corp}</p>

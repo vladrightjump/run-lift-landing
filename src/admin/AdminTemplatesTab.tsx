@@ -186,17 +186,17 @@ export const AdminTemplatesTab = () => {
    */
   const cerereaCurenta = useRef(0);
 
-  const previzualizeaza = async (cheie: string, pentru = destinatar) => {
+  const previzualizeaza = async (t: AdminEmailTemplate, pentru = destinatar) => {
+    const { cheie } = t;
     const aMea = ++cerereaCurenta.current;
     setPrevizualizare({ cheie, date: null, eroare: null });
     // Cu modificări nepublicate se randează CIORNA: „Publică" e singura
     // scriere, deci aici e singurul loc în care textul nou se vede randat
     // înainte să plece la următorul email.
-    const t = rows?.find((r) => r.cheie === cheie);
     const d = draft[cheie];
-    const ciorna = t && d && modificat(t) ? { subiect: d.subiect.trim(), text: d.text } : undefined;
+    const ciorna = d && modificat(t) ? { subiect: d.subiect.trim(), text: d.text } : undefined;
     try {
-      const date = await previewEmailHtml(token, cheie, pentru || undefined, undefined, ciorna);
+      const date = await previewEmailHtml(token, cheie, { email: pentru || undefined, ciorna });
       if (aMea !== cerereaCurenta.current) return;
       setPrevizualizare({ cheie, date, eroare: null });
     } catch (err) {
@@ -299,7 +299,7 @@ export const AdminTemplatesTab = () => {
                     ? 'Vezi HTML-ul ciornei, exact cum va pleca după „Publică"'
                     : 'Vezi HTML-ul exact cum pleacă'
                 }
-                onClick={() => previzualizeaza(t.cheie)}
+                onClick={() => previzualizeaza(t)}
               >
                 Previzualizează
               </button>
@@ -330,7 +330,7 @@ export const AdminTemplatesTab = () => {
                       value={destinatar}
                       onChange={(e) => {
                         setDestinatar(e.target.value);
-                        void previzualizeaza(t.cheie, e.target.value);
+                        void previzualizeaza(t, e.target.value);
                       }}
                     >
                       <option value="">Primul înscris al ediției</option>
