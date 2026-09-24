@@ -122,7 +122,7 @@ describe('AdminTemplatesTab — previzualizarea HTML', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'ana@exemplu.ro' } });
 
     await waitFor(() => expect(previewEmailHtml).toHaveBeenCalledTimes(2));
-    const [, , email] = previewEmailHtml.mock.calls.at(-1)!;
+    const [, , { email }] = previewEmailHtml.mock.calls.at(-1)!;
     expect(email).toBe('ana@exemplu.ro');
   });
 
@@ -134,16 +134,30 @@ describe('AdminTemplatesTab — previzualizarea HTML', () => {
     expect(saveEmailTemplate).not.toHaveBeenCalled();
   });
 
-  it('cu modificări nesalvate butonul e inert — ar randa altceva decât ce pleacă', async () => {
+  it('fără modificări, randează șablonul din bază — nu trimite nicio ciornă', async () => {
+    randeaza();
+    fireEvent.click(await screen.findByRole('button', { name: 'Previzualizează' }));
+
+    await waitFor(() => expect(previewEmailHtml).toHaveBeenCalled());
+    expect(previewEmailHtml.mock.calls.at(-1)![2].ciorna).toBeUndefined();
+  });
+
+  it('cu modificări nepublicate, randează ciorna — înainte să ajungă în bază', async () => {
+    // „Publică" e singura scriere: fără previzualizarea ciornei, un șablon
+    // corectat pleca la următorul email fără să-l fi văzut cineva randat.
     randeaza();
     await screen.findByRole('button', { name: 'Previzualizează' });
     fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
       target: { value: 'Alt subiect' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Previzualizează' }));
 
-    expect(
-      (screen.getByRole('button', { name: 'Previzualizează' }) as HTMLButtonElement).disabled
-    ).toBe(true);
+    await waitFor(() => expect(previewEmailHtml).toHaveBeenCalled());
+    expect(previewEmailHtml.mock.calls.at(-1)![2].ciorna).toEqual({
+      subiect: 'Alt subiect',
+      text: SABLON.text_email,
+    });
+    expect(saveEmailTemplate).not.toHaveBeenCalled();
   });
 
   it('o ediție fără destinatari spune de ce n-are ce randa', async () => {
@@ -277,5 +291,89 @@ describe('AdminTemplatesTab — reminderul fără {link_renunt}', () => {
     fireEvent.change(textarea, { target: { value: 'Ne vedem sâmbătă, fără link.' } });
 
     expect(avertismentul()).toBeTruthy();
+  });
+});
+
+describe('AdminTemplatesTab — verbul de finalizare', () => {
+  it('scrierea se cheamă „Publică", ca pe celelalte ecrane de conținut', async () => {
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    expect(screen.queryByRole('button', { name: 'Salvează' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Publică' })).toBeTruthy();
+  });
+
+  it('„Publică" scrie ciorna în bază', async () => {
+    saveEmailTemplate.mockResolvedValue(undefined);
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
+      target: { value: 'Alt subiect' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
+
+    await waitFor(() =>
+      expect(saveEmailTemplate).toHaveBeenCalledWith(
+        't',
+        'bulk_participant_reminder',
+        'Alt subiect',
+        SABLON.text_email
+      )
+    );
+  });
+});
+
+describe('AdminTemplatesTab — previzualizarea nu rămâne în urma ciornei', () => {
+  it('o editare după randare retrage previzualizarea — ar arăta alt text decât cel publicat', async () => {
+    randeaza();
+    fireEvent.click(await screen.findByRole('button', { name: 'Previzualizează' }));
+    await waitFor(() => expect(cadru()).not.toBeNull());
+
+    fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
+      target: { value: 'Alt subiect' },
+    });
+    expect(cadru()).toBeNull();
+  });
+
+  it('„Anulează" retrage și el previzualizarea ciornei', async () => {
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
+      target: { value: 'Alt subiect' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Previzualizează' }));
+    await waitFor(() => expect(cadru()).not.toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anulează' }));
+    expect(cadru()).toBeNull();
+  });
+
+  it('o randare pornită înaintea editării nu mai aterizează după ea', async () => {
+    let elibereaza: (v: typeof PREVIEW) => void = () => {};
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    previewEmailHtml.mockReturnValueOnce(new Promise((res) => { elibereaza = res; }));
+    fireEvent.click(screen.getByRole('button', { name: 'Previzualizează' }));
+
+    fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
+      target: { value: 'Alt subiect' },
+    });
+    elibereaza(PREVIEW);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(cadru()).toBeNull();
+  });
+});
+
+describe('AdminTemplatesTab — funcția de email rămasă în urmă', () => {
+  it('spune că ciorna nu s-a putut randa, în loc să arate șablonul vechi', async () => {
+    randeaza();
+    await screen.findByRole('button', { name: 'Previzualizează' });
+    previewEmailHtml.mockRejectedValueOnce(new Error('draft_not_rendered'));
+    fireEvent.change(screen.getByDisplayValue(SABLON.subiect), {
+      target: { value: 'Alt subiect' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Previzualizează' }));
+
+    expect(await screen.findByText(/nu știe încă să randeze ciorne/)).toBeTruthy();
+    expect(cadru()).toBeNull();
   });
 });

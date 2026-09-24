@@ -385,8 +385,11 @@ Deno.serve(async (req: Request) => {
   // implementare în client ar diverge la primul `fillVars` schimbat — și ar
   // diverge tăcut, fiindcă nimic n-ar compara cele două randări.
   //
-  // Se randează șablonul SALVAT, nu ciorna din formular: previzualizarea
-  // răspunde la „ce pleacă", iar ce pleacă e ce e în DB.
+  // Implicit se randează șablonul SALVAT. Cu `subiect` + `text` în cerere se
+  // randează CIORNA din editor: pe ecranul Șabloane, „Publică" e singura
+  // scriere, deci previzualizarea trebuie să vadă textul înainte să ajungă în
+  // DB — altfel un șablon salvat pleca la următorul email nevăzut. Ciorna nu
+  // ocolește nimic: cheia trebuie să existe, iar randarea e aceeași.
   //
   // Autentificare cu tokenul de sesiune al adminului, ca `mode: "admin"` — NU cu
   // secretul de difuzare. Secretul există tocmai ca să nu ajungă în browser;
@@ -398,10 +401,22 @@ Deno.serve(async (req: Request) => {
 
     const cheie = String(payload.template ?? "");
     if (!cheie) return json(400, { error: "missing_template" });
-    const tpl = await loadTemplate(cheie);
+    // O ciornă e ori întreagă, ori deloc: pe jumătate ar fi completată tăcut
+    // din DB și ar arăta un email pe care nu-l scrie nimeni.
+    const areCiorna = payload.subiect !== undefined || payload.text !== undefined;
+    const ciornaValida =
+      typeof payload.subiect === "string" && payload.subiect.trim() !== "" &&
+      typeof payload.text === "string" && payload.text.trim() !== "" &&
+      payload.subiect.length <= 1_000 && payload.text.length <= 50_000;
+    if (areCiorna && !ciornaValida) return json(400, { error: "invalid_draft" });
+
+    const salvat = await loadTemplate(cheie);
     // Un șablon inexistent NU cade pe textul de rezervă: previzualizarea ar
     // arăta atunci un email care nu există nicăieri, cu aerul că e cel real.
-    if (!tpl?.text_email) return json(404, { error: "unknown_template" });
+    if (!salvat?.text_email) return json(404, { error: "unknown_template" });
+    const tpl = areCiorna
+      ? { subiect: String(payload.subiect), text_email: String(payload.text) }
+      : salvat;
 
     // Un destinatar REAL al ediției: variabilele se completează cu numele și
     // tokenurile lui, deci linkurile din previzualizare sunt cele adevărate.
@@ -456,6 +471,10 @@ Deno.serve(async (req: Request) => {
       html: renderHtml(tpl.subiect, text, badge, unsubPage),
       subiect: tpl.subiect,
       pentru: { email: row.email, nume: row.nume },
+      // Confirmarea că s-a randat ciorna, nu șablonul din DB. O funcție mai
+      // veche n-o trimite, iar clientul refuză atunci să prezinte rezultatul
+      // drept ciornă — funcția se deployează de mână, separat de site.
+      ciorna: areCiorna,
     });
   }
 

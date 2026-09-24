@@ -190,7 +190,7 @@ describe('editarea unei săptămâni', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'S2' }));
     fireEvent.change(camp(/Antrenamentul/), { target: { value: 'corp rescris' } });
-    fireEvent.click(butonSalveaza());
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
 
     await waitFor(() =>
       expect(saveWeeklyWorkout).toHaveBeenCalledWith('t', 's2', 'S2', 'corp rescris', true)
@@ -254,7 +254,7 @@ describe('editarea unei săptămâni', () => {
     fireEvent.click(screen.getByRole('button', { name: 'S2' }));
     listWeeklyWorkout.mockResolvedValue(dupaPrimaSalvare);
     fireEvent.change(camp(/Antrenamentul/), { target: { value: 'prima corectură' } });
-    fireEvent.click(butonSalveaza());
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
     await waitFor(() =>
       expect(saveWeeklyWorkout).toHaveBeenLastCalledWith('t', 's2', 'S2', 'prima corectură', true)
     );
@@ -268,7 +268,8 @@ describe('editarea unei săptămâni', () => {
     );
 
     fireEvent.change(camp(/Antrenamentul/), { target: { value: 'a doua corectură' } });
-    fireEvent.click(butonSalveaza());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Publică' })).toHaveProperty('disabled', false));
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
 
     await waitFor(() =>
       expect(saveWeeklyWorkout).toHaveBeenLastCalledWith(
@@ -314,6 +315,62 @@ describe('verbele comune ale ecranelor de conținut', () => {
     await waitFor(() =>
       expect(saveWeeklyWorkout).toHaveBeenLastCalledWith('t', 's3', 'S3', 'corectură', false)
     );
+  });
+
+  it('o săptămână vizibilă nu oferă „Salvează" — editarea ei se scrie doar prin „Publică"', async () => {
+    // Pe o săptămână de pe pagină, „Salvează" ar fi publicat textul nou fără
+    // previzualizare: rândul public e singurul loc de scriere.
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'corectură' } });
+
+    expect(screen.queryByRole('button', { name: 'Salvează' })).toBeNull();
+    expect(butonPublica()).toBeDefined();
+  });
+
+  it('ascunsă din editor, o săptămână vizibilă se poate salva — ascunderea nu publică nimic', async () => {
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'pentru mai târziu' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ascunsă' }));
+    fireEvent.click(butonSalveaza());
+
+    await waitFor(() =>
+      expect(saveWeeklyWorkout).toHaveBeenLastCalledWith('t', 's2', 'S2', 'pentru mai târziu', false)
+    );
+  });
+});
+
+describe('previzualizarea', () => {
+  it('arată săptămâna cum o vede vizitatorul, din textul încă nesalvat', async () => {
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
+    fireEvent.change(camp(/Titlu/), { target: { value: 'Deal lung' } });
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: '6×400m\npauză 90s' } });
+
+    const previz = screen.getByRole('region', { name: 'Așa se va vedea pe pagină' });
+    expect(previz.textContent).toContain('Săptămâna 2');
+    expect(previz.textContent).toContain('Deal lung');
+    expect(previz.textContent).toContain('6×400m\npauză 90s');
+    expect(saveWeeklyWorkout).not.toHaveBeenCalled();
+  });
+
+  it('o săptămână nouă se previzualizează cu numărul pe care-l va primi', async () => {
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S1' })).toBeDefined());
+    fireEvent.change(camp(/Titlu/), { target: { value: 'Nouă' } });
+
+    const previz = screen.getByRole('region', { name: 'Așa se va vedea pe pagină' });
+    expect(previz.textContent).toContain('Săptămâna 4');
+  });
+
+  it('cu editorul gol, nu promite o previzualizare', async () => {
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S1' })).toBeDefined());
+    expect(screen.queryByRole('region', { name: 'Așa se va vedea pe pagină' })).toBeNull();
   });
 });
 
@@ -367,7 +424,8 @@ describe('textul nesalvat', () => {
     fireEvent.click(screen.getByRole('button', { name: 'S2' }));
 
     fireEvent.change(camp(/Antrenamentul/), { target: { value: 'prima versiune' } });
-    fireEvent.click(butonSalveaza());
+    // S2 e vizibilă, deci scrierea trece prin „Publică".
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
     await waitFor(() => expect(saveWeeklyWorkout).toHaveBeenCalled());
 
     // Omul continuă să scrie cât timp cererea e în zbor.
@@ -387,7 +445,8 @@ describe('textul nesalvat', () => {
     fireEvent.click(screen.getByRole('button', { name: 'S2' }));
 
     fireEvent.change(camp(/Antrenamentul/), { target: { value: 'corectat' } });
-    fireEvent.click(butonSalveaza());
+    // S2 e vizibilă, deci scrierea trece prin „Publică".
+    fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
     await waitFor(() => expect(showToast).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole('button', { name: 'S1' }));

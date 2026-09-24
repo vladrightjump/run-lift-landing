@@ -133,11 +133,11 @@ export const AdminTemplatesTab = () => {
     setSaving(cheie);
     try {
       await saveEmailTemplate(token, cheie, d.subiect.trim(), d.text);
-      arataMesaj('ok', 'Șablon salvat. Se aplică imediat la următorul email.');
+      arataMesaj('ok', 'Șablon publicat. Se aplică imediat la următorul email.');
       refresh();
     } catch (err) {
       if (onAuthError(err)) return;
-      arataMesaj('err', 'Nu am putut salva. Încearcă din nou.');
+      arataMesaj('err', 'Nu am putut publica. Încearcă din nou.');
     } finally {
       setSaving(null);
     }
@@ -186,11 +186,32 @@ export const AdminTemplatesTab = () => {
    */
   const cerereaCurenta = useRef(0);
 
-  const previzualizeaza = async (cheie: string, pentru = destinatar) => {
+  /**
+   * Scrie în ciornă și retrage previzualizarea ei.
+   *
+   * Previzualizarea arată ciorna de la momentul randării. După încă o
+   * editare ar arăta alt text decât cel pe care-l scrie „Publică", deci
+   * dispare — iar o randare încă în zbor nu mai are voie să aterizeze.
+   */
+  const scrieCiorna = (cheie: string, ciorna: { subiect: string; text: string }) => {
+    setDraft((p) => ({ ...p, [cheie]: ciorna }));
+    if (previzualizare?.cheie === cheie) {
+      cerereaCurenta.current += 1;
+      setPrevizualizare(null);
+    }
+  };
+
+  const previzualizeaza = async (t: AdminEmailTemplate, pentru = destinatar) => {
+    const { cheie } = t;
     const aMea = ++cerereaCurenta.current;
     setPrevizualizare({ cheie, date: null, eroare: null });
+    // Cu modificări nepublicate se randează CIORNA: „Publică" e singura
+    // scriere, deci aici e singurul loc în care textul nou se vede randat
+    // înainte să plece la următorul email.
+    const d = draft[cheie];
+    const ciorna = d && modificat(t) ? { subiect: d.subiect.trim(), text: d.text } : undefined;
     try {
-      const date = await previewEmailHtml(token, cheie, pentru || undefined);
+      const date = await previewEmailHtml(token, cheie, { email: pentru || undefined, ciorna });
       if (aMea !== cerereaCurenta.current) return;
       setPrevizualizare({ cheie, date, eroare: null });
     } catch (err) {
@@ -204,7 +225,9 @@ export const AdminTemplatesTab = () => {
           ? 'Persoana aleasă nu mai e destinatar al ediției — s-a dezabonat sau a fost ștearsă. Alege pe altcineva.'
           : text.includes('no_recipient')
             ? 'Ediția n-are niciun destinatar înscris, deci variabilele n-au cu ce fi completate.'
-            : 'Nu am putut randa previzualizarea.',
+            : text.includes('draft_not_rendered')
+              ? 'Funcția de email de pe server nu știe încă să randeze ciorne — trebuie deployată. Până atunci, previzualizarea ar arăta textul vechi, nu ciorna.'
+              : 'Nu am putut randa previzualizarea.',
       });
     }
   };
@@ -221,7 +244,7 @@ export const AdminTemplatesTab = () => {
   return (
     <InvelisEditare
       titlu="Șabloane de email"
-      descriere="Textul emailurilor de confirmare, reminder, anunț și badge. Fiecare se salvează și se previzualizează separat."
+      descriere={'Textul emailurilor de confirmare, reminder, anunț și badge. Fiecare se previzualizează și se publică separat; ciorna stă în editor până la „Publică”.'}
       bara={null}
     >
 
@@ -255,9 +278,7 @@ export const AdminTemplatesTab = () => {
               <input
                 type="text"
                 value={d.subiect}
-                onChange={(e) =>
-                  setDraft((p) => ({ ...p, [t.cheie]: { ...d, subiect: e.target.value } }))
-                }
+                onChange={(e) => scrieCiorna(t.cheie, { ...d, subiect: e.target.value })}
               />
             </label>
 
@@ -266,9 +287,7 @@ export const AdminTemplatesTab = () => {
               <textarea
                 rows={14}
                 value={d.text}
-                onChange={(e) =>
-                  setDraft((p) => ({ ...p, [t.cheie]: { ...d, text: e.target.value } }))
-                }
+                onChange={(e) => scrieCiorna(t.cheie, { ...d, text: e.target.value })}
               />
             </label>
 
@@ -281,20 +300,19 @@ export const AdminTemplatesTab = () => {
             )}
 
             <div className="admin-tpl-actions">
-              {modificat(t) && <span className="admin-tpl-dirty">Modificări nesalvate</span>}
+              {modificat(t) && <span className="admin-tpl-dirty">Modificări nepublicate</span>}
               <button
                 type="button"
                 className="admin-btn-ghost"
-                // Randează șablonul SALVAT. Cu modificări nesalvate pe ecran,
-                // previzualizarea ar răspunde la altă întrebare decât cea pusă:
-                // ce pleacă e ce e în DB.
-                disabled={modificat(t)}
+                // Cu modificări nepublicate randează ciorna, nu șablonul din DB:
+                // asta e ce va pleca după „Publică".
+                disabled={!d.subiect.trim() || !d.text.trim()}
                 title={
                   modificat(t)
-                    ? 'Salvează întâi — previzualizarea arată șablonul din baza de date'
+                    ? 'Vezi HTML-ul ciornei, exact cum va pleca după „Publică"'
                     : 'Vezi HTML-ul exact cum pleacă'
                 }
-                onClick={() => previzualizeaza(t.cheie)}
+                onClick={() => previzualizeaza(t)}
               >
                 Previzualizează
               </button>
@@ -302,7 +320,7 @@ export const AdminTemplatesTab = () => {
                 type="button"
                 className="admin-btn-ghost"
                 disabled={!modificat(t) || saving === t.cheie}
-                onClick={() => setDraft((p) => ({ ...p, [t.cheie]: { subiect: t.subiect, text: t.text_email } }))}
+                onClick={() => scrieCiorna(t.cheie, { subiect: t.subiect, text: t.text_email })}
               >
                 Anulează
               </button>
@@ -312,7 +330,7 @@ export const AdminTemplatesTab = () => {
                 disabled={!modificat(t) || saving === t.cheie}
                 onClick={() => salveaza(t.cheie)}
               >
-                {saving === t.cheie ? 'Se salvează…' : 'Salvează'}
+                {saving === t.cheie ? 'Se publică…' : 'Publică'}
               </button>
             </div>
 
@@ -325,7 +343,7 @@ export const AdminTemplatesTab = () => {
                       value={destinatar}
                       onChange={(e) => {
                         setDestinatar(e.target.value);
-                        void previzualizeaza(t.cheie, e.target.value);
+                        void previzualizeaza(t, e.target.value);
                       }}
                     >
                       <option value="">Primul înscris al ediției</option>

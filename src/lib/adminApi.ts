@@ -751,6 +751,8 @@ export type EmailPreview = {
   subiect: string;
   /** Destinatarul real pentru care s-au completat variabilele. */
   pentru: { email: string; nume: string };
+  /** `true` când s-a randat ciorna trimisă, nu șablonul din bază. */
+  ciorna?: boolean;
 };
 
 /**
@@ -764,19 +766,30 @@ export type EmailPreview = {
 export const previewEmailHtml = async (
   token: string,
   template: string,
-  email?: string,
+  optiuni: {
+    /** Destinatarul ale cărui date completează variabilele. Lipsă: primul înscris. */
+    email?: string;
+    /** Textul din editor, încă nepublicat. Lipsă: se randează șablonul din bază. */
+    ciorna?: { subiect: string; text: string };
+  } = {},
   signal?: AbortSignal
 ): Promise<EmailPreview> => {
+  const { email, ciorna } = optiuni;
   const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
     method: 'POST',
     headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode: 'preview', token, template, email }),
+    body: JSON.stringify({ mode: 'preview', token, template, email, ...ciorna }),
     signal,
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401) throw new InvalidTokenError();
     throw new SubmitHttpError(res.status, JSON.stringify(body));
+  }
+  // O funcție `send-email` mai veche decât site-ul ignoră ciorna și randează
+  // șablonul din bază. Fără confirmare, ecranul l-ar prezenta drept ciornă.
+  if (ciorna && (body as EmailPreview).ciorna !== true) {
+    throw new Error('draft_not_rendered');
   }
   return body as EmailPreview;
 };
