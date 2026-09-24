@@ -354,7 +354,10 @@ export const AdminAntrenamentTab = () => {
            Săptămânile sînt un program, iar `vizibil` alege care se vede —
            deci verbul nu putea însemna același lucru ca pe clipuri fără să se
            lovească de controlul de vizibilitate al programului. */
-        onSalveaza: () => trimite(vizibil),
+        // Pe o săptămână de pe pagină, „Salvează" ar publica textul nou fără
+        // previzualizare. Rămâne doar dacă săptămâna nu se vede — sau dacă tocmai
+        // a fost trecută pe „Ascunsă", când salvarea n-arată nimic nimănui.
+        onSalveaza: saptamanaDeschisa?.vizibil && vizibil ? undefined : () => trimite(vizibil),
         onPublica: () => trimite(true),
         seSalveaza: salveaza,
         sePublica: false,
@@ -498,6 +501,25 @@ export const AdminAntrenamentTab = () => {
             ))}
           </div>
         </fieldset>
+
+        {/* Previzualizarea e vie, în editor: textul nesalvat, cu aceleași clase
+            ca pe `/antrenament`. Pe o săptămână vizibilă e singurul loc în care
+            vezi editarea înainte de „Publică", fiindcă n-are o ciornă separată. */}
+        {(titlu.trim() !== '' || corp.trim() !== '') && (
+          <section className="admin-previz" aria-label="Așa se va vedea pe pagină">
+            <span className="admin-previz-eticheta" aria-hidden="true">
+              Așa se va vedea pe pagină
+            </span>
+            <article className="an-card">
+              <p className="an-eticheta">
+                Săptămâna{' '}
+                {deschis.fel === 'noua' ? urmatorul : (saptamanaDeschisa?.numar ?? '—')}
+              </p>
+              <h3 className="an-titlu">{titlu}</h3>
+              <p className="an-corp">{corp}</p>
+            </article>
+          </section>
+        )}
 
       </div>
 
