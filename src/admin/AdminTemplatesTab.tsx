@@ -133,11 +133,11 @@ export const AdminTemplatesTab = () => {
     setSaving(cheie);
     try {
       await saveEmailTemplate(token, cheie, d.subiect.trim(), d.text);
-      arataMesaj('ok', 'Șablon salvat. Se aplică imediat la următorul email.');
+      arataMesaj('ok', 'Șablon publicat. Se aplică imediat la următorul email.');
       refresh();
     } catch (err) {
       if (onAuthError(err)) return;
-      arataMesaj('err', 'Nu am putut salva. Încearcă din nou.');
+      arataMesaj('err', 'Nu am putut publica. Încearcă din nou.');
     } finally {
       setSaving(null);
     }
@@ -189,8 +189,14 @@ export const AdminTemplatesTab = () => {
   const previzualizeaza = async (cheie: string, pentru = destinatar) => {
     const aMea = ++cerereaCurenta.current;
     setPrevizualizare({ cheie, date: null, eroare: null });
+    // Cu modificări nepublicate se randează CIORNA: „Publică" e singura
+    // scriere, deci aici e singurul loc în care textul nou se vede randat
+    // înainte să plece la următorul email.
+    const t = rows?.find((r) => r.cheie === cheie);
+    const d = draft[cheie];
+    const ciorna = t && d && modificat(t) ? { subiect: d.subiect.trim(), text: d.text } : undefined;
     try {
-      const date = await previewEmailHtml(token, cheie, pentru || undefined);
+      const date = await previewEmailHtml(token, cheie, pentru || undefined, undefined, ciorna);
       if (aMea !== cerereaCurenta.current) return;
       setPrevizualizare({ cheie, date, eroare: null });
     } catch (err) {
@@ -221,7 +227,7 @@ export const AdminTemplatesTab = () => {
   return (
     <InvelisEditare
       titlu="Șabloane de email"
-      descriere="Textul emailurilor de confirmare, reminder, anunț și badge. Fiecare se salvează și se previzualizează separat."
+      descriere={'Textul emailurilor de confirmare, reminder, anunț și badge. Fiecare se previzualizează și se publică separat; ciorna stă în editor până la „Publică”.'}
       bara={null}
     >
 
@@ -281,17 +287,16 @@ export const AdminTemplatesTab = () => {
             )}
 
             <div className="admin-tpl-actions">
-              {modificat(t) && <span className="admin-tpl-dirty">Modificări nesalvate</span>}
+              {modificat(t) && <span className="admin-tpl-dirty">Modificări nepublicate</span>}
               <button
                 type="button"
                 className="admin-btn-ghost"
-                // Randează șablonul SALVAT. Cu modificări nesalvate pe ecran,
-                // previzualizarea ar răspunde la altă întrebare decât cea pusă:
-                // ce pleacă e ce e în DB.
-                disabled={modificat(t)}
+                // Cu modificări nepublicate randează ciorna, nu șablonul din DB:
+                // asta e ce va pleca după „Publică".
+                disabled={!d.subiect.trim() || !d.text.trim()}
                 title={
                   modificat(t)
-                    ? 'Salvează întâi — previzualizarea arată șablonul din baza de date'
+                    ? 'Vezi HTML-ul ciornei, exact cum va pleca după „Publică"'
                     : 'Vezi HTML-ul exact cum pleacă'
                 }
                 onClick={() => previzualizeaza(t.cheie)}
@@ -312,7 +317,7 @@ export const AdminTemplatesTab = () => {
                 disabled={!modificat(t) || saving === t.cheie}
                 onClick={() => salveaza(t.cheie)}
               >
-                {saving === t.cheie ? 'Se salvează…' : 'Salvează'}
+                {saving === t.cheie ? 'Se publică…' : 'Publică'}
               </button>
             </div>
 

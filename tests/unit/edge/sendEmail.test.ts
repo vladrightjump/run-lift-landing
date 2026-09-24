@@ -778,6 +778,63 @@ describe('preview — ce se vede înainte de trimitere', () => {
     expect(html).toContain('token=EXEMPLU');
     expect(html).not.toContain('{{');
   });
+
+  describe('ciorna din editor', () => {
+    it('randează textul trimis, nu pe cel din bază', async () => {
+      const f = await incarca({ stare: stare() });
+      const { res, body } = await cere(f, {
+        mode: 'preview',
+        token: 'x',
+        template: 'bulk_participant_reminder',
+        subiect: 'Subiect din ciornă',
+        text: 'Salut {prenume}, textul încă nesalvat.',
+      });
+      expect(res.status).toBe(200);
+      expect(body.subiect).toBe('Subiect din ciornă');
+      expect(body.html as string).toContain('Salut Ana, textul încă nesalvat.');
+      expect(trimise(f)).toHaveLength(0);
+      expect(jurnal(f)).toHaveLength(0);
+    });
+
+    it('ciorna nu ocolește verificarea șablonului: o cheie inexistentă rămâne 404', async () => {
+      const f = await incarca({ stare: stare() });
+      const { res } = await cere(f, {
+        mode: 'preview',
+        token: 'x',
+        template: 'nu_exista',
+        subiect: 'S',
+        text: 'T',
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('o ciornă pe jumătate sau goală e refuzată, nu completată din bază', async () => {
+      const f = await incarca({ stare: stare() });
+      for (const ciorna of [{ subiect: 'Doar subiect' }, { subiect: 'S', text: '   ' }, { subiect: 1, text: 'T' }]) {
+        const { res, body } = await cere(f, {
+          mode: 'preview',
+          token: 'x',
+          template: 'bulk_participant_reminder',
+          ...ciorna,
+        });
+        expect(res.status).toBe(400);
+        expect(body).toEqual({ error: 'invalid_draft' });
+      }
+    });
+
+    it('o ciornă peste limită e refuzată', async () => {
+      const f = await incarca({ stare: stare() });
+      const { res, body } = await cere(f, {
+        mode: 'preview',
+        token: 'x',
+        template: 'bulk_participant_reminder',
+        subiect: 'S',
+        text: 'x'.repeat(50_001),
+      });
+      expect(res.status).toBe(400);
+      expect(body).toEqual({ error: 'invalid_draft' });
+    });
+  });
 });
 
 describe('emailul predat providerului', () => {

@@ -765,12 +765,14 @@ export const previewEmailHtml = async (
   token: string,
   template: string,
   email?: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  /** Textul din editor, încă nepublicat. Lipsă: se randează șablonul din bază. */
+  ciorna?: { subiect: string; text: string }
 ): Promise<EmailPreview> => {
   const res = await fetch(`${FUNCTIONS_URL}/send-email`, {
     method: 'POST',
     headers: { apikey: SUPABASE.publishableKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode: 'preview', token, template, email }),
+    body: JSON.stringify({ mode: 'preview', token, template, email, ...ciorna }),
     signal,
   });
   const body = await res.json().catch(() => ({}));
