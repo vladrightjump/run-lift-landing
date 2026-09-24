@@ -16,7 +16,7 @@ execution: code
 - **Obiectiv:** Organizatorul duce la capăt orice treabă din `/admin` fără să caute unde stă și fără să ghicească ce vrea un câmp de la el.
 - **Mijloc:** Adminul se împarte în ecrane adresabile, iar ecranele de conținut adoptă învelișul de editare extras din ecranul Evenimentului (KTD1, KTD3).
 - **Autoritate de produs:** Acest plan deține structura de ecrane a lui `/admin`, controalele din ele și tiparul de editare al ecranelor de conținut. Nu deține comportamentul de trimitere a emailurilor, modelul de date al ediției, autentificarea, și nici pagina publică în afara previzualizării.
-- **Profil de execuție:** Opt unități, în ordinea din secțiune. U1–U3 construiesc învelișul; U4–U6 mută conținutul pe el; U7 atinge operațiunile; U8 e etapa de design. Nicio migrare de bază de date.
+- **Profil de execuție:** Opt unități, în ordinea din secțiune. U1–U3 construiesc învelișul; U4–U6 mută conținutul pe el; U7 atinge operațiunile; U8 e etapa de design — direcția vizuală înainte de U3, verificarea la urmă. Nicio migrare de bază de date.
 - **Condiții de oprire:** Oprește-te și întreabă dacă pragurile de acoperire din `vitest.config.ts` nu pot fi ținute fără a scădea clichetul, sau dacă extragerea învelișului din `src/admin/AdminEventTab.tsx` cere schimbarea semanticii de ciornă a evenimentului.
 - **Coada:** `ce-work` duce până la PR deschis. Fuziunea în `main` — care e deploy-ul — rămâne la organizator.
 - **Blocante deschise:** Niciunul.
@@ -75,7 +75,7 @@ Ecranele de conținut nu se comportă la fel între ele. „Evenimentul" are cio
 - R13. Verbul de salvare e același pe toate ecranele de conținut.
 - R14. Nicio schimbare făcută din adminul refăcut nu cere deploy.
 - R15. Coming Soon are efect imediat și spune pe ecran că e o excepție: e o manetă, nu un document.
-- R16. Ecranele de comunicare primesc structura și controalele noi, dar nu tiparul din R9.
+- R16. Ecranele de operațiuni din comunicare — Trimite emailuri și Livrare — primesc structura și controalele noi, dar nu tiparul din R9. Șabloanele, ecran de conținut, primesc tiparul din R9.
 
 ### Harta ecranelor
 
@@ -176,15 +176,25 @@ Coming Soon stă sub „Conținutul site-ului" fiindcă acolo îl caută organiz
 - KTD1. **Ecranele primesc adrese în fragmentul URL (`/admin#clipuri`).** Fără ele, butonul „înapoi" scoate din admin cu totul de îndată ce ecranele se exclud reciproc. Fragmentul evită atingerea `src/main.tsx`, care comută pe `pathname` exact. (session-settled: user-approved — ales în locul stării pur în memorie.) Instantiates KD1; governs R1, R2.
 - KTD2. **`TabAdmin` devine `EcranAdmin`, cu `antrenament` și `desfasurare` ca membri noi.** Tipul e deja punctul de cuplare pentru navigație, semnale și acțiunile liniei de timp; extinderea lui e ce face antrenamentele un ecran egal. Governs R3, R5.
 - KTD3. **Învelișul comun de editare se extrage din `src/admin/AdminEventTab.tsx`, nu se scrie de la zero.** Ecranul acela are deja ciorna, previzualizarea, validarea care blochează publicarea și garda de ieșire. Cites KD4; governs R9, R10, R13.
-- KTD4. **Învelișul e o componentă cu sloturi, nu un editor generic condus de date.** Cele patru ecrane au seturi de câmpuri ireductibil diferite; o generalizare peste ele ar fi o abstracție mai proastă decât repetiția. Governs R9.
+- KTD4. **Învelișul deține prezentarea și verbele, nu semantica.** Ecranele nu diferă doar prin câmpuri, ci prin ce scrie „Publică", unde se randează previzualizarea și dacă există o listă. Învelișul dă așezarea, bara de acțiuni, garda de ieșire și ajutorul de câmp; fiecare ecran își aduce salvarea, publicarea și previzualizarea prin callback-uri. Un editor generic condus de date ar fi o abstracție mai proastă decât repetiția. Ce înseamnă „publicat" pe fiecare ecran stă în tabelul de sub decizii. Governs R9.
 - KTD5. **Controalele stau într-un modul propriu de primitive**, nu redefinite în fiecare ecran. Altfel R6–R8 se aplică inegal și a treia listă reinventează a doua. Governs R6, R7, R8.
 - KTD6. **Reordonarea folosește o listă derulantă de poziție pe rând, nu tragere.** Tragerea cere fie o dependență nouă, fie tratare manuală de `pointer`, și e greu de testat și de folosit cu tastatura. (session-settled: user-approved — ales în locul tragerii.) Governs R8.
 - KTD7. **Adminul capătă primul lui test de browser.** Suita de azi e numai unitară, iar comutarea între ecrane — exact ce introduce planul — e clasa de regresie pe care testele unitare n-o pot prinde structural. (session-settled: user-approved.)
 - KTD8. **Lucrul de design rulează pe `admin-preview.html`.** Există deja, randează dashboardul complet cu date false și nu cere login în producție. Governs the work in U8.
-- KTD10. **Pentru clipuri, `vizibil` E poarta de publicare.** `training_reels` n-are coloană de stare, iar banda publică filtrează pe `vizibil` — deci „publicat" și „se vede pe pagină" sînt deja același lucru. „Salvează" scrie clipul ascuns, „Publică" îl face vizibil, iar previzualizarea randează cardul în admin, cu același `iframe` ca pagina publică. Fără migrare. (session-settled: user-approved — ales în locul unei migrări care ar fi adus o coloană de stare.) Governs R9, R10, R13 pe ecranul Clipuri.
+- KTD10. **Pentru clipuri, `vizibil` E poarta de publicare.** `training_reels` n-are coloană de stare, iar banda publică filtrează pe `vizibil` — deci „publicat" și „se vede pe pagină" sînt deja același lucru. „Salvează" scrie un clip nou ascuns, iar pe unul existent păstrează vizibilitatea pe care o are — nu scoate niciodată de pe pagină un clip vizibil. Pe un clip vizibil, „Salvează" nu se oferă: ciorna stă în editor, iar singura scriere e „Publică", după previzualizare. „Publică" face clipul vizibil, iar previzualizarea randează cardul în admin, cu același `iframe` ca pagina publică. Fără migrare. (session-settled: user-approved — ales în locul unei migrări care ar fi adus o coloană de stare.) Governs R9, R10, R13 pe ecranul Clipuri.
 - KTD11. **Mutarea pe o poziție se traduce în apeluri de câte un pas.** `admin_move_training_reel` mută cu o singură poziție; o mutare de pe 5 pe 1 e patru apeluri seriale. Nu e atomică, dar banda e scurtă și o mutare întreruptă se repară cu încă una. (session-settled: user-approved — ales în locul unui RPC nou cu migrare.) Governs R8 pe ecranul Clipuri.
-- KTD12. **Pe ecranul Antrenamente, „Publică" înseamnă salvează ȘI arată săptămâna asta.** Acolo săptămânile sînt un program, iar `vizibil` alege care se vede — deci verbul nu putea însemna același lucru ca pe clipuri fără să se lovească de controlul de vizibilitate al programului. „Salvează" păstrează vizibilitatea de acum. (session-settled: user-approved — ales în locul păstrării unui singur verb ca excepție.) Governs R9, R13 pe ecranul Antrenamente.
+- KTD12. **Pe ecranul Antrenamente, „Publică" înseamnă salvează ȘI arată săptămâna asta.** Acolo săptămânile sînt un program, iar `vizibil` alege care se vede — deci verbul nu putea însemna același lucru ca pe clipuri fără să se lovească de controlul de vizibilitate al programului. „Salvează" păstrează vizibilitatea de acum. Pe săptămâna afișată acum, „Salvează" nu se oferă: editarea ei trece prin previzualizare și „Publică", ca pe un clip vizibil. (session-settled: user-approved — ales în locul păstrării unui singur verb ca excepție.) Governs R9, R13 pe ecranul Antrenamente.
 - KTD9. **Cadrul păstrează poll-ul agregat; ecranele își dețin doar scrierile.** Contoarele din registru se derivă azi din aceeași citire agregată, deci mutarea citirii în fiecare ecran le-ar stinge exact pe cele ale ecranelor închise. Alternativa — citire per ecran — s-ar plăti cu un contor mort sau cu o a doua sursă de adevăr peste aceleași rânduri. Governs the work in U2.
+- KTD13. **Pe Șabloane, ciorna stă în editor, iar „Publică" e singura scriere.** `email_templates` n-are coloană de stare și planul nu aduce migrări, deci ciorna e starea din client. Previzualizarea randează textul nesalvat prin `send-email`, în modul de previzualizare, cu subiectul și corpul trimise în cerere, nu citite din bază. „Publică" scrie șablonul, iar de acolo pleacă la următorul email trimis. Governs R9, R10, R13 pe ecranul Șabloane.
+
+Ce înseamnă „publicat" pe fiecare ecran de conținut (KTD4):
+
+| Ecran | Unde stă ciorna | Ce scrie „Publică" | Unde se previzualizează |
+|---|---|---|---|
+| Evenimentul | documentul de ciornă al ediției | starea publicată a documentului | pagina publică, pe `/?config=draft` |
+| Clipuri | rândul ascuns (clip nou sau ascuns); editorul (clip vizibil) | `vizibil` pe rând (KTD10) | cardul, randat în admin |
+| Antrenamente | rândul (săptămână neafișată); editorul (săptămâna afișată) | săptămâna, salvată și arătată (KTD12) | nefixat de plan — U5 îl stabilește |
+| Șabloane | editorul (KTD13) | șablonul din bază | emailul randat prin `send-email` |
 
 ### High-Level Technical Design
 
@@ -222,7 +232,7 @@ flowchart TB
 
 ### Sequencing
 
-U1 → U2 → U3 construiesc învelișul și îl lasă funcțional cu ecranele de azi puse în el. U4 extrage învelișul de editare. U5 și U6 mută conținutul pe el. U7 atinge operațiunile. U8 e etapa de design și rulează la urmă, când structura nu se mai mișcă.
+U1 → U2 → U3 construiesc învelișul și îl lasă funcțional cu ecranele de azi puse în el. U4 extrage învelișul de editare. U5 și U6 mută conținutul pe el. U7 atinge operațiunile. Auditul și direcția vizuală din U8 (pașii 1–2) rulează înainte de U3, ca primitivele și cadrul să se construiască pe direcția aleasă. Restul lui U8 — datele false, verificarea după ghid și testul de browser — rulează la urmă, când structura nu se mai mișcă.
 
 ### System-Wide Impact
 
@@ -269,6 +279,7 @@ U1 → U2 → U3 construiesc învelișul și îl lasă funcțional cu ecranele d
   2. Ține ecranul curent într-un hook care citește și scrie fragmentul URL și ascultă `hashchange`.
   3. Scoate linia de timp, blocul săptămânal și bara pe două rânduri din stiva permanentă.
   4. Lasă poll-ul agregat în cadru, per KTD9; ecranele primesc datele prin proprietăți, ca azi.
+  5. Selectorul de ediție și bannerul de arhivă ies din stiva permanentă și se randează doar pe ecranele care filtrează pe ediție (participanți, abonați, trimitere, livrare, lansare, eveniment), în corpul ecranului, nu în cadru.
 - **Execution note:** Pornește de la un test care demonstrează că două ecrane nu pot fi randate simultan — asta e regresia pe care o previne unitatea.
 - **Patterns to follow:** Garda de ieșire deja predată de taburi prin `inregistreazaGardaIesire` în `src/admin/AdminDashboard.tsx`.
 - **Test scenarios:**
@@ -284,7 +295,7 @@ U1 → U2 → U3 construiesc învelișul și îl lasă funcțional cu ecranele d
 
 - **Goal:** Aterizarea în admin răspunde „unde e ediția acum?", iar controalele comune există într-un singur loc.
 - **Requirements:** R4, R6, R7, R8. Cites KTD5, KTD6.
-- **Dependencies:** U2
+- **Dependencies:** U2; pașii 1–2 din U8 (auditul și direcția vizuală)
 - **Files:** `src/admin/EcranPornire.tsx`, `src/admin/LiniaDeTimp.tsx`, `src/admin/controale/ListaDerulanta.tsx`, `src/admin/controale/GrupRadio.tsx`, `src/admin/controale/ListaOrdonabila.tsx`, `tests/unit/adminControale.test.tsx`, `tests/unit/ecranPornire.test.tsx`
 - **Approach:**
   1. Fă din linia de timp ecranul de pornire, cu semnalele de atenție și blocul săptămânal ca rezumate care duc la ecranele lor.
@@ -339,6 +350,8 @@ U1 → U2 → U3 construiesc învelișul și îl lasă funcțional cu ecranele d
   - Covers AE5. Verbul de finalizare e același pe ecranul Clipuri și pe cel al Antrenamentelor.
   - Reordonarea benzii prin alegerea poziției schimbă ordinea publică.
   - Un clip ascuns rămâne în listă și marcat ca ascuns.
+  - „Salvează" pe un clip existent ascuns îl lasă ascuns; pe un clip vizibil, „Salvează" nu se oferă, iar editarea se scrie doar prin „Publică".
+  - Pe săptămâna afișată acum, editarea se scrie doar prin „Publică", după previzualizare.
   - Ecranul Antrenamente se deschide din registrul de ecrane, nu dintr-o manetă.
   - Cu banda goală, ecranul spune că secțiunea nu apare pe pagină.
 - **Verification:** Un clip adăugat de pe ecranul nou ajunge în bandă fără deploy; antrenamentul săptămânii se schimbă de pe ecranul lui.
@@ -346,7 +359,7 @@ U1 → U2 → U3 construiesc învelișul și îl lasă funcțional cu ecranele d
 ### U6. Șabloanele pe înveliș și excepția Coming Soon
 
 - **Goal:** Șabloanele folosesc același tipar, iar Coming Soon rămâne cu efect imediat și o spune.
-- **Requirements:** R9, R13, R14, R15. Cites KD6, KTD3.
+- **Requirements:** R9, R13, R14, R15. Cites KD6, KTD3, KTD13.
 - **Dependencies:** U4
 - **Files:** `src/admin/AdminTemplatesTab.tsx`, `src/admin/AdminComingSoonTab.tsx`, `tests/unit/adminTemplatesTab.test.tsx`, `tests/unit/adminComingSoonTab.test.tsx`
 - **Approach:**
@@ -356,6 +369,7 @@ U1 → U2 → U3 construiesc învelișul și îl lasă funcțional cu ecranele d
 - **Patterns to follow:** Textul de excepție urmează tonul notelor din `src/admin/AdminEditionTabs.tsx:109-115` — spune ce se întâmplă, nu doar că e diferit.
 - **Test scenarios:**
   - Previzualizarea unui șablon arată emailul randat, nu sursa lui.
+  - Cu modificări nesalvate, previzualizarea arată textul nou, iar șablonul din bază rămâne neschimbat până la „Publică".
   - Covers AE5. Verbul de finalizare al Șabloanelor e cel comun.
   - Coming Soon aplică schimbarea fără pas de publicare.
   - Ecranul Coming Soon spune că are efect imediat, în text, nu doar prin lipsa butonului.
@@ -391,15 +405,14 @@ U1 → U2 → U3 construiesc învelișul și îl lasă funcțional cu ecranele d
   2. Stabilește direcția vizuală cu `minimalist-ui` sau `high-end-visual-design`, pe tokenii de temă existenți din `src/index.css`.
   3. Extinde datele false din previzualizare cu toate ecranele noi, ca designul să se judece pe conținut plauzibil.
   4. Treci rezultatul prin `web-design-guidelines`.
-  5. Scrie primul test de browser al adminului, per KTD7: comutarea între ecrane și revenirea cu butonul „înapoi".
-- **Execution note:** Etapa de design rulează pe previzualizarea de dezvoltare, nu pe producție. Fără login, cu date false.
+  5. Scrie primul test de browser al adminului, per KTD7: comutarea între ecrane și revenirea cu butonul „înapoi". Testul țintește `/admin` din build-ul servit de `test:e2e:preview`, cu un token de admin pus dinainte în `localStorage` și cu toate apelurile RPC Supabase interceptate prin `page.route` — `admin-preview.html` nu intră în build.
+- **Execution note:** Pașii 1–2 rulează înainte de U3; pașii 3–5, după U5, U6 și U7. Etapa de design rulează pe previzualizarea de dezvoltare, nu pe producție. Fără login, cu date false.
 - **Patterns to follow:** Tokenii de temă din capul lui `src/index.css` — rebrandul se face acolo, nu prin fișier.
 - **Test scenarios:**
   - Comutarea între două ecrane schimbă conținutul și fragmentul URL.
   - Butonul „înapoi" revine la ecranul anterior fără a părăsi `/admin`.
-  - Previzualizarea de dezvoltare randează fiecare ecran nou cu date false.
   - Ecranele trec verificarea de contrast și de focalizare din ghidul de interfață.
-- **Verification:** `npm run test:e2e:preview` trece cu noul test; previzualizarea arată toate ecranele.
+- **Verification:** `npm run test:e2e:preview` trece cu noul test. Separat, verificat manual pe serverul de dezvoltare: `admin-preview.html` randează fiecare ecran nou cu date false.
 
 ---
 
