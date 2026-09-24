@@ -394,3 +394,32 @@ describe('garda de ieșire', () => {
     confirm.mockRestore();
   });
 });
+
+describe('vizibilitatea din listă', () => {
+  it('un clip vizibil se poate ascunde din rândul lui, fără să-l scoți din bandă', async () => {
+    // „Salvează" nu mai ascunde un clip vizibil, deci rândul trebuie să ofere
+    // drumul explicit — altfel singura cale de a-l lua de pe pagină ar fi ștergerea.
+    listTrainingReels.mockResolvedValue([rand({ vizibil: true })]);
+    randeaza();
+    await screen.findByText('Marți în parc');
+    fireEvent.click(screen.getByRole('button', { name: 'Ascunde clipul „Marți în parc”' }));
+
+    await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
+    expect(saveTrainingReel).toHaveBeenCalledWith(
+      'tok',
+      'r1',
+      'dQw4w9WgXcQ',
+      'Marți în parc',
+      'https://www.instagram.com/reel/AAAAA11111/',
+      false
+    );
+  });
+
+  it('un clip ascuns oferă „Arată", nu „Ascunde"', async () => {
+    listTrainingReels.mockResolvedValue([rand({ vizibil: false })]);
+    randeaza();
+    await screen.findByText('Marți în parc');
+    expect(screen.getByRole('button', { name: 'Arată clipul „Marți în parc”' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /^Ascunde clipul/ })).toBeNull();
+  });
+});

@@ -223,6 +223,32 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
     }
   };
 
+  /**
+   * Ascunde sau arată un clip din rândul lui, fără să-l deschidă.
+   *
+   * Pe un clip vizibil „Salvează" nu se mai oferă, deci fără butonul ăsta
+   * singurul drum de a-l lua de pe pagină ar fi ștergerea. Scrie rândul așa
+   * cum e, cu vizibilitatea întoarsă — conținutul nu se schimbă.
+   */
+  const comutaVizibilitatea = async (r: AdminReelRow) => {
+    if (!token || ocupat) return;
+    setOcupat(true);
+    try {
+      await saveTrainingReel(token, r.id, r.youtube, r.caption, r.url, !r.vizibil);
+      showToast({
+        kind: 'success',
+        msg: r.vizibil
+          ? `Clipul „${r.caption}” e ascuns — nu se mai vede pe pagină.`
+          : `Clipul „${r.caption}” se vede din nou pe pagină.`,
+      });
+      await incarca();
+    } catch (err) {
+      if (!onAuthError(err)) setRefuz(mesajRefuzClip(err));
+    } finally {
+      setOcupat(false);
+    }
+  };
+
   const sterge = async (r: AdminReelRow) => {
     if (!token || ocupat) return;
     setOcupat(true);
@@ -319,6 +345,14 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
                 <div className="admin-table-actions">
                   <button type="button" onClick={() => deschideExistent(r)} disabled={ocupat}>
                     Editează
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void comutaVizibilitatea(r)}
+                    disabled={ocupat}
+                    aria-label={`${r.vizibil ? 'Ascunde' : 'Arată'} clipul „${r.caption}”`}
+                  >
+                    {r.vizibil ? 'Ascunde' : 'Arată'}
                   </button>
                   <button
                     type="button"
