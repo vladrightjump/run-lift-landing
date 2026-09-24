@@ -1115,6 +1115,10 @@
     width: 100%; aspect-ratio: 9 / 16; border: 0; display: block; background: var(--e3-bg);
   }
   .admin-previz-legenda { font-size: 13px; color: var(--e3-text); }
+  /* Cardul de pe /antrenament, randat in editor. Fara animatia de intrare:
+     aici se re-randeaza la fiecare tasta. Latimea urmeaza coloana editorului,
+     nu cei 680px ai paginii, ca pe telefon sa nu impinga ecranul in lateral. */
+  .admin-previz .an-card { width: auto; max-width: 680px; margin: 0; animation: none; }
 
   /* Alerta de livrare, in antet: un email care n-a ajuns trebuie sa te
      gaseasca pe orice ecran, nu doar daca te intorci acasa. */
