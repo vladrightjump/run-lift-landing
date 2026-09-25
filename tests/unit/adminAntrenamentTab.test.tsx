@@ -329,6 +329,23 @@ describe('verbele comune ale ecranelor de conținut', () => {
     expect(butonPublica()).toBeDefined();
   });
 
+  it('imediat după „Publică", „Salvează" nu reapare cât lista încă se reîncarcă', async () => {
+    // Editorul trece pe rândul nou (`nou`) înainte ca reîncărcarea să-l aducă.
+    // Fără să țină minte că săptămâna e pe pagină, ar fi părut nepublicată.
+    listWeeklyWorkout
+      .mockResolvedValueOnce(programDe(3))
+      .mockReturnValue(new Promise(() => {}));
+    randeaza();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: 'S2' }));
+    fireEvent.change(camp(/Antrenamentul/), { target: { value: 'text nou' } });
+    fireEvent.click(butonPublica());
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' })));
+    await waitFor(() => expect(butonPublica()).toBeDefined());
+    expect(screen.queryByRole('button', { name: 'Salvează' })).toBeNull();
+  });
+
   it('ascunsă din editor, o săptămână vizibilă se poate salva — ascunderea nu publică nimic', async () => {
     randeaza();
     await waitFor(() => expect(screen.getByRole('button', { name: 'S2' })).toBeDefined());

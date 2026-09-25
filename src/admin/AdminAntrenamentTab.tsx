@@ -54,6 +54,15 @@ export const AdminAntrenamentTab = () => {
   const [titlu, setTitlu] = useState('');
   const [corp, setCorp] = useState('');
   const [vizibil, setVizibil] = useState(false);
+  /**
+   * Dacă săptămâna deschisă se vede acum pe pagină, după ultima scriere de aici.
+   *
+   * Lista o spune și ea, dar după „Publică" editorul trece pe rândul nou
+   * înainte ca `incarca()` să-l aducă — iar dacă reîncărcarea cade, nu-l mai
+   * aduce deloc. Între timp săptămâna ar părea nepublicată și „Salvează" ar
+   * reapărea pe un text care e deja pe pagină.
+   */
+  const [pePagina, setPePagina] = useState(false);
   const [salveaza, setSalveaza] = useState(false);
   const [deSters, setDeSters] = useState<AdminWorkoutRow | null>(null);
   const [deParasit, setDeParasit] = useState<Deschis | null>(null);
@@ -133,12 +142,14 @@ export const AdminAntrenamentTab = () => {
       setTitlu('');
       setCorp('');
       setVizibil(false);
+      setPePagina(false);
       return;
     }
     setDeschis({ fel: 'existenta', id: s.id });
     setTitlu(s.titlu);
     setCorp(s.corp);
     setVizibil(s.vizibil);
+    setPePagina(s.vizibil);
   };
 
   /** Deschide altceva în editor, dar nu peste text netrimis fără să întrebe. */
@@ -215,6 +226,7 @@ export const AdminAntrenamentTab = () => {
       else {
         setDeschis({ fel: 'existenta', id: idNou });
         setVizibil(vizibilDupa);
+        setPePagina(vizibilDupa);
       }
       incarca();
     } catch (err) {
@@ -236,7 +248,10 @@ export const AdminAntrenamentTab = () => {
   const comutaVizibilitatea = async (s: AdminWorkoutRow) => {
     try {
       await saveWeeklyWorkout(token, s.id, s.titlu, s.corp, !s.vizibil);
-      if (deschis.fel === 'existenta' && deschis.id === s.id) setVizibil(!s.vizibil);
+      if (deschis.fel === 'existenta' && deschis.id === s.id) {
+        setVizibil(!s.vizibil);
+        setPePagina(!s.vizibil);
+      }
       incarca();
     } catch (err) {
       if (!onAuthError(err)) showToast({ kind: 'error', msg: mesajRefuzAntrenament(err) });
@@ -358,7 +373,8 @@ export const AdminAntrenamentTab = () => {
         // Pe o săptămână de pe pagină, „Salvează" ar publica textul nou fără
         // previzualizare. Rămâne doar dacă săptămâna nu se vede — sau dacă tocmai
         // a fost trecută pe „Ascunsă", când salvarea n-arată nimic nimănui.
-        onSalveaza: saptamanaDeschisa?.vizibil && vizibil ? undefined : () => trimite(vizibil),
+        onSalveaza:
+          (saptamanaDeschisa?.vizibil ?? pePagina) && vizibil ? undefined : () => trimite(vizibil),
         onPublica: () => trimite(true),
         seSalveaza: salveaza,
         sePublica: false,

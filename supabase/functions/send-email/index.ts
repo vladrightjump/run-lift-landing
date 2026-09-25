@@ -414,8 +414,14 @@ Deno.serve(async (req: Request) => {
     // Un șablon inexistent NU cade pe textul de rezervă: previzualizarea ar
     // arăta atunci un email care nu există nicăieri, cu aerul că e cel real.
     if (!salvat?.text_email) return json(404, { error: "unknown_template" });
+    // Ciorna trece prin aceeași completare a ediției ca `loadTemplate` — altfel
+    // previzualizarea ar arăta `{data}` literal, iar emailul trimis data reală.
+    const config = areCiorna ? await loadConfig() : null;
     const tpl = areCiorna
-      ? { subiect: String(payload.subiect), text_email: String(payload.text) }
+      ? {
+        subiect: fillEventVars(String(payload.subiect), config),
+        text_email: fillEventVars(String(payload.text), config),
+      }
       : salvat;
 
     // Un destinatar REAL al ediției: variabilele se completează cu numele și
