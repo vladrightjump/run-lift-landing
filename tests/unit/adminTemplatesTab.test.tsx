@@ -320,6 +320,21 @@ describe('AdminTemplatesTab — verbul de finalizare', () => {
       )
     );
   });
+
+  it('o ciornă cu subiect gol nu se previzualizează — serverul ar refuza-o oricum', async () => {
+    randeaza();
+    const buton = (await screen.findByRole('button', {
+      name: 'Previzualizează',
+    })) as HTMLButtonElement;
+    expect(buton.disabled).toBe(false);
+
+    const subiect = screen.getByDisplayValue(SABLON.subiect);
+    fireEvent.change(subiect, { target: { value: '   ' } });
+    expect(buton.disabled).toBe(true);
+
+    fireEvent.change(subiect, { target: { value: 'Subiect nou' } });
+    expect(buton.disabled).toBe(false);
+  });
 });
 
 describe('AdminTemplatesTab — previzualizarea nu rămâne în urma ciornei', () => {

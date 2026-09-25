@@ -804,6 +804,21 @@ describe('preview — ce se vede înainte de trimitere', () => {
       expect(jurnal(f)).toHaveLength(0);
     });
 
+    it('completează variabilele ediției în ciornă, ca la trimitere', async () => {
+      const f = await incarca({ stare: stare() });
+      const { body } = await cere(f, {
+        mode: 'preview',
+        token: 'x',
+        template: 'bulk_participant_reminder',
+        subiect: 'Ne vedem pe {data_cursei}',
+        text: 'Salut {prenume}, ne vedem pe {data_cursei}.',
+      });
+      expect(body.subiect).not.toContain('{data_cursei}');
+      expect(body.subiect).toContain('19 septembrie');
+      expect(body.html as string).not.toContain('{data_cursei}');
+      expect(body.html as string).toContain('19 septembrie');
+    });
+
     it('ciorna nu ocolește verificarea șablonului: o cheie inexistentă rămâne 404', async () => {
       const f = await incarca({ stare: stare() });
       const { res } = await cere(f, {

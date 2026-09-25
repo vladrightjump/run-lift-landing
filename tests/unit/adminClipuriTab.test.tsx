@@ -422,4 +422,21 @@ describe('vizibilitatea din listă', () => {
     expect(screen.getByRole('button', { name: 'Arată clipul „Marți în parc”' })).toBeDefined();
     expect(screen.queryByRole('button', { name: /^Ascunde clipul/ })).toBeNull();
   });
+
+  it('„Arată" pune clipul înapoi pe pagină, cu același conținut', async () => {
+    listTrainingReels.mockResolvedValue([rand({ vizibil: false })]);
+    randeaza();
+    await screen.findByText('Marți în parc');
+    fireEvent.click(screen.getByRole('button', { name: 'Arată clipul „Marți în parc”' }));
+
+    await waitFor(() => expect(saveTrainingReel).toHaveBeenCalled());
+    expect(saveTrainingReel).toHaveBeenCalledWith(
+      'tok',
+      'r1',
+      'dQw4w9WgXcQ',
+      'Marți în parc',
+      'https://www.instagram.com/reel/AAAAA11111/',
+      true
+    );
+  });
 });
