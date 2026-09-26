@@ -373,7 +373,7 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
                 <span className="e3-reels-count-total">{doiDigiti(total)}</span>
                 <span className="e3-sr">
                   {' '}
-                  — {reels[centru]?.caption}
+                  , {reels[centru]?.caption}
                 </span>
               </p>
 

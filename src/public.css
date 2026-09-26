@@ -44,8 +44,9 @@
     margin: 0; font-family: Anton, sans-serif; font-weight: 400;
     font-size: var(--e3-fs-h2); line-height: 0.88; letter-spacing: -0.005em;
     text-transform: uppercase; text-wrap: balance;
-    /* Loc pentru virgula de sub Ș/Ț, care coboară sub linia de bază. */
-    padding-bottom: 0.06em;
+    /* Loc pentru diacritice: căciula lui Î/Â/Ă urcă peste înălțimea
+       interliniei strânse, iar virgula de sub Ș/Ț coboară sub linia de bază. */
+    padding-block: 0.14em 0.06em;
   }
 
   .e3-lead {
@@ -1095,4 +1096,110 @@
   }
   @media (max-width: 720px) {
     .e3-format-panel { grid-template-columns: 1fr; }
+  }
+
+  /* ======================================================================
+     Landing: înscrierea ca linie de sosire
+     ----------------------------------------------------------------------
+     Banda în carouri stă pe marginea de sus a secțiunii, oricare ar fi
+     poziția ei pe pagină. Nimic de aici nu presupune că după înscriere se
+     termină pagina: fără `:last-child`, fără frați, fără footer.
+     ====================================================================== */
+  .e3-reg { padding-top: calc(clamp(72px, 11vw, 144px) + 24px); }
+  .e3-finish { position: absolute; top: 0; left: 0; right: 0; height: 24px; }
+  .e3-finish-band {
+    position: absolute; inset: 0;
+    background: repeating-conic-gradient(var(--e3-text) 0 25%, var(--e3-bg) 0 50%) 0 0 / 24px 24px;
+    transform-origin: 0 50%;
+  }
+  .e3-finish-word {
+    position: absolute; top: 0; left: var(--e3-gutter); height: 24px;
+    display: flex; align-items: center; padding: 0 12px;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-family: Anton, sans-serif; font-size: 14px; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  /* Banda se desfășoară de la stânga când secțiunea intră în ecran. */
+  @supports (animation-timeline: view()) {
+    .e3-finish-band {
+      animation: e3-tape linear both;
+      animation-timeline: view(block);
+      animation-range: entry 0% cover 30%;
+    }
+  }
+  @keyframes e3-tape { from { transform: scaleX(0.08); } to { transform: scaleX(1); } }
+
+  .e3-reg-grid {
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(32px, 5vw, 72px); align-items: start;
+  }
+  @media (max-width: 900px) { .e3-reg-grid { grid-template-columns: 1fr; } }
+  .e3-reg-side, .e3-reg-main { min-width: 0; }
+  .e3-reg-lead { margin-bottom: 28px; }
+  .e3-reg-lead strong { color: var(--e3-accent); }
+  .e3-reg-summary { padding: 26px; }
+  .e3-reg-summary-title {
+    margin-bottom: 18px; font-family: Anton, sans-serif; font-size: 15px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--e3-accent);
+  }
+  .e3-reg-summary-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  .e3-reg-summary-list li {
+    position: relative; padding-left: 26px;
+    font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong);
+  }
+  .e3-reg-summary-list li::before {
+    content: ''; position: absolute; left: 0; top: 0.7em; width: 14px; height: 2px;
+    background: var(--e3-accent);
+  }
+
+  .e3-reg-slots {
+    display: grid; gap: 12px; padding: 18px 22px;
+    border: 1px solid var(--e3-border); border-bottom: none; background: var(--e3-surface);
+  }
+  .e3-reg-count { display: inline-block; font-size: 28px; line-height: 1; color: var(--e3-accent); }
+  .e3-reg-count-low { color: var(--e3-danger); }
+  .e3-reg-soldout { margin: 0; font-size: 14px; line-height: 1.5; font-weight: 600; color: var(--e3-accent); text-wrap: pretty; }
+  .e3-reg-form {
+    display: grid; gap: 22px; padding: clamp(20px, 4vw, 36px);
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+  }
+  .e3-reg-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 18px; }
+  .e3-reg-stack { display: grid; gap: 18px; }
+  .e3-reg-note { margin: 0; font-size: 14px; line-height: 1.5; color: var(--e3-muted); text-wrap: pretty; }
+
+  /* Panourile de stare: închis, se trimite, succes, eroare. */
+  .e3-reg-panel {
+    display: grid; gap: 16px; justify-items: center; text-align: center;
+    padding: clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px);
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+  }
+  .e3-reg-panel-loading { gap: 22px; padding-block: clamp(48px, 8vw, 80px); }
+  .e3-reg-panel-ok { border-color: var(--e3-accent); }
+  .e3-reg-panel-err { border-color: var(--e3-danger); }
+  .e3-reg-panel-title {
+    font-family: Anton, sans-serif; font-size: clamp(28px, 5vw, 40px); line-height: 1.05;
+    letter-spacing: 0.02em; text-transform: uppercase; text-wrap: balance;
+  }
+  .e3-reg-panel-err .e3-reg-panel-title { color: var(--e3-danger); }
+  .e3-reg-panel-wait { font-size: 22px; color: var(--e3-muted-strong); }
+  .e3-reg-panel-msg { margin: 0; max-width: 380px; font-size: 16px; line-height: 1.55; color: var(--e3-muted); }
+
+  /* Indicatorul de trimitere: un segment lime care traversează o bară. */
+  .e3-progress-bar {
+    position: relative; overflow: hidden; width: min(220px, 70%); height: 6px;
+    background: var(--e3-border);
+  }
+  .e3-progress-bar::after {
+    content: ''; position: absolute; inset: 0; width: 40%;
+    background: var(--e3-accent);
+    animation: e3-progress-run 1s var(--e3-ease) infinite;
+  }
+  @keyframes e3-progress-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+  /* Titlul paginilor de sine stătătoare (/inscriere): aceeași scară de afiș,
+     pe măsura coloanei înguste, cu loc pentru căciula lui „Î". */
+  .e3-page-title {
+    margin: 0; padding-top: 0.12em;
+    font-family: Anton, sans-serif; font-weight: 400;
+    font-size: clamp(56px, 14vw, 96px); line-height: 0.9; letter-spacing: -0.005em;
+    text-transform: uppercase;
   }

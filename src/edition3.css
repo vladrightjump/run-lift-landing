@@ -126,7 +126,6 @@
 @keyframes e3-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes e3-ring-pulse { 0% { transform: scale(0.9); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
 @keyframes e3-rise { from { clip-path: inset(0 0 100% 0); transform: translateY(14px); } to { clip-path: inset(0); transform: translateY(0); } }
-@keyframes e3-dot-blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.75); } }
 
 /* Fundalul video din hero — rămâne fundalul întunecat dacă e ascuns. */
 .e3-hero-video { background: var(--e3-bg); }

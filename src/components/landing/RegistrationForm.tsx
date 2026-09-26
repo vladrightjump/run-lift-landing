@@ -130,7 +130,7 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
         <BaraLocuri total={TOTAL_SLOTS} ocupate={slots.occupied} gap={3} animat={false} />
         {isSoldOut && !isWaitlistFull && (
           <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-accent)', fontWeight: 600, textWrap: 'pretty' }}>
-            Locurile s-au epuizat — completează formularul și intri pe lista de așteptare
+            Locurile s-au epuizat. Completează formularul și intri pe lista de așteptare
             ({waitlistLeft} {waitlistLeft === 1 ? 'loc' : 'locuri'} rămase).
           </p>
         )}

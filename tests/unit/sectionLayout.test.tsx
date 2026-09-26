@@ -202,6 +202,34 @@ describe('secțiunea „Instagram" nu cere NIMIC de la Instagram', () => {
   });
 });
 
+describe('linia de sosire nu depinde de poziție', () => {
+  const banda = () => document.querySelector('#inscriere > .e3-finish');
+
+  it('Covers AE2. Înscrierea prima, Reels ascuns: e 01 și poartă banda de sosire', () => {
+    cuClipuri(UN_CLIP);
+    randeaza([
+      { key: 'registration', visible: true },
+      { key: 'reels', visible: false },
+      { key: 'format', visible: true },
+      { key: 'venue', visible: true },
+      { key: 'participants', visible: true },
+    ]);
+    expect(sectiuniDinPagina()[0]).toBe('01 Înscriere');
+    expect(banda()).not.toBeNull();
+    // După ea mai urmează secțiuni: banda nu e un sfârșit de pagină.
+    expect(document.querySelector('#inscriere ~ section')).not.toBeNull();
+  });
+
+  it('ultima pe pagină, banda e aceeași', () => {
+    randeaza([
+      { key: 'format', visible: true },
+      { key: 'registration', visible: true },
+    ]);
+    expect(sectiuniDinPagina().at(-1)).toBe('02 Înscriere');
+    expect(banda()).not.toBeNull();
+  });
+});
+
 describe('ziua cursei nu e configurabilă', () => {
   it('modul leaderboard își păstrează aranjarea, oricare ar fi configul', () => {
     // Configul cere o cu totul altă ordine, cu formatul ascuns.
