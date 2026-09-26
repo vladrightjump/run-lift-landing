@@ -13,148 +13,65 @@ type Props = {
 export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
   const { EVENT_META } = useEditionStrings();
 
-  // Padding-ul barei, mărimea mărcii și cea a butonului stau în `.e3-topbar*`
-  // din edition3.css, NU aici: inline ar bate media query-ul de mobil la
-  // specificitate, iar antetul ar rămâne la fel pe telefon fără ca nimic să
-  // pară stricat.
+  // Aspectul stă în `.e3-topbar*` (edition3.css pentru comportamentul la
+  // scroll, public.css pentru compoziție), NU inline: inline ar bate media
+  // query-ul de mobil la specificitate.
   return (
-      <header
-        className="e3-topbar"
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          background: 'rgba(18,20,16,0.92)',
-          backdropFilter: 'blur(8px)',
-          borderBottom: '1px solid var(--e3-border)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div
-            className="e3-topbar-mark"
-            style={{
-              background: 'var(--e3-accent)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: 'Anton, sans-serif',
-              color: 'var(--e3-bg)',
-              letterSpacing: 0.5,
-            }}
-          >
-            RL
-          </div>
-          <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 18, letterSpacing: 1, textTransform: 'uppercase' }}>
-            Run + Lift
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: 'var(--e3-accent)',
-              animation: 'e3-dot-blink 1.4s ease-in-out infinite',
-            }}
-          />
-          {/* După ora de start countdown-ul ar sta pe patru zerouri, care arată
-              a pagină stricată. Îl înlocuim cu starea „se întâmplă acum". */}
-          {cd.done ? (
-            <span
-              style={{
-                fontFamily: 'Anton, sans-serif',
-                fontSize: 19,
-                letterSpacing: 1,
-                textTransform: 'uppercase',
-                color: 'var(--e3-accent)',
-              }}
-            >
-              Live acum
-            </span>
-          ) : (
-            <>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
-            Start în
-          </span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }} role="timer" aria-label="Timp rămas până la start">
-            {[
-              { v: cd.zile, l: 'z', lime: true },
-              { v: cd.ore, l: 'h', lime: false },
-              { v: cd.minute, l: 'm', lime: false },
-              { v: cd.secunde, l: 's', lime: false },
-            ].map((u) => (
-              <span key={u.l} style={{ display: 'inline-flex', alignItems: 'baseline' }}>
-                {/* Cifra se rostogolește la fiecare schimbare: cheia include
-                    valoarea, deci React remontează, iar animația de montare
-                    din `.e3-digit` pornește din nou. Unitățile care nu s-au
-                    schimbat păstrează aceeași cheie și stau pe loc. */}
-                <span
-                  className="e3-digit"
-                  style={{
-                    fontFamily: 'Anton, sans-serif',
-                    fontSize: 24,
-                    color: u.lime ? 'var(--e3-accent)' : 'var(--e3-text-bright)',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
-                  <span key={u.v}>{u.v}</span>
+    <header className="e3-topbar">
+      <div className="e3-topbar-brand">
+        <div className="e3-topbar-mark">RL</div>
+        <span className="e3-topbar-name">Run + Lift</span>
+      </div>
+      <div className="e3-topbar-cd">
+        {/* După ora de start countdown-ul ar sta pe patru zerouri, care arată
+            a pagină stricată. Îl înlocuim cu starea „se întâmplă acum". */}
+        {cd.done ? (
+          <span className="e3-topbar-live">Live acum</span>
+        ) : (
+          <>
+            <span className="e3-label">Start în</span>
+            <div className="e3-topbar-units" role="timer" aria-label="Timp rămas până la start">
+              {[
+                { v: cd.zile, l: 'z', lime: true },
+                { v: cd.ore, l: 'h', lime: false },
+                { v: cd.minute, l: 'm', lime: false },
+                { v: cd.secunde, l: 's', lime: false },
+              ].map((u) => (
+                <span key={u.l} className="e3-topbar-unit">
+                  {/* Cifra se rostogolește la fiecare schimbare: cheia include
+                      valoarea, deci React remontează, iar animația de montare
+                      din `.e3-digit` pornește din nou. Unitățile care nu s-au
+                      schimbat păstrează aceeași cheie și stau pe loc. */}
+                  <span className={u.lime ? 'e3-digit e3-num e3-topbar-lime' : 'e3-digit e3-num'}>
+                    <span key={u.v}>{u.v}</span>
+                  </span>
+                  <span className="e3-topbar-unit-l">{u.l}</span>
                 </span>
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
-                  {u.l}
-                </span>
-              </span>
-            ))}
-          </div>
-            </>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>
-            {EVENT_META}
-          </span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      <nav className="e3-topbar-nav" aria-label="Principal">
+        <span className="e3-topbar-meta">{EVENT_META}</span>
+        <a href="/despre-noi" className="e3-link e3-topbar-link">
+          Despre noi
+        </a>
+        {showCta && (
           <a
-            href="/despre-noi"
-            className="e3-link"
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: 2,
-              textTransform: 'uppercase',
-              color: 'var(--e3-muted)',
-              textDecoration: 'none',
+            href="/inscriere"
+            onClick={(e) => {
+              if (onInscrie) {
+                e.preventDefault();
+                onInscrie();
+              }
             }}
+            className="e3-btn e3-btn-sm e3-cta e3-shine e3-topbar-cta"
           >
-            Despre noi
+            Înscrie-te
           </a>
-          {showCta && (
-            <a
-              href="/inscriere"
-              onClick={(e) => {
-                if (onInscrie) {
-                  e.preventDefault();
-                  onInscrie();
-                }
-              }}
-              className="e3-cta e3-shine e3-topbar-cta"
-              style={{
-                display: 'inline-block',
-                background: 'var(--e3-accent)',
-                color: 'var(--e3-bg)',
-                fontWeight: 700,
-                letterSpacing: 1.5,
-                textTransform: 'uppercase',
-                textDecoration: 'none',
-              }}
-            >
-              Înscrie-te
-            </a>
-          )}
-        </div>
-      </header>
+        )}
+      </nav>
+    </header>
   );
 };

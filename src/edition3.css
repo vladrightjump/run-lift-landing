@@ -112,8 +112,9 @@
 .e3-cta:hover { background: var(--e3-accent-hover); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(201,242,75,0.25); }
 .e3-cta:active { transform: translateY(0) scale(0.97); box-shadow: none; }
 
-/* CTA mare din hero (cu glow) */
-.e3-cta-lg { transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; animation: e3-fade-up 0.6s ease-out 0.7s both, e3-glow 3s ease-in-out 1.5s infinite; }
+/* CTA mare din hero. Intră din mască, fără opacitate, ca să nu întârzie
+   primul ecran; `backwards` lasă butonul fără clip după intrare. */
+.e3-cta-lg { transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; animation: e3-rise 0.5s var(--e3-ease, ease-out) 0.18s backwards; }
 .e3-cta-lg:hover { background: var(--e3-accent-hover); transform: translateY(-3px); box-shadow: 0 10px 28px rgba(201,242,75,0.28); }
 .e3-cta-lg:active { transform: translateY(0) scale(0.97); box-shadow: none; }
 
@@ -147,7 +148,7 @@
 @keyframes e3-draw-check { to { stroke-dashoffset: 0; } }
 @keyframes e3-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes e3-ring-pulse { 0% { transform: scale(0.9); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
-@keyframes e3-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,242,75,0.35); } 50% { box-shadow: 0 0 24px 4px rgba(201,242,75,0.22); } }
+@keyframes e3-rise { from { clip-path: inset(0 0 100% 0); transform: translateY(14px); } to { clip-path: inset(0); transform: translateY(0); } }
 @keyframes e3-dot-blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.75); } }
 
 /* Fundalul video din hero — rămâne fundalul întunecat dacă e ascuns. */
@@ -297,9 +298,11 @@
    de secțiune, ca intrarea paginii și intrările de pe scroll să fie același
    gest. Marginile negative din starea finală lasă loc pentru coada lui „y".
    `--d` e întârzierea per cuvânt, pusă inline la randare. */
-.e3-word { display: inline-block; animation: e3-mask-up 0.85s var(--e3-spring) both; animation-delay: var(--d, 0s); }
+.e3-word { display: inline-block; animation: e3-mask-up 0.55s var(--e3-ease, ease-out) both; animation-delay: var(--d, 0s); }
+/* Pornește cu jumătatea de jos a literelor deja vizibilă: titlul are formă din
+   primul cadru, deci nu întârzie prima afișare (elementul LCP poate fi el). */
 @keyframes e3-mask-up {
-  from { clip-path: inset(105% -8% -35% -8%); transform: translateY(0.28em); }
+  from { clip-path: inset(50% -8% -35% -8%); transform: translateY(0.16em); }
   to   { clip-path: inset(-35% -8% -35% -8%); transform: translateY(0); }
 }
 
@@ -388,7 +391,7 @@
    bate media query-ul de mai jos la specificitate, iar antetul ar rămâne la fel
    pe telefon fără ca nimic să pară stricat. Aceeași lecție ca la `.e3-card`. */
 .e3-topbar {
-  position: relative; isolation: isolate;
+  isolation: isolate; /* `position: sticky` vine din public.css */
   padding: 14px clamp(16px, 4vw, 40px);
   gap: 12px 24px;
 }

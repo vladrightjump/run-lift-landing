@@ -9,6 +9,76 @@
  */
 
   /* ======================================================================
+     Afișul: vocabularul comun al paginilor publice
+     ----------------------------------------------------------------------
+     O singură sursă pentru scara tipografică, grilă, antetul de secțiune,
+     butoane și mișcare. Colțurile sunt drepte peste tot; lime-ul marchează
+     doar semnale (CTA, stare activă, cifre vii), nu umple suprafețe.
+     ====================================================================== */
+  :root {
+    --e3-gutter: clamp(20px, 5vw, 48px);
+    --e3-wrap: 1280px;
+    /* Titlul din hero și titlurile de secțiune: scară de afiș, nu de pagină. */
+    --e3-fs-display: clamp(84px, min(21vw, 29dvh), 300px);
+    --e3-fs-h2: clamp(56px, 10vw, 148px);
+    /* Mișcarea: o curbă care pleacă repede și se așază lung, trei durate. */
+    --e3-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --e3-dur-fast: 0.16s;
+    --e3-dur: 0.3s;
+    --e3-dur-slow: 0.6s;
+  }
+
+  .e3-wrap { box-sizing: border-box; max-width: var(--e3-wrap); margin-inline: auto; padding-inline: var(--e3-gutter); }
+  .e3-sec { position: relative; padding-block: clamp(72px, 11vw, 144px); border-top: 1px solid var(--e3-border); }
+
+  /* Antetul de secțiune: numărul, o linie până la marginea paginii, apoi
+     titlul la scară de afiș. Numărul vine din poziția secțiunii (Landing). */
+  .e3-sec-head { display: grid; gap: clamp(10px, 1.6vw, 18px); margin-bottom: clamp(40px, 6vw, 80px); }
+  .e3-sec-head .e3-title-num {
+    display: flex; align-items: center; gap: 16px;
+    font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 0.14em;
+    color: var(--e3-accent); font-variant-numeric: tabular-nums;
+  }
+  .e3-sec-head .e3-title-num::after { content: ''; flex: 1; height: 2px; background: var(--e3-border); }
+  .e3-sec-head .e3-title {
+    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+    font-size: var(--e3-fs-h2); line-height: 0.88; letter-spacing: -0.005em;
+    text-transform: uppercase; text-wrap: balance;
+    /* Loc pentru virgula de sub Ș/Ț, care coboară sub linia de bază. */
+    padding-bottom: 0.06em;
+  }
+
+  .e3-lead {
+    margin: 0; max-width: 60ch;
+    font-size: clamp(17px, 1.5vw, 20px); line-height: 1.55;
+    color: var(--e3-muted-strong); text-wrap: pretty;
+  }
+  .e3-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+  .e3-num { font-family: Anton, sans-serif; font-weight: 400; font-variant-numeric: tabular-nums; }
+
+  /* Butonul principal. `a.e3-btn` bate culoarea de link din `.e3-root a`. */
+  .e3-btn,
+  .e3-root a.e3-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-family: Anton, sans-serif; font-weight: 400; font-size: 20px;
+    letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+    padding: 18px 32px; border: 0; cursor: pointer; text-decoration: none;
+  }
+  .e3-btn-sm,
+  .e3-root a.e3-btn-sm { font-size: 15px; padding: 11px 18px; }
+
+  /* Linkul de text cu săgeată (hartă, Instagram). */
+  .e3-arrow-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--e3-accent);
+  }
+
+  /* ======================================================================
      Coming Soon — Ediția a treia (ecran full-screen + modal notificare)
      ====================================================================== */
   @keyframes marquee {
@@ -733,3 +803,229 @@
   .an-selector-camp:focus-visible {
     outline: 2px solid var(--e3-accent); outline-offset: 2px;
   }
+  /* ======================================================================
+     Landing: cadrul (antet, hero, footer, banner, toast)
+     ====================================================================== */
+
+  /* ---- Antetul ----
+     Comportamentul la scroll (stratul care se îndesește, marca ce se strânge)
+     și dimensiunile de mobil stau în edition3.css; aici, compoziția. */
+  .e3-topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    background: rgba(18,20,16,0.92);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--e3-border);
+  }
+  .e3-topbar-brand { display: flex; align-items: center; gap: 12px; }
+  .e3-topbar-mark {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-family: Anton, sans-serif; letter-spacing: 0.02em;
+  }
+  .e3-topbar-name { font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .e3-topbar-cd { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .e3-topbar-units { display: flex; align-items: baseline; gap: 8px; }
+  .e3-topbar-unit { display: inline-flex; align-items: baseline; gap: 1px; }
+  .e3-topbar-unit .e3-digit { font-size: 24px; color: var(--e3-text-bright); }
+  .e3-topbar-unit .e3-topbar-lime { color: var(--e3-accent); }
+  .e3-topbar-unit-l { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--e3-muted); }
+  .e3-topbar-live { font-family: Anton, sans-serif; font-size: 19px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--e3-accent); }
+  .e3-topbar-nav { display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
+  .e3-topbar-meta,
+  .e3-root a.e3-topbar-link {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--e3-muted); white-space: nowrap;
+  }
+  .e3-root a.e3-topbar-link:hover { color: var(--e3-text); text-decoration: none; }
+  /* Între 561 și 1100px, meta-ul (data și locul) nu mai are loc pe un rând
+     lângă countdown; e oricum pe hero și pe bandă. */
+  @media (max-width: 1100px) {
+    .e3-topbar-meta { display: none; }
+  }
+  @media (max-width: 720px) {
+    .e3-topbar { grid-template-columns: 1fr auto; }
+    .e3-topbar-cd { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
+    .e3-topbar-nav { gap: 14px; }
+  }
+
+  /* ---- Hero ----
+     Titlul ocupă lățimea; rezumatul și CTA-ul stau pe o bază sub o linie.
+     Totul încape în primul ecran, cu CTA-ul vizibil fără scroll. */
+  .e3-hero {
+    position: relative; overflow: clip; /* `clip`, nu `hidden`: vezi .e3-hero-copy în edition3.css */
+    box-sizing: border-box;
+    display: flex; align-items: flex-end;
+    min-height: min(calc(100dvh - 64px), 980px);
+    padding-block: clamp(40px, 7vw, 88px) clamp(28px, 4vw, 48px);
+    background: var(--e3-bg);
+    border-bottom: 1px solid var(--e3-border);
+  }
+  .e3-hero-video {
+    position: absolute; inset: 0; z-index: 0;
+    width: 100%; height: 100%; object-fit: cover; pointer-events: none;
+  }
+  /* Umbra de sub text: mai densă jos și în stânga, unde stă conținutul. */
+  .e3-hero-shade {
+    position: absolute; inset: 0; z-index: 1;
+    background:
+      linear-gradient(0deg, rgba(18,20,16,0.96) 0%, rgba(18,20,16,0.55) 45%, rgba(18,20,16,0.35) 100%),
+      linear-gradient(90deg, rgba(18,20,16,0.7) 0%, rgba(18,20,16,0) 70%);
+  }
+  .e3-hero-copy { position: relative; z-index: 2; width: 100%; }
+  .e3-hero-kicker {
+    margin: 0 0 clamp(16px, 2.4vw, 28px);
+    font-size: clamp(12px, 1.1vw, 15px); font-weight: 600; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--e3-muted-strong);
+  }
+  .e3-hero-title {
+    margin: 0; display: flex; flex-direction: column; align-items: flex-start;
+    font-family: Anton, sans-serif; font-weight: 400;
+    font-size: var(--e3-fs-display); line-height: 0.9; letter-spacing: -0.01em;
+    text-transform: uppercase;
+  }
+  .e3-hero-accent { color: var(--e3-accent); }
+  .e3-hero-foot {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end;
+    gap: 24px 48px;
+    margin-top: clamp(24px, 3.4vw, 44px); padding-top: clamp(18px, 2vw, 24px);
+    border-top: 2px solid var(--e3-muted-dim);
+  }
+  .e3-hero-lead { max-width: 46ch; }
+  @media (max-width: 720px) {
+    .e3-hero { --e3-fs-display: min(29vw, 20dvh); }
+    .e3-hero-foot { grid-template-columns: 1fr; }
+    .e3-hero-cta { justify-self: stretch; }
+  }
+
+  /* ---- Footer ---- */
+  /* `display: block` anulează regula globală `footer {}` din index.css (flex). */
+  .e3-foot { display: block; border-top: 1px solid var(--e3-border); padding: clamp(48px, 7vw, 88px) 0 32px; }
+  .e3-foot-mark {
+    margin: 0 0 clamp(28px, 4vw, 48px);
+    font-family: Anton, sans-serif; font-size: clamp(64px, 15vw, 216px); line-height: 0.84;
+    letter-spacing: -0.01em; text-transform: uppercase; color: var(--e3-surface-tint);
+    white-space: nowrap; overflow: hidden;
+  }
+  .e3-foot-grid {
+    display: grid; grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr)); gap: 28px 32px;
+    padding-top: 24px; border-top: 1px solid var(--e3-border);
+    font-size: 14px; line-height: 1.6;
+  }
+  .e3-foot-year { font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--e3-muted); }
+  .e3-foot-org { display: grid; gap: 2px; align-content: start; }
+  .e3-foot-org .e3-label { margin-bottom: 6px; }
+  .e3-foot-name { font-weight: 600; color: var(--e3-muted-strong); }
+  .e3-foot-org a { font-weight: 600; width: fit-content; }
+  @media (max-width: 900px) { .e3-foot-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .e3-foot-grid { grid-template-columns: 1fr; } }
+
+  /* ---- Bannerul „ești înscris" ---- */
+  .e3-banner {
+    position: sticky; top: 0; z-index: 60;
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px var(--e3-gutter);
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-size: 15px; font-weight: 600;
+    animation: e3-rise 0.3s var(--e3-ease) backwards;
+  }
+  .e3-banner-mark { font-size: 17px; font-weight: 700; }
+  .e3-banner-text { flex: 1; text-wrap: pretty; }
+  .e3-banner-close {
+    background: transparent; border: 0; color: var(--e3-bg); cursor: pointer;
+    font-size: 16px; line-height: 1; padding: 6px;
+  }
+
+  /* ---- Toast ---- */
+  .e3-toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 200;
+    display: flex; align-items: center; gap: 12px; max-width: min(90vw, 480px);
+    padding: 14px 22px;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-size: 15px; font-weight: 600;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    animation: e3-toast-in 0.25s ease;
+  }
+  .e3-toast-err { background: var(--e3-danger-bg); color: var(--e3-danger); }
+  .e3-toast-mark { font-size: 17px; font-weight: 700; }
+
+  /* ======================================================================
+     Landing: secțiunile de conținut
+     ====================================================================== */
+
+  /* ---- Locația: orarul ----
+     Ora de start e cifra pe care o ține minte oricine: stă la scară de afiș.
+     Locul și data vin dedesubt, ca rânduri de fișă tehnică. */
+  .e3-venue { background: var(--e3-bg-deep); }
+  .e3-venue-grid {
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(36px, 5vw, 72px); align-items: start;
+  }
+  .e3-venue-info { display: grid; align-content: start; }
+  .e3-venue-time {
+    margin: 4px 0 clamp(24px, 3vw, 36px);
+    font-size: clamp(96px, 14vw, 200px); line-height: 0.86; letter-spacing: -0.01em;
+    color: var(--e3-accent);
+  }
+  .e3-venue-list { margin: 0; border-top: 2px solid var(--e3-muted-dim); }
+  .e3-venue-row {
+    display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: baseline; gap: 16px;
+    padding: 16px 12px 16px 0; border-bottom: 1px solid var(--e3-border);
+  }
+  .e3-venue-row dd { margin: 0; font-size: 17px; font-weight: 600; color: var(--e3-text); }
+  .e3-venue-note { margin: 20px 0 0; max-width: 44ch; font-size: 14px; line-height: 1.55; color: var(--e3-muted); text-wrap: pretty; }
+  .e3-venue-map { display: grid; gap: 14px; }
+  .e3-venue-map iframe {
+    display: block; width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--e3-border);
+    background: var(--e3-surface);
+  }
+  @media (max-width: 860px) {
+    .e3-venue-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---- Cine vine: lista de start ----
+     Fiecare înscris e un număr de concurs. Grila se umple pe lățime; pe
+     telefon rămân două coloane, ca numele să încapă. */
+  .e3-people-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    padding-bottom: 16px; border-bottom: 2px solid var(--e3-muted-dim);
+  }
+  .e3-people-count { font-size: clamp(32px, 4vw, 48px); line-height: 1; color: var(--e3-accent); }
+  .e3-people-grid {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    border-left: 1px solid var(--e3-border);
+  }
+  .e3-people-grid:empty { display: none; }
+  .e3-bib {
+    position: relative; display: grid; gap: 6px; align-content: start;
+    padding: 18px 20px 20px; background: var(--e3-bg);
+    border-right: 1px solid var(--e3-border); border-bottom: 1px solid var(--e3-border);
+    transition: background var(--e3-dur) var(--e3-ease);
+  }
+  .e3-bib:hover { background: var(--e3-surface); }
+  .e3-bib-nr { font-size: 34px; line-height: 1; color: var(--e3-muted-dim); transition: color var(--e3-dur) var(--e3-ease); }
+  .e3-bib:hover .e3-bib-nr { color: var(--e3-accent); }
+  .e3-bib-name { font-size: 16px; font-weight: 600; color: var(--e3-text); overflow-wrap: anywhere; }
+  .e3-bib-new {
+    position: absolute; top: 16px; right: 16px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--e3-bg); background: var(--e3-accent); padding: 3px 8px;
+  }
+  .e3-bib-skel { gap: 12px; }
+  .e3-people-empty {
+    margin: 0; padding: 40px 0; border-bottom: 1px solid var(--e3-border);
+    font-size: 16px; color: var(--e3-muted);
+  }
+  .e3-people-empty a { font-weight: 600; }
+  .e3-people-wait { margin-top: clamp(28px, 4vw, 44px); }
+  @media (max-width: 480px) {
+    .e3-people-grid { grid-template-columns: 1fr 1fr; }
+    .e3-bib { padding: 14px 14px 16px; }
+    .e3-bib-nr { font-size: 28px; }
+  }
+
+  /* ---- Instagram: antetul în coloana îngustă ----
+     Aceeași compoziție ca restul secțiunilor, la o scară pe măsura coloanei. */
+  .e3-reels .e3-sec-head { margin-bottom: 24px; }
+  .e3-reels .e3-sec-head .e3-title { font-size: clamp(48px, 6.4vw, 96px); }
