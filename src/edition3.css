@@ -5,7 +5,7 @@
  * :hover / :focus / :active. Fiecare element interactiv are și o clasă `e3-*`.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&display=swap');
+/* Fonturile se încarcă o singură dată, din `index.html`. */
 
 /* 100dvh, nu 100vh: pe iOS Safari bara de adresă schimbă 100vh și pagina saltă. */
 .e3-root { min-height: 100dvh; background: var(--e3-bg); color: var(--e3-text); font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; }

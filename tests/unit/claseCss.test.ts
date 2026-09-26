@@ -17,8 +17,9 @@ import { resolve, join } from 'node:path';
  */
 
 const root = resolve(__dirname, '../..');
-// Amândouă fișierele de stil: `edition3.css` ține clasele `e3-*` ale landing-ului.
-const css = ['src/index.css', 'src/edition3.css']
+// Toate fișierele de stil: `public.css` ține paginile publice, `edition3.css`
+// stările și keyframes-urile `e3-*`, `index.css` adminul și regulile globale.
+const css = ['src/index.css', 'src/public.css', 'src/edition3.css']
   .map((f) => readFileSync(resolve(root, f), 'utf8'))
   .join('\n');
 
