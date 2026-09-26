@@ -1,11 +1,10 @@
-import type { CSSProperties } from 'react';
 import { useEventConfig, useEditionStrings } from '../../hooks/useEventConfig';
 import type { FieldName } from '../../lib/validation';
 import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
 import { useCountUp } from '../../hooks/useCountUp';
 import { BirthDateField } from './BirthDateField';
-import { sectionNum, sectionTitle } from './shared';
+import { SectionHead } from './SectionHead';
 import {
   AntetLocuri,
   BaraLocuri,
@@ -17,7 +16,7 @@ import {
   CampText,
   IconEroare,
   LinkContact,
-  Rotitor,
+  BaraIncarcare,
   ActiuniSucces,
   TEXT_EROARE_MESAJ,
   TEXT_EROARE_TITLU,
@@ -34,32 +33,6 @@ const summaryItems = (eventSummaryLine: string): string[] => [
   'Deschis oricui, indiferent de nivel',
   'Adu cu tine: apă pentru hidratare și bună dispoziție',
 ];
-
-/** Cadrul comun al panourilor de stare (închis / încărcare / succes / eroare). */
-const panou: CSSProperties = {
-  border: '1px solid var(--e3-border)',
-  background: 'var(--e3-surface)',
-  padding: 'clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px)',
-  textAlign: 'center',
-  display: 'grid',
-  gap: 16,
-  justifyItems: 'center',
-};
-
-const titluPanou: CSSProperties = {
-  fontFamily: 'Anton, sans-serif',
-  fontSize: 'clamp(28px, 6vw, 40px)',
-  textTransform: 'uppercase',
-  letterSpacing: 1,
-};
-
-const mesajPanou: CSSProperties = {
-  margin: 0,
-  fontSize: 16,
-  lineHeight: 1.55,
-  color: 'var(--e3-muted)',
-  maxWidth: 380,
-};
 
 type Props = {
   reg: ReturnType<typeof useRegistration>;
@@ -90,108 +63,74 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
   };
 
   return (
-      <section
-        id="inscriere"
-        style={{ padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px) clamp(64px, 9vw, 96px)' }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: '0 auto',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
-            gap: 'clamp(32px, 5vw, 56px)',
-            alignItems: 'start',
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 32 }}>
-              <span className="e3-title-num" style={sectionNum}>{num}</span>
-              <h2 className="e3-title" style={sectionTitle}>Înscriere</h2>
-            </div>
-            <p style={{ margin: '0 0 28px', fontSize: 17, lineHeight: 1.55, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
+    <section id="inscriere" className="e3-sec e3-reg">
+      {/* Linia de sosire. Stă în secțiune, la marginea ei de sus, și nu depinde
+          de ce vine înainte sau după: ordinea secțiunilor se schimbă din admin,
+          iar înscrierea nu e neapărat ultima. */}
+      <div className="e3-finish" aria-hidden="true">
+        <span className="e3-finish-band" />
+        <span className="e3-finish-word">Finish</span>
+      </div>
+      <div className="e3-wrap">
+        <SectionHead num={num}>Înscriere</SectionHead>
+        <div className="e3-reg-grid">
+          <div className="e3-reg-side">
+            <p className="e3-lead e3-reg-lead">
               {waitlistMode ? (
                 <>
-                  Locurile s-au epuizat, dar te poți pune pe <strong style={{ color: 'var(--e3-accent)' }}>lista de așteptare</strong>.
+                  Locurile s-au epuizat, dar te poți pune pe <strong>lista de așteptare</strong>.
                   Au mai rămas{' '}
-                  <strong style={{ color: 'var(--e3-accent)' }}>
+                  <strong>
                     {waitlistLeft} {waitlistLeft === 1 ? 'loc' : 'locuri'}
                   </strong>{' '}
                   pe listă.
                 </>
               ) : (
                 <>
-                  Completează formularul și primești confirmarea pe email.{' '}
-                  <strong style={{ color: 'var(--e3-accent)' }}>Locuri limitate</strong> — primul venit, primul servit.
+                  Completează formularul și primești confirmarea pe email. <strong>Locuri limitate</strong>:
+                  primul venit, primul servit.
                 </>
               )}
             </p>
-            {/* Fundalul și bordura vin din `.e3-card` — vezi nota de acolo. */}
-            <div data-reveal className="e3-card e3-spot" style={{ padding: 26 }}>
-              <div
-                style={{
-                  fontFamily: 'Anton, sans-serif',
-                  fontSize: 15,
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                  color: 'var(--e3-accent)',
-                  marginBottom: 18,
-                }}
-              >
-                Pe scurt
-              </div>
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 14 }}>
+            {/* Fundalul și bordura vin din `.e3-card` (edition3.css): inline ar
+                bate `:hover`. */}
+            <div data-reveal className="e3-card e3-spot e3-reg-summary">
+              <div className="e3-reg-summary-title">Pe scurt</div>
+              <ul className="e3-reg-summary-list">
                 {summaryItems(EVENT_SUMMARY_LINE).map((item) => (
-                  <li key={item} style={{ display: 'flex', gap: 12, fontSize: 15, lineHeight: 1.5, color: 'var(--e3-muted-strong)' }}>
-                    <span style={{ color: 'var(--e3-accent)', fontWeight: 700 }}>→</span>
-                    {item}
-                  </li>
+                  <li key={item}>{item}</li>
                 ))}
               </ul>
             </div>
           </div>
 
-          <div>
-            {/* Slots */}
-            <div
-              style={{
-                border: '1px solid var(--e3-border)',
-                borderBottom: 'none',
-                background: 'var(--e3-surface)',
-                padding: '18px 22px',
-                display: 'grid',
-                gap: 12,
-              }}
-            >
+          <div className="e3-reg-main">
+            <div className="e3-reg-slots">
               <AntetLocuri>
                 {/* Contorul respiră doar cât chiar mai sunt locuri puține.
                     Pe zero n-ar mai fi urgență, ci doar zgomot lângă mesajul
                     de „epuizat" de dedesubt. */}
                 <span
-                  className={
-                    stats && slots.remaining > 0 && slots.remaining <= 5 ? 'e3-urgent' : undefined
-                  }
-                  style={{
-                    display: 'inline-block',
-                    fontFamily: 'Anton, sans-serif',
-                    fontSize: 22,
-                    letterSpacing: 1,
-                    color: slots.remaining <= 3 ? 'var(--e3-danger)' : 'var(--e3-accent)',
-                  }}
+                  className={[
+                    'e3-num e3-reg-count',
+                    slots.remaining <= 3 ? 'e3-reg-count-low' : '',
+                    stats && slots.remaining > 0 && slots.remaining <= 5 ? 'e3-urgent' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
                   {remainingShown ?? '–'} / {TOTAL_SLOTS}
                 </span>
               </AntetLocuri>
               <BaraLocuri total={TOTAL_SLOTS} ocupate={slots.occupied} gap={4} animat />
               {isSoldOut && !isWaitlistFull && (
-                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-accent)', fontWeight: 600, textWrap: 'pretty' }}>
-                  Locurile s-au epuizat — completează formularul și intri pe lista de așteptare. Te contactăm
+                <p className="e3-reg-soldout">
+                  Locurile s-au epuizat. Completează formularul și intri pe lista de așteptare. Te contactăm
                   imediat ce se eliberează un loc.
                 </p>
               )}
             </div>
 
-            {/* Formular */}
             {showForm && (
               <form
                 ref={formRef}
@@ -202,18 +141,12 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                   const name = el.getAttribute('name') as FieldName | null;
                   if (name && name !== 'acord') clearErrorFor(name);
                 }}
-                style={{
-                  border: '1px solid var(--e3-border)',
-                  background: 'var(--e3-surface)',
-                  padding: 'clamp(20px, 4vw, 36px)',
-                  display: 'grid',
-                  gap: 22,
-                }}
+                className="e3-reg-form"
               >
                 {/* Capcană anti-bot: invizibilă pentru oameni, tentantă pentru
                     scripturile care completează orice câmp. Verificată pe server. */}
                 <input type="text" {...hpProps} />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 18 }}>
+                <div className="e3-reg-fields">
                   <CampText
                     nume="nume"
                     eticheta="Nume *"
@@ -242,7 +175,7 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                     mesajEroare="Numărul de telefon nu e valid."
                   />
                 </div>
-                <div style={{ display: 'grid', gap: 18 }}>
+                <div className="e3-reg-stack">
                   <CampText
                     nume="email"
                     eticheta="Email *"
@@ -262,7 +195,7 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                     errMsg={dateErrMsg}
                   />
                 </div>
-                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-muted)', textWrap: 'pretty' }}>
+                <p className="e3-reg-note">
                   Participanții trebuie să aibă minim 14 ani în ziua evenimentului. Stațiile și greutățile sunt
                   adaptate de antrenori la fața locului.
                 </p>
@@ -278,11 +211,9 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
 
             {/* Închis (eveniment trecut / înscrieri închise / totul plin) */}
             {closedReason && (
-              <div style={panou}>
-                <div style={{ ...titluPanou, fontSize: 'clamp(24px, 5vw, 34px)' }}>
-                  {textInchis(closedReason).titlu}
-                </div>
-                <p style={mesajPanou}>{textInchis(closedReason).mesaj}</p>
+              <div className="e3-reg-panel">
+                <div className="e3-reg-panel-title">{textInchis(closedReason).titlu}</div>
+                <p className="e3-reg-panel-msg">{textInchis(closedReason).mesaj}</p>
                 <LinkContact
                   stil={{
                     background: 'var(--e3-accent)',
@@ -297,33 +228,22 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
               </div>
             )}
 
-            {/* Loading */}
             {phase === 'loading' && (
-              <div style={{ ...panou, padding: 'clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px)', gap: 22 }}>
-                <Rotitor />
-                <div
-                  style={{
-                    fontFamily: 'Anton, sans-serif',
-                    fontSize: 22,
-                    textTransform: 'uppercase',
-                    letterSpacing: 1.5,
-                    color: 'var(--e3-muted-strong)',
-                  }}
-                >
-                  {TEXT_INCARCARE}
-                </div>
+              <div className="e3-reg-panel e3-reg-panel-loading">
+                <BaraIncarcare />
+                <div className="e3-reg-panel-title e3-reg-panel-wait">{TEXT_INCARCARE}</div>
               </div>
             )}
 
-            {/* Success */}
+            {/* Succes: ai trecut linia. Bordura lime o spune. */}
             {phase === 'success' && (
-              <div style={{ ...panou, border: '1px solid var(--e3-accent)' }}>
+              <div className="e3-reg-panel e3-reg-panel-ok">
                 <BifaSucces />
-                <div style={titluPanou}>
+                <div className="e3-reg-panel-title">
                   {submittedAsWaitlist ? 'Ești pe lista de așteptare, ' : 'Te-ai înregistrat, '}
                   {confirmName}!
                 </div>
-                <p style={mesajPanou}>
+                <p className="e3-reg-panel-msg">
                   {submittedAsWaitlist
                     ? TEXT_SUCCES_ASTEPTARE
                     : `Ți-am trimis un email de confirmare cu toate detaliile. ${SUCCESS_SEE_YOU}`}
@@ -337,12 +257,11 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
               </div>
             )}
 
-            {/* Error */}
             {phase === 'error' && (
-              <div style={{ ...panou, border: '1px solid var(--e3-danger)' }}>
+              <div className="e3-reg-panel e3-reg-panel-err">
                 <IconEroare />
-                <div style={{ ...titluPanou, color: 'var(--e3-danger)' }}>{TEXT_EROARE_TITLU}</div>
-                <p style={mesajPanou}>{TEXT_EROARE_MESAJ}</p>
+                <div className="e3-reg-panel-title">{TEXT_EROARE_TITLU}</div>
+                <p className="e3-reg-panel-msg">{TEXT_EROARE_MESAJ}</p>
                 <ButonReincearca
                   onClick={() => {
                     setErrors({});
@@ -354,6 +273,7 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
             )}
           </div>
         </div>
-      </section>
+      </div>
+    </section>
   );
 };

@@ -97,29 +97,8 @@ export const Landing = ({ mode = 'full' }: Props) => {
           bara nativă; aici doar dublează, în culoarea brandului. */}
       <div className="e3-progress" aria-hidden="true" />
       {toast && (
-        <div
-          role="status"
-          style={{
-            position: 'fixed',
-            top: 20,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 200,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            background: toast.kind === 'error' ? 'var(--e3-danger-bg)' : 'var(--e3-accent)',
-            color: toast.kind === 'error' ? 'var(--e3-danger)' : 'var(--e3-bg)',
-            fontFamily: 'Archivo, sans-serif',
-            fontSize: 15,
-            fontWeight: 600,
-            padding: '14px 22px',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
-            animation: 'e3-toast-in 0.25s ease',
-            maxWidth: 'min(90vw, 480px)',
-          }}
-        >
-          <span style={{ fontSize: 17, fontWeight: 700 }}>{toast.kind === 'error' ? '!' : '✓'}</span>
+        <div role="status" className={toast.kind === 'error' ? 'e3-toast e3-toast-err' : 'e3-toast'}>
+          <span className="e3-toast-mark" aria-hidden="true">{toast.kind === 'error' ? '!' : '✓'}</span>
           {toast.msg}
         </div>
       )}

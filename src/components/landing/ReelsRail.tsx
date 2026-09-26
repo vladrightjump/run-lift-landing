@@ -3,7 +3,7 @@ import '../../edition3.css';
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '../../lib/config';
 import type { Reel } from '../../lib/supabase';
 import { posterClip, posterClipRezerva, sursaIncorporare } from '../../lib/youtube';
-import { sectionNum, sectionTitle } from './shared';
+import { SectionHead } from './SectionHead';
 
 type Props = {
   /** Clipurile de randat. Lista goală nu randează nimic. */
@@ -373,7 +373,7 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
                 <span className="e3-reels-count-total">{doiDigiti(total)}</span>
                 <span className="e3-sr">
                   {' '}
-                  — {reels[centru]?.caption}
+                  , {reels[centru]?.caption}
                 </span>
               </p>
 
@@ -394,14 +394,7 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
         </div>
 
         <div className="e3-reels-text">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 24 }}>
-            <span className="e3-title-num" style={sectionNum}>
-              {num}
-            </span>
-            <h2 className="e3-title" style={sectionTitle}>
-              {headline}
-            </h2>
-          </div>
+          <SectionHead num={num}>{headline}</SectionHead>
           {body && <p className="e3-reels-body">{body}</p>}
           <a
             className="e3-link e3-reels-cta"

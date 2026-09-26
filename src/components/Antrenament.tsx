@@ -140,7 +140,7 @@ export const Antrenament = () => {
               {stare.program.map((s) => (
                 <option key={s.numar} value={s.numar}>
                   Săptămâna {s.numar}
-                  {s.titlu ? ` — ${s.titlu}` : ''}
+                  {s.titlu ? `: ${s.titlu}` : ''}
                 </option>
               ))}
             </select>
@@ -154,7 +154,7 @@ export const Antrenament = () => {
         */}
         {stare.fel === 'nimic' && (
           <p className="cs-sub">
-            Nu e publicat niciun antrenament acum. Revino peste câteva zile — sau vezi ce mai
+            Nu e publicat niciun antrenament acum. Revino peste câteva zile sau vezi ce mai
             facem pe{' '}
             <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
               {INSTAGRAM_HANDLE}

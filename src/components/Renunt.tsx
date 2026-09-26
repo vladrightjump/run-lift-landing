@@ -29,7 +29,7 @@ const REZULTATE: Record<
 > = {
   renuntat: {
     titlu: 'Locul e eliberat',
-    text: 'Mulțumim că ne-ai spus din timp — locul tău merge acum către primul om de pe lista de așteptare. Dacă te răzgândești, scrie-ne pe Instagram; dacă mai e loc, te punem la loc.',
+    text: 'Mulțumim că ne-ai spus din timp: locul tău merge acum către primul om de pe lista de așteptare. Dacă te răzgândești, scrie-ne pe Instagram; dacă mai e loc, te punem la loc.',
     ok: true,
   },
   deja_renuntat: {
@@ -92,7 +92,7 @@ export const Renunt = () => {
           <>
             <h1 className="cf-title">Nu mai poți veni?</h1>
             <p className="cs-sub">
-              Ești pe lista de participanți la <strong>{eventName}</strong> — {EVENT_WHEN}, ora{' '}
+              Ești pe lista de participanți la <strong>{eventName}</strong>, {EVENT_WHEN}, ora{' '}
               {EVENT_START_TIME}, la {EVENT_WHERE}.
             </p>
             {/*

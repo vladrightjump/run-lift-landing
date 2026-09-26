@@ -13,6 +13,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+// Pentru cardul `.an-card`, pe care tabul de antrenament îl randează ca previzualizare.
+import './public.css';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { SNAPSHOT_CONFIG } from './content/eventConfig';
 import type { AdminReelRow } from './lib/adminApi';

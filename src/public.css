@@ -1,0 +1,1204 @@
+/*
+ * Stilurile paginilor publice: landing (`.e3-*`), Coming Soon și paginile
+ * scurte care îi împrumută cadrul (`.cs-*`, `.cf-*`, `.an-*`, `.rn-*`) și
+ * Despre noi (`.dn-*`). Adminul stă în `index.css`; tokenii de culoare, regulile
+ * globale și keyframes-urile comune rămân tot acolo.
+ *
+ * Se importă imediat după `index.css`, ca ordinea în cascadă să rămână cea de
+ * dinainte de mutare.
+ */
+
+  /* ======================================================================
+     Afișul: vocabularul comun al paginilor publice
+     ----------------------------------------------------------------------
+     O singură sursă pentru scara tipografică, grilă, antetul de secțiune,
+     butoane și mișcare. Colțurile sunt drepte peste tot; lime-ul marchează
+     doar semnale (CTA, stare activă, cifre vii), nu umple suprafețe.
+     ====================================================================== */
+  :root {
+    --e3-gutter: clamp(20px, 5vw, 48px);
+    --e3-wrap: 1280px;
+    /* Titlul din hero și titlurile de secțiune: scară de afiș, nu de pagină. */
+    --e3-fs-display: clamp(84px, min(21vw, 29dvh), 300px);
+    --e3-fs-h2: clamp(56px, 10vw, 148px);
+    /* Mișcarea: o curbă care pleacă repede și se așază lung, trei durate. */
+    --e3-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --e3-dur-fast: 0.16s;
+    --e3-dur: 0.3s;
+    --e3-dur-slow: 0.6s;
+  }
+
+  .e3-wrap { box-sizing: border-box; max-width: var(--e3-wrap); margin-inline: auto; padding-inline: var(--e3-gutter); }
+  .e3-sec { position: relative; padding-block: clamp(72px, 11vw, 144px); border-top: 1px solid var(--e3-border); }
+
+  /* Antetul de secțiune: numărul, o linie până la marginea paginii, apoi
+     titlul la scară de afiș. Numărul vine din poziția secțiunii (Landing). */
+  /* `/despre-noi` are aceeași compoziție pe clasele ei (`.dn-section-*`); acolo
+     diferă doar distanța de dedesubt și mărimea titlului. */
+  .e3-sec-head,
+  .dn-section-head { display: grid; gap: clamp(10px, 1.6vw, 18px); margin-bottom: clamp(40px, 6vw, 80px); }
+  .e3-sec-head .e3-title-num,
+  .dn-section-num {
+    display: flex; align-items: center; gap: 16px;
+    font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 0.14em;
+    color: var(--e3-accent); font-variant-numeric: tabular-nums;
+  }
+  .e3-sec-head .e3-title-num::after,
+  .dn-section-num::after { content: ''; flex: 1; height: 2px; background: var(--e3-border); }
+  .e3-sec-head .e3-title,
+  .dn-section-head h2 {
+    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+    font-size: var(--e3-fs-h2); line-height: 0.88; letter-spacing: -0.005em;
+    text-transform: uppercase; text-wrap: balance;
+    /* Loc pentru diacritice: căciula lui Î/Â/Ă urcă peste înălțimea
+       interliniei strânse, iar virgula de sub Ș/Ț coboară sub linia de bază. */
+    padding-block: 0.14em 0.06em;
+  }
+
+  .e3-lead {
+    margin: 0; max-width: 60ch;
+    font-size: clamp(17px, 1.5vw, 20px); line-height: 1.55;
+    color: var(--e3-muted-strong); text-wrap: pretty;
+  }
+  .e3-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+  .e3-num { font-family: Anton, sans-serif; font-weight: 400; font-variant-numeric: tabular-nums; }
+
+  /* Butonul principal. Hover-ul și tranzițiile vin din clasele de CTA
+     (`.e3-cta`, `.e3-cta-lg`, `.e3-mag` în edition3.css): aici nu se pune
+     `transition`, altfel, încărcat ultimul, ar înlocui easing-ul magnetic. */
+  .e3-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-family: Anton, sans-serif; font-weight: 400; font-size: 20px;
+    letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+    padding: 18px 32px; border: 0; cursor: pointer; text-decoration: none;
+  }
+  /* Doar culoarea urcă la specificitatea lui `.e3-root a` (culoarea de link);
+     fundalul rămâne pe `.e3-btn`, ca `:hover`-ul din edition3.css să-l poată
+     schimba. */
+  .e3-root a.e3-btn { color: var(--e3-bg); text-decoration: none; }
+  .e3-btn-sm { font-size: 15px; padding: 11px 18px; }
+  /* Apăsarea se simte: butonul coboară un pixel și se strânge puțin. */
+  .e3-btn:active { transform: translateY(1px) scale(0.98); }
+
+  /* Linkul de text cu săgeată (hartă, Instagram). */
+  .e3-arrow-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--e3-accent);
+  }
+
+  /* ======================================================================
+     Coming Soon — Ediția a treia (ecran full-screen + modal notificare)
+     ====================================================================== */
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .cs-root {
+    position: relative;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--e3-bg-deep);
+    overflow: hidden;
+  }
+  .cs-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgba(201,242,75,0.10), transparent 70%),
+      radial-gradient(40% 40% at 80% 100%, rgba(201,242,75,0.06), transparent 70%);
+    pointer-events: none;
+  }
+  .cs-accent { color: var(--e3-accent); }
+
+  .cs-topbar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 24px 32px;
+    z-index: 1;
+  }
+  .cs-logo {
+    font-family: 'Anton', sans-serif;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: var(--e3-text);
+  }
+  .cs-brand-meta {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--e3-muted);
+  }
+  .cs-nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+  }
+  .cs-tab {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--e3-muted);
+    text-decoration: none;
+    padding-bottom: 3px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .cs-tab:hover,
+  .cs-tab.active {
+    color: var(--e3-accent);
+    border-color: var(--e3-accent);
+  }
+
+  .cs-main {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px 20px 48px;
+    gap: 22px;
+  }
+  .cs-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid var(--e3-accent-dim);
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--e3-accent);
+    animation: fade-up 0.6s ease-out both;
+  }
+  .cs-title {
+    margin: 0;
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: clamp(64px, 16vw, 168px);
+    line-height: 0.92;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--e3-text);
+    animation: fade-up 0.6s ease-out 0.1s both;
+  }
+  /* „Coming Soon" n-are diacritice, deci 0.92 e sigur. Un „CURÂND" pe rândul
+     al doilea urcă circumflexul peste rândul de deasupra — titlurile cu
+     diacritice primesc aer în plus. */
+  .cs-title--diacritice {
+    line-height: 1.04;
+  }
+  .cs-sub {
+    max-width: 520px;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--e3-muted-strong);
+    animation: fade-up 0.6s ease-out 0.2s both;
+  }
+  .cs-countdown {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    animation: fade-up 0.6s ease-out 0.35s both;
+  }
+  .cs-cd-unit {
+    min-width: 74px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 16px 10px;
+    background: var(--e3-bg);
+    border: 1px solid var(--e3-border);
+  }
+  .cs-cd-value {
+    font-family: 'Anton', sans-serif;
+    font-size: 34px;
+    line-height: 1;
+    color: var(--e3-text);
+    font-variant-numeric: tabular-nums;
+  }
+  .cs-cd-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--e3-muted);
+  }
+  .cs-cta {
+    margin-top: 6px;
+    background: var(--e3-accent);
+    color: var(--e3-bg);
+    border: none;
+    cursor: pointer;
+    font-family: 'Anton', sans-serif;
+    font-size: 18px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 16px 34px;
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+    animation: fade-up 0.6s ease-out 0.5s both, glow-pulse 3s ease-in-out 1.5s infinite;
+  }
+  .cs-cta:hover { background: var(--e3-accent-hover); transform: translateY(-3px); box-shadow: 0 10px 28px rgba(201,242,75,0.28); }
+  .cs-cta:active { transform: translateY(0) scale(0.97); box-shadow: none; }
+  .cs-marquee {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--e3-border);
+    border-bottom: 1px solid var(--e3-border);
+    padding: 14px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .cs-marquee-track { display: inline-flex; animation: marquee 22s linear infinite; }
+  .cs-marquee-group { display: inline-flex; }
+  .cs-marquee-item {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Anton', sans-serif;
+    font-size: 15px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--e3-muted);
+    padding: 0 28px;
+  }
+  .cs-marquee-star { color: var(--e3-accent); margin-left: 28px; }
+
+  /* ---- Modal notificare ---- */
+  .cs-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(6, 7, 5, 0.78);
+    animation: fade-up 0.2s ease-out;
+  }
+  .cs-modal {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+    background: var(--e3-bg-deep);
+    border: 1px solid var(--e3-border);
+    padding: 32px 28px 28px;
+    animation: pop-in 0.28s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+  .cs-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 34px;
+    height: 34px;
+    background: transparent;
+    border: 1px solid var(--e3-border);
+    color: var(--e3-muted);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .cs-modal-close:hover { border-color: var(--e3-accent); color: var(--e3-text); }
+  .cs-modal-title {
+    margin: 0 0 6px;
+    font-family: 'Anton', sans-serif;
+    font-size: 26px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--e3-text);
+  }
+  .cs-modal-sub { margin: 0 0 22px; font-size: 14px; line-height: 1.5; color: var(--e3-muted); }
+
+  .cs-form { display: grid; gap: 14px; }
+  .cs-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .cs-field { display: grid; gap: 7px; }
+  .cs-field > span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--e3-muted);
+  }
+  .cs-field input {
+    background: var(--e3-bg);
+    border: 1px solid var(--e3-border);
+    color: var(--e3-text);
+    font-family: 'Archivo', sans-serif;
+    font-size: 15px;
+    padding: 12px 14px;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+  }
+  .cs-field input:focus { border-color: var(--e3-accent); }
+  .cs-field.invalid input { border-color: var(--e3-danger-strong); }
+  .cs-submit {
+    margin-top: 4px;
+    background: var(--e3-accent);
+    color: var(--e3-bg);
+    border: none;
+    cursor: pointer;
+    font-family: 'Anton', sans-serif;
+    font-size: 17px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 15px 24px;
+    width: 100%;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .cs-submit:hover { background: var(--e3-accent-hover); transform: translateY(-2px); }
+  .cs-submit:active { transform: translateY(0) scale(0.98); }
+  .cs-submit:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+  .cs-success { text-align: center; display: grid; gap: 12px; justify-items: center; }
+  .cs-success-check {
+    width: 56px;
+    height: 56px;
+    background: var(--e3-accent);
+    color: var(--e3-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    animation: pop-in 0.35s ease-out both;
+  }
+
+  @media (max-width: 520px) {
+    .cs-form-row { grid-template-columns: 1fr; }
+    .cs-cd-unit { min-width: 62px; padding: 13px 8px; }
+    .cs-cd-value { font-size: 28px; }
+  }
+
+  /* ======================================================================
+     Despre Noi (/despre-noi) — pagină statică + formular „Vreau info"
+     ====================================================================== */
+  @keyframes stripes-move {
+    from { background-position: 0 0; }
+    to   { background-position: 56px 56px; }
+  }
+
+  .dn-root { background: var(--e3-bg); min-height: 100dvh; }
+  .dn-accent { color: var(--e3-accent); }
+  .dn-container { max-width: 1200px; margin: 0 auto; }
+
+  .dn-topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 14px clamp(16px, 4vw, 40px);
+    background: rgba(18,20,16,0.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--e3-border);
+  }
+  .dn-logo {
+    font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--e3-text);
+  }
+  .dn-topbar-cta {
+    background: var(--e3-accent); color: var(--e3-bg); font-weight: 700; font-size: 13px;
+    letter-spacing: 1.5px; text-transform: uppercase; padding: 11px 22px;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .dn-topbar-cta:hover { background: var(--e3-accent-hover); transform: translateY(-2px); }
+
+  /* Butonul de direcții ancorat peste harta antrenamentelor. Același tipar ca
+     `.venue-map-link` de la locația cursei, în namespace-ul paginii. */
+  .dn-map-link {
+    position: absolute; right: 12px; bottom: 12px; z-index: 2;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-family: Anton, sans-serif; font-size: 13px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 9px 16px; text-decoration: none;
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .dn-map-link:hover {
+    background: var(--e3-accent-hover); transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(201,242,75,0.28);
+  }
+  .dn-map-link:active { transform: translateY(0) scale(0.97); box-shadow: none; }
+
+  .dn-hero {
+    position: relative; min-height: 82vh; display: flex; align-items: flex-end;
+    /* `clip`, nu `hidden`: taie la fel, dar nu creează container de scroll.
+       Cu `hidden`, `view(block)` din `.e3-hero-copy` s-ar lega de secțiune — un
+       scroller fără overflow — și parallaxul n-ar porni niciodată. Aceeași
+       capcană ca la hero-ul landing-ului. */
+    overflow: clip; border-bottom: 1px solid var(--e3-border);
+  }
+  .dn-hero-stripes {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(45deg, var(--e3-surface) 0 28px, var(--e3-bg) 28px 56px);
+    animation: stripes-move 3s linear infinite;
+  }
+  .dn-hero-fade {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(18,20,16,0.25) 0%, rgba(18,20,16,0.85) 100%);
+  }
+  /* Fundal video FPV — peste stripes, sub fade. La reduced-motion e ascuns și
+     rămân stripes-urile ca fallback. */
+  .dn-hero-video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; pointer-events: none; background: var(--e3-bg);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dn-hero-video { display: none; }
+  }
+  .dn-hero-inner {
+    position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; width: 100%;
+    padding: clamp(48px, 9vw, 96px) clamp(20px, 5vw, 40px);
+  }
+  .dn-kicker {
+    margin: 0 0 20px; font-size: 15px; font-weight: 600; letter-spacing: 2.5px;
+    text-transform: uppercase; color: var(--e3-accent); animation: fade-up 0.6s ease-out both;
+  }
+  .dn-hero-title {
+    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+    font-size: clamp(52px, 12vw, 176px); line-height: 0.9; letter-spacing: -0.005em;
+    padding-top: 0.1em;
+    text-transform: uppercase; text-wrap: balance; color: var(--e3-text);
+    animation: fade-up 0.6s ease-out 0.15s both;
+  }
+  .dn-hero-sub {
+    margin: 28px 0 0; max-width: 560px; font-size: 18px; line-height: 1.55;
+    color: var(--e3-text); text-wrap: pretty; animation: fade-up 0.6s ease-out 0.3s both;
+  }
+
+  .dn-section {
+    padding: clamp(48px, 8vw, 80px) clamp(20px, 5vw, 40px);
+    border-bottom: 1px solid var(--e3-border);
+  }
+  .dn-section-form { border-bottom: none; padding-bottom: clamp(48px, 8vw, 88px); }
+  /* Antetul de secțiune e cel de pe landing (vezi `.e3-sec-head`); aici doar
+     ce diferă: mai puțin aer dedesubt și un titlu pe măsura paginii. */
+  .dn-section-head { margin-bottom: clamp(36px, 5vw, 64px); }
+  .dn-section-head h2 { font-size: clamp(40px, 8vw, 120px); line-height: 0.9; color: var(--e3-text); }
+
+  .dn-story {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: clamp(24px, 4vw, 48px); align-items: start;
+  }
+  .dn-story-text { margin: 0; font-size: 17px; line-height: 1.6; color: var(--e3-muted-strong); text-wrap: pretty; }
+  .dn-values { display: grid; gap: 16px; }
+  /* Cardurile se ridică pe arc, ca pe landing (`--e3-spring`), și primesc
+     aceeași tentă lime la hover. Erau doar o schimbare de bordură — pe pagina
+     principală același card se ridică, se colorează și capătă umbră, deci cele
+     două pagini se simțeau ca două site-uri. */
+  .dn-value-card {
+    background: var(--e3-surface); border: 1px solid var(--e3-border); padding: 24px;
+  }
+  /* Cardurile „cum arată un antrenament": aceleași declarații care erau inline
+     pe componentă. Mutate aici ca `:hover` să le poată bate — inline ar câștiga
+     la specificitate și tenta lime n-ar apărea niciodată (aceeași lecție ca la
+     `.e3-card`). Rămân fără fundal, ca înainte: pe pagina asta cartonașele cu
+     bordură simplă sunt convenția locală. */
+  .dn-step {
+    border: 1px solid var(--e3-border); padding: 28px 24px; display: grid; gap: 10px;
+  }
+  .dn-step-nr { font-family: Anton, sans-serif; font-size: 34px; color: var(--e3-accent); }
+  .dn-step-titlu {
+    font-family: Anton, sans-serif; font-size: 15px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .dn-step p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong); }
+
+  /* Ridicarea pe arc și tenta lime la hover — ca pe landing. Erau doar o
+     schimbare de bordură, deci aceleași carduri se simțeau ca alt site. */
+  .dn-value-card, .dn-step {
+    transition: background 0.25s var(--e3-spring), border-color 0.25s var(--e3-spring),
+                transform 0.25s var(--e3-spring), box-shadow 0.25s var(--e3-spring);
+  }
+  .dn-value-card:hover, .dn-step:hover {
+    background: var(--e3-surface-tint); border-color: var(--e3-accent);
+    transform: translateY(-4px); box-shadow: 0 14px 32px rgba(10,14,8,0.55);
+  }
+
+  /* Cartonașele de comunitate intră în cascadă, nu toate odată. `--i` vine
+     inline de la randare. */
+  .dn-stat {
+    animation: fade-up 0.5s ease-out both;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+  /* Rândurile de orar — accent la trecerea cursorului, ca `.e3-row` pe landing. */
+  .dn-orar-row { transition: background 0.2s ease, box-shadow 0.2s ease; }
+  .dn-orar-row:hover { background: var(--e3-surface-hover); box-shadow: inset 3px 0 0 var(--e3-accent); }
+  .dn-value-title {
+    font-family: Anton, sans-serif; font-size: 13px; color: var(--e3-accent);
+    letter-spacing: 2px; margin-bottom: 8px;
+  }
+  .dn-value-card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong); }
+
+  .dn-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+  }
+  .dn-stat { border: 1px solid var(--e3-border); padding: 28px 24px; }
+  .dn-stat-value {
+    font-family: Anton, sans-serif; font-size: clamp(26px, 3.2vw, 36px);
+    line-height: 1.1; overflow-wrap: break-word; color: var(--e3-text);
+  }
+  .dn-stat-value.accent { color: var(--e3-accent); }
+  .dn-stat-label {
+    margin-top: 10px; font-size: 13px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+
+  .dn-form-grid {
+    max-width: 1200px; margin: 0 auto; display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: clamp(24px, 4vw, 64px); align-items: start;
+  }
+  .dn-form-intro {
+    margin: 0; max-width: 480px; font-size: 17px; line-height: 1.6;
+    color: var(--e3-muted-strong); text-wrap: pretty;
+  }
+  .dn-badge { display: flex; align-items: center; gap: 10px; margin-top: 24px; }
+  .dn-badge span:last-child {
+    font-size: 13px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+
+  .dn-form {
+    background: var(--e3-surface); border: 1px solid var(--e3-border);
+    padding: clamp(24px, 4vw, 36px); display: grid; gap: 18px;
+  }
+  .dn-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .dn-field { display: grid; gap: 8px; }
+  .dn-field > span {
+    font-size: 12px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--e3-muted);
+  }
+  .dn-field input {
+    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    font-family: Archivo, sans-serif; font-size: 16px; padding: 13px 14px;
+    outline: none; transition: border-color 0.2s ease;
+    min-width: 0; width: 100%; box-sizing: border-box;
+  }
+  .dn-field input:focus { border-color: var(--e3-accent); }
+  .dn-field.invalid input { border-color: var(--e3-danger-strong); }
+  .dn-error { margin: 0; font-size: 14px; color: var(--e3-danger-strong); }
+  .dn-submit {
+    background: var(--e3-accent); color: var(--e3-bg); border: none; cursor: pointer;
+    font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 16px 24px; width: 100%;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .dn-submit:hover { background: var(--e3-accent-hover); transform: translateY(-2px); }
+  .dn-submit:active { transform: translateY(0) scale(0.98); }
+  .dn-submit:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+  .dn-success {
+    background: var(--e3-surface); border: 1px solid var(--e3-accent);
+    padding: clamp(28px, 4vw, 40px); display: grid; gap: 14px; justify-items: center;
+    text-align: center;
+  }
+  .dn-success-check {
+    width: 56px; height: 56px; background: var(--e3-accent); color: var(--e3-bg);
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+    animation: pop-in 0.35s ease-out both;
+  }
+  .dn-success h3 {
+    margin: 0; font-family: Anton, sans-serif; font-weight: 400; font-size: 28px;
+    letter-spacing: 0.5px; text-transform: uppercase; color: var(--e3-text);
+  }
+  .dn-success p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--e3-muted-strong); }
+  .dn-success strong { color: var(--e3-text); }
+
+  .dn-footer {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 12px 24px; padding: 28px clamp(20px, 5vw, 40px);
+    border-top: 1px solid var(--e3-border);
+  }
+  .dn-footer-brand {
+    font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--e3-text);
+  }
+  .dn-footer-link {
+    font-size: 13px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--e3-muted); transition: color 0.2s ease;
+  }
+  .dn-footer-link:hover { color: var(--e3-accent); }
+
+  @media (max-width: 520px) {
+    .dn-form-row { grid-template-columns: 1fr; }
+    .dn-footer { justify-content: center; text-align: center; }
+  }
+
+  /* Coming Soon: două butoane, unul sub altul pe ecrane mici */
+  .cs-actions {
+    display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;
+    animation: fade-up 0.6s ease-out 0.5s both;
+  }
+  /* ---- „Până atunci": antrenamentul săptămânii, sub countdown ---- */
+  .cs-antren {
+    /* Fără el, padding-ul și bordura se ADAUGĂ la `100%`, iar cardul iese 26px
+       în afara ecranului pe 375px — tăiat tăcut de `overflow: hidden` de pe
+       `.cs-root`. Repo-ul n-are reset global, deci fiecare regulă cu lățime și
+       padding și-l pune singură. */
+    box-sizing: border-box;
+    display: grid; gap: 10px; text-align: left; text-decoration: none;
+    /* Marginea e strânsă ca eticheta lime să rămână peste fold pe telefon.
+       Pe 375x812 rămân ~240px sub countdown, iar cardul are 246 — deci nu
+       încape lângă butoane oricum. Aleg să se vadă CAPUL lui: o fâșie care
+       spune „mai e ceva" cheamă la derulare, unde un card complet ascuns n-ar
+       exista deloc. Butonul principal rămâne primul, fiindcă ecranul ăsta e
+       al formularului de notificare. */
+    width: min(520px, 100%); margin: 22px auto 0; padding: 20px 22px 18px;
+    background: var(--e3-surface); border: 1px solid var(--e3-border);
+    color: var(--e3-text);
+    transition: border-color 0.2s ease, transform 0.15s ease;
+    /* Fără întârziere: cardul se montează abia după ce răspunde serverul, deci
+       o pauză în plus ar ține locul ocupat și gol după ce coloana s-a mutat. */
+    animation: fade-up 0.45s ease-out both;
+  }
+  .cs-antren:hover { border-color: var(--e3-accent); transform: translateY(-2px); }
+  .cs-antren:focus-visible { outline: 2px solid var(--e3-accent); outline-offset: 3px; }
+  .cs-antren-eticheta {
+    font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--e3-accent);
+  }
+  .cs-antren-cap { display: grid; gap: 2px; }
+  .cs-antren-nr {
+    font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--e3-muted);
+  }
+  .cs-antren-titlu {
+    font-family: Anton, sans-serif; font-size: clamp(19px, 3.4vw, 23px);
+    letter-spacing: 0.4px; text-transform: uppercase; color: var(--e3-text);
+    /* Titlul îl scrie organizatorul: un cuvânt lung fără spații ar împinge
+       cardul peste lățimea lui, iar `.cs-root` l-ar tăia în loc să-l rupă. */
+    overflow-wrap: break-word; min-width: 0;
+  }
+  .cs-antren-corp {
+    white-space: pre-wrap; overflow: hidden; overflow-wrap: break-word;
+    max-height: 7.2em; font-size: 14px; line-height: 1.6; color: var(--e3-muted);
+  }
+  /* Fade-ul DOAR când chiar s-a tăiat ceva (clasa o pune componenta, după ce
+     măsoară). Aplicat mereu, stingea și un antrenament scurt care încăpea
+     întreg: promitea fals „mai e dedesubt" și cobora contrastul textului gri
+     sub pragul de citit. */
+  .cs-antren-corp.taiat {
+    -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  }
+  .cs-antren-cta {
+    font-family: Anton, sans-serif; font-size: 14px; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--e3-accent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cs-antren { animation: none; }
+    .cs-antren:hover { transform: none; }
+  }
+
+  .cs-cta-secondary {
+    margin-top: 6px; background: transparent; color: var(--e3-text);
+    border: 1px solid var(--e3-border); cursor: pointer;
+    font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 16px 34px;
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  }
+  .cs-cta-secondary:hover { border-color: var(--e3-accent); color: var(--e3-accent); transform: translateY(-3px); }
+  .cs-cta-secondary:active { transform: translateY(0) scale(0.97); }
+
+  .cs-footer {
+    position: relative; z-index: 1; display: flex; flex-wrap: wrap;
+    align-items: center; justify-content: center; gap: 10px 20px;
+    padding: 18px 20px; font-size: 12px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--e3-muted);
+  }
+  .cs-footer a { color: var(--e3-muted); transition: color 0.2s ease; }
+  .cs-footer a:hover { color: var(--e3-accent); }
+
+  /* ---- Pagina /confirmare ---- */
+  .cf-icon {
+    width: 64px; height: 64px;
+    background: var(--e3-accent); color: var(--e3-bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; animation: pop-in 0.35s ease-out both;
+  }
+  .cf-icon.err { background: transparent; border: 2px solid var(--e3-danger-strong); color: var(--e3-danger-strong); }
+  .cf-title {
+    margin: 0; font-family: 'Anton', sans-serif; font-weight: 400;
+    padding-top: 0.12em;
+    font-size: clamp(48px, 10vw, 104px); line-height: 0.92; letter-spacing: -0.005em;
+    text-transform: uppercase; color: var(--e3-text); text-align: center; text-wrap: balance;
+    animation: fade-up 0.6s ease-out 0.1s both;
+  }
+
+  /* ---- Pagina /antrenament ---- */
+  .an-card {
+    width: min(680px, 100%);
+    margin: 8px auto 0;
+    padding: clamp(20px, 4vw, 32px);
+    background: var(--e3-surface);
+    border: 1px solid var(--e3-border);
+    animation: fade-up 0.6s ease-out 0.15s both;
+  }
+  /* Numărul săptămânii, deasupra titlului: cine deschide un link `#s1` trebuie
+     să vadă imediat UNDE a aterizat în program, nu doar ce scrie acolo. */
+  .an-eticheta {
+    margin: 0 0 6px;
+    font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--e3-muted);
+  }
+  .an-titlu {
+    margin: 0 0 14px;
+    font-family: 'Anton', sans-serif; font-weight: 400;
+    font-size: clamp(22px, 4vw, 30px); letter-spacing: 0.4px;
+    text-transform: uppercase; color: var(--e3-accent);
+  }
+  /* `pre-wrap`: rândurile pe care le tastează organizatorul SUNT formatul.
+     `break-word` ca un URL lipit în antrenament să nu lărgească pagina. */
+  .an-corp {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    font-size: clamp(15px, 2.2vw, 17px); line-height: 1.6;
+    color: var(--e3-text);
+  }
+
+  /* Selectorul programului. `width: 100%` pe un `select` cu opțiuni lungi
+     („Săptămâna 12 — Tempo lung pe deal") e ce ține pagina de la scroll
+     orizontal pe telefon: fără el, controlul se lățește după cea mai lungă
+     opțiune. Există un test care păzește asta. */
+  .an-selector {
+    width: min(680px, 100%);
+    margin: 18px auto 0;
+    display: grid; gap: 8px;
+    animation: fade-up 0.6s ease-out 0.25s both;
+  }
+  .an-selector-eticheta {
+    font-size: 13px; color: var(--e3-muted);
+  }
+  .an-selector-camp {
+    width: 100%; max-width: 100%;
+    padding: 12px 14px;
+    background: var(--e3-surface); color: var(--e3-text);
+    border: 1px solid var(--e3-border);
+    font-family: inherit; font-size: 15px;
+    /* Ținta de atins cu degetul, pe recomandarea uzuală de 44px. */
+    min-height: 44px;
+  }
+  .an-selector-camp:focus-visible {
+    outline: 2px solid var(--e3-accent); outline-offset: 2px;
+  }
+  /* ======================================================================
+     Landing: cadrul (antet, hero, footer, banner, toast)
+     ====================================================================== */
+
+  /* ---- Antetul ----
+     Comportamentul la scroll (stratul care se îndesește, marca ce se strânge)
+     și dimensiunile de mobil stau în edition3.css; aici, compoziția. */
+  .e3-topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    background: rgba(18,20,16,0.92);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--e3-border);
+  }
+  .e3-topbar-brand { display: flex; align-items: center; gap: 12px; }
+  .e3-topbar-mark {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-family: Anton, sans-serif; letter-spacing: 0.02em;
+  }
+  /* Mărimea CTA-ului din antet stă aici, după `.e3-btn`, ca s-o bată. */
+  .e3-topbar-cta { padding: 11px 22px; font-size: 15px; }
+  @media (max-width: 560px) {
+    .e3-topbar-cta { padding: 9px 14px; font-size: 13px; white-space: nowrap; }
+  }
+  .e3-topbar-name { font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .e3-topbar-cd { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .e3-topbar-units { display: flex; align-items: baseline; gap: 8px; }
+  .e3-topbar-unit { display: inline-flex; align-items: baseline; gap: 1px; }
+  .e3-topbar-unit .e3-digit { font-size: 24px; color: var(--e3-text-bright); }
+  .e3-topbar-unit .e3-topbar-lime { color: var(--e3-accent); }
+  .e3-topbar-unit-l { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--e3-muted); }
+  .e3-topbar-live { font-family: Anton, sans-serif; font-size: 19px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--e3-accent); }
+  .e3-topbar-nav { display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
+  .e3-topbar-meta,
+  .e3-root a.e3-topbar-link {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--e3-muted); white-space: nowrap;
+  }
+  .e3-root a.e3-topbar-link:hover { color: var(--e3-text); text-decoration: none; }
+  /* Între 561 și 1100px, meta-ul (data și locul) nu mai are loc pe un rând
+     lângă countdown; e oricum pe hero și pe bandă. */
+  @media (max-width: 1100px) {
+    .e3-topbar-meta { display: none; }
+  }
+  @media (max-width: 720px) {
+    .e3-topbar { grid-template-columns: 1fr auto; }
+    .e3-topbar-cd { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
+    .e3-topbar-nav { gap: 14px; }
+  }
+
+  /* ---- Hero ----
+     Titlul ocupă lățimea; rezumatul și CTA-ul stau pe o bază sub o linie.
+     Totul încape în primul ecran, cu CTA-ul vizibil fără scroll. */
+  .e3-hero {
+    position: relative; overflow: clip; /* `clip`, nu `hidden`: vezi .e3-hero-copy în edition3.css */
+    box-sizing: border-box;
+    display: flex; align-items: flex-end;
+    min-height: min(calc(100dvh - 64px), 980px);
+    padding-block: clamp(40px, 7vw, 88px) clamp(28px, 4vw, 48px);
+    background: var(--e3-bg);
+    border-bottom: 1px solid var(--e3-border);
+  }
+  .e3-hero-video {
+    position: absolute; inset: 0; z-index: 0;
+    width: 100%; height: 100%; object-fit: cover; pointer-events: none;
+  }
+  /* Umbra de sub text: mai densă jos și în stânga, unde stă conținutul. */
+  .e3-hero-shade {
+    position: absolute; inset: 0; z-index: 1;
+    background:
+      linear-gradient(0deg, rgba(18,20,16,0.96) 0%, rgba(18,20,16,0.55) 45%, rgba(18,20,16,0.35) 100%),
+      linear-gradient(90deg, rgba(18,20,16,0.7) 0%, rgba(18,20,16,0) 70%);
+  }
+  .e3-hero-copy { position: relative; z-index: 2; width: 100%; box-sizing: border-box; }
+  .e3-hero-kicker {
+    margin: 0 0 clamp(16px, 2.4vw, 28px);
+    font-size: clamp(12px, 1.1vw, 15px); font-weight: 600; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--e3-muted-strong);
+  }
+  .e3-hero-title {
+    margin: 0; display: flex; flex-direction: column; align-items: flex-start;
+    font-family: Anton, sans-serif; font-weight: 400;
+    font-size: var(--e3-fs-display); line-height: 0.9; letter-spacing: -0.01em;
+    text-transform: uppercase;
+  }
+  .e3-hero-accent { color: var(--e3-accent); }
+  .e3-hero-foot {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end;
+    gap: 24px 48px;
+    margin-top: clamp(24px, 3.4vw, 44px); padding-top: clamp(18px, 2vw, 24px);
+    border-top: 2px solid var(--e3-muted-dim);
+  }
+  .e3-hero-lead { max-width: 46ch; }
+  @media (max-width: 720px) {
+    .e3-hero { --e3-fs-display: min(29vw, 20dvh); }
+    .e3-hero-foot { grid-template-columns: 1fr; }
+    .e3-hero-cta { justify-self: stretch; }
+  }
+
+  /* ---- Footer ---- */
+  /* `display: block` anulează regula globală `footer {}` din index.css (flex). */
+  .e3-foot { display: block; border-top: 1px solid var(--e3-border); padding: clamp(48px, 7vw, 88px) 0 32px; }
+  .e3-foot-mark {
+    margin: 0 0 clamp(28px, 4vw, 48px);
+    font-family: Anton, sans-serif; font-size: clamp(64px, 15vw, 216px); line-height: 0.84;
+    letter-spacing: -0.01em; text-transform: uppercase; color: var(--e3-surface-tint);
+    white-space: nowrap; overflow: hidden;
+  }
+  .e3-foot-grid {
+    display: grid; grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr)); gap: 28px 32px;
+    padding-top: 24px; border-top: 1px solid var(--e3-border);
+    font-size: 14px; line-height: 1.6;
+  }
+  .e3-foot-year { font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--e3-muted); }
+  .e3-foot-org { display: grid; gap: 2px; align-content: start; }
+  .e3-foot-org .e3-label { margin-bottom: 6px; }
+  .e3-foot-name { font-weight: 600; color: var(--e3-muted-strong); }
+  .e3-foot-org a { font-weight: 600; width: fit-content; }
+  @media (max-width: 900px) { .e3-foot-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .e3-foot-grid { grid-template-columns: 1fr; } }
+
+  /* ---- Bannerul „ești înscris" ---- */
+  .e3-banner {
+    position: sticky; top: 0; z-index: 60;
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px var(--e3-gutter);
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-size: 15px; font-weight: 600;
+    animation: e3-rise 0.3s var(--e3-ease) backwards;
+  }
+  .e3-banner-mark { font-size: 17px; font-weight: 700; }
+  .e3-banner-text { flex: 1; text-wrap: pretty; }
+  .e3-banner-close {
+    background: transparent; border: 0; color: var(--e3-bg); cursor: pointer;
+    font-size: 16px; line-height: 1; padding: 6px;
+  }
+
+  /* ---- Toast ---- */
+  .e3-toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 200;
+    display: flex; align-items: center; gap: 12px; max-width: min(90vw, 480px);
+    padding: 14px 22px;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-size: 15px; font-weight: 600;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    animation: e3-toast-in 0.25s ease;
+  }
+  .e3-toast-err { background: var(--e3-danger-bg); color: var(--e3-danger); }
+  .e3-toast-mark { font-size: 17px; font-weight: 700; }
+
+  /* ======================================================================
+     Landing: secțiunile de conținut
+     ====================================================================== */
+
+  /* ---- Locația: orarul ----
+     Ora de start e cifra pe care o ține minte oricine: stă la scară de afiș.
+     Locul și data vin dedesubt, ca rânduri de fișă tehnică. */
+  .e3-venue { background: var(--e3-bg-deep); }
+  .e3-venue-grid {
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(36px, 5vw, 72px); align-items: start;
+  }
+  .e3-venue-info { display: grid; align-content: start; }
+  .e3-venue-time {
+    margin: 4px 0 clamp(24px, 3vw, 36px);
+    font-size: clamp(96px, 14vw, 200px); line-height: 0.86; letter-spacing: -0.01em;
+    color: var(--e3-accent);
+  }
+  .e3-venue-list { margin: 0; border-top: 2px solid var(--e3-muted-dim); }
+  .e3-venue-row {
+    display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: baseline; gap: 16px;
+    padding: 16px 12px 16px 0; border-bottom: 1px solid var(--e3-border);
+  }
+  .e3-venue-row dd { margin: 0; font-size: 17px; font-weight: 600; color: var(--e3-text); }
+  .e3-venue-note { margin: 20px 0 0; max-width: 44ch; font-size: 14px; line-height: 1.55; color: var(--e3-muted); text-wrap: pretty; }
+  .e3-venue-map { display: grid; gap: 14px; }
+  .e3-venue-map iframe {
+    display: block; width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--e3-border);
+    background: var(--e3-surface);
+  }
+  @media (max-width: 860px) {
+    .e3-venue-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---- Cine vine: lista de start ----
+     Fiecare înscris e un număr de concurs. Grila se umple pe lățime; pe
+     telefon rămân două coloane, ca numele să încapă. */
+  .e3-people-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    padding-bottom: 16px; border-bottom: 2px solid var(--e3-muted-dim);
+  }
+  .e3-people-count { font-size: clamp(32px, 4vw, 48px); line-height: 1; color: var(--e3-accent); }
+  .e3-people-grid {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    border-left: 1px solid var(--e3-border);
+  }
+  .e3-people-grid:empty { display: none; }
+  .e3-bib {
+    position: relative; display: grid; gap: 6px; align-content: start;
+    padding: 18px 20px 20px; background: var(--e3-bg);
+    border-right: 1px solid var(--e3-border); border-bottom: 1px solid var(--e3-border);
+    transition: background var(--e3-dur) var(--e3-ease);
+  }
+  .e3-bib:hover { background: var(--e3-surface); }
+  .e3-bib-nr { font-size: 34px; line-height: 1; color: var(--e3-muted-dim); transition: color var(--e3-dur) var(--e3-ease); }
+  .e3-bib:hover .e3-bib-nr { color: var(--e3-accent); }
+  .e3-bib-name { font-size: 16px; font-weight: 600; color: var(--e3-text); overflow-wrap: anywhere; }
+  .e3-bib-new {
+    position: absolute; top: 16px; right: 16px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--e3-bg); background: var(--e3-accent); padding: 3px 8px;
+  }
+  .e3-bib-skel { gap: 12px; }
+  .e3-people-empty {
+    margin: 0; padding: 40px 0; border-bottom: 1px solid var(--e3-border);
+    font-size: 16px; color: var(--e3-muted);
+  }
+  .e3-people-empty a { font-weight: 600; }
+  .e3-people-wait { margin-top: clamp(28px, 4vw, 44px); }
+  @media (max-width: 480px) {
+    .e3-people-grid { grid-template-columns: 1fr 1fr; }
+    .e3-bib { padding: 14px 14px 16px; }
+    .e3-bib-nr { font-size: 28px; }
+  }
+
+  /* ---- Instagram: antetul în coloana îngustă ----
+     Aceeași compoziție ca restul secțiunilor, la o scară pe măsura coloanei. */
+  .e3-reels .e3-sec-head { margin-bottom: 24px; }
+  .e3-reels .e3-sec-head .e3-title { font-size: clamp(40px, 6.4vw, 96px); }
+
+  /* ======================================================================
+     Landing: exploratorul formatului
+     ----------------------------------------------------------------------
+     RUN / LIFT / REPEAT sunt cuvinte de afiș pe care le apeși. Etapa aleasă
+     e singura în lime; celelalte stau stinse până le atingi.
+     ====================================================================== */
+  .e3-format-intro { margin-bottom: clamp(36px, 5vw, 64px); }
+  .e3-format-tabs {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 2px solid var(--e3-muted-dim);
+  }
+  .e3-format-tab {
+    position: relative; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 6px; min-width: 0;
+    padding: 18px 12px 22px 0; margin: 0;
+    background: transparent; border: 0; cursor: pointer; text-align: left;
+    color: var(--e3-muted-dim);
+    transition: color var(--e3-dur) var(--e3-ease), transform var(--e3-dur-fast) var(--e3-ease);
+  }
+  /* Bara de sub etapa aleasă crește din stânga, nu apare dintr-odată. */
+  .e3-format-tab::after {
+    content: ''; position: absolute; left: 0; right: 12px; bottom: 0; height: 4px;
+    background: var(--e3-accent);
+    transform: scaleX(0); transform-origin: 0 50%;
+    transition: transform var(--e3-dur-slow) var(--e3-ease);
+  }
+  .e3-format-tab:hover { color: var(--e3-muted-strong); }
+  .e3-format-tab:active { transform: translateY(1px); }
+  .e3-format-tab[aria-selected='true'] { color: var(--e3-accent); }
+  .e3-format-tab[aria-selected='true']::after { transform: scaleX(1); }
+  .e3-format-tab-nr { font-size: 16px; letter-spacing: 0.12em; }
+  /* `clip`: cât timp Anton încă se încarcă, fontul de rezervă e mai lat, iar
+     „REPEAT" ar împinge pagina în lateral pe telefon. */
+  .e3-format-tab-name {
+    width: 100%; overflow: clip;
+    font-family: Anton, sans-serif; font-size: clamp(34px, 9.4vw, 136px);
+    line-height: 0.9; letter-spacing: -0.005em; text-transform: uppercase;
+  }
+
+  /* Panourile stau în aceeași celulă: înălțimea e a celui mai lung, deci
+     pagina nu sare la schimbarea etapei. Copiile nealese doar țin locul. */
+  .e3-format-stage { display: grid; border-bottom: 1px solid var(--e3-border); }
+  .e3-format-panel {
+    grid-area: 1 / 1;
+    display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    gap: clamp(24px, 4vw, 64px); align-items: start;
+    padding-block: clamp(28px, 4vw, 48px);
+    animation: e3-panel-in var(--e3-dur-slow) var(--e3-ease) both;
+  }
+  .e3-format-ghost { visibility: hidden; animation: none; }
+  @keyframes e3-panel-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .e3-format-panel-intro {
+    margin: 0; font-size: clamp(22px, 2.6vw, 34px); line-height: 1.25; font-weight: 600;
+    color: var(--e3-text); text-wrap: balance;
+  }
+  .e3-format-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .e3-format-list li {
+    position: relative; padding-left: 26px;
+    font-size: 16px; line-height: 1.55; color: var(--e3-muted-strong);
+  }
+  .e3-format-list li::before {
+    content: ''; position: absolute; left: 0; top: 0.72em; width: 14px; height: 2px;
+    background: var(--e3-accent);
+  }
+  @media (max-width: 720px) {
+    .e3-format-panel { grid-template-columns: 1fr; }
+  }
+
+  /* ======================================================================
+     Landing: înscrierea ca linie de sosire
+     ----------------------------------------------------------------------
+     Banda în carouri stă pe marginea de sus a secțiunii, oricare ar fi
+     poziția ei pe pagină. Nimic de aici nu presupune că după înscriere se
+     termină pagina: fără `:last-child`, fără frați, fără footer.
+     ====================================================================== */
+  .e3-reg { padding-top: calc(clamp(72px, 11vw, 144px) + 24px); }
+  .e3-finish { position: absolute; top: 0; left: 0; right: 0; height: 24px; }
+  .e3-finish-band {
+    position: absolute; inset: 0;
+    background: repeating-conic-gradient(var(--e3-text) 0 25%, var(--e3-bg) 0 50%) 0 0 / 24px 24px;
+    transform-origin: 0 50%;
+  }
+  .e3-finish-word {
+    position: absolute; top: 0; left: var(--e3-gutter); height: 24px;
+    display: flex; align-items: center; padding: 0 12px;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-family: Anton, sans-serif; font-size: 14px; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  /* Banda se desfășoară de la stânga când secțiunea intră în ecran. */
+  @supports (animation-timeline: view()) {
+    .e3-finish-band {
+      animation: e3-tape linear both;
+      animation-timeline: view(block);
+      animation-range: entry 0% cover 30%;
+    }
+  }
+  @keyframes e3-tape { from { transform: scaleX(0.08); } to { transform: scaleX(1); } }
+
+  .e3-reg-grid {
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(32px, 5vw, 72px); align-items: start;
+  }
+  @media (max-width: 900px) { .e3-reg-grid { grid-template-columns: 1fr; } }
+  .e3-reg-side, .e3-reg-main { min-width: 0; }
+  .e3-reg-lead { margin-bottom: 28px; }
+  .e3-reg-lead strong { color: var(--e3-accent); }
+  .e3-reg-summary { padding: 26px; }
+  .e3-reg-summary-title {
+    margin-bottom: 18px; font-family: Anton, sans-serif; font-size: 15px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--e3-accent);
+  }
+  .e3-reg-summary-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  .e3-reg-summary-list li {
+    position: relative; padding-left: 26px;
+    font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong);
+  }
+  .e3-reg-summary-list li::before {
+    content: ''; position: absolute; left: 0; top: 0.7em; width: 14px; height: 2px;
+    background: var(--e3-accent);
+  }
+
+  .e3-reg-slots {
+    display: grid; gap: 12px; padding: 18px 22px;
+    border: 1px solid var(--e3-border); border-bottom: none; background: var(--e3-surface);
+  }
+  .e3-reg-count { display: inline-block; font-size: 28px; line-height: 1; color: var(--e3-accent); }
+  .e3-reg-count-low { color: var(--e3-danger); }
+  .e3-reg-soldout { margin: 0; font-size: 14px; line-height: 1.5; font-weight: 600; color: var(--e3-accent); text-wrap: pretty; }
+  .e3-reg-form {
+    display: grid; gap: 22px; padding: clamp(20px, 4vw, 36px);
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+  }
+  .e3-reg-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 18px; }
+  .e3-reg-stack { display: grid; gap: 18px; }
+  .e3-reg-note { margin: 0; font-size: 14px; line-height: 1.5; color: var(--e3-muted); text-wrap: pretty; }
+
+  /* Panourile de stare: închis, se trimite, succes, eroare. */
+  .e3-reg-panel {
+    display: grid; gap: 16px; justify-items: center; text-align: center;
+    padding: clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px);
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+  }
+  .e3-reg-panel-loading { gap: 22px; padding-block: clamp(48px, 8vw, 80px); }
+  /* În formularul de sine stătător (/inscriere, overlay) coloana e îngustă. */
+  .e3-reg-panel-compact { padding: clamp(20px, 4vw, 32px); }
+  .e3-reg-panel-ok { border-color: var(--e3-accent); }
+  .e3-reg-panel-err { border-color: var(--e3-danger); }
+  .e3-reg-panel-title {
+    font-family: Anton, sans-serif; font-size: clamp(28px, 5vw, 40px); line-height: 1.05;
+    letter-spacing: 0.02em; text-transform: uppercase; text-wrap: balance;
+  }
+  .e3-reg-panel-err .e3-reg-panel-title { color: var(--e3-danger); }
+  .e3-reg-panel-wait { font-size: 22px; color: var(--e3-muted-strong); }
+  .e3-reg-panel-msg { margin: 0; max-width: 380px; font-size: 16px; line-height: 1.55; color: var(--e3-muted); }
+
+  /* Indicatorul de trimitere: un segment lime care traversează o bară. */
+  .e3-progress-bar {
+    position: relative; overflow: hidden; width: min(220px, 70%); height: 6px;
+    background: var(--e3-border);
+  }
+  .e3-progress-bar::after {
+    content: ''; position: absolute; inset: 0; width: 40%;
+    background: var(--e3-accent);
+    animation: e3-progress-run 1s var(--e3-ease) infinite;
+  }
+  @keyframes e3-progress-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+  /* Titlul paginilor de sine stătătoare (/inscriere): aceeași scară de afiș,
+     pe măsura coloanei înguste, cu loc pentru căciula lui „Î". */
+  .e3-page-title {
+    margin: 0; padding-top: 0.12em;
+    font-family: Anton, sans-serif; font-weight: 400;
+    font-size: clamp(56px, 14vw, 96px); line-height: 0.9; letter-spacing: -0.005em;
+    text-transform: uppercase;
+  }

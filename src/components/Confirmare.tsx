@@ -12,7 +12,7 @@ const TOKEN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
 const CONTINUT: Record<Exclude<Stare, 'loading'>, { titlu: string; text: string; ok: boolean }> = {
   confirmat: {
     titlu: 'Înscriere confirmată!',
-    text: 'Gata — ești pe listă. Îți scriem imediat ce avem noutăți despre noul antrenament.',
+    text: 'Gata, ești pe listă. Îți scriem imediat ce avem noutăți despre noul antrenament.',
     ok: true,
   },
   deja_confirmat: {
@@ -22,7 +22,7 @@ const CONTINUT: Record<Exclude<Stare, 'loading'>, { titlu: string; text: string;
   },
   invalid: {
     titlu: 'Link invalid',
-    text: 'Linkul nu (mai) e valabil. Dacă tocmai te-ai înscris, verifică să fi deschis exact linkul din email — sau înscrie-te din nou.',
+    text: 'Linkul nu (mai) e valabil. Dacă tocmai te-ai înscris, verifică să fi deschis exact linkul din email sau înscrie-te din nou.',
     ok: false,
   },
   eroare: {

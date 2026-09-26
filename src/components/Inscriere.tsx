@@ -144,7 +144,6 @@ export const Inscriere = () => {
           </span>
         </a>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} role="timer" aria-label="Timp rămas până la start">
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--e3-accent)', animation: 'e3-dot-blink 1.4s ease-in-out infinite' }} />
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>Start în</span>
           <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 19, color: 'var(--e3-text-bright)', fontVariantNumeric: 'tabular-nums' }}>
             {cd.zile}z {cd.ore}h {cd.minute}m
@@ -154,19 +153,7 @@ export const Inscriere = () => {
 
       <main style={{ maxWidth: 560, margin: '0 auto', padding: 'clamp(20px, 5vw, 36px) clamp(16px, 5vw, 32px) 48px', display: 'grid', gap: 18 }}>
         <div style={{ display: 'grid', gap: 8 }}>
-          <h1
-            style={{
-              margin: 0,
-              fontFamily: 'Anton, sans-serif',
-              fontWeight: 400,
-              fontSize: 'clamp(34px, 9vw, 52px)',
-              lineHeight: 1,
-              letterSpacing: 0.5,
-              textTransform: 'uppercase',
-            }}
-          >
-            Înscrie-te
-          </h1>
+          <h1 className="e3-page-title">Înscrie-te</h1>
           <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
             {EVENT_META} · ora {EVENT_START_TIME}. Completezi 5 câmpuri și primești confirmarea pe email.
           </p>
@@ -199,7 +186,7 @@ export const Inscriere = () => {
                   color: 'var(--e3-accent)',
                 }}
               >
-                Pe scurt — ce e Hyrox Trial
+                Pe scurt: ce e Hyrox Trial
                 <span style={{ fontSize: 18, lineHeight: 1 }}>{openSummary ? '–' : '+'}</span>
               </button>
               {openSummary && (

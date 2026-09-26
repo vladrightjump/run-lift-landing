@@ -26,7 +26,7 @@ export const TEXT_EROARE_TITLU = 'Ceva n-a mers';
 export const TEXT_EROARE_MESAJ =
   'Înscrierea nu a putut fi trimisă. Verifică conexiunea la internet și încearcă din nou.';
 export const TEXT_SUCCES_ASTEPTARE =
-  'Toate locurile sunt ocupate momentan. Te contactăm pe email sau telefon imediat ce se eliberează un loc — în ordinea înscrierii.';
+  'Toate locurile sunt ocupate momentan. Te contactăm pe email sau telefon imediat ce se eliberează un loc, în ordinea înscrierii.';
 const TEXT_ACORD =
   'Confirm că sunt apt din punct de vedere medical pentru efort fizic intens și accept regulamentul evenimentului. *';
 const TEXT_ACORD_EROARE = 'Trebuie să accepți regulamentul ca să te poți înscrie.';
@@ -46,7 +46,7 @@ export const textInchis = (
     return {
       titlu: 'Înscrierile s-au închis',
       mesaj:
-        'Perioada de înscriere s-a încheiat. Scrie-ne pe Instagram — dacă se eliberează un loc, te anunțăm.',
+        'Perioada de înscriere s-a încheiat. Scrie-ne pe Instagram: dacă se eliberează un loc, te anunțăm.',
     };
   }
   return {
@@ -173,28 +173,19 @@ export const ButonTrimite = ({
 
 /* ---------- Ilustrațiile de stare ---------- */
 
-/** Cercul care se învârte, cât timp înscrierea e pe drum. */
-export const Rotitor = () => (
-  <div
-    style={{
-      width: 52,
-      height: 52,
-      border: '4px solid var(--e3-border)',
-      borderTopColor: 'var(--e3-accent)',
-      borderRadius: '50%',
-      animation: 'e3-spin 0.8s linear infinite',
-    }}
-  />
-);
+/**
+ * Cât timp înscrierea e pe drum: o bară care se umple și se golește, nu un
+ * cerc care se învârte. Pagina are colțuri drepte peste tot.
+ */
+export const BaraIncarcare = () => <div className="e3-progress-bar" aria-hidden="true" />;
 
-/** Bifa de succes: cercul care pulsează o dată, apoi linia care se desenează. */
+/** Bifa de succes: pătratul care pulsează o dată, apoi linia care se desenează. */
 export const BifaSucces = () => (
   <div style={{ position: 'relative', width: 84, height: 84, display: 'grid', placeItems: 'center' }}>
     <div
       style={{
         position: 'absolute',
         inset: 0,
-        borderRadius: '50%',
         border: '2px solid var(--e3-accent)',
         animation: 'e3-ring-pulse 1.6s ease-out 0.4s 3',
       }}
@@ -204,7 +195,6 @@ export const BifaSucces = () => (
         width: 84,
         height: 84,
         background: 'var(--e3-accent)',
-        borderRadius: '50%',
         display: 'grid',
         placeItems: 'center',
         animation: 'e3-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
@@ -215,8 +205,8 @@ export const BifaSucces = () => (
           d="M10 23 L19 32 L34 13"
           stroke="var(--e3-bg)"
           strokeWidth="5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          strokeLinecap="square"
+          strokeLinejoin="miter"
           style={{
             strokeDasharray: 40,
             strokeDashoffset: 40,
@@ -228,14 +218,13 @@ export const BifaSucces = () => (
   </div>
 );
 
-/** Cercul roșu cu „✕", pentru starea de eroare. */
+/** Pătratul roșu cu „✕", pentru starea de eroare. */
 export const IconEroare = () => (
   <div
     style={{
       width: 84,
       height: 84,
       background: 'var(--e3-danger-bg)',
-      borderRadius: '50%',
       display: 'grid',
       placeItems: 'center',
       animation: 'e3-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',

@@ -36,36 +36,14 @@ export const SignupBanner = () => {
   if (!data || hidden) return null;
 
   return (
-    <div
-      role="status"
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 60,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '13px clamp(16px, 4vw, 40px)',
-        background: 'var(--e3-accent)',
-        color: 'var(--e3-bg)',
-        fontFamily: 'Archivo, sans-serif',
-        fontSize: 15,
-        fontWeight: 600,
-        animation: 'e3-fade-up 0.3s ease-out',
-      }}
-    >
-      <span style={{ fontSize: 17, fontWeight: 700 }}>✓</span>
-      <span style={{ flex: 1, textWrap: 'pretty' }}>
+    <div role="status" className="e3-banner">
+      <span className="e3-banner-mark" aria-hidden="true">✓</span>
+      <span className="e3-banner-text">
         {data.waitlist
           ? `${data.prenume}, ești pe lista de așteptare. Te anunțăm imediat ce se eliberează un loc.`
-          : `${data.prenume}, ești înscris${data.loc ? ` — locul ${data.loc}/${TOTAL_SLOTS}` : ''}. Confirmarea a plecat pe email.`}
+          : `${data.prenume}, ești înscris${data.loc ? `, locul ${data.loc}/${TOTAL_SLOTS}` : ''}. Confirmarea a plecat pe email.`}
       </span>
-      <button
-        type="button"
-        onClick={() => setHidden(true)}
-        aria-label="Închide"
-        style={{ background: 'transparent', border: 'none', color: 'var(--e3-bg)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 4 }}
-      >
+      <button type="button" onClick={() => setHidden(true)} aria-label="Închide" className="e3-banner-close">
         ✕
       </button>
     </div>

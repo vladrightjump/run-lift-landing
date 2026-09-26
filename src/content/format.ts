@@ -138,7 +138,7 @@ export const deriveEventStrings = (config: EventConfig): EventStrings => {
     EVENT_START_TIME: startTime,
 
     /** Prima linie din „Pe scurt". */
-    EVENT_SUMMARY_LINE: `${when}, ora ${startTime} — ${place.where}`,
+    EVENT_SUMMARY_LINE: `${when}, ora ${startTime}, ${place.where}`,
 
     /** Mesajul de succes: „Ne vedem pe 22 august la start, ora 07:00." */
     SUCCESS_SEE_YOU: `Ne vedem pe ${dayMonth(config.start)} la start, ora ${startTime}.`,

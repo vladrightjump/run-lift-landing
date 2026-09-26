@@ -146,7 +146,7 @@ describe.each(SUPRAFETE)('stările înscrierii — $nume', ({ randeaza: randeaza
     expect(screen.getByText(/Ești pe lista de așteptare/)).toBeDefined();
     expect(
       screen.getByText(
-        'Toate locurile sunt ocupate momentan. Te contactăm pe email sau telefon imediat ce se eliberează un loc — în ordinea înscrierii.'
+        'Toate locurile sunt ocupate momentan. Te contactăm pe email sau telefon imediat ce se eliberează un loc, în ordinea înscrierii.'
       )
     ).toBeDefined();
     expect(screen.queryByRole('button', { name: 'Adaugă în calendar' })).toBeNull();
@@ -158,7 +158,7 @@ describe.each(SUPRAFETE)('stările înscrierii — $nume', ({ randeaza: randeaza
     [
       'reg',
       'Înscrierile s-au închis',
-      'Perioada de înscriere s-a încheiat. Scrie-ne pe Instagram — dacă se eliberează un loc, te anunțăm.',
+      'Perioada de înscriere s-a încheiat. Scrie-ne pe Instagram: dacă se eliberează un loc, te anunțăm.',
     ],
     [
       'full',
@@ -233,5 +233,45 @@ describe('diferențele dintre suprafețe se păstrează', () => {
       <RegistrationForm reg={regDeBaza()} stats={stats} footerSlot={<span>Vezi tot →</span>} />
     );
     expect(screen.getByText('Vezi tot →')).toBeDefined();
+  });
+});
+
+/**
+ * Linia de sosire (R10): secțiunea de pe landing o poartă în TOATE stările,
+ * fiindcă banda stă pe secțiune, nu pe formular. Dacă ar ajunge într-una din
+ * ramuri, starea „plin" sau „confirmare" ar pierde-o fără ca nimic să pice.
+ */
+describe('linia de sosire, în toate stările secțiunii', () => {
+  const marcaj = (container: HTMLElement) =>
+    container.querySelector('#inscriere > .e3-finish');
+
+  it.each([
+    ['deschisă', cu({})],
+    ['listă de așteptare', cu({ waitlistMode: true, isSoldOut: true })],
+    ['plină', cu({ showForm: false, closedReason: 'full' })],
+    ['închisă', cu({ showForm: false, closedReason: 'reg' })],
+    ['se trimite', cu({ showForm: false, phase: 'loading' })],
+    ['confirmare', cu({ showForm: false, phase: 'success' })],
+    ['eroare', cu({ showForm: false, phase: 'error' })],
+  ])('starea „%s" poartă banda de sosire', (_nume, reg) => {
+    const { container } = randeaza(<RegistrationSection reg={reg} stats={stats} />);
+    expect(marcaj(container)).not.toBeNull();
+  });
+
+  it('Covers AE3. Lista de așteptare deschisă: banda, plus textele listei', () => {
+    const { container } = randeaza(
+      <RegistrationSection reg={cu({ waitlistMode: true, isSoldOut: true })} stats={stats} />
+    );
+    expect(marcaj(container)).not.toBeNull();
+    expect(container.textContent).toContain('te poți pune pe lista de așteptare');
+    expect(screen.getByRole('button', { name: /lista de așteptare/i })).toBeTruthy();
+  });
+
+  it('mesajul de „epuizat" nu are linii de pauză', () => {
+    const { container } = randeaza(
+      <RegistrationSection reg={cu({ isSoldOut: true })} stats={stats} />
+    );
+    expect(container.textContent).toContain('Locurile s-au epuizat');
+    expect(container.textContent).not.toMatch(/—/);
   });
 });

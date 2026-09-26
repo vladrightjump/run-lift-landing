@@ -80,8 +80,8 @@ const rgbOf = (page: Page, selector: string, prop: 'borderTopColor' | 'backgroun
  * când cache-ul de fonturi e rece.
  */
 const settle = async (page: Page) => {
-  // `document.fonts.ready` singur nu ajunge: dacă `@import`-ul de la Google Fonts
-  // n-a fost încă parsat, nu există încărcări în așteptare și promisiunea se
+  // `document.fonts.ready` singur nu ajunge: dacă foaia Google Fonts din
+  // `index.html` n-a fost încă parsată, nu există încărcări în așteptare și promisiunea se
   // rezolvă imediat. Cerem explicit cele două familii înainte.
   await page.evaluate(async () => {
     await Promise.all([
@@ -217,6 +217,18 @@ test.describe('Mișcare — reduced motion', () => {
     });
   });
 
+  test('Covers AE4. fără mișcare: banda de sosire și panoul exploratorului stau pe loc', async ({
+    page,
+  }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    await expect(page.locator('#inscriere .e3-finish-band')).toHaveCSS('animation-name', 'none');
+    await expect(page.locator('#inscriere .e3-finish-band')).toHaveCSS('transform', 'none');
+    const panou = page.getByRole('tabpanel');
+    await expect(panou).toHaveCSS('animation-name', 'none');
+    await expect(panou).toHaveCSS('opacity', '1');
+  });
+
   test('fără mișcare: banda rulantă stă pe loc, dar textul rămâne', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
@@ -303,7 +315,7 @@ test.describe('Mișcare — banda rulantă', () => {
 });
 
 test.describe('Mișcare — titlul din hero', () => {
-  test('cuvintele se dezvăluie complet, nu rămân tăiate de mască', async ({ page }) => {
+  test('cuvintele ajung la masca finală, nu rămân tăiate', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
     // Aceeași capcană ca la titlurile de secțiune: o mască prost calculată
@@ -311,9 +323,88 @@ test.describe('Mișcare — titlul din hero', () => {
     const words = page.locator('.e3-word');
     await expect(words).toHaveCount(2);
     for (let i = 0; i < 2; i++) {
-      await expect(words.nth(i)).not.toHaveCSS('clip-path', 'inset(105% -8% -35% -8%)');
+      await expect(words.nth(i)).toHaveCSS('clip-path', 'inset(-35% -8%)');
       await expect(words.nth(i)).toHaveCSS('opacity', '1');
     }
+  });
+
+  // KTD7: primul ecran nu așteaptă animațiile. Titlul e posibilul element LCP,
+  // deci nu pornește niciodată de la opacitate zero și nici complet mascat.
+  test('titlul are formă din primul cadru: fără opacitate zero, jumătate de literă vizibilă', async ({
+    page,
+  }) => {
+    await page.goto('/?preview=landing');
+    const start = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>('.e3-hero-title, .e3-word')).map((el) => {
+        for (const a of el.getAnimations()) {
+          a.pause();
+          a.currentTime = 0;
+        }
+        const cs = getComputedStyle(el);
+        return { opacity: cs.opacity, clip: cs.clipPath };
+      })
+    );
+    for (const { opacity, clip } of start) {
+      expect(opacity).toBe('1');
+      expect(clip).not.toMatch(/inset\((10[0-9]|100)%/);
+    }
+  });
+
+  test('intrările din primul ecran se termină în cel mult 700 ms', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    const capete = await page.evaluate(() =>
+      document
+        .querySelector('.e3-hero')!
+        .getAnimations({ subtree: true })
+        // Doar animațiile pe timpul documentului; cele legate de scroll
+        // (parallaxul) n-au durată în milisecunde.
+        .filter((a) => a.timeline === document.timeline)
+        .map((a) => Number(a.effect?.getComputedTiming().endTime ?? 0))
+    );
+    expect(capete.length).toBeGreaterThan(0);
+    for (const t of capete) expect(t).toBeLessThanOrEqual(700);
+  });
+
+  test('CTA-ul din hero nu mai strălucește la nesfârșit', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    const infinite = await page.evaluate(() =>
+      document
+        .querySelector('.e3-hero-cta')!
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations === Infinity).length
+    );
+    expect(infinite).toBe(0);
+  });
+});
+
+test.describe('Mișcare — exploratorul formatului', () => {
+  test('bara de sub etapa aleasă se mută odată cu selecția', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    const lift = page.getByRole('tab', { name: /LIFT/ });
+    await lift.scrollIntoViewIfNeeded();
+    await lift.click();
+    const bara = (nume: string) =>
+      page.evaluate((n) => {
+        const tab = [...document.querySelectorAll('[role="tab"]')].find((t) =>
+          t.textContent?.includes(n)
+        )!;
+        return getComputedStyle(tab, '::after').transform;
+      }, nume);
+    await expect.poll(() => bara('LIFT')).toBe('matrix(1, 0, 0, 1, 0, 0)');
+    await expect.poll(() => bara('RUN')).toMatch(/^matrix\(0, 0, 0, 1/);
+  });
+
+  test('tab-ul primește un indicator de focus la tastatură', async ({ page }) => {
+    await page.goto('/?preview=landing');
+    await settle(page);
+    const run = page.getByRole('tab', { name: /RUN/ });
+    await run.scrollIntoViewIfNeeded();
+    await run.focus();
+    await page.keyboard.press('ArrowRight');
+    const lift = page.getByRole('tab', { name: /LIFT/ });
+    await expect(lift).toBeFocused();
+    await expect(lift).toHaveCSS('outline-style', 'solid');
   });
 });
 
@@ -321,13 +412,13 @@ test.describe('Mișcare — hover pe carduri', () => {
   test('cardul se ridică la hover', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
-    const card = page.locator('.e3-card.e3-step').first();
+    const card = page.locator('#inscriere .e3-card').first();
     await card.scrollIntoViewIfNeeded();
 
     // Reveal-ul rulează cu `fill: 'backwards'`, deci ține cardul la
     // translateY(20px) până își termină cursa. Așteptăm să se așeze, altfel
     // măsurăm starea de intrare și testul devine nedeterminist.
-    await expect.poll(() => translateY(page, '.e3-card.e3-step')).toBe(0);
+    await expect.poll(() => translateY(page, '#inscriere .e3-card')).toBe(0);
 
     // Re-facem hover-ul la fiecare încercare: dacă layoutul se mai mișcă între
     // calculul poziției și mișcarea mouse-ului, cursorul aterizează pe gol și
@@ -336,7 +427,7 @@ test.describe('Mișcare — hover pe carduri', () => {
       .poll(
         async () => {
           await card.hover();
-          return translateY(page, '.e3-card.e3-step');
+          return translateY(page, '#inscriere .e3-card');
         },
         { timeout: 10_000 }
       )
@@ -349,7 +440,7 @@ test.describe('Mișcare — hover pe carduri', () => {
   test('cardul primește tentă și bordură lime la hover', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
-    const card = page.locator('.e3-card.e3-step').first();
+    const card = page.locator('#inscriere .e3-card').first();
     await card.scrollIntoViewIfNeeded();
 
     await expect(card).toHaveCSS('border-top-color', BORDER);
@@ -357,7 +448,7 @@ test.describe('Mișcare — hover pe carduri', () => {
 
     // Aceeași grijă ca la testul de mai sus: reveal-ul mai mișcă rândul de
     // carduri, deci re-facem hover-ul la fiecare încercare.
-    await expect.poll(() => translateY(page, '.e3-card.e3-step')).toBe(0);
+    await expect.poll(() => translateY(page, '#inscriere .e3-card')).toBe(0);
     await expect
       .poll(
         async () => {
@@ -367,7 +458,7 @@ test.describe('Mișcare — hover pe carduri', () => {
           // pe el, iar o egalitate strictă ar prinde din când în când cadrul de
           // depășire. Cerem doar să fie lime — verde dominant și luminos — nu
           // gri-ul de bordură (42, 46, 37).
-          const [r, g, b] = await rgbOf(page, '.e3-card.e3-step', 'borderTopColor');
+          const [r, g, b] = await rgbOf(page, '#inscriere .e3-card', 'borderTopColor');
           return g > 200 && r > 150 && b < 130;
         },
         { message: 'bordura nu a devenit lime la hover', timeout: 10_000 }

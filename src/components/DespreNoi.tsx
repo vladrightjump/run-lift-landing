@@ -23,7 +23,7 @@ import { ReelsRail } from './landing/ReelsRail';
 const POVESTE = [
   'Am început antrenamentele în parc, în trei prieteni, cu un scop simplu: să devenim mai fit și mai funcționali.',
   'Încet-încet am crescut comunitatea, unde am devenit prieteni care se antrenează și se respectă împreună.',
-  'Azi organizăm antrenamente deschise și evenimente în stil HYROX, unde toată lumea e binevenită — de la începători la avansați.',
+  'Azi organizăm antrenamente deschise și evenimente în stil HYROX, unde toată lumea e binevenită, de la începători la avansați.',
 ];
 
 const VALORI = [
@@ -33,7 +33,7 @@ const VALORI = [
   },
   {
     titlu: 'ÎN AER LIBER',
-    text: 'Parcul e sala noastră. Soare, ploaie sau frig — ne vedem afară.',
+    text: 'Parcul e sala noastră. Soare, ploaie sau frig: ne vedem afară.',
   },
   {
     titlu: 'PE NIVELUL TĂU',
@@ -49,11 +49,11 @@ const STATISTICI = [
 ];
 
 const ETAPE = [
-  { nr: '01', titlu: 'Încălzire', text: 'Mobilitate și alergare ușoară — pregătim corpul împreună.' },
+  { nr: '01', titlu: 'Încălzire', text: 'Mobilitate și alergare ușoară: pregătim corpul împreună.' },
   {
     nr: '02',
     titlu: 'Exerciții funcționale',
-    text: 'Antrenament în grup, adaptat individual, cu exerciții funcționale — în stil HYROX.',
+    text: 'Antrenament în grup, adaptat individual, cu exerciții funcționale, în stil HYROX.',
   },
   { nr: '03', titlu: 'Stretching', text: 'Revenire, întindere și un moment să ne cunoaștem mai bine.' },
 ];
@@ -189,7 +189,7 @@ export const DespreNoi = () => {
             </span>
           </h1>
           <p className="dn-hero-sub">
-            Alergare, forță și oameni faini — asta e Run <span className="dn-accent">+</span> Lift.
+            Alergare, forță și oameni faini: asta e Run <span className="dn-accent">+</span> Lift.
             Vino așa cum ești, restul vine de la sine.
           </p>
         </div>
@@ -342,7 +342,7 @@ export const DespreNoi = () => {
               }}
             >
               <iframe
-                title={`${TRAINING_WHERE} — hartă`}
+                title={`${TRAINING_WHERE}: hartă`}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 allowFullScreen
@@ -371,10 +371,9 @@ export const DespreNoi = () => {
             </div>
             <p className="dn-form-intro" data-reveal>
               Lasă-ne datele tale și îți scriem când urmează un antrenament deschis sau un eveniment
-              nou. Fără spam — doar ce contează.
+              nou. Fără spam, doar ce contează.
             </p>
             <div className="dn-badge">
-              <span className="dn-badge-dot" />
               <span>Răspundem de obicei în 24h</span>
             </div>
           </div>
@@ -386,7 +385,7 @@ export const DespreNoi = () => {
               </div>
               <h3>Te-am notat!</h3>
               <p>
-                Ți-am trimis un email pe <strong>{emailTrimis}</strong> — apasă pe linkul din el ca
+                Ți-am trimis un email pe <strong>{emailTrimis}</strong>. Apasă pe linkul din el ca
                 să confirmi înscrierea. Ne vedem la antrenament!
               </p>
             </div>
