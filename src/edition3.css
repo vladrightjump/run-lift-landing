@@ -52,29 +52,6 @@
 .e3-row { transition: background 0.2s ease, box-shadow 0.2s ease; }
 .e3-row:hover { background: var(--e3-surface-hover); box-shadow: inset 3px 0 0 var(--e3-accent); }
 
-/* ---- Grila „Formatul" ----
-   Erau trei coloane egale — tiparul cel mai previzibil cu putință. Acum e o
-   scară: lățimi inegale și fiecare card coborât față de precedentul, ca pașii
-   RUN → LIFT → REPEAT să se citească ca o progresie, nu ca un meniu.
-   Sub 900px redevine o coloană, unde scara n-ar avea sens. */
-.e3-format-grid { display: grid; gap: 16px; }
-@media (min-width: 900px) {
-  .e3-format-grid { grid-template-columns: 4.5fr 4fr 3.5fr; align-items: start; }
-  .e3-format-grid > :nth-child(2) { margin-top: 44px; }
-  .e3-format-grid > :nth-child(3) { margin-top: 88px; }
-}
-
-/* Indexul pasului — cifră mare, fantomatică, în spatele titlului. */
-.e3-step { position: relative; overflow: hidden; }
-.e3-step-idx {
-  position: absolute; top: -18px; right: 8px;
-  font-family: Anton, sans-serif; font-size: 96px; line-height: 1;
-  color: var(--e3-text); opacity: 0.045; pointer-events: none;
-  font-variant-numeric: tabular-nums;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-.e3-card:hover .e3-step-idx { opacity: 0.1; transform: translateY(4px); }
-
 /* ---- Skeleton ----
    Înlocuiește textul „Se încarcă…". Are forma rândurilor care urmează, deci
    lista nu mai sare când sosesc datele. */
@@ -489,7 +466,7 @@
   background: var(--e3-bg-deep);
 }
 
-/* Cuvântul-fantomă. Același limbaj ca `.e3-step-idx`, la scara benzii: prezent
+/* Cuvântul-fantomă. Cifră-fantomă la scara benzii: prezent
    ca textură, nu ca text de citit. Unul singur — referința are trei suprapuse,
    ceea ce devine zgomot. */
 .e3-reels-ghost {

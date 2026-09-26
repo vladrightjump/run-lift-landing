@@ -321,13 +321,13 @@ test.describe('Mișcare — hover pe carduri', () => {
   test('cardul se ridică la hover', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
-    const card = page.locator('.e3-card.e3-step').first();
+    const card = page.locator('#inscriere .e3-card').first();
     await card.scrollIntoViewIfNeeded();
 
     // Reveal-ul rulează cu `fill: 'backwards'`, deci ține cardul la
     // translateY(20px) până își termină cursa. Așteptăm să se așeze, altfel
     // măsurăm starea de intrare și testul devine nedeterminist.
-    await expect.poll(() => translateY(page, '.e3-card.e3-step')).toBe(0);
+    await expect.poll(() => translateY(page, '#inscriere .e3-card')).toBe(0);
 
     // Re-facem hover-ul la fiecare încercare: dacă layoutul se mai mișcă între
     // calculul poziției și mișcarea mouse-ului, cursorul aterizează pe gol și
@@ -336,7 +336,7 @@ test.describe('Mișcare — hover pe carduri', () => {
       .poll(
         async () => {
           await card.hover();
-          return translateY(page, '.e3-card.e3-step');
+          return translateY(page, '#inscriere .e3-card');
         },
         { timeout: 10_000 }
       )
@@ -349,7 +349,7 @@ test.describe('Mișcare — hover pe carduri', () => {
   test('cardul primește tentă și bordură lime la hover', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
-    const card = page.locator('.e3-card.e3-step').first();
+    const card = page.locator('#inscriere .e3-card').first();
     await card.scrollIntoViewIfNeeded();
 
     await expect(card).toHaveCSS('border-top-color', BORDER);
@@ -357,7 +357,7 @@ test.describe('Mișcare — hover pe carduri', () => {
 
     // Aceeași grijă ca la testul de mai sus: reveal-ul mai mișcă rândul de
     // carduri, deci re-facem hover-ul la fiecare încercare.
-    await expect.poll(() => translateY(page, '.e3-card.e3-step')).toBe(0);
+    await expect.poll(() => translateY(page, '#inscriere .e3-card')).toBe(0);
     await expect
       .poll(
         async () => {
@@ -367,7 +367,7 @@ test.describe('Mișcare — hover pe carduri', () => {
           // pe el, iar o egalitate strictă ar prinde din când în când cadrul de
           // depășire. Cerem doar să fie lime — verde dominant și luminos — nu
           // gri-ul de bordură (42, 46, 37).
-          const [r, g, b] = await rgbOf(page, '.e3-card.e3-step', 'borderTopColor');
+          const [r, g, b] = await rgbOf(page, '#inscriere .e3-card', 'borderTopColor');
           return g > 200 && r > 150 && b < 130;
         },
         { message: 'bordura nu a devenit lime la hover', timeout: 10_000 }

@@ -1029,3 +1029,70 @@
      Aceeași compoziție ca restul secțiunilor, la o scară pe măsura coloanei. */
   .e3-reels .e3-sec-head { margin-bottom: 24px; }
   .e3-reels .e3-sec-head .e3-title { font-size: clamp(48px, 6.4vw, 96px); }
+
+  /* ======================================================================
+     Landing: exploratorul formatului
+     ----------------------------------------------------------------------
+     RUN / LIFT / REPEAT sunt cuvinte de afiș pe care le apeși. Etapa aleasă
+     e singura în lime; celelalte stau stinse până le atingi.
+     ====================================================================== */
+  .e3-format-intro { margin-bottom: clamp(36px, 5vw, 64px); }
+  .e3-format-tabs {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 2px solid var(--e3-muted-dim);
+  }
+  .e3-format-tab {
+    position: relative; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 6px; min-width: 0;
+    padding: 18px 12px 22px 0; margin: 0;
+    background: transparent; border: 0; cursor: pointer; text-align: left;
+    color: var(--e3-muted-dim);
+    transition: color var(--e3-dur) var(--e3-ease), transform var(--e3-dur-fast) var(--e3-ease);
+  }
+  /* Bara de sub etapa aleasă crește din stânga, nu apare dintr-odată. */
+  .e3-format-tab::after {
+    content: ''; position: absolute; left: 0; right: 12px; bottom: 0; height: 4px;
+    background: var(--e3-accent);
+    transform: scaleX(0); transform-origin: 0 50%;
+    transition: transform var(--e3-dur-slow) var(--e3-ease);
+  }
+  .e3-format-tab:hover { color: var(--e3-muted-strong); }
+  .e3-format-tab:active { transform: translateY(1px); }
+  .e3-format-tab[aria-selected='true'] { color: var(--e3-accent); }
+  .e3-format-tab[aria-selected='true']::after { transform: scaleX(1); }
+  .e3-format-tab-nr { font-size: 16px; letter-spacing: 0.12em; }
+  /* `clip`: cât timp Anton încă se încarcă, fontul de rezervă e mai lat, iar
+     „REPEAT" ar împinge pagina în lateral pe telefon. */
+  .e3-format-tab-name {
+    width: 100%; overflow: clip;
+    font-family: Anton, sans-serif; font-size: clamp(34px, 9.4vw, 136px);
+    line-height: 0.9; letter-spacing: -0.005em; text-transform: uppercase;
+  }
+
+  /* Panourile stau în aceeași celulă: înălțimea e a celui mai lung, deci
+     pagina nu sare la schimbarea etapei. Copiile nealese doar țin locul. */
+  .e3-format-stage { display: grid; border-bottom: 1px solid var(--e3-border); }
+  .e3-format-panel {
+    grid-area: 1 / 1;
+    display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    gap: clamp(24px, 4vw, 64px); align-items: start;
+    padding-block: clamp(28px, 4vw, 48px);
+    animation: e3-panel-in var(--e3-dur-slow) var(--e3-ease) both;
+  }
+  .e3-format-ghost { visibility: hidden; animation: none; }
+  @keyframes e3-panel-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .e3-format-panel-intro {
+    margin: 0; font-size: clamp(22px, 2.6vw, 34px); line-height: 1.25; font-weight: 600;
+    color: var(--e3-text); text-wrap: balance;
+  }
+  .e3-format-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .e3-format-list li {
+    position: relative; padding-left: 26px;
+    font-size: 16px; line-height: 1.55; color: var(--e3-muted-strong);
+  }
+  .e3-format-list li::before {
+    content: ''; position: absolute; left: 0; top: 0.72em; width: 14px; height: 2px;
+    background: var(--e3-accent);
+  }
+  @media (max-width: 720px) {
+    .e3-format-panel { grid-template-columns: 1fr; }
+  }

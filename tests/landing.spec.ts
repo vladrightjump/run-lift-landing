@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import { deriveEventStrings } from '../src/content/format';
 import { deriveEditionDates } from '../src/lib/config';
 import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
+import { ETAPE } from '../src/content/etape';
 
 const { HERO_KICKER, EVENT_WHEN, EVENT_WHERE, EVENT_START_TIME } =
   deriveEventStrings(SNAPSHOT_CONFIG);
@@ -75,11 +76,37 @@ test.describe('Landing — conținut', () => {
     await expect(page.getByText(HERO_KICKER)).toBeVisible();
   });
 
-  test('format: cardurile RUN / LIFT / REPEAT', async ({ page }) => {
+  test('format: etapele RUN / LIFT / REPEAT', async ({ page }) => {
     await page.goto('/?preview=landing');
     for (const t of ['RUN', 'LIFT', 'REPEAT']) {
       await expect(page.getByText(t, { exact: true })).toBeVisible();
     }
+  });
+
+  test('format pe telefon: atingerea lui REPEAT arată detaliile REPEAT, fără scroll orizontal', async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, hasTouch: true });
+    const page = await ctx.newPage();
+    await page.addInitScript(() => {
+      const base = new Date('2026-08-06T10:00:00+03:00').getTime();
+      const start = performance.now();
+      Date.now = () => base + (performance.now() - start);
+    });
+    await page.route(STATS_ROUTE, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY) })
+    );
+    await page.goto('/?preview=landing');
+    const repeat = page.getByRole('tab', { name: /REPEAT/ });
+    await repeat.scrollIntoViewIfNeeded();
+    await repeat.tap();
+    await expect(repeat).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tabpanel')).toContainText(ETAPE[2].intro);
+    const depasire = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(depasire).toBeLessThanOrEqual(0);
+    await ctx.close();
   });
 
   test('locația: data, adresa și ora de start', async ({ page }) => {
