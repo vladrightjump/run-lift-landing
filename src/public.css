@@ -66,20 +66,22 @@
   }
   .e3-num { font-family: Anton, sans-serif; font-weight: 400; font-variant-numeric: tabular-nums; }
 
-  /* Butonul principal. `a.e3-btn` bate culoarea de link din `.e3-root a`. */
-  .e3-btn,
-  .e3-root a.e3-btn {
+  /* Butonul principal. Hover-ul și tranzițiile vin din clasele de CTA
+     (`.e3-cta`, `.e3-cta-lg`, `.e3-mag` în edition3.css): aici nu se pune
+     `transition`, altfel, încărcat ultimul, ar înlocui easing-ul magnetic. */
+  .e3-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 10px;
     background: var(--e3-accent); color: var(--e3-bg);
     font-family: Anton, sans-serif; font-weight: 400; font-size: 20px;
     letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
     padding: 18px 32px; border: 0; cursor: pointer; text-decoration: none;
   }
-  .e3-btn-sm,
-  .e3-root a.e3-btn-sm { font-size: 15px; padding: 11px 18px; }
-  /* Apăsarea se simte: butonul coboară un pixel și se strânge puțin. Hover-ul
-     vine din clasele de CTA (`.e3-cta`, `.e3-cta-lg`, edition3.css). */
-  .e3-btn { transition: background var(--e3-dur) var(--e3-ease), transform var(--e3-dur-fast) var(--e3-ease); }
+  /* Doar culoarea urcă la specificitatea lui `.e3-root a` (culoarea de link);
+     fundalul rămâne pe `.e3-btn`, ca `:hover`-ul din edition3.css să-l poată
+     schimba. */
+  .e3-root a.e3-btn { color: var(--e3-bg); text-decoration: none; }
+  .e3-btn-sm { font-size: 15px; padding: 11px 18px; }
+  /* Apăsarea se simte: butonul coboară un pixel și se strânge puțin. */
   .e3-btn:active { transform: translateY(1px) scale(0.98); }
 
   /* Linkul de text cu săgeată (hartă, Instagram). */
@@ -814,6 +816,11 @@
     background: var(--e3-accent); color: var(--e3-bg);
     font-family: Anton, sans-serif; letter-spacing: 0.02em;
   }
+  /* Mărimea CTA-ului din antet stă aici, după `.e3-btn`, ca s-o bată. */
+  .e3-topbar-cta { padding: 11px 22px; font-size: 15px; }
+  @media (max-width: 560px) {
+    .e3-topbar-cta { padding: 9px 14px; font-size: 13px; white-space: nowrap; }
+  }
   .e3-topbar-name { font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; }
   .e3-topbar-cd { display: flex; align-items: center; justify-content: center; gap: 12px; }
   .e3-topbar-units { display: flex; align-items: baseline; gap: 8px; }
@@ -1163,6 +1170,8 @@
     border: 1px solid var(--e3-border); background: var(--e3-surface);
   }
   .e3-reg-panel-loading { gap: 22px; padding-block: clamp(48px, 8vw, 80px); }
+  /* În formularul de sine stătător (/inscriere, overlay) coloana e îngustă. */
+  .e3-reg-panel-compact { padding: clamp(20px, 4vw, 32px); }
   .e3-reg-panel-ok { border-color: var(--e3-accent); }
   .e3-reg-panel-err { border-color: var(--e3-danger); }
   .e3-reg-panel-title {

@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import type { CSSProperties } from 'react';
 import { useEventConfig, useEditionStrings } from '../../hooks/useEventConfig';
 import type { FieldName } from '../../lib/validation';
 import type { PublicStats } from '../../lib/supabase';
@@ -40,23 +39,6 @@ import {
  * `useRegistration`, a doua din `registrationStates.tsx`. Aici rămâne doar ce
  * ține de suprafața asta.
  */
-
-const panel: CSSProperties = {
-  border: '1px solid var(--e3-border)',
-  background: 'var(--e3-surface)',
-  padding: 'clamp(20px, 4vw, 32px)',
-  textAlign: 'center',
-  display: 'grid',
-  gap: 16,
-  justifyItems: 'center',
-};
-
-const titluPanou: CSSProperties = {
-  fontFamily: 'Anton, sans-serif',
-  fontSize: 'clamp(26px, 6vw, 38px)',
-  textTransform: 'uppercase',
-  letterSpacing: 1,
-};
 
 type Props = {
   reg: ReturnType<typeof useRegistration>;
@@ -227,11 +209,9 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
       )}
 
       {closedReason && (
-        <div style={panel}>
-          <div style={{ ...titluPanou, fontSize: 'clamp(24px, 5vw, 34px)' }}>
-            {textInchis(closedReason).titlu}
-          </div>
-          <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: 'var(--e3-muted)', maxWidth: 380 }}>
+        <div className="e3-reg-panel e3-reg-panel-compact">
+          <div className="e3-reg-panel-title">{textInchis(closedReason).titlu}</div>
+          <p className="e3-reg-panel-msg">
             {textInchis(closedReason).mesaj}
           </p>
           <LinkContact stil={ctaSmall} />
@@ -239,22 +219,20 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
       )}
 
       {phase === 'loading' && (
-        <div style={{ ...panel, padding: 'clamp(40px, 8vw, 64px) 24px', gap: 22 }}>
+        <div className="e3-reg-panel e3-reg-panel-loading">
           <BaraIncarcare />
-          <div style={{ fontFamily: 'Anton, sans-serif', fontSize: 22, textTransform: 'uppercase', letterSpacing: 1.5, color: 'var(--e3-muted-strong)' }}>
-            {TEXT_INCARCARE}
-          </div>
+          <div className="e3-reg-panel-title e3-reg-panel-wait">{TEXT_INCARCARE}</div>
         </div>
       )}
 
       {phase === 'success' && (
-        <div style={{ ...panel, border: '1px solid var(--e3-accent)' }}>
+        <div className="e3-reg-panel e3-reg-panel-compact e3-reg-panel-ok">
           <BifaSucces />
-          <div style={titluPanou}>
+          <div className="e3-reg-panel-title">
             {submittedAsWaitlist ? 'Ești pe lista de așteptare, ' : 'Te-ai înscris, '}
             {confirmName}!
           </div>
-          <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: 'var(--e3-muted)', maxWidth: 400 }}>
+          <p className="e3-reg-panel-msg">
             {submittedAsWaitlist
               ? TEXT_SUCCES_ASTEPTARE
               : `Locul ${slots.occupied} din ${TOTAL_SLOTS}. Ți-am trimis emailul de confirmare cu toate detaliile. ${SUCCESS_SEE_YOU}`}
@@ -302,10 +280,10 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
       )}
 
       {phase === 'error' && (
-        <div style={{ ...panel, border: '1px solid var(--e3-danger)' }}>
+        <div className="e3-reg-panel e3-reg-panel-compact e3-reg-panel-err">
           <IconEroare />
-          <div style={{ ...titluPanou, color: 'var(--e3-danger)' }}>{TEXT_EROARE_TITLU}</div>
-          <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: 'var(--e3-muted)', maxWidth: 380 }}>
+          <div className="e3-reg-panel-title">{TEXT_EROARE_TITLU}</div>
+          <p className="e3-reg-panel-msg">
             {TEXT_EROARE_MESAJ}
           </p>
           <ButonReincearca
