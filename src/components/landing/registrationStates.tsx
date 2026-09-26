@@ -177,7 +177,7 @@ export const ButonTrimite = ({
  * Cât timp înscrierea e pe drum: o bară care se umple și se golește, nu un
  * cerc care se învârte. Pagina are colțuri drepte peste tot.
  */
-export const Rotitor = () => <div className="e3-progress-bar" aria-hidden="true" />;
+export const BaraIncarcare = () => <div className="e3-progress-bar" aria-hidden="true" />;
 
 /** Bifa de succes: pătratul care pulsează o dată, apoi linia care se desenează. */
 export const BifaSucces = () => (

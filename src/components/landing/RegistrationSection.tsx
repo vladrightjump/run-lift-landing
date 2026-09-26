@@ -16,7 +16,7 @@ import {
   CampText,
   IconEroare,
   LinkContact,
-  Rotitor,
+  BaraIncarcare,
   ActiuniSucces,
   TEXT_EROARE_MESAJ,
   TEXT_EROARE_TITLU,
@@ -230,7 +230,7 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
 
             {phase === 'loading' && (
               <div className="e3-reg-panel e3-reg-panel-loading">
-                <Rotitor />
+                <BaraIncarcare />
                 <div className="e3-reg-panel-title e3-reg-panel-wait">{TEXT_INCARCARE}</div>
               </div>
             )}

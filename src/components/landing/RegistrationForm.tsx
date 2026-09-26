@@ -20,7 +20,7 @@ import {
   CampText,
   IconEroare,
   LinkContact,
-  Rotitor,
+  BaraIncarcare,
   TEXT_EROARE_MESAJ,
   TEXT_EROARE_TITLU,
   TEXT_INCARCARE,
@@ -240,7 +240,7 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
 
       {phase === 'loading' && (
         <div style={{ ...panel, padding: 'clamp(40px, 8vw, 64px) 24px', gap: 22 }}>
-          <Rotitor />
+          <BaraIncarcare />
           <div style={{ fontFamily: 'Anton, sans-serif', fontSize: 22, textTransform: 'uppercase', letterSpacing: 1.5, color: 'var(--e3-muted-strong)' }}>
             {TEXT_INCARCARE}
           </div>

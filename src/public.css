@@ -33,14 +33,20 @@
 
   /* Antetul de secțiune: numărul, o linie până la marginea paginii, apoi
      titlul la scară de afiș. Numărul vine din poziția secțiunii (Landing). */
-  .e3-sec-head { display: grid; gap: clamp(10px, 1.6vw, 18px); margin-bottom: clamp(40px, 6vw, 80px); }
-  .e3-sec-head .e3-title-num {
+  /* `/despre-noi` are aceeași compoziție pe clasele ei (`.dn-section-*`); acolo
+     diferă doar distanța de dedesubt și mărimea titlului. */
+  .e3-sec-head,
+  .dn-section-head { display: grid; gap: clamp(10px, 1.6vw, 18px); margin-bottom: clamp(40px, 6vw, 80px); }
+  .e3-sec-head .e3-title-num,
+  .dn-section-num {
     display: flex; align-items: center; gap: 16px;
     font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 0.14em;
     color: var(--e3-accent); font-variant-numeric: tabular-nums;
   }
-  .e3-sec-head .e3-title-num::after { content: ''; flex: 1; height: 2px; background: var(--e3-border); }
-  .e3-sec-head .e3-title {
+  .e3-sec-head .e3-title-num::after,
+  .dn-section-num::after { content: ''; flex: 1; height: 2px; background: var(--e3-border); }
+  .e3-sec-head .e3-title,
+  .dn-section-head h2 {
     margin: 0; font-family: Anton, sans-serif; font-weight: 400;
     font-size: var(--e3-fs-h2); line-height: 0.88; letter-spacing: -0.005em;
     text-transform: uppercase; text-wrap: balance;
@@ -476,23 +482,10 @@
     border-bottom: 1px solid var(--e3-border);
   }
   .dn-section-form { border-bottom: none; padding-bottom: clamp(48px, 8vw, 88px); }
-  /* Aceeași compoziție ca antetul de secțiune de pe landing (`.e3-sec-head`):
-     numărul, linia până la margine, titlul la scară de afiș. */
-  .dn-section-head {
-    display: grid; gap: clamp(10px, 1.6vw, 18px); margin-bottom: clamp(36px, 5vw, 64px);
-  }
-  .dn-section-num {
-    display: flex; align-items: center; gap: 16px;
-    font-family: Anton, sans-serif; font-size: 18px; color: var(--e3-accent);
-    letter-spacing: 0.14em; text-transform: uppercase; font-variant-numeric: tabular-nums;
-  }
-  .dn-section-num::after { content: ''; flex: 1; height: 2px; background: var(--e3-border); }
-  .dn-section-head h2 {
-    margin: 0; padding-block: 0.14em 0.06em;
-    font-family: Anton, sans-serif; font-weight: 400;
-    font-size: clamp(40px, 8vw, 120px); line-height: 0.9; letter-spacing: -0.005em;
-    text-transform: uppercase; text-wrap: balance; color: var(--e3-text);
-  }
+  /* Antetul de secțiune e cel de pe landing (vezi `.e3-sec-head`); aici doar
+     ce diferă: mai puțin aer dedesubt și un titlu pe măsura paginii. */
+  .dn-section-head { margin-bottom: clamp(36px, 5vw, 64px); }
+  .dn-section-head h2 { font-size: clamp(40px, 8vw, 120px); line-height: 0.9; color: var(--e3-text); }
 
   .dn-story {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
