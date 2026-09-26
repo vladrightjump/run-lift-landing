@@ -91,7 +91,6 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
 
       <main className="cs-main">
         <span className="cs-badge">
-          <span className="cs-badge-dot" />
           {urmatorul
             ? `Următorul antrenament · ${ziLunaLunga(tinta)}`
             : `Antrenament nou · Ediția ${LAUNCH_EDITION_ORDINAL}`}
@@ -219,7 +218,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
                 <p className="cs-modal-sub">
                   {duplicate
                     ? 'Adresa ta era deja înscrisă. Te anunțăm când lansăm noul antrenament.'
-                    : 'Ți-am trimis un email — apasă pe linkul din el ca să confirmi înscrierea.'}
+                    : 'Ți-am trimis un email. Apasă pe linkul din el ca să confirmi înscrierea.'}
                 </p>
                 <button type="button" className="cs-submit" onClick={closeForm}>
                   Închide
