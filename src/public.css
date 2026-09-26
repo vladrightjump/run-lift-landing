@@ -71,6 +71,10 @@
   }
   .e3-btn-sm,
   .e3-root a.e3-btn-sm { font-size: 15px; padding: 11px 18px; }
+  /* Apăsarea se simte: butonul coboară un pixel și se strânge puțin. Hover-ul
+     vine din clasele de CTA (`.e3-cta`, `.e3-cta-lg`, edition3.css). */
+  .e3-btn { transition: background var(--e3-dur) var(--e3-ease), transform var(--e3-dur-fast) var(--e3-ease); }
+  .e3-btn:active { transform: translateY(1px) scale(0.98); }
 
   /* Linkul de text cu săgeată (hartă, Instagram). */
   .e3-arrow-link {
