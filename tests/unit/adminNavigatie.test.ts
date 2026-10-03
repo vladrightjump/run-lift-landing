@@ -28,6 +28,10 @@ const TOATE_CHEILE: EcranAdmin[] = [
   'clipuri',
   'antrenament',
   'coming-soon',
+  'grup-prezente',
+  'grup-membri',
+  'grup-analiza',
+  'grup-bot',
 ];
 
 describe('niciun ecran nu rămâne în afara registrului', () => {
@@ -102,5 +106,24 @@ describe('contorul grupului spune ce e înăuntru', () => {
     // o citește organizatorul când intră.
     expect(contorGrup(oameni, contoare({}))).toBeNull();
     expect(contorGrup(oameni, contoare({ participanti: 20 }))).toBe(20);
+  });
+});
+
+describe('grupul din parc (R3)', () => {
+  it('stă în al cincilea grup, cu cele patru ecrane', () => {
+    expect(GRUPURI).toHaveLength(5);
+    expect(GRUPURI[4].ecrane.map((e) => e.cheie)).toEqual([
+      'grup-prezente',
+      'grup-membri',
+      'grup-analiza',
+      'grup-bot',
+    ]);
+  });
+
+  it('niciun nume nu se repetă cu alt ecran sau grup, „Antrenamente" inclus', () => {
+    const etichete = [...GRUPURI.map((g) => g.eticheta), ...TOATE_ECRANELE.map((e) => e.eticheta)];
+    expect(new Set(etichete).size).toBe(etichete.length);
+    const intrebari = GRUPURI.map((g) => g.intrebare);
+    expect(new Set(intrebari).size).toBe(intrebari.length);
   });
 });

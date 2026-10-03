@@ -83,8 +83,18 @@ const SUPRAFETE: { nume: string; element: () => ReactElement; deschide?: string 
  * `.tsx` din `src/` care conține `<form` trebuie să menționeze și `hpProps`.
  */
 describe('niciun formular din src/ nu scapă fără capcană', () => {
-  /** Singurul `<form>` care NU e public: autentificarea în backoffice. */
-  const EXCEPTII = new Set(['src/admin/AdminLogin.tsx']);
+  /**
+   * `<form>`-urile care NU sunt publice: autentificarea în backoffice și
+   * formularele ecranelor grupului din parc, care stau în spatele ei (tokenul de
+   * sesiune e verificat de fiecare funcție `admin_sala_*`). Un bot fără cont nu
+   * ajunge la ele, deci capcana n-ar prinde nimic.
+   */
+  const EXCEPTII = new Set([
+    'src/admin/AdminLogin.tsx',
+    'src/admin/sala/EcranPrezente.tsx',
+    'src/admin/sala/EcranMembri.tsx',
+    'src/admin/sala/EcranBot.tsx',
+  ]);
 
   it('fiecare fișier cu <form> folosește hpProps', () => {
     const radacina = path.resolve(__dirname, '../..');

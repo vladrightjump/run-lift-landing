@@ -1,6 +1,7 @@
 import type { EcranAdmin, SemnaleAdmin } from './stareCurenta';
 import { LiniaDeTimp } from './LiniaDeTimp';
 import { BlocSaptamanal } from './BlocSaptamanal';
+import { CardGrup } from './sala/CardGrup';
 import { AdminNav } from './AdminNav';
 
 type Props = {
@@ -47,6 +48,10 @@ export const EcranPornire = ({
         linie ar fi sugerat că e un reper al ediției curente și ar fi dispărut
         odată cu ea. */}
     <BlocSaptamanal onDeschide={() => onEcran('antrenament')} />
+
+    {/* Grupul din parc: tot recurent, tot în afara ediției, deci tot sub
+        linie. Spune câți vin la antrenamentul următor fără un clic. */}
+    <CardGrup onDeschide={() => onEcran('grup-prezente')} />
 
     <AdminNav onEcran={onEcran} contorEcran={contorEcran} nelivrate={nelivrate} />
   </>
