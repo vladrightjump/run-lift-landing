@@ -9,7 +9,7 @@
 -- NU se aplică nicăieri: nu e o migrare. Ăsta e „ce e acum în producție",
 -- regenerat după fiecare migrare care atinge tabelele grupului — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 3 octombrie 2026 (înainte de prima migrare `sala_`).
+-- Ultima regenerare: 3 octombrie 2026 (după `sala_02_functii_admin`).
 
 create table public.attendance (
   id uuid default gen_random_uuid() not null,
@@ -53,7 +53,10 @@ create table public.bot_config (
   training_time text default '06:30'::text not null,
   location text default 'Parcul Dumitru Râșcanu'::text not null,
   auto_reminder_enabled boolean default true not null,
-  reminder_threshold integer default 6 not null
+  reminder_threshold integer default 6 not null,
+  poll_title text,
+  poll_yes_label text,
+  poll_no_label text
 );
 
 create table public.members (
@@ -99,7 +102,8 @@ create table public.training_sessions (
   location text default 'Parcul Dumitru Râșcanu'::text not null,
   poll_message_id bigint,
   status text default 'scheduled'::text not null,
-  created_at timestamp with time zone default now() not null
+  created_at timestamp with time zone default now() not null,
+  poll_wording jsonb
 );
 
 alter table public.attendance add constraint attendance_pkey PRIMARY KEY (id);
@@ -207,8 +211,6 @@ END $function$
 ;
 
 revoke all on function public.merge_members(keep uuid, remove uuid) from public, anon, authenticated, service_role;
-grant execute on function public.merge_members(keep uuid, remove uuid) to anon;
-grant execute on function public.merge_members(keep uuid, remove uuid) to authenticated;
 grant execute on function public.merge_members(keep uuid, remove uuid) to service_role;
 
 revoke all on table public.attendance from public, anon, authenticated, service_role;
