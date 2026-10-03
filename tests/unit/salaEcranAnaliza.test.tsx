@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, within, waitFor } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { EcranAnaliza } from '../../src/admin/sala/EcranAnaliza';
 import { dateSala } from './helpers/salaFixtures';
@@ -31,6 +31,8 @@ const cifra = (eticheta: string) =>
 
 beforeEach(() => {
   api.incarcaSala.mockReset();
+  api.scoateDinGrup.mockReset();
+  api.scoateDinGrup.mockResolvedValue('id');
 });
 afterEach(cleanup);
 
@@ -67,5 +69,28 @@ describe('Analiza prezențelor', () => {
     api.incarcaSala.mockResolvedValue(dateSala({ antrenamente: [], raspunsuri: [] }));
     randeaza();
     expect(await screen.findByText('Niciun antrenament în perioada asta.')).toBeTruthy();
+  });
+});
+
+describe('Analiza — scoaterea din grup', () => {
+  const randul = (nume: string) =>
+    screen.getAllByText(nume, { selector: '.admin-sala-nume' }).map((e) => e.closest('li') as HTMLElement)[0];
+
+  it('se face de aici cu același dialog ca pe Membri', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Ion', { selector: '.admin-sala-nume' });
+    fireEvent.click(within(randul('Ion')).getByRole('button', { name: /Scoate-l pe Ion/ }));
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Scoate din grup' }));
+    await waitFor(() => expect(api.scoateDinGrup).toHaveBeenCalledWith('tok', 'ion'));
+  });
+
+  it('la un admin, motivul se citește și de pe ecran, și de cititorul de ecran', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Roma', { selector: '.admin-sala-nume' });
+    const rand = randul('Roma');
+    expect((within(rand).getByRole('button', { name: /Scoate din grup: Adminii grupului nu se scot/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(rand).getByText('Adminii grupului nu se scot.')).toBeTruthy();
   });
 });

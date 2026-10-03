@@ -97,9 +97,24 @@ describe('funcțiile de admin cer un token de sesiune', () => {
                 + (select count(*) from runlift.event_waitlist)
                 + (select count(*) from runlift.email_templates)
                 + (select count(*) from runlift.event_config)
-                + (select count(*) from runlift.weekly_workout) as n`
+                + (select count(*) from runlift.weekly_workout)
+                -- Tabelele grupului de antrenament: funcțiile admin_sala_* scriu în public.
+                + (select count(*) from public.members)
+                + (select count(*) from public.training_sessions)
+                + (select count(*) from public.attendance)
+                + (select count(*) from public.attendance_log)
+                + (select count(*) from public.bot_config)
+                + (select count(*) from public.bot_actions)
+                + (select count(*) from public.telegram_unmatched) as n`
         )
       ).rows[0].n;
+
+    // Câte un rând în fiecare tabel al grupului, ca o ștergere să se vadă și ea.
+    const m = await db.query<{ id: string }>(`insert into public.members (full_name, telegram_user_id) values ('Ion', 555) returning id`);
+    const s = await db.query<{ id: string }>(`insert into public.training_sessions (session_date) values ('2026-10-08') returning id`);
+    await db.query(`insert into public.attendance (session_id, member_id, response) values ($1, $2, 'yes')`, [s.rows[0].id, m.rows[0].id]);
+    await db.query(`insert into public.bot_config (id) values (1)`);
+    await db.query(`insert into public.telegram_unmatched (telegram_user_id) values (909)`);
 
     const inainte = await numara();
     for (const f of await functii('admin\\_%')) {

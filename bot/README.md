@@ -35,8 +35,9 @@ din admin → „Botul de Telegram" — și:
 - trimite lunea la 09:00 lista celor inactivi și verifică webhook-ul la 09:05;
 - golește coada de comenzi (`public.bot_actions`) venite din admin.
 
-Webhook-ul (`POST /telegram/webhook`, verificat cu secretul) înregistrează voturile, parchează
-conturile necunoscute în `telegram_unmatched` și răspunde la `/start`.
+Webhook-ul (`POST /telegram/webhook`, verificat cu secretul) înregistrează voturile — un cont
+necunoscut care votează devine membru pe loc, cu numele din Telegram —, pune în
+`telegram_unmatched` pe cine intră în grup fără să fie legat de un membru și răspunde la `/start`.
 
 ## Deploy (Railway)
 
@@ -49,7 +50,21 @@ Merge-ul în `main` e deploy-ul, ca la site — dar doar dacă trec verificăril
 - **calea fișierului de configurare** `/bot/railway.json` — Railway nu-l caută singur în
   directorul rădăcină al serviciului;
 - **Wait for CI** pornit: deploy-ul așteaptă job-ul `bot` din `.github/workflows/ci-deploy.yml`
-  (Node 22: teste + build).
+  (Node 22: teste, build și o pornire reală a `dist/` care trebuie să răspundă pe `/health`).
+
+`railway.json` ține în cod și calea urmărită (`/bot/**`) și verificarea de sănătate
+(`/health`): un deploy care nu pornește nu-l înlocuiește pe cel care merge.
+
+**De verificat la mutare (U9):**
+
+- `railway.json` cere builderul `NIXPACKS`, copiat din repo-ul vechi, dar serviciul arată
+  `RAILPACK` în setări (3 octombrie 2026). În detaliile primului deploy din acest repo,
+  verifică ce builder a folosit Railway și că versiunea de Node e 22. Dacă nu e, scoate
+  `builder` din `railway.json`, ca să rămână cel din setări.
+- **Railway a declarat „Config as Code" (`railway.json`) învechit:** fișierele merg pentru
+  serviciile existente doar până pe **1 decembrie 2026**. Până atunci, setările din fișier
+  (calea urmărită, `/health`, comenzile) trebuie mutate în setările serviciului sau în
+  „Infrastructure as Code" — altfel dispar fără niciun semn.
 
 Variabile de mediu (pe serviciu, nu în repo): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`,
 `TELEGRAM_GROUP_CHAT_ID`, `TELEGRAM_ADMIN_CHAT_IDS`, `SUPABASE_URL`,
@@ -63,6 +78,9 @@ rădăcina goală. Domeniul, variabilele și webhook-ul sînt ale serviciului, d
 (`npm run set-webhook`, cu `.env` completat), apoi se verifică cu `getWebhookInfo`.
 
 ## Local
+
+Cu Node 22 (`engines` din `package.json`): pe Node 20, testul `smoke.test.ts` pică exact cum
+ar pica botul pe Railway.
 
 ```bash
 cd bot

@@ -42,8 +42,6 @@ export type SalaMembru = {
   telegram_username: string | null;
   bot_dm_enabled: boolean;
   join_date: string;
-  phone: string | null;
-  email: string | null;
 };
 
 export type SalaAntrenament = {

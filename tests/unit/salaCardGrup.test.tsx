@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent, act } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { CardGrup } from '../../src/admin/sala/CardGrup';
 
@@ -38,9 +38,28 @@ describe('cardul grupului de pe pornire', () => {
   });
 
   it('cererea pică → cardul nu apare', async () => {
-    incarcaRezumatSala.mockRejectedValue(new Error('rețea'));
+    const esec = Promise.reject(new Error('rețea'));
+    esec.catch(() => undefined);
+    incarcaRezumatSala.mockReturnValue(esec);
     randeaza();
     await waitFor(() => expect(incarcaRezumatSala).toHaveBeenCalled());
+    // Așteaptă ca refuzul să fie tratat, ca testul să vadă un eșec, nu o cerere în zbor.
+    await act(async () => {
+      await esec.catch(() => undefined);
+    });
     expect(screen.queryByLabelText('Grupul din parc')).toBeNull();
+  });
+
+  it('un rând programat fără sondaj plecat nu arată „0 vin"', async () => {
+    incarcaRezumatSala.mockResolvedValue({
+      azi: '2026-10-07',
+      pornit: true,
+      poll_days: [1, 3],
+      poll_time: '12:00',
+      urmatorul: { session_date: '2026-10-08', starts_at: '06:30', location: 'Parc', status: 'scheduled', poll_sent: false, vin: 0, nu_vin: 0 },
+    });
+    randeaza();
+    const card = await screen.findByLabelText('Grupul din parc');
+    expect(card.textContent).not.toMatch(/0 vin/);
   });
 });

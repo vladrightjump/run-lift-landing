@@ -11,9 +11,10 @@
 -- `ddl` peste `supabase/schema/sala.sql`, sub antetul existent.
 --
 -- Ordinea din ieșire e cea în care se poate REÎNCĂRCA: tabelele, apoi cheile
--- primare și unice, apoi cele externe, vederile (citesc tabelele), funcțiile și
--- drepturile. Stub-ul pentru `auth.users` (referit de `payments.recorded_by`)
--- NU e aici — îl pune `tests/unit/sql/db.ts`, fiindcă ține de Supabase Auth.
+-- primare și unice, apoi cele externe, vederile (citesc tabelele), funcțiile,
+-- triggerele (cheamă funcțiile) și drepturile. Stub-ul pentru `auth.users`
+-- (referit de `payments.recorded_by`) NU e aici — îl pune `tests/unit/sql/db.ts`,
+-- fiindcă ține de Supabase Auth.
 
 with obiecte as (
   select unnest(array[
@@ -56,6 +57,14 @@ with obiecte as (
   select string_agg(pg_get_functiondef(p.oid) || E';\n', E'\n' order by p.proname) t
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname in (select nume from functii_grup)
+), triggere as (
+  -- Azi (3 octombrie 2026) tabelele grupului n-au niciun trigger, deci partea asta
+  -- iese goală. Un trigger adăugat de gym-app sau de bot intră de la sine în
+  -- instantaneu; dacă funcția lui nu e în `functii_grup`, încărcarea în PGlite
+  -- pică zgomotos, nu trece pe lângă teste.
+  select coalesce(string_agg(pg_get_triggerdef(t.oid) || E';\n', '' order by t.tgname), '') t
+    from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and not t.tgisinternal and c.relname in (select nume from obiecte)
 ), roluri as (select unnest(array['anon', 'authenticated', 'service_role']) r
 ), drepturi_functii as (
   select string_agg(
@@ -83,6 +92,6 @@ with obiecte as (
   from pg_policies p where p.schemaname = 'public' and p.tablename in (select nume from obiecte)
 )
 select (select t from tabele) || E'\n' || (select t from constrangeri) || E'\n' || (select t from indexuri)
-    || E'\n' || (select t from vederi) || E'\n' || (select t from functii)
+    || E'\n' || (select t from vederi) || E'\n' || (select t from functii) || (select t from triggere)
     || E'\n' || (select t from drepturi_functii) || E'\n\n' || (select t from drepturi_relatii)
     || E'\n\n' || (select t from politici) || E'\n' as ddl;

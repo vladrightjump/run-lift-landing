@@ -25,6 +25,10 @@ describe('problemeConfig (oglinda validării din server)', () => {
     [{ reminder_threshold: Number.NaN }, /Pragul/],
     [{ poll_title: 'x'.repeat(81) }, /80/],
     [{ poll_yes_label: 'x'.repeat(33) }, /32/],
+    [{ poll_no_label: 'x'.repeat(33) }, /32/],
+    [{ location: 'x'.repeat(121) }, /Locul/],
+    [{ reminder_threshold: 1000 }, /Pragul/],
+    [{ reminder_threshold: 1.5 }, /Pragul/],
   ])('refuză %o', (peste, mesaj) => {
     const p = problemeConfig({ ...CONFIG_IMPLICIT, ...peste });
     expect(p.some((x) => mesaj.test(x))).toBe(true);

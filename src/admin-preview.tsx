@@ -194,8 +194,6 @@ const membriGrup = NUME.slice(0, 14).map(([nume, prenume], i) => ({
   telegram_username: i % 3 === 0 ? `${prenume.toLowerCase()}_${i}` : null,
   bot_dm_enabled: i < 3,
   join_date: cuZileInUrma(120 - i).slice(0, 10),
-  phone: null,
-  email: null,
 }));
 // Antrenamentul de mâine (sondajul a plecat) și opt trecute, câte două pe săptămână.
 const antrenamenteGrup = [1, -2, -5, -9, -12, -16, -19, -23, -26].map((z, i) => ({

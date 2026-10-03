@@ -6,6 +6,10 @@ import type { SalaComanda } from '../../lib/salaApi';
  * Adminul nu vorbește cu botul; îi lasă comenzi în coadă, iar botul le golește
  * la fiecare minut. O comandă care stă în așteptare mult peste minut e deci
  * semnul că botul nu rulează — fără să schimbăm nimic în bot.
+ *
+ * Invers nu ține: cu coada goală nu știm dacă botul rulează, doar că nimic nu
+ * e blocat. De aceea starea „normală" poartă și momentul ultimei comenzi
+ * executate — singura dovadă de viață pe care o avem fără un semnal din bot.
  */
 
 /** Trei minute: botul are un tic pe minut, deci trei ratate la rând nu sunt întâmplare. */
@@ -14,7 +18,7 @@ const PRAG_NERASPUNS_MS = 3 * 60_000;
 export type StareBot =
   | { tip: 'oprit' }
   | { tip: 'nu-raspunde'; comanda: SalaComanda; minute: number }
-  | { tip: 'normal' };
+  | { tip: 'normal'; ultimaExecutata: string | null };
 
 export const stareBot = (pornit: boolean | null, comenzi: SalaComanda[], acum: Date): StareBot => {
   // Coada se golește și cu botul oprit din setări — comutatorul suspendă doar
@@ -29,5 +33,11 @@ export const stareBot = (pornit: boolean | null, comenzi: SalaComanda[], acum: D
     return { tip: 'nu-raspunde', comanda: blocata.c, minute: Math.floor(blocata.varsta / 60_000) };
   }
   if (pornit === false) return { tip: 'oprit' };
-  return { tip: 'normal' };
+  const ultimaExecutata =
+    comenzi
+      .map((c) => c.processed_at)
+      .filter((t): t is string => t !== null)
+      .sort()
+      .at(-1) ?? null;
+  return { tip: 'normal', ultimaExecutata };
 };

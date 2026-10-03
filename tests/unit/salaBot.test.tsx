@@ -331,3 +331,45 @@ describe('erorile la scriere', () => {
     expect(monitorizare.logClientError).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('mesajul liber', () => {
+  it('peste limita Telegram (cu tot cu mențiuni) nu se poate trimite și spune de ce', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Textul sondajului');
+    fireEvent.change(screen.getByLabelText('Textul mesajului'), { target: { value: 'x'.repeat(4097) } });
+    expect(buton('Trimite în grup').disabled).toBe(true);
+    expect(screen.getByText(/trece de limita Telegram/)).toBeTruthy();
+  });
+
+  it('„Nu trimite" din confirmare nu cheamă serverul și păstrează textul', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Textul sondajului');
+    fireEvent.change(screen.getByLabelText('Textul mesajului'), { target: { value: 'Mâine plouă' } });
+    fireEvent.click(buton('Trimite în grup'));
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Nu trimite' }));
+    expect(api.trimiteComanda).not.toHaveBeenCalled();
+    expect((screen.getByLabelText('Textul mesajului') as HTMLTextAreaElement).value).toBe('Mâine plouă');
+  });
+});
+
+describe('starea botului', () => {
+  it('cu coada liniștită spune doar ce știe: nicio comandă blocată și ultima executată', async () => {
+    api.incarcaSala.mockResolvedValue(
+      dateSala({ comenzi: [comandaSala({ status: 'done', processed_at: '2026-10-02T17:43:00Z' })] })
+    );
+    randeaza();
+    const stare = await screen.findByRole('status', { name: 'Starea botului' });
+    expect(stare.textContent).toContain('Botul e pornit');
+    expect(stare.textContent).toContain('Nicio comandă blocată. Ultima executată de bot: 2 oct');
+    expect(stare.textContent).not.toContain('Botul merge');
+  });
+
+  it('textul sondajului spune că intră în sondaj abia după actualizarea botului', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    const grup = (await screen.findByText('Textul sondajului')).closest('fieldset') as HTMLElement;
+    expect(grup.textContent).toContain('abia după actualizarea botului');
+  });
+});

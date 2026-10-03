@@ -16,8 +16,6 @@ const membru = (id: string, peste: Partial<SalaMembru> = {}): SalaMembru => ({
   telegram_username: null,
   bot_dm_enabled: false,
   join_date: '2026-07-01',
-  phone: null,
-  email: null,
   ...peste,
 });
 

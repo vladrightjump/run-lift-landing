@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 3 octombrie 2026 (după `sala_03_corecturi`).
+-- Ultima regenerare: 3 octombrie 2026 (după `sala_04_mai_putine_date`).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -850,8 +850,7 @@ begin
       select jsonb_agg(jsonb_build_object(
         'id', m.id, 'full_name', m.full_name, 'status', m.status, 'is_admin', m.is_admin,
         'telegram_user_id', m.telegram_user_id, 'telegram_username', m.telegram_username,
-        'bot_dm_enabled', m.bot_dm_enabled, 'join_date', m.join_date,
-        'phone', m.phone, 'email', m.email
+        'bot_dm_enabled', m.bot_dm_enabled, 'join_date', m.join_date
       ) order by m.full_name)
       from public.members m
     ), '[]'::jsonb),
@@ -959,7 +958,11 @@ AS $function$
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
   if p_pornit is null then raise exception 'config_invalid'; end if;
-  update public.bot_config set enabled = p_pornit, updated_at = now() where id = 1;
+  -- Fără rând de setări, un `update` n-ar schimba nimic, iar ecranul ar spune
+  -- totuși „Botul e oprit". Rândul nou primește valorile implicite ale
+  -- coloanelor — aceleași pe care botul le folosește când nu găsește rândul.
+  insert into public.bot_config (id, enabled, updated_at) values (1, p_pornit, now())
+  on conflict (id) do update set enabled = excluded.enabled, updated_at = excluded.updated_at;
   perform sala_jurnal(p_token, 'sala_pornire', jsonb_build_object('pornit', p_pornit));
 end;
 $function$
@@ -1011,6 +1014,9 @@ declare
   v_text text;
   v_cheie text;
   v_prag integer;
+  -- `btrim` fără al doilea argument taie doar spațiile; clientul taie orice
+  -- spațiu alb, deci un titlu din tab-uri ar fi ieșit „text propriu" gol.
+  v_alb constant text := E' \t\r\n';
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
   if p_config is null or jsonb_typeof(p_config) <> 'object' then raise exception 'config_invalid'; end if;
@@ -1040,7 +1046,7 @@ begin
     end if;
   end loop;
 
-  v_text := btrim(coalesce(p_config ->> 'location', ''));
+  v_text := btrim(coalesce(p_config ->> 'location', ''), v_alb);
   if char_length(v_text) = 0 or char_length(v_text) > 120 then raise exception 'loc_invalid'; end if;
 
   if jsonb_typeof(p_config -> 'enabled') is distinct from 'boolean'
@@ -1057,9 +1063,9 @@ begin
   v_prag := (p_config ->> 'reminder_threshold')::integer;
 
   -- Textul sondajului: gol → null, adică textul de azi.
-  if char_length(btrim(coalesce(p_config ->> 'poll_title', ''))) > 80
-     or char_length(btrim(coalesce(p_config ->> 'poll_yes_label', ''))) > 32
-     or char_length(btrim(coalesce(p_config ->> 'poll_no_label', ''))) > 32
+  if char_length(btrim(coalesce(p_config ->> 'poll_title', ''), v_alb)) > 80
+     or char_length(btrim(coalesce(p_config ->> 'poll_yes_label', ''), v_alb)) > 32
+     or char_length(btrim(coalesce(p_config ->> 'poll_no_label', ''), v_alb)) > 32
   then
     raise exception 'text_prea_lung';
   end if;
@@ -1081,9 +1087,9 @@ begin
     v_text,
     (p_config ->> 'auto_reminder_enabled')::boolean,
     v_prag,
-    nullif(btrim(coalesce(p_config ->> 'poll_title', '')), ''),
-    nullif(btrim(coalesce(p_config ->> 'poll_yes_label', '')), ''),
-    nullif(btrim(coalesce(p_config ->> 'poll_no_label', '')), ''),
+    nullif(btrim(coalesce(p_config ->> 'poll_title', ''), v_alb), ''),
+    nullif(btrim(coalesce(p_config ->> 'poll_yes_label', ''), v_alb), ''),
+    nullif(btrim(coalesce(p_config ->> 'poll_no_label', ''), v_alb), ''),
     now()
   )
   on conflict (id) do update set

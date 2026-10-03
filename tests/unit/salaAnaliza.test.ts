@@ -84,9 +84,25 @@ describe('istoricMembru', () => {
     expect(istoricMembru(cuSesiuni(['yes', 'no', 'yes', 'no', 'yes', 'no', 'yes', 'no']), 'ana').tendinta).toBe('egal');
   });
 
-  it('cel mult 20 de antrenamente, fără cele viitoare', () => {
+  it('cel mult 20 de antrenamente', () => {
     const ist = istoricMembru(cuSesiuni(Array(25).fill('yes')), 'ana');
     expect(ist.total).toBe(20);
+  });
+
+  it('fără antrenamentele viitoare și fără cele anulate, nici în istoric, nici în procent', () => {
+    const d = cuSesiuni(['yes', 'no']);
+    d.antrenamente.push(
+      { id: 'viitor', session_date: '2026-10-20', starts_at: '06:30', location: 'Parc', status: 'scheduled', poll_sent: true },
+      { id: 'anulat', session_date: '2026-10-02', starts_at: '06:30', location: 'Parc', status: 'cancelled', poll_sent: false }
+    );
+    d.raspunsuri.push(
+      { session_id: 'viitor', member_id: 'ana', response: 'yes', is_first_training: false, responded_at: 'x' },
+      { session_id: 'anulat', member_id: 'ana', response: 'no', is_first_training: false, responded_at: 'x' }
+    );
+    const ist = istoricMembru(d, 'ana');
+    expect(ist.istoric.map((h) => h.data)).not.toContain('2026-10-20');
+    expect(ist.istoric.map((h) => h.data)).not.toContain('2026-10-02');
+    expect(ist).toEqual(expect.objectContaining({ prezente: 1, total: 2, procent: 50 }));
   });
 });
 

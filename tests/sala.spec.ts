@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import type { Page, Request } from '@playwright/test';
+import type { Locator, Page, Request } from '@playwright/test';
 import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
 
 /**
@@ -24,8 +24,6 @@ const membri = ['Ana Rusu', 'Ion Ceban', 'Maria Lungu', 'Roma Admin'].map((nume,
   telegram_username: null,
   bot_dm_enabled: false,
   join_date: '2026-07-01',
-  phone: null,
-  email: null,
 }));
 
 const SALA = {
@@ -129,15 +127,34 @@ test.describe('grupul din parc', () => {
 test.describe('grupul din parc, pe telefon', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  for (const ecran of ['#grup-prezente', '#grup-membri', '#grup-analiza', '#grup-bot', '#desfasurare']) {
-    test(`${ecran}: fără scroll orizontal la 375px`, async ({ page }) => {
+  // Fiecare ecran se verifică DUPĂ ce și-a randat datele: `main` e vizibil încă din
+  // starea „Se încarcă…", când nu e nimic care să poată ieși din pagină. Butonul
+  // numit e cel principal al ecranului și trebuie să rămână apăsabil pe telefon.
+  const ecrane: [string, (p: Page) => Locator, (p: Page) => Locator][] = [
+    ['#grup-prezente', (p) => p.getByText('Antrenamentul următor'), (p) => p.getByRole('button', { name: 'Anulează antrenamentul' })],
+    ['#grup-membri', (p) => p.getByRole('heading', { name: 'Membrii' }), (p) => p.getByRole('button', { name: 'Editează' }).first()],
+    ['#grup-analiza', (p) => p.getByRole('heading', { name: 'Fiecare antrenament' }), (p) => p.getByRole('button', { name: 'Istoric' }).first()],
+    ['#grup-bot', (p) => p.getByText('Textul sondajului'), (p) => p.getByRole('button', { name: 'Trimite sondajul acum' })],
+  ];
+
+  for (const [ecran, gata, principal] of ecrane) {
+    test(`${ecran}: fără scroll orizontal la 375px, cu butonul principal apăsabil`, async ({ page }) => {
       await deschideAdminul(page, ecran);
-      await expect(page.locator('main')).toBeVisible();
-      await page.waitForTimeout(300);
+      await expect(gata(page)).toBeVisible();
       const lat = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(lat).toBeLessThanOrEqual(375);
+      const cutie = await principal(page).boundingBox();
+      expect(cutie?.height ?? 0).toBeGreaterThanOrEqual(32);
+      expect((cutie?.x ?? 0) + (cutie?.width ?? 0)).toBeLessThanOrEqual(375);
     });
   }
+
+  test('#desfasurare: fără scroll orizontal la 375px, cu cardul grupului', async ({ page }) => {
+    await deschideAdminul(page, '#desfasurare');
+    await expect(page.getByLabel('Grupul din parc')).toBeVisible();
+    const lat = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(lat).toBeLessThanOrEqual(375);
+  });
 
   test('pe „Prezențe", butoanele de marcare rămân apăsabile', async ({ page }) => {
     await deschideAdminul(page, '#grup-prezente');

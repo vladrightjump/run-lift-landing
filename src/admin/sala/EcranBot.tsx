@@ -114,7 +114,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
             ? 'Botul nu răspunde'
             : stare.tip === 'oprit'
               ? 'Botul e oprit'
-              : 'Botul merge'}
+              : 'Botul e pornit'}
         </p>
         <p className="admin-sala-cand">
           {stare.tip === 'nu-raspunde'
@@ -125,6 +125,14 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
                 ? `Următorul sondaj: ${dataLunga(sondaj.data)} la ${sondaj.ora}, pentru antrenamentul de ${numeZi(sondaj.antrenament)}.`
                 : 'Niciun sondaj programat: alege zilele mai jos.'}
         </p>
+        {stare.tip === 'normal' && (
+          <p className="admin-config-hint">
+            {stare.ultimaExecutata
+              ? `Nicio comandă blocată. Ultima executată de bot: ${ziLunaOra(stare.ultimaExecutata)}.`
+              : 'Nicio comandă blocată.'}{' '}
+            Dacă ai nevoie de o dovadă că botul rulează acum, trimite rezumatul: pleacă doar la admini.
+          </p>
+        )}
         <button
           type="button"
           className={salvat.enabled ? 'admin-btn-ghost' : 'admin-btn-accent'}
@@ -165,8 +173,9 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
         <fieldset className="admin-config-grup">
           <legend>Textul sondajului</legend>
           <p className="admin-config-hint">
-            Gol înseamnă textul de acum. O schimbare ajunge doar la sondajul următor; unul care e deja
-            în grup își păstrează textul.
+            Gol înseamnă textul de acum. Botul de azi trimite încă textul fix: cel de aici intră în
+            sondaj abia după actualizarea botului, anunțată separat. De atunci, o schimbare ajunge
+            la sondajul următor, iar unul deja în grup își păstrează textul.
           </p>
           <div className="admin-sala-text-sondaj">
             <div>

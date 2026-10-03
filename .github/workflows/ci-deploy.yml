@@ -111,6 +111,35 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # Testele și `tsc` nu pornesc botul: un import care cade abia la rulare
+      # (ESM fără `.js`, o dependență lipsă) ar trece verde și ar ajunge pe
+      # Railway. Aici `dist/` pornește de-adevăratelea și trebuie să răspundă pe
+      # `/health`. Fără variabile de Telegram și cu o bază falsă: nu pleacă
+      # nimic nicăieri, iar clientul Supabase se construiește abia la primul tic.
+      - name: Botul construit pornește și răspunde pe /health
+        env:
+          PORT: '3999'
+          SUPABASE_URL: http://127.0.0.1:9
+          SUPABASE_SERVICE_ROLE_KEY: ci-fara-cheie
+        run: |
+          node dist/index.js > pornire.log 2>&1 &
+          PID=$!
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:3999/health; then
+              kill "$PID"
+              exit 0
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              echo "Botul s-a oprit la pornire:"
+              cat pornire.log
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "Botul n-a răspuns pe /health în 20 de secunde:"
+          cat pornire.log
+          kill "$PID"
+          exit 1
 
   deploy:
     name: Deploy Vercel + verificare live

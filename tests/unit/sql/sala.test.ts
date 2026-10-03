@@ -260,6 +260,45 @@ describe('admin_sala_date', () => {
     expect(d.comenzi).toEqual([expect.objectContaining({ action: 'send_poll', status: 'pending' })]);
   });
 
+  it('membrii vin fără telefon și email: niciun ecran nu le folosește', async () => {
+    await db.query(
+      `insert into public.members (full_name, phone, email) values ('Maria', '069123456', 'maria@x.ro')`
+    );
+    const d = await cheama<{ membri: Record<string, unknown>[] }>('admin_sala_date', ADMIN_TOKEN);
+    expect(Object.keys(d.membri[0]).sort()).toEqual([
+      'bot_dm_enabled',
+      'full_name',
+      'id',
+      'is_admin',
+      'join_date',
+      'status',
+      'telegram_user_id',
+      'telegram_username',
+    ]);
+  });
+
+  it('fereastra de 800 de zile și ultimele 30 de comenzi, cea mai nouă prima', async () => {
+    const m = await membru('Ana');
+    const vechi = await antrenament(await ziua(-801));
+    const inFereastra = await antrenament(await ziua(-799));
+    await raspuns(vechi, m, 'yes');
+    await raspuns(inFereastra, m, 'yes');
+    await db.query(
+      `insert into public.bot_actions (action, created_at)
+       select 'send_summary', now() - make_interval(mins => g) from generate_series(1, 31) g`
+    );
+    const d = await cheama<{
+      antrenamente: { id: string }[];
+      raspunsuri: { session_id: string }[];
+      comenzi: { created_at: string }[];
+    }>('admin_sala_date', ADMIN_TOKEN);
+    expect(d.antrenamente.map((a) => a.id)).toEqual([inFereastra]);
+    expect(d.raspunsuri.map((r) => r.session_id)).toEqual([inFereastra]);
+    expect(d.comenzi).toHaveLength(30);
+    const ore = d.comenzi.map((c) => c.created_at);
+    expect([...ore].sort().reverse()).toEqual(ore);
+  });
+
   it('nu întoarce nicio plată', async () => {
     const m = await membru('Maria');
     // O sumă pe care n-o poate conține întâmplător un uuid sau o dată.
@@ -338,6 +377,23 @@ describe('admin_sala_set_prezenta', () => {
     expect(j.rows).toEqual([{ response: 'clear', source: 'manual' }]);
   });
 
+  it('refuză un membru inexistent', async () => {
+    const s = await antrenament('2026-10-06');
+    await expect(
+      cheama('admin_sala_set_prezenta', ADMIN_TOKEN, s, '33333333-3333-3333-3333-333333333333', 'yes')
+    ).rejects.toThrow('membru_inexistent');
+  });
+
+  it('un „yes” repetat pe același antrenament nu dublează rândul și rămâne prim antrenament', async () => {
+    const m = await membru('Ion');
+    const s = await antrenament('2026-10-06');
+    await cheama('admin_sala_set_prezenta', ADMIN_TOKEN, s, m, 'yes');
+    await cheama('admin_sala_set_prezenta', ADMIN_TOKEN, s, m, 'yes');
+    const a = await db.query(`select response, is_first_training from public.attendance`);
+    expect(a.rows).toEqual([{ response: 'yes', is_first_training: true }]);
+    expect((await db.query(`select 1 from public.attendance_log`)).rows).toHaveLength(2);
+  });
+
   it('refuză un răspuns necunoscut și un antrenament inexistent', async () => {
     const m = await membru('Ion');
     const s = await antrenament('2026-10-06');
@@ -371,6 +427,17 @@ describe('admin_sala_seteaza_antrenament', () => {
     await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true);
     const r = await db.query(`select starts_at::text, status from public.training_sessions`);
     expect(r.rows).toEqual([{ starts_at: '06:30:00', status: 'cancelled' }]);
+  });
+
+  it('refuză o zi lipsă', async () => {
+    await expect(cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, null, true)).rejects.toThrow('data_invalida');
+  });
+
+  it('reactivarea nu atinge un antrenament ținut deja', async () => {
+    await db.query(`insert into public.training_sessions (session_date, status) values ('2026-10-01', 'done')`);
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-01', false);
+    const r = await db.query(`select status from public.training_sessions`);
+    expect(r.rows).toEqual([{ status: 'done' }]);
   });
 
   it('reactivarea pune ziua înapoi pe scheduled', async () => {
@@ -418,6 +485,15 @@ describe('admin_sala_salveaza_config', () => {
     ['locul gol', { location: '   ' }, 'loc_invalid'],
     ['titlul prea lung', { poll_title: 'x'.repeat(81) }, 'text_prea_lung'],
     ['eticheta prea lungă', { poll_yes_label: 'x'.repeat(33) }, 'text_prea_lung'],
+    ['eticheta „nu" prea lungă', { poll_no_label: 'x'.repeat(33) }, 'text_prea_lung'],
+    ['zilele care nu-s listă', { poll_days: 3 }, 'zi_invalida'],
+    ['zilele lipsă', { summary_days: null }, 'zi_invalida'],
+    ['o zi scrisă ca text', { poll_days: ['1'] }, 'zi_invalida'],
+    ['ora lipsă', { training_time: null }, 'ora_invalida'],
+    ['locul prea lung', { location: 'x'.repeat(121) }, 'loc_invalid'],
+    ['pornit scris ca text', { enabled: 'da' }, 'config_invalid'],
+    ['pragul cu virgulă', { reminder_threshold: 1.5 }, 'prag_invalid'],
+    ['pragul peste 999', { reminder_threshold: 1000 }, 'prag_invalid'],
   ])('refuză %s și lasă rândul neschimbat', async (_, peste, eroare) => {
     await cheama('admin_sala_salveaza_config', ADMIN_TOKEN, JSON.stringify(configValid()));
     const inainte = await randBotConfig();
@@ -437,6 +513,28 @@ describe('admin_sala_salveaza_config', () => {
 
   it('prima salvare, fără rând, scrie și `enabled`', async () => {
     await cheama('admin_sala_salveaza_config', ADMIN_TOKEN, JSON.stringify(configValid({ enabled: false })));
+    expect(await randBotConfig()).toEqual(expect.objectContaining({ enabled: false }));
+  });
+
+  it('un text doar din spații albe (și tab-uri) înseamnă textul de azi', async () => {
+    await cheama(
+      'admin_sala_salveaza_config',
+      ADMIN_TOKEN,
+      JSON.stringify(configValid({ poll_title: ' \t ', location: '\tParcul Valea Morilor\t' }))
+    );
+    expect(await randBotConfig()).toEqual(
+      expect.objectContaining({ poll_title: null, location: 'Parcul Valea Morilor' })
+    );
+  });
+
+  it('refuză un corp care nu e obiect', async () => {
+    await expect(cheama('admin_sala_salveaza_config', ADMIN_TOKEN, JSON.stringify([1]))).rejects.toThrow(
+      'config_invalid'
+    );
+  });
+
+  it('comutatorul fără rând de setări îl creează, ca să nu mintă că a oprit botul', async () => {
+    await cheama('admin_sala_porneste_bot', ADMIN_TOKEN, false);
     expect(await randBotConfig()).toEqual(expect.objectContaining({ enabled: false }));
   });
 
@@ -555,6 +653,32 @@ describe('membrii', () => {
     await expect(cheama('admin_sala_salveaza_membru', ADMIN_TOKEN, m, ...rest)).rejects.toThrow(eroare);
   });
 
+  it.each([
+    ['un membru inexistent', 'membru_inexistent', true],
+    ['un id de Telegram sub 100', 'telegram_invalid', false],
+    ['un nume peste 80 de caractere', 'nume_invalid', false],
+  ])('refuză %s', async (_, eroare, inexistent) => {
+    const m = inexistent ? '33333333-3333-3333-3333-333333333333' : await membru('Ana');
+    const nume = eroare === 'nume_invalid' ? 'x'.repeat(81) : 'Ana';
+    const tg = eroare === 'telegram_invalid' ? 99 : null;
+    await expect(cheama('admin_sala_salveaza_membru', ADMIN_TOKEN, m, nume, tg, null, 'active', false)).rejects.toThrow(
+      eroare
+    );
+  });
+
+  it('legarea sau crearea dintr-un cont care nu (mai) e în listă e refuzată cu nume', async () => {
+    const m = await membru('Ana');
+    await expect(cheama('admin_sala_leaga_cont', ADMIN_TOKEN, 909, m)).rejects.toThrow('cont_inexistent');
+    await expect(cheama('admin_sala_membru_din_cont', ADMIN_TOKEN, 909, 'Dan')).rejects.toThrow('cont_inexistent');
+  });
+
+  it('unirea cu un membru inexistent e refuzată', async () => {
+    const a = await membru('Ana');
+    await expect(
+      cheama('admin_sala_uneste', ADMIN_TOKEN, a, '33333333-3333-3333-3333-333333333333')
+    ).rejects.toThrow('membru_inexistent');
+  });
+
   it('refuză un cont de Telegram legat deja de alt membru', async () => {
     await membru('Primul', 555);
     const al2lea = await membru('Al doilea');
@@ -618,6 +742,28 @@ describe('urma scrierilor', () => {
       'sala_pornire',
       'sala_comanda',
       'sala_scoatere',
+    ]);
+    expect(ev.every((e) => e.detaliu.admin === 'operator')).toBe(true);
+  });
+
+  it('și scrierile membrilor lasă urmă, cu numele adminului', async () => {
+    const a = await membru('Ana', 555);
+    const b = await membru('Ana R.');
+    await db.query(`insert into public.telegram_unmatched (telegram_user_id) values (909), (910)`);
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true);
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', false);
+    await cheama('admin_sala_salveaza_membru', ADMIN_TOKEN, a, 'Ana Rusu', 555, null, 'active', false);
+    await cheama('admin_sala_leaga_cont', ADMIN_TOKEN, 909, b);
+    await cheama('admin_sala_membru_din_cont', ADMIN_TOKEN, 910, 'Dan');
+    await cheama('admin_sala_uneste', ADMIN_TOKEN, a, b);
+    const ev = await evenimente();
+    expect(ev.map((e) => e.tip)).toEqual([
+      'sala_anulare',
+      'sala_reactivare',
+      'sala_membru',
+      'sala_legare',
+      'sala_membru_nou',
+      'sala_unire',
     ]);
     expect(ev.every((e) => e.detaliu.admin === 'operator')).toBe(true);
   });

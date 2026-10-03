@@ -133,3 +133,76 @@ describe('Membrii grupului', () => {
     expect(screen.queryByRole('button', { name: /Șterge|Elimină/ })).toBeNull();
   });
 });
+
+describe('Membrii grupului — editarea, conturile, unirea', () => {
+  it('editarea trimite numele, contul, starea și adminul', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Ion');
+    fireEvent.click(within(randul('Ion')).getByRole('button', { name: 'Editează' }));
+    const dialog = within(screen.getByRole('dialog'));
+    fireEvent.change(dialog.getByLabelText('Nume'), { target: { value: 'Ion Ceban' } });
+    fireEvent.change(dialog.getByLabelText('Utilizator Telegram'), { target: { value: 'ion_c' } });
+    fireEvent.change(dialog.getByLabelText('Stare'), { target: { value: 'paused' } });
+    fireEvent.click(dialog.getByRole('button', { name: 'Salvează' }));
+    await waitFor(() =>
+      expect(api.salveazaMembru).toHaveBeenCalledWith('tok', 'ion', {
+        nume: 'Ion Ceban',
+        telegramId: 1003,
+        telegramUser: 'ion_c',
+        status: 'paused',
+        admin: false,
+      })
+    );
+  });
+
+  it.each([
+    ['un nume de o literă', 'Nume', 'I'],
+    ['un id de Telegram cu litere', 'Id Telegram', '12a'],
+    ['un utilizator cu caractere HTML', 'Utilizator Telegram', '<b>'],
+  ])('%s blochează salvarea', async (_, camp, valoare) => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Ion');
+    fireEvent.click(within(randul('Ion')).getByRole('button', { name: 'Editează' }));
+    const dialog = within(screen.getByRole('dialog'));
+    fireEvent.change(dialog.getByLabelText(camp), { target: { value: valoare } });
+    expect((dialog.getByRole('button', { name: 'Salvează' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('un cont nelegat devine membru nou, cu numele din Telegram', async () => {
+    api.incarcaSala.mockResolvedValue(
+      dateSala({
+        necunoscuti: [{ telegram_user_id: 909, username: 'nou', first_name: 'Dan', last_name: null, created_at: 'x' }],
+      })
+    );
+    randeaza();
+    fireEvent.click(await screen.findByRole('button', { name: 'Membru nou' }));
+    await waitFor(() => expect(api.membruDinCont).toHaveBeenCalledWith('tok', 909, 'Dan'));
+  });
+
+  it('unirea spune cine rămâne și trimite perechea aleasă', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Ion');
+    fireEvent.click(screen.getByRole('button', { name: /Unește doi membri/ }));
+    const dialog = within(screen.getByRole('dialog'));
+    fireEvent.change(dialog.getByLabelText('Păstrează'), { target: { value: 'ana' } });
+    fireEvent.change(dialog.getByLabelText('Duplicatul (dispare)'), { target: { value: 'ion' } });
+    expect(screen.getByRole('dialog').textContent).toMatch(/Rămâne.*Ana/);
+    fireEvent.click(dialog.getByRole('button', { name: 'Unește' }));
+    await waitFor(() => expect(api.unesteMembri).toHaveBeenCalledWith('tok', 'ana', 'ion'));
+  });
+
+  it('textul conturilor nelegate nu mai spune că voturile lor nu se numără', async () => {
+    api.incarcaSala.mockResolvedValue(
+      dateSala({
+        necunoscuti: [{ telegram_user_id: 909, username: 'nou', first_name: 'Dan', last_name: null, created_at: 'x' }],
+      })
+    );
+    randeaza();
+    const sectiune = (await screen.findByRole('heading', { name: /Conturi de Telegram nelegate/ })).closest('section') as HTMLElement;
+    expect(sectiune.textContent).toContain('Au intrat în grup');
+    expect(sectiune.textContent).not.toContain('nu se numără');
+  });
+});

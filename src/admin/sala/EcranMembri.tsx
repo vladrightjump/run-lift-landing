@@ -19,9 +19,9 @@ import { useSala } from './useSala';
 /**
  * Membrii grupului — lista ținută la zi (R8, R9, F2).
  *
- * Trei treburi, în ordinea în care apar: conturile de Telegram pe care botul nu
- * le-a recunoscut (au votat, dar voturile nu se numără nimănui), lista însăși
- * și scoaterea cuiva din grup. Ștergerea definitivă NU există (KTD7): ar șterge
+ * Trei treburi, în ordinea în care apar: conturile de Telegram nelegate (oameni
+ * intrați în grup pe care botul nu-i știe încă), lista însăși și scoaterea
+ * cuiva din grup. Ștergerea definitivă NU există (KTD7): ar șterge
  * și istoricul de prezențe; starea „ieșit", scoaterea și unirea duplicatelor
  * acoperă aceleași nevoi.
  */
@@ -92,8 +92,8 @@ export const EcranMembri = () => {
             Conturi de Telegram nelegate <span className="admin-tab-alert">{date.necunoscuti.length}</span>
           </h3>
           <p className="admin-config-hint">
-            Au votat în grup, dar botul nu știe cine sunt, deci voturile lor nu se numără. Leagă
-            fiecare cont de un membru — sau fă din el un membru nou.
+            Au intrat în grup, dar nu sunt legați de niciun membru. Cine votează devine membru de la
+            sine; restul îi legi de aici de un membru existent — sau faci din cont un membru nou.
           </p>
           <ul className="admin-sala-lista">
             {date.necunoscuti.map((c) => (
