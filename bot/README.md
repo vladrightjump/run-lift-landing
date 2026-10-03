@@ -41,46 +41,57 @@ necunoscut care votează devine membru pe loc, cu numele din Telegram —, pune 
 
 ## Deploy (Railway)
 
-Merge-ul în `main` e deploy-ul, ca la site — dar doar dacă trec verificările:
+Merge-ul în `main` e deploy-ul, ca la site — dar doar dacă trec verificările. Serviciul e
+descris în cod, în **`.railway/railway.ts`** (Infrastructure as Code, la rădăcina repo-ului):
 
 - serviciul `bot` din proiectul Railway `parkgym-telegram-bot` construiește din
-  `vladrightjump/run-lift-landing`, branch `main`;
-- **directorul rădăcină** `/bot`, **calea urmărită** `/bot/**` (un commit care atinge doar
-  site-ul nu repornește botul);
-- **calea fișierului de configurare** `/bot/railway.json` — Railway nu-l caută singur în
-  directorul rădăcină al serviciului;
-- **Wait for CI** pornit: deploy-ul așteaptă job-ul `bot` din `.github/workflows/ci-deploy.yml`
-  (Node 22: teste, build și o pornire reală a `dist/` care trebuie să răspundă pe `/health`).
+  `vladrightjump/run-lift-landing`, branch `main`, **directorul rădăcină** `/bot`;
+- **calea urmărită** `/bot/**`: un commit care atinge doar site-ul nu repornește botul;
+- **Wait for CI** (`checkSuites`): deploy-ul așteaptă toate job-urile din
+  `.github/workflows/ci-deploy.yml` — pentru bot: teste, build, o pornire reală a `dist/` care
+  trebuie să răspundă pe `/health` și compilarea lui `.railway/`;
+- builderul `RAILPACK`, cu Node din `engines` (`24.x`, LTS-ul din `.nvmrc`);
+- **verificarea de sănătate** `/health`: un deploy care nu pornește nu-l înlocuiește pe cel care merge.
 
-`railway.json` ține în cod și calea urmărită (`/bot/**`) și verificarea de sănătate
-(`/health`): un deploy care nu pornește nu-l înlocuiește pe cel care merge.
+Fișierul NU e citit la deploy: îl aplică CLI-ul Railway, explicit. Orice schimbare în el
+trece prin `railway config plan` (doar citește și arată diferențele) și apoi
+`railway config apply`. „Config as Code" (`railway.json`) nu mai e folosit: Railway nu-l mai
+citește după 1 decembrie 2026, iar un serviciu nu poate fi condus de ambele.
 
-**De verificat la mutare (U9):**
+**Mutarea (U9), într-o fereastră fără sondaj (vineri–duminică):**
 
-- `railway.json` cere builderul `NIXPACKS`, copiat din repo-ul vechi, dar serviciul arată
-  `RAILPACK` în setări (3 octombrie 2026). În detaliile primului deploy din acest repo,
-  verifică ce builder a folosit Railway și că versiunea de Node e 22. Dacă nu e, scoate
-  `builder` din `railway.json`, ca să rămână cel din setări.
-- **Railway a declarat „Config as Code" (`railway.json`) învechit:** fișierele merg pentru
-  serviciile existente doar până pe **1 decembrie 2026**. Până atunci, setările din fișier
-  (calea urmărită, `/health`, comenzile) trebuie mutate în setările serviciului sau în
-  „Infrastructure as Code" — altfel dispar fără niciun semn.
+```bash
+brew install railway          # CLI ≥ 5.42.1 (motorul IaC e în CLI)
+railway login                 # o dată, în browser
+railway link                  # proiectul parkgym-telegram-bot, mediul production
+railway config plan           # din rădăcina repo-ului
+```
+
+Planul trebuie să arate doar schimbările de mai sus pe `service.bot`: sursa (repo, `/bot`,
+`checkSuites`), builderul, comenzile, calea urmărită și `/health`. **Nicio ștergere** — nici de
+serviciu, nici de variabilă (toate nouă sînt `preserve()`). Dacă CLI-ul spune că serviciul e încă
+condus de `railway.json` (repo-ul vechi îl are la rădăcină), schimbă întâi sursa din panou
+(Settings → Source: acest repo, `main`, rădăcina `/bot`, câmpul „Railway Config File" gol),
+apoi rulează din nou `plan`. Când planul e curat: `railway config apply`, apoi verifică
+`/health`, jurnalele (planificatorul pornit) și webhook-ul (`getWebhookInfo`). În detaliile
+deploy-ului: builder Railpack, Node 24.
 
 Variabile de mediu (pe serviciu, nu în repo): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`,
 `TELEGRAM_GROUP_CHAT_ID`, `TELEGRAM_ADMIN_CHAT_IDS`, `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, `TZ=Europe/Chisinau`, `PUBLIC_URL`. Node ≥ 22 vine din
-`engines` în `package.json` (cu Node 20, `supabase-js` cade la rulare).
+`SUPABASE_SERVICE_ROLE_KEY`, `TZ=Europe/Chisinau`, `PUBLIC_URL`. `NIXPACKS_NODE_VERSION` nu mai
+e citit de Railpack, dar rămâne până la U11: întoarcerea pe repo-ul vechi (al cărui
+`railway.json` cere NIXPACKS) are nevoie de el.
 
 **Întoarcere:** sursa serviciului se repune pe `vladrightjump/parkgym-telegram-bot`, `main`,
-rădăcina goală. Domeniul, variabilele și webhook-ul sînt ale serviciului, deci rămân.
+rădăcina goală (din panou). Domeniul, variabilele și webhook-ul sînt ale serviciului, deci rămân.
 
 **Token nou:** după schimbarea `TELEGRAM_BOT_TOKEN`, webhook-ul se reînregistrează o dată
 (`npm run set-webhook`, cu `.env` completat), apoi se verifică cu `getWebhookInfo`.
 
 ## Local
 
-Cu Node 22 (`engines` din `package.json`): pe Node 20, testul `smoke.test.ts` pică exact cum
-ar pica botul pe Railway.
+Cu Node 24, din `.nvmrc` (`fnm use` / `nvm use` la rădăcina repo-ului). Pe Node 20, testul
+`smoke.test.ts` pică exact cum ar pica botul pe Railway.
 
 ```bash
 cd bot

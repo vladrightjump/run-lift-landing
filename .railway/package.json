@@ -1,0 +1,16 @@
+{
+  "name": "railway-config",
+  "private": true,
+  "description": "Serviciul Railway al botului, ca Infrastructure as Code. Doar SDK-ul pentru `railway config plan/apply` și verificarea tipurilor.",
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "railway": "3.12.0",
+    "typescript": "^5.9.0"
+  }
+}

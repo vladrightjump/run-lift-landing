@@ -45,8 +45,10 @@ ce găsește, deci construiește întâi.
 ## Botul de Telegram (job-ul `bot`)
 
 Al doilea job din `ci-deploy.yml`, independent de deploy-ul Vercel: instalează, testează și
-construiește `bot/` pe Node 22. Railway nu ia singur codul nou: serviciul `bot` are „Wait for
-CI", deci deploy-ul botului așteaptă ca TOATE job-urile de pe commit să treacă. Un `bot`
+construiește `bot/` pe Node-ul din `.nvmrc` (24, ca tot pipeline-ul), îl pornește o dată ca să
+răspundă pe `/health` și compilează `.railway/railway.ts`. Railway nu ia singur codul nou:
+serviciul `bot` are „Wait for CI", deci deploy-ul botului așteaptă ca TOATE job-urile de pe
+commit să treacă. Un `bot`
 roșu lasă botul pe versiunea de dinainte; nu-l oprește. Un commit care nu atinge `bot/` nu
 creează deloc un deploy Railway (calea urmărită e `/bot/**`). Vezi `bot/README.md`.
 

@@ -36,6 +36,9 @@ run-lift-landing/
 
 ## Rulare locală
 
+Node 24 (LTS-ul curent), din `.nvmrc` — același în CI, pe Vercel și pe Railway (`engines`).
+Cu `fnm` sau `nvm`, `fnm use` / `nvm use` la rădăcina repo-ului.
+
 ```bash
 npm install
 npm run dev        # dev server pe http://localhost:5173
@@ -94,7 +97,8 @@ care păzesc ambele. `VITE_TURNSTILE_SITE_KEY` e obligatorie la build-ul de prod
 
 Botul grupului din parc (sondajul „vii mâine?", voturile, rezumatul, comenzile din admin)
 trăiește în `bot/` și rulează pe **Railway**, nu pe Vercel. Merge-ul în `main` îl deployează
-doar dacă trece job-ul `bot` din CI (Railway are „Wait for CI"). Detalii, variabile și
+doar dacă trece job-ul `bot` din CI (Railway are „Wait for CI"). Serviciul Railway e descris
+în `.railway/railway.ts` și se schimbă cu `railway config plan` / `apply`. Detalii, variabile și
 întoarcere: **`bot/README.md`**. Se configurează din `/admin` → „Botul de Telegram".
 
 ## Teste
