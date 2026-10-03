@@ -1,0 +1,4 @@
+# Botul de Telegram rulează pe Railway, nu pe Vercel. Build-ul site-ului nu-l
+# atinge (tsconfig, knip și vitest au globuri care nu-l prind); fără linia asta
+# s-ar urca degeaba la fiecare deploy.
+bot/

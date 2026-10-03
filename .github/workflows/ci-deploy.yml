@@ -91,6 +91,27 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # Botul de Telegram (`bot/`), deployat pe Railway din acest repo. Nu e un
+  # pas al deploy-ului Vercel: serviciul Railway are „Wait for CI" pornit, deci
+  # așteaptă ca TOATE job-urile de pe commit să treacă înainte să ia codul nou.
+  # Node 22, nu 20: `supabase-js` cade pe Node 20 la rulare (vezi bot/README.md).
+  bot:
+    name: Botul de Telegram (teste + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: bot/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
   deploy:
     name: Deploy Vercel + verificare live
     needs: test

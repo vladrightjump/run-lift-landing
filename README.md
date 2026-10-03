@@ -90,6 +90,13 @@ Git-connected: push pe `main` (GitHub `vladrightjump/run-lift-landing`) → Verc
 permită originul Supabase curent **și `challenges.cloudflare.com`** (Turnstile) — există teste
 care păzesc ambele. `VITE_TURNSTILE_SITE_KEY` e obligatorie la build-ul de producție.
 
+## Botul de Telegram (`bot/`)
+
+Botul grupului din parc (sondajul „vii mâine?", voturile, rezumatul, comenzile din admin)
+trăiește în `bot/` și rulează pe **Railway**, nu pe Vercel. Merge-ul în `main` îl deployează
+doar dacă trece job-ul `bot` din CI (Railway are „Wait for CI"). Detalii, variabile și
+întoarcere: **`bot/README.md`**. Se configurează din `/admin` → „Botul de Telegram".
+
 ## Teste
 
 ```bash
