@@ -242,9 +242,11 @@ De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
 
 ## Documente
 
-- **`docs/FLUXURI.md`** — toate fluxurile de utilizator (public + `/admin`), cu diagrame.
+- **`docs/FLUXURI.md`** — toate fluxurile de utilizator (public + `/admin`, inclusiv grupul din parc), cu diagrame.
 - **`GHID-EDITIE-NOUA.md`** — runbook pas cu pas pentru o ediție nouă.
-- **`MIGRATIONS.md`** — migrările DB + granița față de gym-app/bot.
+- **`GHID-GRUPUL-DIN-PARC.md`** — grupul din parc din `/admin`: prezențe, membri, analiză, botul.
+- **`bot/README.md`** — botul de Telegram ca serviciu: deploy pe Railway, mutarea, întoarcerea.
+- **`MIGRATIONS.md`** — migrările DB + granița față de `public` (tabelele grupului din parc).
 - **`ANTI-BOT.md`** — Turnstile + lockdown RLS: cum funcționează, configurare, runbook de deploy.
 - **`ERROR-HANDLING.md`** — tratarea erorilor, monitoring și garda CSP↔config la build.
 - **`CI-CD.md`** — pipeline-ul de testare + deploy Vercel verificat pe live.
