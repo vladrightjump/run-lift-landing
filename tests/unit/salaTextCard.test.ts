@@ -24,6 +24,7 @@ const urmator = (peste: Partial<NonNullable<SalaRezumat['urmatorul']>> = {}) => 
   starts_at: '06:30',
   location: 'Parc',
   status: 'scheduled' as const,
+  poll_sent: true,
   vin: 12,
   nu_vin: 3,
   ...peste,
@@ -60,6 +61,28 @@ describe('textCard', () => {
     const t = textCard(rezumat({ pornit: false, urmatorul: urmator({ status: 'cancelled' }) }), ACUM);
     expect(t.stare).toBe('anulat');
     expect(t.titlu).toBe('Joi, 8 oct — anulat');
+  });
+
+  it('Covers AE4. rând programat, dar sondajul n-a plecat (reactivat): nu „0 vin", ci când pleacă', () => {
+    const t = textCard(rezumat({ urmatorul: urmator({ poll_sent: false, vin: 0, nu_vin: 0 }) }), ACUM);
+    expect(t.stare).toBe('asteapta-sondajul');
+    expect(t.titlu).toBe('Următorul: Joi, 8 oct, 06:30');
+    expect(t.detaliu).toBe('Sondajul pleacă miercuri la 12:00.');
+  });
+
+  it('rând programat fără sondaj, pentru o zi pe care orarul n-o acoperă: spune doar că n-a plecat', () => {
+    const t = textCard(
+      rezumat({ urmatorul: urmator({ session_date: '2026-10-10', poll_sent: false, vin: 0, nu_vin: 0 }) }),
+      ACUM
+    );
+    expect(t.stare).toBe('asteapta-sondajul');
+    expect(t.detaliu).toBe('Sondajul n-a plecat încă.');
+  });
+
+  it('voturi marcate de mână înainte de sondaj se numără', () => {
+    const t = textCard(rezumat({ urmatorul: urmator({ poll_sent: false, vin: 2, nu_vin: 0 }) }), ACUM);
+    expect(t.stare).toBe('cu-raspunsuri');
+    expect(t.detaliu).toBe('2 vin · 0 nu');
   });
 
   it('fără zile de sondaj: spune unde se aleg', () => {

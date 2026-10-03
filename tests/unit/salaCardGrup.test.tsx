@@ -27,7 +27,7 @@ describe('cardul grupului de pe pornire', () => {
       pornit: true,
       poll_days: [1, 3],
       poll_time: '12:00',
-      urmatorul: { session_date: '2026-10-08', starts_at: '06:30', location: 'Parc', status: 'scheduled', vin: 12, nu_vin: 3 },
+      urmatorul: { session_date: '2026-10-08', starts_at: '06:30', location: 'Parc', status: 'scheduled', poll_sent: true, vin: 12, nu_vin: 3 },
     });
     randeaza();
     const card = await screen.findByLabelText('Grupul din parc');

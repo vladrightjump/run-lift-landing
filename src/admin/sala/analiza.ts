@@ -1,5 +1,6 @@
 import type { SalaDate, SalaMembru } from '../../lib/salaApi';
 import type { Breakdown, StatSession } from './statistici';
+import { RO_DOW, ziuaSaptamanii } from './sondaj';
 
 /**
  * Calculele ecranului „Analiza prezențelor" care nu stau deja în `statistici.ts`.
@@ -107,7 +108,6 @@ export const istoricMembru = (d: SalaDate, membru: string): IstoricMembru => {
 };
 
 const ORDINE_ZILE = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
-const NUME_ZILE = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
 
 /** Prezența medie (procent „vin") pe zile ale săptămânii, de luni încolo. */
 export const peZileleSaptamanii = (
@@ -116,8 +116,7 @@ export const peZileleSaptamanii = (
 ): { zi: string; procent: number }[] => {
   const pe = new Map<string, number[]>();
   sesiuni.forEach((s, i) => {
-    const [y, l, z] = s.session_date.split('-').map(Number);
-    const zi = NUME_ZILE[new Date(Date.UTC(y, l - 1, z)).getUTCDay()];
+    const zi = RO_DOW[ziuaSaptamanii(s.session_date)];
     pe.set(zi, [...(pe.get(zi) ?? []), defalcari[i].yesPct]);
   });
   return [...pe.entries()]

@@ -39,6 +39,10 @@ export const antrenamentulUrmator = (d: SalaDate): SalaAntrenament | null =>
     .filter((a) => a.status !== 'cancelled' && a.session_date >= d.azi)
     .sort((a, b) => a.session_date.localeCompare(b.session_date))[0] ?? null;
 
+/** Zilele de antrenament anulate (`YYYY-MM-DD`), pentru `urmatorulSondaj`. */
+export const zileAnulate = (d: SalaDate): Set<string> =>
+  new Set(d.antrenamente.filter((a) => a.status === 'cancelled').map((a) => a.session_date));
+
 export type CineVine = {
   vin: SalaMembru[];
   nuVin: SalaMembru[];

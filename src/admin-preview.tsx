@@ -257,6 +257,7 @@ const rezumatSala = {
     starts_at: urmatorulGrup.starts_at,
     location: urmatorulGrup.location,
     status: urmatorulGrup.status,
+    poll_sent: urmatorulGrup.poll_sent,
     vin: raspunsuriGrup.filter((r) => r.session_id === urmatorulGrup.id && r.response === 'yes').length,
     nu_vin: raspunsuriGrup.filter((r) => r.session_id === urmatorulGrup.id && r.response === 'no').length,
   },

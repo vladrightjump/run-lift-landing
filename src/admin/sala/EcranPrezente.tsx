@@ -7,8 +7,8 @@ import {
   type SalaMembru,
 } from '../../lib/salaApi';
 import { Dialog } from '../eventTab/Dialog';
-import { antrenamentulUrmator, cineVine, raspunsul } from './model';
-import { urmatorulSondaj, ziSiData } from './sondaj';
+import { antrenamentulUrmator, cineVine, raspunsul, zileAnulate } from './model';
+import { dataLunga, frazaSondaj, urmatorulSondaj } from './sondaj';
 import { useSala } from './useSala';
 
 /**
@@ -24,8 +24,6 @@ import { useSala } from './useSala';
  */
 
 type Raspuns = 'yes' | 'no' | 'clear';
-
-const dataLunga = (iso: string) => ziSiData(iso) ?? iso;
 
 export const EcranPrezente = () => {
   const { date, eroare, ocupat, fa } = useSala();
@@ -194,10 +192,8 @@ const AntrenamentUrmator = ({ date, antrenament: a, ocupat, onMarcheaza, onAnule
   const sondaj = a.poll_sent
     ? 'Sondajul a plecat în grup.'
     : (() => {
-        const s = urmatorulSondaj(date.config?.poll_days, date.config?.poll_time, new Date());
-        return s && s.antrenament === a.session_date
-          ? `Sondajul pleacă ${dataLunga(s.data).split(',')[0].toLowerCase()} la ${s.ora}.`
-          : 'Sondajul n-a plecat încă.';
+        const s = urmatorulSondaj(date.config?.poll_days, date.config?.poll_time, new Date(), zileAnulate(date));
+        return s && s.antrenament === a.session_date ? frazaSondaj(s) : 'Sondajul n-a plecat încă.';
       })();
 
   return (
@@ -330,7 +326,7 @@ const RandMembru = ({ membru: m, zi, sesiune, date, ocupat, onMarcheaza }: Props
 
 /** Fără antrenament creat: botul îl creează când trimite sondajul. */
 const FaraAntrenament = ({ date }: { date: SalaDate }) => {
-  const s = urmatorulSondaj(date.config?.poll_days, date.config?.poll_time, new Date());
+  const s = urmatorulSondaj(date.config?.poll_days, date.config?.poll_time, new Date(), zileAnulate(date));
   return (
     <section className="admin-sala-urmator" aria-labelledby="sala-urmator">
       <p className="admin-saptamanal-eticheta">Antrenamentul următor</p>
@@ -341,7 +337,7 @@ const FaraAntrenament = ({ date }: { date: SalaDate }) => {
         {date.config?.enabled === false
           ? 'Botul e oprit, deci sondajele programate nu pleacă.'
           : s
-            ? `Sondajul pleacă ${dataLunga(s.data).split(',')[0].toLowerCase()} la ${s.ora}; lista apare aici pe măsură ce votează lumea.`
+            ? `${frazaSondaj(s)} Lista apare aici pe măsură ce votează lumea.`
             : 'Alege zilele sondajului în „Botul de Telegram".'}
       </p>
     </section>

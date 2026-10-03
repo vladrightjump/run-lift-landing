@@ -2,6 +2,11 @@ import { useCallback, useState } from 'react';
 import { incarcaSala, refuzSala, MESAJE_REFUZ, type SalaDate } from '../../lib/salaApi';
 import { useAdminResource } from '../useAdminResource';
 import { useSesiuneAdmin } from '../adminSession';
+import { logClientError } from '../../lib/monitoring';
+import { isNetworkOrCspError, isTimeoutError } from '../../lib/supabase';
+
+const NU_STIM =
+  'Nu știm dacă a ajuns: legătura cu serverul s-a întrerupt. Verifică pe ecran (sau în „Ultimele comenzi") înainte să reîncerci.';
 
 /**
  * Datele grupului de antrenament, ținute proaspete, plus o singură cale de a
@@ -13,7 +18,13 @@ import { useSesiuneAdmin } from '../adminSession';
  *
  * `fa` e drumul comun pentru scrieri: cheamă serverul, spune în toast ce s-a
  * întâmplat — cu motivul serverului tradus, nu cu un „a apărut o eroare" —
- * și reîncarcă blocul, ca ecranul să arate starea de după.
+ * și reîncarcă blocul, ca ecranul să arate starea de după. Ecranul rămâne
+ * „ocupat" până ajung datele noi: altfel, butoanele se deblochează peste starea
+ * veche, iar un formular golit după salvare arată o clipă valorile de dinainte.
+ *
+ * O eroare pe care serverul n-o numește se trimite în monitorizare. Dacă e de
+ * rețea, nu știm dacă scrierea a ajuns: toastul spune să verifici înainte să
+ * reîncerci, ca o comandă pentru bot să nu plece de două ori.
  */
 export const useSala = () => {
   const { token, onAuthError, showToast } = useSesiuneAdmin();
@@ -33,15 +44,20 @@ export const useSala = () => {
     } catch (err) {
       if (!onAuthError(err)) {
         const motiv = refuzSala(err);
-        showToast({
-          kind: 'error',
-          msg: motiv ? MESAJE_REFUZ[motiv] : 'Nu s-a putut salva. Încearcă din nou.',
-        });
+        if (motiv) {
+          showToast({ kind: 'error', msg: MESAJE_REFUZ[motiv] });
+        } else {
+          logClientError('sala-scriere', err);
+          showToast({
+            kind: 'error',
+            msg: isNetworkOrCspError(err) || isTimeoutError(err) ? NU_STIM : 'Nu s-a putut salva. Încearcă din nou.',
+          });
+        }
       }
       return false;
     } finally {
+      await reincarca();
       setOcupat(false);
-      reincarca();
     }
   };
 

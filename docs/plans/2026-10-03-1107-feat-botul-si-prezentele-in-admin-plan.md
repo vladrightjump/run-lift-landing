@@ -391,7 +391,7 @@ Faza A pornește prima: fără copia de siguranță nu se atinge nimic (R19). Fa
 1. Coloanele de text din KTD6: trei pe `public.bot_config`, una pe `public.training_sessions`. Toate nule.
 2. Citirile din KTD2: blocul pentru ecrane (membri, antrenamente, răspunsuri, conturi necunoscute, setări, ultimele comenzi) și rezumatul pentru card (antrenamentul următor, câți vin, dacă botul e pornit, setările de orar). Plățile nu apar în nicio citire (R21).
 3. Scrierile din KTD3, cu aceeași semantică precum acțiunile din gym-app (`lib/attendance-actions.ts`, `lib/session-actions.ts`, `lib/bot-config-actions.ts`, `lib/member-actions.ts`):
-   - prezența de mână scrie în `attendance` și în `attendance_log`, cu sursa `admin`;
+   - prezența de mână scrie în `attendance` și în `attendance_log`, cu sursa `manual` (singura permisă de constrângere în afară de `telegram`, ca în gym-app);
    - anularea unei zile creează rândul antrenamentului dacă lipsește; reactivarea îl pune înapoi pe `scheduled`;
    - salvarea setărilor validează zilele (0–6), orele (`HH:MM`), pragul (≥ 0) și lungimea textului; textul gol se salvează ca nul;
    - comenzile intră doar din lista închisă; `send_message` cere un text nevid, cu plafon de lungime;
@@ -399,7 +399,7 @@ Faza A pornește prima: fără copia de siguranță nu se atinge nimic (R19). Fa
    - editarea membrului (nume, date Telegram, stare, admin), legarea unui cont necunoscut, crearea unui membru din cont și unirea, care cheamă `public.merge_members`.
 4. Fiecare scriere adaugă în `runlift.admin_events` un rând cu tip `sala_*` și numele adminului.
 5. Drepturile ca în `supabase/sql/supabase-migration-antrenament-saptamanii.sql`: `revoke all`, apoi `grant execute` pentru `anon`, `authenticated` și `service_role`.
-6. Se revocă execuția `public.merge_members` pentru `anon`. Funcția rulează cu drepturile proprietarului și nu verifică cine o cheamă, deci azi o poate chema oricine are cheia publică. gym-app o cheamă ca `authenticated`, deci merge în continuare în săptămâna paralelă.
+6. Se revocă execuția `public.merge_members` pentru `anon`. Funcția rulează cu drepturile proprietarului și nu verifică cine o cheamă, deci azi o poate chema oricine are cheia publică. gym-app o cheamă cu cheia de service (`createAdminClient`), deci merge în continuare în săptămâna paralelă. (La aplicare s-a văzut că dreptul venea prin PUBLIC, deci revocarea l-a închis și pentru `authenticated`.)
 7. Se aplică prin MCP, apoi se regenerează instantaneele și se rulează `get_advisors` (security).
 
 **Patterns to follow:** `runlift.admin_save_weekly_workout` și grant-urile lui; `runlift.admin_check_token`.
@@ -407,7 +407,7 @@ Faza A pornește prima: fără copia de siguranță nu se atinge nimic (R19). Fa
 **Test scenarios:**
 - Fiecare funcție nouă, chemată cu un token invalid, aruncă `invalid_token`.
 - Blocul întoarce membrii, antrenamentele, răspunsurile, conturile necunoscute, setările și comenzile recente, și niciun rând de plată.
-- Prezență „vin” → rând în `attendance` și rând în `attendance_log` cu sursa `admin`; prezență golită → rândul din `attendance` dispare, iar jurnalul primește rândul ștergerii.
+- Prezență „vin” → rând în `attendance` și rând în `attendance_log` cu sursa `manual`; prezență golită → rândul din `attendance` dispare, iar jurnalul primește rândul ștergerii.
 - Anularea unei zile fără antrenament creează rândul cu starea anulată; reactivarea îl pune pe `scheduled`.
 - Setări cu ora `25:00`, cu ziua 7 sau cu pragul negativ → eroare, iar rândul rămâne neschimbat.
 - Text de sondaj peste plafon → eroare; text gol → nul în bază.

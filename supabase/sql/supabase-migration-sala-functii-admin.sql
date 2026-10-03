@@ -21,9 +21,11 @@
 --
 -- ÎNTOARCERE: doar adaugă (funcții și coloane nule). Se întoarce cu `drop function`
 -- pe funcțiile `runlift.admin_sala_*` / `runlift.sala_*` și `alter table … drop
--- column` pe cele patru coloane, plus `grant execute on function
--- public.merge_members(uuid, uuid) to anon` dacă trebuie refăcută exact starea
--- de dinainte (n-ar trebui: era o gaură).
+-- column` pe cele patru coloane — întâi copiază `poll_title`/`poll_yes_label`/
+-- `poll_no_label`/`poll_wording` deoparte, dacă s-a salvat ceva în ele. Starea
+-- exactă de dinainte cere și `grant execute on function
+-- public.merge_members(uuid, uuid) to public` (dreptul venea prin PUBLIC, nu
+-- direct pe `anon`) — doar pentru o întoarcere completă: redeschide gaura.
 
 -- ---------------------------------------------------------------------------
 -- 1. Textul sondajului (KTD6)

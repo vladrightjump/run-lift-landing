@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, within, fireEvent, waitFor } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { EcranMembri } from '../../src/admin/sala/EcranMembri';
-import { comandaSala, dateSala } from './helpers/salaFixtures';
+import { comandaSala, dateSala, membruSala } from './helpers/salaFixtures';
 
 const api = vi.hoisted(() => ({
   incarcaSala: vi.fn(),
@@ -59,17 +59,37 @@ describe('Membrii grupului', () => {
     expect((within(randul('Fara')).getByRole('button', { name: /Scoate din grup/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('Covers AE3. o scoatere eșuată apare lângă membru, cu motivul', async () => {
+  it('Covers AE3. o scoatere eșuată rămâne la vedere, cu motivul, și se poate reîncerca', async () => {
+    // Starea reală de după cerere: serverul l-a trecut deja pe „ieșit", deci sub
+    // filtrul implicit („Activi") n-ar mai apărea în listă.
     api.incarcaSala.mockResolvedValue(
       dateSala({
+        membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'cancelled' })],
         comenzi: [
           comandaSala({ action: 'kick_member', member_id: 'ion', status: 'failed', result: 'Bad Request: not enough rights' }),
         ],
       })
     );
     randeaza();
-    await screen.findByText('Ion');
-    expect(within(randul('Ion')).getByText(/scoaterea a eșuat: Bad Request: not enough rights/)).toBeTruthy();
+    const sectiune = (await screen.findByRole('heading', { name: /Scoateri eșuate/ })).closest('section') as HTMLElement;
+    expect(within(sectiune).getByText(/scoaterea a eșuat: Bad Request: not enough rights/)).toBeTruthy();
+    fireEvent.click(within(sectiune).getByRole('button', { name: /Reîncearcă scoaterea lui Ion/ }));
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Scoate din grup' }));
+    await waitFor(() => expect(api.scoateDinGrup).toHaveBeenCalledWith('tok', 'ion'));
+  });
+
+  it('un membru ieșit cu scoaterea reușită nu apare la „Scoateri eșuate" și nu se mai scoate', async () => {
+    api.incarcaSala.mockResolvedValue(
+      dateSala({
+        membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'cancelled' })],
+        comenzi: [comandaSala({ action: 'kick_member', member_id: 'ion', status: 'done' })],
+      })
+    );
+    randeaza();
+    await screen.findByText('Ana');
+    expect(screen.queryByRole('heading', { name: /Scoateri eșuate/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Ieșiți' }));
+    expect((within(randul('Ion')).getByRole('button', { name: /Scoate din grup: E deja ieșit/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('scoaterea unui membru obișnuit cere confirmare, apoi cheamă serverul', async () => {

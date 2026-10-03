@@ -113,6 +113,8 @@ export type SalaRezumat = {
     starts_at: string;
     location: string;
     status: SalaAntrenament['status'];
+    /** Sondajul pentru el a plecat deja în grup. */
+    poll_sent: boolean;
     vin: number;
     nu_vin: number;
   } | null;
@@ -211,6 +213,7 @@ export const REFUZURI_SALA = [
   'telegram_deja_legat',
   'cont_inexistent',
   'acelasi_membru',
+  'antrenament_anulat',
 ] as const;
 
 export type RefuzSala = (typeof REFUZURI_SALA)[number];
@@ -245,4 +248,5 @@ export const MESAJE_REFUZ: Record<RefuzSala, string> = {
   telegram_deja_legat: 'Contul de Telegram e deja legat de alt membru.',
   cont_inexistent: 'Contul a fost deja legat sau nu mai există.',
   acelasi_membru: 'Alege doi membri diferiți.',
+  antrenament_anulat: 'Antrenamentul de mâine e anulat, deci botul n-are pentru ce să trimită sondaj sau reminder.',
 };

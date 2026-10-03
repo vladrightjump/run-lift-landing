@@ -3,6 +3,9 @@ import {
   TEXT_IMPLICIT,
   antetSondaj,
   corpSondaj,
+  dataScurta,
+  frazaSondaj,
+  numeZi,
   textEfectiv,
   urmatorulSondaj,
   ziSiData,
@@ -11,9 +14,9 @@ import {
 /**
  * Previzualizarea sondajului și momentul următorului.
  *
- * Așteptările de text sunt cele din testele botului (`poll-text.test.ts` din
- * repo-ul parkgym-telegram-bot): fără text salvat, previzualizarea trebuie să
- * iasă caracter cu caracter ce scrie botul azi.
+ * Așteptările de text sunt cele din testele botului (`bot/test/poll-text.test.ts`,
+ * pentru `bot/src/lib/poll-text.ts`): fără text salvat, previzualizarea trebuie
+ * să iasă caracter cu caracter ce scrie botul azi.
  */
 
 describe('textul de azi, ca în bot', () => {
@@ -117,9 +120,41 @@ describe('urmatorulSondaj (luni și miercuri la 12:00, ora Chișinăului)', () =
     expect(urmatorulSondaj(zile, '12:00', la('2026-10-08T01:30:00'))?.data).toBe('2026-10-12');
   });
 
+  it('sare peste ziua de sondaj al cărei antrenament e anulat (botul nu trimite)', () => {
+    // Miercuri 11:59; joi e anulat → sondajul de miercuri nu pleacă, următorul e luni.
+    expect(urmatorulSondaj(zile, '12:00', la('2026-10-07T11:59:00'), new Set(['2026-10-08']))).toEqual({
+      data: '2026-10-12',
+      ora: '12:00',
+      antrenament: '2026-10-13',
+    });
+  });
+
+  it('cu toate antrenamentele unei săptămâni anulate, găsește săptămâna următoare', () => {
+    const anulate = new Set(['2026-10-08', '2026-10-13']);
+    expect(urmatorulSondaj(zile, '12:00', la('2026-10-07T11:59:00'), anulate)?.data).toBe('2026-10-14');
+  });
+
   it('fără zile sau fără oră validă → niciun sondaj programat', () => {
     expect(urmatorulSondaj([], '12:00', new Date())).toBeNull();
     expect(urmatorulSondaj(null, '12:00', new Date())).toBeNull();
     expect(urmatorulSondaj(zile, '', new Date())).toBeNull();
+  });
+});
+
+describe('datele în propoziții', () => {
+  it('numeZi: ziua cu literă mică, pentru mijlocul frazei', () => {
+    expect(numeZi('2026-10-07')).toBe('miercuri');
+    expect(numeZi('nu-i dată')).toBe('nu-i dată');
+  });
+
+  it('dataScurta: ziua și luna scurtă, fără ziua săptămânii', () => {
+    expect(dataScurta('2026-10-07')).toBe('7 oct');
+    expect(dataScurta('2026-10-07T09:00:00Z')).toBe('7 oct');
+  });
+
+  it('frazaSondaj: când pleacă sondajul', () => {
+    expect(frazaSondaj({ data: '2026-10-12', ora: '12:00', antrenament: '2026-10-13' })).toBe(
+      'Sondajul pleacă luni la 12:00.'
+    );
   });
 });

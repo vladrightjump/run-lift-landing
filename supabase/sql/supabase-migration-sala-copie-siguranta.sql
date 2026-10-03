@@ -13,9 +13,10 @@
 -- externe sau triggere — exact ce trebuie unei copii: nimic din ea nu reacționează
 -- la nimic și nimic nu o leagă de originale.
 --
--- Numărul de rânduri în clipa copierii (3 octombrie 2026), ca referință pentru
--- criteriul „niciun tabel nu are mai puține rânduri decât în copie”: vezi
--- `MIGRATIONS.md`, rândul migrării.
+-- Numărul de rânduri în clipa copierii (3 octombrie 2026): vezi `MIGRATIONS.md`,
+-- rândul migrării. Criteriul „niciun tabel nu are mai puține rânduri decât în
+-- copie” se verifică pe cheia primară, nu pe număr: adminul șterge legitim rânduri
+-- (prezență golită, unire, cont legat). Interogarea e tot în `MIGRATIONS.md`.
 --
 -- ÎNTOARCERE: `drop schema sala_copie_20261003 cascade;` — numai după oprirea
 -- gym-app și verificarea numărului de rânduri (U11).

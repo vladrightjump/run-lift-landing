@@ -19,7 +19,7 @@ import { InvalidTokenError } from '../../src/lib/adminApi';
 const onAuthError = vi.fn(() => false);
 const showToast = vi.fn();
 
-type Prins = { date: unknown; eroare: boolean; reincarca: () => void };
+type Prins = { date: unknown; eroare: boolean; reincarca: () => Promise<void> };
 const captura: { r: Prins | null } = { r: null };
 const res = (): Prins => {
   if (!captura.r) throw new Error('Sonda nu e randată.');
@@ -162,6 +162,53 @@ describe('useAdminResource — căile de eșec', () => {
 
     expect(res().eroare).toBe(false);
     expect(onAuthError).not.toHaveBeenCalled();
+  });
+
+  it('o cerere anulată care totuși se rezolvă (cu nimic) nu înlocuiește datele bune', async () => {
+    let raspunde: (v: unknown) => void = () => {};
+    const incarca = vi
+      .fn()
+      .mockResolvedValueOnce(['bun'])
+      .mockImplementationOnce(() => new Promise((r) => (raspunde = r)))
+      .mockResolvedValueOnce(['proaspăt']);
+    randeaza(incarca, null);
+    await lasaSaSeAseze();
+
+    // A doua cerere pleacă; a treia o anulează înainte să răspundă.
+    await act(async () => {
+      void res().reincarca();
+      void res().reincarca();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      raspunde(undefined);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(res().date).toEqual(['proaspăt']);
+  });
+
+  it('`reincarca` se împlinește după ce datele noi sunt pe ecran', async () => {
+    let raspunde: (v: unknown) => void = () => {};
+    const incarca = vi
+      .fn()
+      .mockResolvedValueOnce(['vechi'])
+      .mockImplementationOnce(() => new Promise((r) => (raspunde = r)));
+    randeaza(incarca, null);
+    await lasaSaSeAseze();
+
+    let gata = false;
+    await act(async () => {
+      void res().reincarca().then(() => (gata = true));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(gata).toBe(false);
+    await act(async () => {
+      raspunde(['nou']);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(gata).toBe(true);
+    expect(res().date).toEqual(['nou']);
   });
 });
 

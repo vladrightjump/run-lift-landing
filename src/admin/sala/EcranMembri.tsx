@@ -3,7 +3,6 @@ import {
   leagaCont,
   membruDinCont,
   salveazaMembru,
-  scoateDinGrup,
   unesteMembri,
   type DateMembru,
   type SalaComanda,
@@ -12,9 +11,9 @@ import {
 } from '../../lib/salaApi';
 import { Dialog } from '../eventTab/Dialog';
 import { StareComanda } from './StareComanda';
-import { DialogScoatere, motivFaraScoatere } from './DialogScoatere';
+import { MotivScoatere, ScoateDinGrup, ultimeleScoateri } from './DialogScoatere';
 import { prezentePeMembru } from './analiza';
-import { ziSiData } from './sondaj';
+import { dataScurta } from './sondaj';
 import { useSala } from './useSala';
 
 /**
@@ -45,15 +44,6 @@ const ETICHETE_STARE: Record<SalaMembru['status'], string> = {
 const numeCont = (c: { first_name: string | null; last_name: string | null; username: string | null }) =>
   [c.first_name, c.last_name].filter(Boolean).join(' ') || (c.username ? `@${c.username}` : 'Fără nume');
 
-/** Ultima comandă de scoatere pentru fiecare membru — rezultatul ei se vede pe rând. */
-const ultimeleScoateri = (comenzi: SalaComanda[]): Map<string, SalaComanda> => {
-  const m = new Map<string, SalaComanda>();
-  for (const c of comenzi) {
-    if (c.action === 'kick_member' && c.member_id && !m.has(c.member_id)) m.set(c.member_id, c);
-  }
-  return m;
-};
-
 const textScoatere = (c: SalaComanda): string =>
   c.status === 'pending'
     ? 'scoatere în așteptare'
@@ -66,7 +56,6 @@ export const EcranMembri = () => {
   const [cauta, setCauta] = useState('');
   const [filtru, setFiltru] = useState<Filtru>('active');
   const [deEditat, setDeEditat] = useState<SalaMembru | null>(null);
-  const [deScos, setDeScos] = useState<SalaMembru | null>(null);
   const [unire, setUnire] = useState(false);
 
   const ultimaPrezenta = useMemo(
@@ -83,6 +72,9 @@ export const EcranMembri = () => {
   }
 
   const scoateri = ultimeleScoateri(date.comenzi);
+  // Serverul îi trece pe „ieșit" încă de la cerere, deci sub filtrul implicit
+  // („Activi") o scoatere eșuată n-ar mai fi vizibilă. Stă deasupra listei.
+  const esuate = date.membri.filter((m) => scoateri.get(m.id)?.status === 'failed' && m.status === 'cancelled');
   const termen = cauta.trim().toLowerCase().replace(/^@/, '');
   const vizibili = date.membri.filter(
     (m) =>
@@ -123,6 +115,34 @@ export const EcranMembri = () => {
         </section>
       )}
 
+      {esuate.length > 0 && (
+        <section className="admin-config-grup" aria-labelledby="sala-scoateri-esuate">
+          <h3 id="sala-scoateri-esuate">
+            Scoateri eșuate <span className="admin-tab-alert">{esuate.length}</span>
+          </h3>
+          <p className="admin-config-hint">
+            Botul n-a putut să-i scoată din grup, deci sunt încă acolo. Cel mai des, botul nu e admin
+            în grup. Rezolvă cauza, apoi reîncearcă.
+          </p>
+          <ul className="admin-sala-lista">
+            {esuate.map((m) => {
+              const k = scoateri.get(m.id);
+              return (
+                <li key={m.id} className="admin-sala-rand admin-sala-membru">
+                  <span className="admin-sala-nume">{m.full_name}</span>
+                  <span className="admin-sala-detaliu">
+                    {k && <StareComanda comanda={k}>{textScoatere(k)}</StareComanda>}
+                  </span>
+                  <span className="admin-sala-actiuni">
+                    <ScoateDinGrup membru={m} ultimaScoatere={k} ocupat={ocupat} fa={fa} />
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       <section className="admin-config-grup" aria-labelledby="sala-membri">
         <h3 id="sala-membri">Membrii</h3>
         <div className="admin-sala-filtre">
@@ -156,7 +176,6 @@ export const EcranMembri = () => {
             {vizibili.map((m) => {
               const k = scoateri.get(m.id);
               const ultima = ultimaPrezenta.get(m.id);
-              const motiv = motivFaraScoatere(m);
               return (
                 <li key={m.id} className="admin-sala-rand admin-sala-membru">
                   <span className="admin-sala-nume">
@@ -168,7 +187,7 @@ export const EcranMembri = () => {
                     {' · '}
                     {ETICHETE_STARE[m.status]}
                     {' · '}
-                    {ultima ? `ultima dată ${ziSiData(ultima)?.split(', ')[1] ?? ultima}` : 'n-a venit încă'}
+                    {ultima ? `ultima dată ${dataScurta(ultima)}` : 'n-a venit încă'}
                     {k && (
                       <StareComanda comanda={k}> · {textScoatere(k)}</StareComanda>
                     )}
@@ -177,20 +196,9 @@ export const EcranMembri = () => {
                     <button type="button" className="admin-btn-ghost" onClick={() => setDeEditat(m)}>
                       Editează
                     </button>
-                    <button
-                      type="button"
-                      className="admin-btn-ghost"
-                      disabled={ocupat || motiv !== null}
-                      title={motiv ?? undefined}
-                      aria-label={motiv ? `Scoate din grup: ${motiv}` : `Scoate-l pe ${m.full_name} din grup`}
-                      onClick={() => setDeScos(m)}
-                    >
-                      Scoate din grup
-                    </button>
+                    <ScoateDinGrup membru={m} ultimaScoatere={k} ocupat={ocupat} fa={fa} />
                   </span>
-                  {motiv && m.status !== 'cancelled' && (
-                    <span className="admin-sala-motiv">{motiv}</span>
-                  )}
+                  <MotivScoatere membru={m} ultimaScoatere={k} />
                 </li>
               );
             })}
@@ -219,19 +227,6 @@ export const EcranMembri = () => {
               (ok) => ok && setDeEditat(null)
             )
           }
-        />
-      )}
-
-      {deScos && (
-        <DialogScoatere
-          membru={deScos}
-          ocupat={ocupat}
-          onInchide={() => setDeScos(null)}
-          onConfirma={() => {
-            const m = deScos;
-            setDeScos(null);
-            void fa((t) => scoateDinGrup(t, m.id), `${m.full_name} iese din grup în cel mult un minut.`);
-          }}
         />
       )}
 

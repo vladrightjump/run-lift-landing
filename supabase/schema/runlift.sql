@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 3 octombrie 2026 (după `sala_02_functii_admin`).
+-- Ultima regenerare: 3 octombrie 2026 (după `sala_03_corecturi`).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -295,6 +295,9 @@ begin
   return query
     select e.id, e.created_at, e.tip, e.detaliu
     from admin_events e
+    -- Urma scrierilor din ecranele grupului rămâne în tabel (cine a făcut ce),
+    -- dar nu ocupă locurile fluxului edițiilor.
+    where e.tip not like 'sala\_%'
     order by e.created_at desc
     limit least(greatest(coalesce(p_limit, 200), 1), 1000);
 end;
@@ -795,7 +798,26 @@ begin
   end if;
   if p_actiune = 'send_message' then
     if char_length(v_html) = 0 then raise exception 'mesaj_gol'; end if;
+    -- Limita fermă a Telegram pentru `sendMessage`.
     if char_length(v_html) > 4096 then raise exception 'mesaj_prea_lung'; end if;
+  end if;
+
+  -- Sondajul și reminderul sunt despre antrenamentul de mâine. Pentru o zi
+  -- anulată botul nu trimite nimic, dar comanda ar fi ieșit „făcută".
+  if p_actiune in ('send_poll', 'send_reminder') and exists (
+    select 1 from public.training_sessions
+     where session_date = sala_azi() + 1 and status = 'cancelled'
+  ) then
+    raise exception 'antrenament_anulat';
+  end if;
+
+  -- O a doua apăsare cât prima încă așteaptă nu mai pune nimic în coadă: botul
+  -- ar trimite de două ori. Mesajul liber e altceva la fiecare apăsare.
+  if p_actiune <> 'send_message' then
+    select b.id into v_id from public.bot_actions b
+     where b.action = p_actiune and b.status = 'pending'
+     order by b.created_at desc limit 1;
+    if v_id is not null then return v_id; end if;
   end if;
 
   insert into public.bot_actions (action, payload)
@@ -968,6 +990,7 @@ begin
       'starts_at', to_char(v_urm.starts_at, 'HH24:MI'),
       'location', v_urm.location,
       'status', v_urm.status,
+      'poll_sent', v_urm.poll_message_id is not null,
       'vin', (select count(*) from public.attendance a where a.session_id = v_urm.id and a.response = 'yes'),
       'nu_vin', (select count(*) from public.attendance a where a.session_id = v_urm.id and a.response = 'no')
     ) end
@@ -992,6 +1015,8 @@ begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
   if p_config is null or jsonb_typeof(p_config) <> 'object' then raise exception 'config_invalid'; end if;
 
+  -- Zilele: 0 = duminică … 6 = sâmbătă, fără dubluri. O listă goală e voie
+  -- (niciun sondaj programat, doar „trimite acum").
   foreach v_cheie in array array['poll_days', 'summary_days'] loop
     if jsonb_typeof(p_config -> v_cheie) is distinct from 'array'
        or exists (
@@ -1031,6 +1056,7 @@ begin
   end if;
   v_prag := (p_config ->> 'reminder_threshold')::integer;
 
+  -- Textul sondajului: gol → null, adică textul de azi.
   if char_length(btrim(coalesce(p_config ->> 'poll_title', ''))) > 80
      or char_length(btrim(coalesce(p_config ->> 'poll_yes_label', ''))) > 32
      or char_length(btrim(coalesce(p_config ->> 'poll_no_label', ''))) > 32
@@ -1038,6 +1064,9 @@ begin
     raise exception 'text_prea_lung';
   end if;
 
+  -- `enabled` intră doar la prima scriere, când rândul nu există. După aceea îl
+  -- schimbă numai comutatorul (`admin_sala_porneste_bot`): formularul poate
+  -- purta o valoare veche, citită înainte ca cineva să oprească botul.
   insert into public.bot_config as c (
     id, enabled, poll_days, poll_time, summary_days, summary_time, training_time, location,
     auto_reminder_enabled, reminder_threshold, poll_title, poll_yes_label, poll_no_label, updated_at
@@ -1058,7 +1087,6 @@ begin
     now()
   )
   on conflict (id) do update set
-    enabled = excluded.enabled,
     poll_days = excluded.poll_days,
     poll_time = excluded.poll_time,
     summary_days = excluded.summary_days,
@@ -1200,8 +1228,14 @@ begin
   if p_data is null or p_anulat is null then raise exception 'data_invalida'; end if;
 
   if p_anulat then
-    insert into public.training_sessions (session_date, status)
-    values (p_data, 'cancelled')
+    -- Ora și locul vin din setările botului, ca la rândul pe care îl creează
+    -- botul când trimite sondajul; fără setări, rămân valorile coloanelor.
+    insert into public.training_sessions (session_date, status, starts_at, location)
+    select p_data, 'cancelled',
+           coalesce(c.training_time::time, '06:30'::time),
+           coalesce(c.location, 'Parcul Dumitru Râșcanu')
+      from (select 1) x
+      left join public.bot_config c on c.id = 1
     on conflict (session_date) do update set status = 'cancelled';
   else
     update public.training_sessions set status = 'scheduled'

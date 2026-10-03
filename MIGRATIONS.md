@@ -3,7 +3,7 @@
 Catalog al migrărilor care ating Run + Lift, cu granița clară față de aplicația vecină
 (gym-app + botul de Telegram) care împarte același proiect Supabase.
 
-Ultima actualizare: 21 septembrie 2026.
+Ultima actualizare: 3 octombrie 2026.
 
 ---
 
@@ -17,8 +17,13 @@ Proiectul Supabase **`ironworks-gym`** (`whyndrjcezmtajbykeil`, eu-central-1) e 
 | `public` | **gym-app** (Vercel) + **bot Telegram** (Railway) | `members`, `payments`, `training_sessions`, `attendance`, `bot_config`, `bot_actions`, … |
 | `runlift` | **run-lift-landing** (ACEST repo, Vercel) | `registrations`, `event_waitlist`, `launch_notifications`, `admin_*`, `email_templates`, `app_config`, … |
 
-> **Regulă:** acest repo deține DOAR schema `runlift`. **Nu atinge schema `public`** — e a
-> altei aplicații. Botul de Telegram NU face parte din run-lift-landing.
+> **Regulă:** acest repo deține schema `runlift` și, din 3 octombrie 2026, **tabelele grupului de
+> antrenament din `public`** (`members`, `training_sessions`, `attendance`, `attendance_log`,
+> `bot_config`, `bot_actions`, `telegram_unmatched`, plus funcția `merge_members`): adminul le
+> citește și le scrie prin funcțiile `runlift.admin_sala_*`, iar botul de Telegram a intrat în
+> repo, în `bot/` (planul `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md`).
+> Până la oprirea gym-app (U11), gym-app le citește și le scrie în paralel. **Restul schemei
+> `public` nu se atinge**, iar `payments` rămâne neatins, fără ecran și fără export (R21).
 
 Rutarea către `runlift` se face prin headerele PostgREST `Accept-Profile` (GET) /
 `Content-Profile` (scriere). Schema trebuie **expusă** în Supabase → Project Settings → API →
@@ -65,8 +70,30 @@ prefix `runlift_`:
 | 20260907033532 | `runlift_escaladare` | runlift | `operator_email()` + `escaladeaza()` (dedup prin `broadcast_once`, tot corpul într-un bloc cu `exception` ca alerta să nu poată anula tranzacția care a chemat-o, ambele revocate de la `anon`/`authenticated`), escaladare din triggerul de auto-promovare, și trigger nou `registrations_locuri_epuizate_trg`. Cere precondiția `runlift_undo_waitlist`. **A fost inert până pe 17 septembrie 2026**, când s-a scris `app_config.operator_email` — până atunci fiecare escaladare ieșea tăcut pe prima ramură. Vezi `supabase/sql/supabase-migration-escaladare.sql` |
 | 20260919124301 | `runlift_antrenament_saptamanii` | runlift | Antrenamentul saptamanii: tabelul `weekly_workout` + cele patru RPC-uri. Vezi `supabase/sql/supabase-migration-antrenament-saptamanii.sql` |
 | 20260920120025 | `runlift_program_antrenamente` | runlift | Antrenamentul devine **program numerotat**: `numar` (pozitia, 1...N fara goluri), `activ` → `vizibil` (per saptamana), unicitatea trece pe un publicat per numar. Trei functii sterse inainte de recreare (retur/semnatura schimbate), doua noi (`admin_move_`/`admin_delete_weekly_workout`), `public_weekly_workout()` → `public_weekly_workouts()`. Renumerotarea trece prin interval-tampon negativ: indexul unic e PARTIAL, deci neamanabil. Vezi `supabase/sql/supabase-migration-program-antrenamente.sql` |
-| 20261003 | `sala_01_copie_siguranta` | sala_copie_20261003 | **Prima migrare a grupului de antrenament** (fostul gym-app + botul), înainte de mutarea lui în adminul Run + Lift — planul `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md`. Copie a celor opt tabele din `public` (`members` 35, `payments` 16, `training_sessions` 22, `attendance` 449, `attendance_log` 642, `bot_config` 1, `bot_actions` 3, `telegram_unmatched` 1 rânduri) într-o schemă SEPARATĂ, neexpusă prin API (cererea REST răspunde `PGRST106`), cu drepturile revocate. Nu atinge tabelele originale. Instantaneul lor pentru teste: `supabase/schema/sala.sql`, generat de `scripts/schema-snapshot-sala.sql`. Vezi `supabase/sql/supabase-migration-sala-copie-siguranta.sql` |
-| 20261003 | `sala_02_functii_admin` | runlift + public | **Adminul ajunge la tabelele grupului.** Douăsprezece funcții `runlift.admin_sala_*` (SECURITY DEFINER, verifică tokenul de sesiune): citirea în bloc pentru ecrane, rezumatul pentru cardul de pe pornire, prezența de mână (jurnal cu sursa `manual`), anularea/reactivarea unei zile, setările botului (validate: zile 0–6 fără dubluri, ore `HH:MM`, prag 0–999, text de sondaj ≤ 80/32 caractere, gol = textul de azi), pornit/oprit, comenzile `send_poll`/`send_summary`/`send_reminder`/`send_message`, scoaterea din grup (refuză adminii și membrii fără cont de Telegram), editarea, legarea, crearea și unirea membrilor. Fiecare scriere lasă un rând `sala_*` în `admin_events`, cu numele adminului (`sala_jurnal`); fluxul de activitate al edițiilor nu le arată (listă albă). Plățile nu apar în nicio citire. Patru coloane noi, nule: `bot_config.poll_title`/`poll_yes_label`/`poll_no_label` și `training_sessions.poll_wording` (copia textului cu care a plecat sondajul) — botul de acum nu le citește. **Închide `public.merge_members`**: SECURITY DEFINER, fără verificare de apelant, executabilă de oricine prin PUBLIC; acum doar `postgres` + `service_role` (gym-app o cheamă cu cheia de service, deci nu e afectat). `get_advisors`: nicio clasă nouă de problemă. Instantaneele `runlift.sql` și `sala.sql` regenerate. Vezi `supabase/sql/supabase-migration-sala-functii-admin.sql` |
+| 20261003090408 | `sala_01_copie_siguranta` | sala_copie_20261003 | **Prima migrare a grupului de antrenament** (fostul gym-app + botul), înainte de mutarea lui în adminul Run + Lift — planul `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md`. Copie a celor opt tabele din `public` (`members` 35, `payments` 16, `training_sessions` 22, `attendance` 449, `attendance_log` 642, `bot_config` 1, `bot_actions` 3, `telegram_unmatched` 1 rânduri) într-o schemă SEPARATĂ, neexpusă prin API (cererea REST răspunde `PGRST106`), cu drepturile revocate. Nu atinge tabelele originale. Instantaneul lor pentru teste: `supabase/schema/sala.sql`, generat de `scripts/schema-snapshot-sala.sql`. Vezi `supabase/sql/supabase-migration-sala-copie-siguranta.sql` |
+| 20261003090943 | `sala_02_functii_admin` | runlift + public | **Adminul ajunge la tabelele grupului.** Douăsprezece funcții `runlift.admin_sala_*` (SECURITY DEFINER, verifică tokenul de sesiune): citirea în bloc pentru ecrane, rezumatul pentru cardul de pe pornire, prezența de mână (jurnal cu sursa `manual`), anularea/reactivarea unei zile, setările botului (validate: zile 0–6 fără dubluri, ore `HH:MM`, prag 0–999, text de sondaj ≤ 80/32 caractere, gol = textul de azi), pornit/oprit, comenzile `send_poll`/`send_summary`/`send_reminder`/`send_message`, scoaterea din grup (refuză adminii și membrii fără cont de Telegram), editarea, legarea, crearea și unirea membrilor. Fiecare scriere lasă un rând `sala_*` în `admin_events`, cu numele adminului (`sala_jurnal`); fluxul de activitate al edițiilor nu le arată (listă albă). Plățile nu apar în nicio citire. Patru coloane noi, nule: `bot_config.poll_title`/`poll_yes_label`/`poll_no_label` și `training_sessions.poll_wording` (copia textului cu care a plecat sondajul) — botul de acum nu le citește. **Închide `public.merge_members`**: SECURITY DEFINER, fără verificare de apelant, executabilă de oricine prin PUBLIC; acum doar `postgres` + `service_role` (gym-app o cheamă cu cheia de service, deci nu e afectat). `get_advisors`: nicio clasă nouă de problemă. Instantaneele `runlift.sql` și `sala.sql` regenerate. Vezi `supabase/sql/supabase-migration-sala-functii-admin.sql` |
+| 20261003173839 | `sala_03_corecturi` | runlift | Corecturile din review-ul ramurii, doar `create or replace` pe funcții existente (fără coloane, fără drepturi noi). `admin_list_events` nu mai întoarce rândurile `sala_*` — limita de 200 se aplica înaintea listei albe din client, deci prezențele marcate de mână împingeau renunțările afară din „Activitate recentă". `admin_sala_rezumat` spune `poll_sent` (cardul nu mai arată „0 vin" pentru un antrenament fără sondaj). `admin_sala_salveaza_config` nu mai scrie `enabled` peste un rând existent — îl schimbă doar comutatorul. `admin_sala_comanda` refuză sondajul/reminderul „acum" pentru un mâine anulat (`antrenament_anulat`) și nu mai pune a doua oară în coadă o comandă la fel care așteaptă. Anularea unei zile fără rând ia ora și locul din setările botului. `get_advisors`: nicio clasă nouă. Instantaneul `runlift.sql` regenerat (`sala.sql` neatins: tabelele din `public` nu se schimbă). Vezi `supabase/sql/supabase-migration-sala-corecturi.sql` |
+
+**Verificarea copiei de siguranță, înainte de U11.** Criteriul din plan („niciun tabel nu are mai puține
+rânduri decât în copie") pică și fără pierderi: adminul șterge legitim rânduri (prezență golită,
+unirea a doi membri, un cont necunoscut legat sau făcut membru). Se verifică pe cheia primară,
+iar fiecare rând dispărut trebuie explicat de un eveniment `sala_*` (sau de gym-app, cât încă
+rulează). Numărul simplu de rânduri rămâne criteriu doar pentru `payments`, `training_sessions`,
+`attendance_log` și `bot_actions`, din care nimic nu șterge:
+
+```sql
+-- Rânduri din copie care lipsesc acum, pe tabel (repetă pentru fiecare tabel cu `id`).
+select 'members' tabel, c.id, c.full_name from sala_copie_20261003.members c
+ where not exists (select 1 from public.members m where m.id = c.id)
+union all
+select 'attendance', c.id, null from sala_copie_20261003.attendance c
+ where not exists (select 1 from public.attendance a where a.id = c.id)
+union all
+select 'telegram_unmatched', null, c.telegram_user_id::text from sala_copie_20261003.telegram_unmatched c
+ where not exists (select 1 from public.telegram_unmatched u where u.telegram_user_id = c.telegram_user_id);
+-- Explicațiile: select tip, detaliu, created_at from runlift.admin_events
+--   where tip in ('sala_prezenta', 'sala_unire', 'sala_legare', 'sala_membru_nou') order by created_at;
+```
 
 **Migrări ale altei aplicații** (schema `public`, gym-app + bot — **hands-off**):
 `ironworks_initial_schema`, `monthly_summary_security_invoker`, `telegram_bot_phase1_attendance`,

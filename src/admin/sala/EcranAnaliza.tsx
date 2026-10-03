@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { scoateDinGrup, type SalaMembru } from '../../lib/salaApi';
 import {
   filterByPeriod,
   filterPrevPeriod,
@@ -9,8 +8,8 @@ import {
 } from './statistici';
 import { istoricMembru, peZileleSaptamanii, randuriFrecventa, type StareFrecventa } from './analiza';
 import { sesiuniPentruStatistici } from './model';
-import { DialogScoatere, motivFaraScoatere } from './DialogScoatere';
-import { ziSiData } from './sondaj';
+import { MotivScoatere, ScoateDinGrup, ultimeleScoateri } from './DialogScoatere';
+import { dataScurta, ziSiData } from './sondaj';
 import { useSala } from './useSala';
 
 /**
@@ -62,8 +61,6 @@ const CLASA_PUNCT = {
   tacere: 'admin-sala-punct',
 } as const;
 
-const scurt = (iso: string) => ziSiData(iso)?.split(', ')[1] ?? iso;
-
 export const EcranAnaliza = () => {
   const { date, eroare, ocupat, fa } = useSala();
   const [perioada, setPerioada] = useState<Period>('month');
@@ -71,7 +68,6 @@ export const EcranAnaliza = () => {
   const [filtru, setFiltru] = useState<Filtru>('toti');
   const [sortare, setSortare] = useState<'prezente' | 'nume'>('prezente');
   const [deschis, setDeschis] = useState<string | null>(null);
-  const [deScos, setDeScos] = useState<SalaMembru | null>(null);
 
   const calc = useMemo(() => {
     if (!date) return null;
@@ -118,6 +114,8 @@ export const EcranAnaliza = () => {
         : b.prezente - a.prezente || a.membru.full_name.localeCompare(b.membru.full_name, 'ro')
     );
 
+  const scoateri = ultimeleScoateri(date.comenzi);
+
   // Curba procentului „vin", pe o grilă 100 × 44.
   const puncte = defalcari.map((b, i) => {
     const x = defalcari.length > 1 ? (i / (defalcari.length - 1)) * 100 : 50;
@@ -161,7 +159,7 @@ export const EcranAnaliza = () => {
         <div className="admin-sala-cifra">
           <dt>record</dt>
           <dd>{rezumat.record?.count ?? 0}</dd>
-          <span className="admin-sala-sub">{rezumat.record ? scurt(rezumat.record.date) : '—'}</span>
+          <span className="admin-sala-sub">{rezumat.record ? dataScurta(rezumat.record.date) : '—'}</span>
         </div>
         <div className="admin-sala-cifra">
           <dt>fără răspuns</dt>
@@ -271,7 +269,7 @@ export const EcranAnaliza = () => {
         ) : (
           <ul className="admin-sala-lista">
             {randuri.map((r) => {
-              const motiv = motivFaraScoatere(r.membru);
+              const k = scoateri.get(r.membru.id);
               const ist = deschis === r.membru.id ? istoricMembru(date, r.membru.id) : null;
               return (
                 <li key={r.membru.id} className="admin-sala-rand admin-sala-membru">
@@ -282,7 +280,7 @@ export const EcranAnaliza = () => {
                   <span className="admin-sala-detaliu">
                     {r.prezente}/{r.total} ·{' '}
                     <span className={CLASA_STARE[r.stare]}>{ETICHETE_STARE[r.stare]}</span>
-                    {r.ultima && ` · ultima ${scurt(r.ultima)}`}
+                    {r.ultima && ` · ultima ${dataScurta(r.ultima)}`}
                   </span>
                   <span className="admin-sala-actiuni">
                     <button
@@ -293,16 +291,9 @@ export const EcranAnaliza = () => {
                     >
                       Istoric
                     </button>
-                    <button
-                      type="button"
-                      className="admin-btn-ghost"
-                      disabled={ocupat || motiv !== null}
-                      title={motiv ?? undefined}
-                      onClick={() => setDeScos(r.membru)}
-                    >
-                      Scoate din grup
-                    </button>
+                    <ScoateDinGrup membru={r.membru} ultimaScoatere={k} ocupat={ocupat} fa={fa} />
                   </span>
+                  <MotivScoatere membru={r.membru} ultimaScoatere={k} />
                   {ist && (
                     <div className="admin-sala-istoric">
                       <p className="admin-sala-cand">
@@ -327,18 +318,6 @@ export const EcranAnaliza = () => {
         )}
       </section>
 
-      {deScos && (
-        <DialogScoatere
-          membru={deScos}
-          ocupat={ocupat}
-          onInchide={() => setDeScos(null)}
-          onConfirma={() => {
-            const m = deScos;
-            setDeScos(null);
-            void fa((t) => scoateDinGrup(t, m.id), `${m.full_name} iese din grup în cel mult un minut.`);
-          }}
-        />
-      )}
     </div>
   );
 };

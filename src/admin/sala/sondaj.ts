@@ -1,4 +1,5 @@
-import { GYM_TZ } from './fus';
+import { FUS } from '../../lib/formatare';
+import { escHtml as esc } from './mesaj';
 
 /**
  * Sondajul din grup, văzut din admin: previzualizarea mesajului și momentul în
@@ -18,21 +19,34 @@ export const TEXT_IMPLICIT = {
   nu: '❌ Nu pot',
 } as const;
 
-const RO_DOW = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+/** Numele zilelor, după `getUTCDay()` (0 = duminică). */
+export const RO_DOW = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
 const RO_MON = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'noi', 'dec'];
 
-/** Escapare pentru modul HTML al Telegram. */
-const esc = (s: string): string =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-/** `2026-10-07` → „Miercuri, 7 oct"; `null` pentru o dată care nu se citește. */
-export const ziSiData = (iso: string): string | null => {
+const descompune = (iso: string): { zi: number; data: string } | null => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   if (!m) return null;
   const [y, l, z] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const dt = new Date(Date.UTC(y, l - 1, z));
-  return `${RO_DOW[dt.getUTCDay()]}, ${z} ${RO_MON[l - 1]}`;
+  return { zi: new Date(Date.UTC(y, l - 1, z)).getUTCDay(), data: `${z} ${RO_MON[l - 1]}` };
 };
+
+/** `2026-10-07` → „Miercuri, 7 oct"; `null` pentru o dată care nu se citește. */
+export const ziSiData = (iso: string): string | null => {
+  const p = descompune(iso);
+  return p ? `${RO_DOW[p.zi]}, ${p.data}` : null;
+};
+
+/** `2026-10-07` → „Miercuri, 7 oct"; data neschimbată dacă nu se citește. */
+export const dataLunga = (iso: string): string => ziSiData(iso) ?? iso;
+
+/** `2026-10-07` → „miercuri" (în mijlocul unei propoziții). */
+export const numeZi = (iso: string): string => {
+  const p = descompune(iso);
+  return p ? RO_DOW[p.zi].toLowerCase() : iso;
+};
+
+/** `2026-10-07` → „7 oct". */
+export const dataScurta = (iso: string): string => descompune(iso)?.data ?? iso;
 
 /** Rândul de titlu: fraza (editabilă), apoi ziua, ora și locul (automate). */
 export const antetSondaj = (
@@ -77,13 +91,13 @@ export const textEfectiv = (t: TextSondaj): { titlu: string; da: string; nu: str
 });
 
 /** `YYYY-MM-DD` + `n` zile. */
-const plusZile = (iso: string, n: number): string => {
+export const plusZile = (iso: string, n: number): string => {
   const [y, l, z] = iso.split('-').map(Number);
   const dt = new Date(Date.UTC(y, l - 1, z + n));
   return dt.toISOString().slice(0, 10);
 };
 
-const ziuaSaptamanii = (iso: string): number => {
+export const ziuaSaptamanii = (iso: string): number => {
   const [y, l, z] = iso.split('-').map(Number);
   return new Date(Date.UTC(y, l - 1, z)).getUTCDay();
 };
@@ -91,7 +105,7 @@ const ziuaSaptamanii = (iso: string): number => {
 /** Ziua și ora de acum, la Chișinău. */
 const acumLaChisinau = (acum: Date): { data: string; ora: string } => {
   const parti = new Intl.DateTimeFormat('en-CA', {
-    timeZone: GYM_TZ,
+    timeZone: FUS,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -117,19 +131,29 @@ export type SondajProgramat = {
  *
  * Minutul curent încă se socotește „următor": botul trimite în minutul orei
  * din setări, deci la 12:00 fix sondajul de 12:00 n-a plecat neapărat.
+ *
+ * O zi de sondaj al cărei antrenament (a doua zi) e anulat se sare: botul nu
+ * trimite sondaj pentru o zi anulată, deci „pleacă miercuri" ar fi fals.
  */
 export const urmatorulSondaj = (
   zile: number[] | null | undefined,
   ora: string | null | undefined,
-  acum: Date
+  acum: Date,
+  /** Zilele de antrenament anulate, `YYYY-MM-DD`. */
+  anulate: ReadonlySet<string> = new Set()
 ): SondajProgramat | null => {
   if (!zile || zile.length === 0 || !ora || !/^\d{2}:\d{2}$/.test(ora)) return null;
   const { data: azi, ora: acumOra } = acumLaChisinau(acum);
-  for (let n = 0; n <= 7; n += 1) {
+  // Două săptămâni: o săptămână întreagă de zile anulate încă lasă un răspuns.
+  for (let n = 0; n <= 14; n += 1) {
     const zi = plusZile(azi, n);
     if (!zile.includes(ziuaSaptamanii(zi))) continue;
     if (n === 0 && ora < acumOra) continue;
+    if (anulate.has(plusZile(zi, 1))) continue;
     return { data: zi, ora, antrenament: plusZile(zi, 1) };
   }
   return null;
 };
+
+/** „Sondajul pleacă miercuri la 12:00." */
+export const frazaSondaj = (s: SondajProgramat): string => `Sondajul pleacă ${numeZi(s.data)} la ${s.ora}.`;

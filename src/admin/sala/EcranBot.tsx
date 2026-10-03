@@ -7,6 +7,7 @@ import {
   type SalaConfig,
   type SalaMembru,
 } from '../../lib/salaApi';
+import { ziLunaOra } from '../../lib/formatare';
 import { Dialog } from '../eventTab/Dialog';
 import {
   ETICHETE_COMENZI,
@@ -19,7 +20,8 @@ import {
 import { buildCustomMessageHtml } from './mesaj';
 import { PrevizualizareSondaj } from './PrevizualizareSondaj';
 import { StareComanda } from './StareComanda';
-import { urmatorulSondaj, ziSiData } from './sondaj';
+import { dataLunga, numeZi, plusZile, urmatorulSondaj } from './sondaj';
+import { zileAnulate } from './model';
 import { stareBot } from './stareBot';
 import { useSala } from './useSala';
 
@@ -53,8 +55,10 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
 
   // Formularul pornește din setările salvate și nu le mai urmează după ce l-ai
   // atins: reîmprospătarea de la 15 secunde n-are voie să-ți șteargă ce scrii.
-  const forma = ciorna ?? salvat;
-  const nesalvat = ciorna !== null && salvat !== null && !configEgal(ciorna, salvat);
+  // Excepție: pornit/oprit. Îl schimbă doar comutatorul, pe loc, deci ciorna nu
+  // are voie să poarte o valoare veche (și nici s-o salveze înapoi).
+  const forma = ciorna && salvat ? { ...ciorna, enabled: salvat.enabled } : salvat;
+  const nesalvat = forma !== null && salvat !== null && ciorna !== null && !configEgal(forma, salvat);
 
   const potPleca = (): boolean =>
     !nesalvat || window.confirm('Setările botului nu sunt salvate. Dacă pleci acum, se pierd. Continui?');
@@ -89,8 +93,14 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
 
   const probleme = problemeConfig(forma);
   const stare = stareBot(date.config?.enabled ?? null, date.comenzi, new Date());
-  const sondaj = urmatorulSondaj(salvat.poll_days, salvat.poll_time, new Date());
+  const anulate = zileAnulate(date);
+  const sondaj = urmatorulSondaj(salvat.poll_days, salvat.poll_time, new Date(), anulate);
   const exempluData = urmatorulSondaj(forma.poll_days, forma.poll_time, new Date())?.antrenament ?? date.azi;
+  // O comandă la fel, încă în așteptare: a doua apăsare n-ar trimite nimic în plus.
+  const inAsteptare = new Set(date.comenzi.filter((c) => c.status === 'pending').map((c) => c.action));
+  // „Trimite acum" e mereu despre antrenamentul de mâine (ziua de la Chișinău).
+  const maine = date.antrenamente.find((a) => a.session_date === plusZile(date.azi, 1));
+  const sondajMainePlecat = maine?.poll_sent === true && maine.status !== 'cancelled';
 
   return (
     <div className="admin-sala">
@@ -112,7 +122,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
             : stare.tip === 'oprit'
               ? 'Sondajele programate nu pleacă. Comenzile „acum" merg în continuare.'
               : sondaj
-                ? `Următorul sondaj: ${ziSiData(sondaj.data)} la ${sondaj.ora}, pentru antrenamentul de ${ziSiData(sondaj.antrenament)?.split(',')[0].toLowerCase()}.`
+                ? `Următorul sondaj: ${dataLunga(sondaj.data)} la ${sondaj.ora}, pentru antrenamentul de ${numeZi(sondaj.antrenament)}.`
                 : 'Niciun sondaj programat: alege zilele mai jos.'}
         </p>
         <button
@@ -132,7 +142,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
         onSubmit={(e) => {
           e.preventDefault();
           if (probleme.length > 0 || !nesalvat) return;
-          void fa((t) => salveazaConfigBot(t, forma), 'Setările botului sunt salvate.').then(
+          void fa((t) => salveazaConfigBot(t, { ...forma, enabled: salvat.enabled }), 'Setările botului sunt salvate.').then(
             (ok) => ok && setCiorna(null)
           );
         }}
@@ -246,21 +256,33 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
 
       <section className="admin-config-grup" aria-labelledby="bot-acum">
         <h3 id="bot-acum">Acum</h3>
-        <p className="admin-config-hint">Botul execută comanda în cel mult un minut.</p>
+        <p className="admin-config-hint">
+          Botul execută comanda în cel mult un minut. Cât una așteaptă, butonul ei stă blocat.
+        </p>
         <div className="admin-table-actions admin-sala-comenzi">
-          <button type="button" className="admin-btn-ghost" disabled={ocupat} onClick={() => setDeConfirmat('send_poll')}>
-            Trimite sondajul acum
-          </button>
-          <button type="button" className="admin-btn-ghost" disabled={ocupat} onClick={() => setDeConfirmat('send_reminder')}>
-            Trimite reminderul acum
+          <button
+            type="button"
+            className="admin-btn-ghost"
+            disabled={ocupat || inAsteptare.has('send_poll')}
+            onClick={() => setDeConfirmat('send_poll')}
+          >
+            {inAsteptare.has('send_poll') ? 'Sondajul e în așteptare…' : 'Trimite sondajul acum'}
           </button>
           <button
             type="button"
             className="admin-btn-ghost"
-            disabled={ocupat}
+            disabled={ocupat || inAsteptare.has('send_reminder')}
+            onClick={() => setDeConfirmat('send_reminder')}
+          >
+            {inAsteptare.has('send_reminder') ? 'Reminderul e în așteptare…' : 'Trimite reminderul acum'}
+          </button>
+          <button
+            type="button"
+            className="admin-btn-ghost"
+            disabled={ocupat || inAsteptare.has('send_summary')}
             onClick={() => void fa((t) => trimiteComanda(t, 'send_summary'), 'Rezumatul pleacă la admini în cel mult un minut.')}
           >
-            Trimite rezumatul acum
+            {inAsteptare.has('send_summary') ? 'Rezumatul e în așteptare…' : 'Trimite rezumatul acum'}
           </button>
         </div>
       </section>
@@ -277,7 +299,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
               <li key={c.id} className="admin-sala-rand">
                 <span className="admin-sala-nume">{ETICHETE_COMENZI[c.action]}</span>
                 <span className="admin-sala-detaliu">
-                  {new Date(c.created_at).toLocaleString('ro-RO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  {ziLunaOra(c.created_at)}
                 </span>
                 <StareComanda comanda={c}>
                   {ETICHETE_STARE_COMANDA[c.status]}
@@ -297,7 +319,9 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
         >
           <p>
             {deConfirmat === 'send_poll'
-              ? 'Botul postează în grup sondajul pentru antrenamentul de mâine. Dacă l-a trimis deja, nu-l trimite a doua oară.'
+              ? sondajMainePlecat
+                ? 'Sondajul pentru mâine e deja în grup. Botul postează unul NOU, iar cel vechi rămâne: membrii vor vedea două. Trimite doar dacă primul s-a pierdut.'
+                : 'Botul postează în grup sondajul pentru antrenamentul de mâine.'
               : 'Botul scrie în grup și îi pomenește pe membrii activi care n-au răspuns încă la sondajul de mâine.'}
           </p>
           <div className="admin-table-actions">

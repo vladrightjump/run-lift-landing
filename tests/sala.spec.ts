@@ -54,7 +54,7 @@ const REZUMAT = {
   pornit: true,
   poll_days: [1, 3],
   poll_time: '12:00',
-  urmatorul: { session_date: plus(1), starts_at: '06:30', location: 'Parcul Dumitru Râșcanu', status: 'scheduled', vin: 1, nu_vin: 1 },
+  urmatorul: { session_date: plus(1), starts_at: '06:30', location: 'Parcul Dumitru Râșcanu', status: 'scheduled', poll_sent: true, vin: 1, nu_vin: 1 },
 };
 
 const RASPUNSURI: Record<string, unknown> = {

@@ -259,6 +259,42 @@ describe('grupul de antrenament (salaApi)', () => {
     expect(lipsa).toEqual([]);
   });
 
+  /**
+   * Parametrii fiecărei funcții, din instantaneul producției. Componentele și
+   * e2e-ul mochează stratul RPC, deci un `p_*` scris greșit în client ar trece
+   * prin toate testele și ar pica abia live, cu un 404 de la PostgREST.
+   */
+  const parametri = (schema: string, rpc: string): { toti: string[]; obligatorii: string[] } => {
+    const m = new RegExp(`FUNCTION runlift\\.${rpc}\\(([^)]*)\\)`).exec(schema);
+    if (!m) throw new Error(`${rpc} lipsește din instantaneu`);
+    const parti = m[1].split(/,\s*(?=p_)/).map((p) => p.trim()).filter(Boolean);
+    return {
+      toti: parti.map((p) => p.split(' ')[0]),
+      obligatorii: parti.filter((p) => !/\bDEFAULT\b/i.test(p)).map((p) => p.split(' ')[0]),
+    };
+  };
+
+  it.each(apeluri)('%s: corpul are exact parametrii funcției din producție', async (rpc, cheama) => {
+    const schema = readFileSync(resolve(__dirname, '../../supabase/schema/runlift.sql'), 'utf8');
+    fetchMock.mockResolvedValueOnce(new Response('null', { status: 200 }));
+    await cheama();
+    const chei = Object.keys(JSON.parse(String(fetchMock.mock.calls[0][1].body))).sort();
+    const { toti, obligatorii } = parametri(schema, rpc);
+    expect(chei.filter((k) => !toti.includes(k))).toEqual([]);
+    expect(obligatorii.filter((k) => !chei.includes(k))).toEqual([]);
+  });
+
+  it('fiecare refuz numit de server are un mesaj în client', () => {
+    const coduri = new Set<string>();
+    for (const f of ['supabase-migration-sala-functii-admin.sql', 'supabase-migration-sala-corecturi.sql']) {
+      const sql = readFileSync(resolve(__dirname, '../../supabase/sql', f), 'utf8');
+      for (const m of sql.matchAll(/raise exception '(\w+)'/g)) coduri.add(m[1]);
+    }
+    coduri.delete('invalid_token');
+    const necunoscute = [...coduri].filter((c) => !(sala.REFUZURI_SALA as readonly string[]).includes(c));
+    expect(necunoscute).toEqual([]);
+  });
+
   it('mesajul liber poartă HTML-ul, iar celelalte comenzi trimit null', async () => {
     fetchMock.mockResolvedValue(new Response('"id"', { status: 200 }));
     await sala.trimiteComanda('tok', 'send_message', '<b>Mâine</b>');
