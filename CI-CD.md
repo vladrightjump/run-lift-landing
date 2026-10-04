@@ -1,8 +1,9 @@
 # CI/CD — testare + deploy verificat pe live
 
-Pipeline care, la fiecare push în `main`, rulează toate verificările și — doar dacă
-trec — declanșează deploy-ul Vercel și confirmă pe LIVE că build-ul nou e chiar
-sus. Născut din incidentul din 4–5 aug 2026, când un push nu a declanșat build și
+Pipeline care, pe fiecare pull request spre `main`, rulează toate verificările (site +
+bot), iar `main` nu primește merge-ul până nu sunt verzi. La fiecare push în `main`
+(adică la merge) le rulează din nou și — doar dacă trec — declanșează deploy-ul
+Vercel și confirmă pe LIVE că build-ul nou e chiar sus. Născut din incidentul din 4–5 aug 2026, când un push nu a declanșat build și
 producția a rămas pe un commit vechi (înscrierile picau) fără ca nimeni să știe.
 
 Workflow: `.github/workflows/ci-deploy.yml`.
@@ -10,7 +11,13 @@ Workflow: `.github/workflows/ci-deploy.yml`.
 ## Fluxul
 
 ```
-push main
+pull request spre main
+   │
+   ├─ job „test" și job „bot" (aceleași ca mai jos)
+   └─ job „deploy": sărit („skipped"), un PR nu publică nimic
+   (merge-ul e blocat până „test" și „bot" sunt verzi; vezi „Regula pe main")
+
+push main  (= merge-ul unui PR)
    │
    ├─ job „test" ─ npm ci → typecheck (app+teste) → teste unitare
    │               → build → teste e2e (Playwright, PE build)
@@ -41,6 +48,33 @@ varianta de CI, deci reproduce exact ce se întâmplă în pipeline.
 
 Comanda pe build e `npm run test:e2e:preview` și cere un `dist/` proaspăt: servește
 ce găsește, deci construiește întâi.
+
+## Regula pe `main` (ruleset)
+
+Din 4 oct 2026, `main` are ruleset-ul „main: doar prin PR, cu verificările verzi"
+(GitHub → repo → Settings → Rules → Rulesets). Fără nicio excepție, nici pentru admin:
+
+- orice schimbare intră doar printr-un pull request; push-ul direct în `main` e refuzat;
+- merge-ul cere verzi job-urile **„Verificări (typecheck + teste + build)"** și
+  **„Botul de Telegram (teste + build)"**, rulate de GitHub Actions;
+- PR-ul trebuie să fie la zi cu `main` înainte de merge (merge-ul e deploy-ul, deci
+  se testează exact ce ajunge în producție). Butonul „Update branch" din PR îl aduce la zi;
+- nu e nevoie de aprobare (un singur om lucrează în repo), dar nici de ocolire;
+- `main` nu se poate șterge și nu primește force-push.
+
+Un PR din alt branch decât `main` nu publică nimic: job-ul „deploy" rulează doar
+pe `main`. La fel o rulare manuală (`workflow_dispatch`) pornită de pe alt branch.
+
+**Dacă redenumești un job** din `ci-deploy.yml`, schimbă numele și în ruleset, în
+același timp. Altfel ruleset-ul așteaptă o verificare care nu mai vine, iar
+niciun PR nu mai intră. Ieșirea, pentru un admin: Settings → Rules → Rulesets →
+ruleset-ul de mai sus → actualizează numele (sau „Disable", temporar).
+
+Ruleset-ul se recreează din `scripts/ruleset-main.json`:
+
+```bash
+gh api -X POST repos/vladrightjump/run-lift-landing/rulesets --input scripts/ruleset-main.json
+```
 
 ## Botul de Telegram (job-ul `bot`)
 
@@ -105,7 +139,8 @@ vercel --prod --yes
 ## Cum citești un pipeline roșu
 
 - **job „test" roșu** → o verificare a picat (typecheck / test / e2e / garda CSP la
-  build). Logul spune exact care. Nu s-a deployat nimic.
+  build). Logul spune exact care. Nu s-a deployat nimic. Pe un PR, merge-ul rămâne
+  blocat până trece.
 - **„Declanșează deploy-ul" roșu** → lipsește `VERCEL_DEPLOY_HOOK_URL` (vezi Setup).
 - **„Verifică pe live" roșu, „Build-ul nou NU e live"** → Vercel n-a terminat/n-a
   reușit build-ul în 4 min. Verifică deploy-ul în dashboard-ul Vercel (build logs).
