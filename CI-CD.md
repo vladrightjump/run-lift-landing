@@ -11,20 +11,20 @@ Workflow: `.github/workflows/ci-deploy.yml`.
 ## Fluxul
 
 ```
-pull request spre main
+pull request spre main  sau  push main (= merge-ul unui PR)
    │
-   ├─ job „test" și job „bot" (aceleași ca mai jos)
-   └─ job „deploy": sărit („skipped"), un PR nu publică nimic
-   (merge-ul e blocat până „test" și „bot" sunt verzi; vezi „Regula pe main")
-
-push main  (= merge-ul unui PR)
+   │  în paralel, fiecare pe runner-ul lui:
+   ├─ „Verificări — linter, cod mort, typecheck"
+   ├─ „Verificări — teste unitare (cu acoperire)"
+   ├─ „Verificări — e2e (1/2)"  ┐ build (cu garda CSP↔config) + browserul,
+   ├─ „Verificări — e2e (2/2)"  ┘ apoi jumătate din Playwright, PE build
+   ├─ „Botul de Telegram (teste + build)"
    │
-   ├─ job „test" ─ npm ci → typecheck (app+teste) → teste unitare
-   │               → build → teste e2e (Playwright, PE build)
-   │                  └─ garda CSP↔config + ștampila de versiune
-   │   (dacă PICĂ ceva → STOP, nu se deployează)
+   ├─ poarta „Verificări (typecheck + teste + build)": verde doar dacă primele
+   │  patru sunt verzi. Ea și „Botul de Telegram" sunt cele cerute de regula de pe main.
+   │   (dacă PICĂ ceva → STOP: PR-ul nu intră, main nu se deployează)
    ▼
-   └─ job „deploy" (doar dacă „test" e verde)
+   └─ job „deploy": doar pe main, doar dacă poarta e verde. Pe un PR, „skipped".
         1. POST la Vercel Deploy Hook  →  Vercel face build + deploy
         2. poll pe https://parktraining.fit/version.json
              până commit == SHA-ul push-ului  (timeout 4 min → roșu)
@@ -34,6 +34,29 @@ push main  (= merge-ul unui PR)
 
 Dacă build-ul nou nu apare live sau CSP-ul e desincronizat, pipeline-ul e **roșu** —
 ai semnalul imediat, nu afli de la utilizatori.
+
+### De ce e împărțit în job-uri paralele (4 oct 2026)
+
+Până pe 4 oct, „Verificări" era un singur job, cu pașii la rând: ~3m40s, din care
+testele unitare ~65s și e2e ~90s, adică aproape tot. Acum:
+
+- static, unitare și e2e pornesc deodată, pe runnere separate;
+- e2e e tăiat în două (`--shard=1/2`, `2/2`), iar fiecare bucată folosește toate
+  cele 4 nuclee ale runner-ului (`workers: '100%'` pe CI în `playwright.config.ts`;
+  implicitul era jumătate);
+- bibliotecile de sistem ale browserului (apt, ~15s) se instalează în timpul build-ului;
+- testele unitare `.ts` rulează în Node, nu în jsdom (vezi `vitest.config.ts`); jsdom
+  se construia pentru fiecare fișier și mânca ~47s din timpul cumulat.
+
+**Poarta.** Regula de pe `main` cere o verificare cu numele vechiului job,
+„Verificări (typecheck + teste + build)". Acum e un job mic care așteaptă celelalte
+și pică dacă vreunul n-a reușit. Are `if: always()` cu motiv: GitHub socotește o
+verificare obligatorie **„skipped" ca trecută**, iar fără `always()` poarta ar fi
+„skipped" exact când un job de dinainte pică. Nu scoate `always()` și nu înlocui
+verificarea rezultatelor cu `success()`.
+
+**Ce costă:** fiecare job își face `npm ci` (~5s, din cache), iar e2e face build-ul
+de două ori (~8s fiecare). Merită: drumul critic e acum cel mai lung job, nu suma lor.
 
 ### De ce build-ul e ÎNAINTEA testelor e2e
 

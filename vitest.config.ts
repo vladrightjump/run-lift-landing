@@ -7,10 +7,20 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   test: {
-    environment: 'jsdom',
-    include: ['tests/unit/**/*.test.ts', 'tests/unit/**/*.test.tsx'],
     globals: false,
     restoreMocks: true,
+    // Două proiecte, după extensie. jsdom costă: se construiește pentru fiecare
+    // fișier și mânca jumătate din timpul suitei, deși majoritatea testelor `.ts`
+    // sunt logică pură. Deci:
+    //  - `.test.ts` rulează în Node; cine are nevoie de DOM (`window`,
+    //    `localStorage`, `renderHook`) o spune pe primul rând, cu
+    //    `// @vitest-environment jsdom`. Fără el, testul pică zgomotos
+    //    („document is not defined"), nu trece pe alt drum;
+    //  - `.test.tsx` (componente) rulează în jsdom.
+    projects: [
+      { extends: true, test: { name: 'node', environment: 'node', include: ['tests/unit/**/*.test.ts'] } },
+      { extends: true, test: { name: 'dom', environment: 'jsdom', include: ['tests/unit/**/*.test.tsx'] } },
+    ],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
