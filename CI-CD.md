@@ -1,8 +1,9 @@
 # CI/CD — testare + deploy verificat pe live
 
-Pipeline care, la fiecare push în `main`, rulează toate verificările și — doar dacă
-trec — declanșează deploy-ul Vercel și confirmă pe LIVE că build-ul nou e chiar
-sus. Născut din incidentul din 4–5 aug 2026, când un push nu a declanșat build și
+Pipeline care, pe fiecare pull request spre `main`, rulează toate verificările (site +
+bot), iar `main` nu primește merge-ul până nu sunt verzi. La fiecare push în `main`
+(adică la merge) le rulează din nou și — doar dacă trec — declanșează deploy-ul
+Vercel și confirmă pe LIVE că build-ul nou e chiar sus. Născut din incidentul din 4–5 aug 2026, când un push nu a declanșat build și
 producția a rămas pe un commit vechi (înscrierile picau) fără ca nimeni să știe.
 
 Workflow: `.github/workflows/ci-deploy.yml`.
@@ -10,14 +11,20 @@ Workflow: `.github/workflows/ci-deploy.yml`.
 ## Fluxul
 
 ```
-push main
+pull request spre main  sau  push main (= merge-ul unui PR)
    │
-   ├─ job „test" ─ npm ci → typecheck (app+teste) → teste unitare
-   │               → build → teste e2e (Playwright, PE build)
-   │                  └─ garda CSP↔config + ștampila de versiune
-   │   (dacă PICĂ ceva → STOP, nu se deployează)
+   │  în paralel, fiecare pe runner-ul lui:
+   ├─ „Verificări — linter, cod mort, typecheck"
+   ├─ „Verificări — teste unitare (cu acoperire)"
+   ├─ „Verificări — e2e (1/2)"  ┐ build (cu garda CSP↔config) + browserul,
+   ├─ „Verificări — e2e (2/2)"  ┘ apoi jumătate din Playwright, PE build
+   ├─ „Botul de Telegram (teste + build)"
+   │
+   ├─ poarta „Verificări (typecheck + teste + build)": verde doar dacă primele
+   │  patru sunt verzi. Ea și „Botul de Telegram" sunt cele cerute de regula de pe main.
+   │   (dacă PICĂ ceva → STOP: PR-ul nu intră, main nu se deployează)
    ▼
-   └─ job „deploy" (doar dacă „test" e verde)
+   └─ job „deploy": doar pe main, doar dacă poarta e verde. Pe un PR, „skipped".
         1. POST la Vercel Deploy Hook  →  Vercel face build + deploy
         2. poll pe https://parktraining.fit/version.json
              până commit == SHA-ul push-ului  (timeout 4 min → roșu)
@@ -27,6 +34,29 @@ push main
 
 Dacă build-ul nou nu apare live sau CSP-ul e desincronizat, pipeline-ul e **roșu** —
 ai semnalul imediat, nu afli de la utilizatori.
+
+### De ce e împărțit în job-uri paralele (4 oct 2026)
+
+Până pe 4 oct, „Verificări" era un singur job, cu pașii la rând: ~3m40s, din care
+testele unitare ~65s și e2e ~90s, adică aproape tot. Acum:
+
+- static, unitare și e2e pornesc deodată, pe runnere separate;
+- e2e e tăiat în două (`--shard=1/2`, `2/2`), iar fiecare bucată folosește toate
+  cele 4 nuclee ale runner-ului (`workers: '100%'` pe CI în `playwright.config.ts`;
+  implicitul era jumătate);
+- bibliotecile de sistem ale browserului (apt, ~15s) se instalează în timpul build-ului;
+- testele unitare `.ts` rulează în Node, nu în jsdom (vezi `vitest.config.ts`); jsdom
+  se construia pentru fiecare fișier și mânca ~47s din timpul cumulat.
+
+**Poarta.** Regula de pe `main` cere o verificare cu numele vechiului job,
+„Verificări (typecheck + teste + build)". Acum e un job mic care așteaptă celelalte
+și pică dacă vreunul n-a reușit. Are `if: always()` cu motiv: GitHub socotește o
+verificare obligatorie **„skipped" ca trecută**, iar fără `always()` poarta ar fi
+„skipped" exact când un job de dinainte pică. Nu scoate `always()` și nu înlocui
+verificarea rezultatelor cu `success()`.
+
+**Ce costă:** fiecare job își face `npm ci` (~5s, din cache), iar e2e face build-ul
+de două ori (~8s fiecare). Merită: drumul critic e acum cel mai lung job, nu suma lor.
 
 ### De ce build-ul e ÎNAINTEA testelor e2e
 
@@ -41,6 +71,33 @@ varianta de CI, deci reproduce exact ce se întâmplă în pipeline.
 
 Comanda pe build e `npm run test:e2e:preview` și cere un `dist/` proaspăt: servește
 ce găsește, deci construiește întâi.
+
+## Regula pe `main` (ruleset)
+
+Din 4 oct 2026, `main` are ruleset-ul „main: doar prin PR, cu verificările verzi"
+(GitHub → repo → Settings → Rules → Rulesets). Fără nicio excepție, nici pentru admin:
+
+- orice schimbare intră doar printr-un pull request; push-ul direct în `main` e refuzat;
+- merge-ul cere verzi job-urile **„Verificări (typecheck + teste + build)"** și
+  **„Botul de Telegram (teste + build)"**, rulate de GitHub Actions;
+- PR-ul trebuie să fie la zi cu `main` înainte de merge (merge-ul e deploy-ul, deci
+  se testează exact ce ajunge în producție). Butonul „Update branch" din PR îl aduce la zi;
+- nu e nevoie de aprobare (un singur om lucrează în repo), dar nici de ocolire;
+- `main` nu se poate șterge și nu primește force-push.
+
+Un PR din alt branch decât `main` nu publică nimic: job-ul „deploy" rulează doar
+pe `main`. La fel o rulare manuală (`workflow_dispatch`) pornită de pe alt branch.
+
+**Dacă redenumești un job** din `ci-deploy.yml`, schimbă numele și în ruleset, în
+același timp. Altfel ruleset-ul așteaptă o verificare care nu mai vine, iar
+niciun PR nu mai intră. Ieșirea, pentru un admin: Settings → Rules → Rulesets →
+ruleset-ul de mai sus → actualizează numele (sau „Disable", temporar).
+
+Ruleset-ul se recreează din `scripts/ruleset-main.json`:
+
+```bash
+gh api -X POST repos/vladrightjump/run-lift-landing/rulesets --input scripts/ruleset-main.json
+```
 
 ## Botul de Telegram (job-ul `bot`)
 
@@ -105,7 +162,8 @@ vercel --prod --yes
 ## Cum citești un pipeline roșu
 
 - **job „test" roșu** → o verificare a picat (typecheck / test / e2e / garda CSP la
-  build). Logul spune exact care. Nu s-a deployat nimic.
+  build). Logul spune exact care. Nu s-a deployat nimic. Pe un PR, merge-ul rămâne
+  blocat până trece.
 - **„Declanșează deploy-ul" roșu** → lipsește `VERCEL_DEPLOY_HOOK_URL` (vezi Setup).
 - **„Verifică pe live" roșu, „Build-ul nou NU e live"** → Vercel n-a terminat/n-a
   reușit build-ul în 4 min. Verifică deploy-ul în dashboard-ul Vercel (build logs).

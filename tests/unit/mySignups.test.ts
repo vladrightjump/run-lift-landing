@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { maskName, getMySignups, rememberMySignup } from '../../src/lib/mySignups';
 

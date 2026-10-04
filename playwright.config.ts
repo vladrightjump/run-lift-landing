@@ -36,6 +36,11 @@ export default defineConfig({
   // și nu pot fi încărcate de Playwright (import din 'vitest' => crash).
   testMatch: /.*\.spec\.ts/,
   fullyParallel: true,
+  // Implicit, Playwright folosește jumătate din nuclee: 2 din cele 4 ale
+  // runner-ului GitHub. Testele așteaptă mai mult decât calculează (animații,
+  // redirecturi temporizate), deci pe CI le dăm pe toate. Local rămâne
+  // implicitul, ca laptopul să nu se sufoce.
+  workers: process.env.CI ? '100%' : undefined,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: 'list',
