@@ -74,13 +74,22 @@ prefix `runlift_`:
 | 20261003090943 | `sala_02_functii_admin` | runlift + public | **Adminul ajunge la tabelele grupului.** Douăsprezece funcții `runlift.admin_sala_*` (SECURITY DEFINER, verifică tokenul de sesiune): citirea în bloc pentru ecrane, rezumatul pentru cardul de pe pornire, prezența de mână (jurnal cu sursa `manual`), anularea/reactivarea unei zile, setările botului (validate: zile 0–6 fără dubluri, ore `HH:MM`, prag 0–999, text de sondaj ≤ 80/32 caractere, gol = textul de azi), pornit/oprit, comenzile `send_poll`/`send_summary`/`send_reminder`/`send_message`, scoaterea din grup (refuză adminii și membrii fără cont de Telegram), editarea, legarea, crearea și unirea membrilor. Fiecare scriere lasă un rând `sala_*` în `admin_events`, cu numele adminului (`sala_jurnal`); fluxul de activitate al edițiilor nu le arată (listă albă). Plățile nu apar în nicio citire. Patru coloane noi, nule: `bot_config.poll_title`/`poll_yes_label`/`poll_no_label` și `training_sessions.poll_wording` (copia textului cu care a plecat sondajul) — botul de acum nu le citește. **Închide `public.merge_members`**: SECURITY DEFINER, fără verificare de apelant, executabilă de oricine prin PUBLIC; acum doar `postgres` + `service_role` (gym-app o cheamă cu cheia de service, deci nu e afectat). `get_advisors`: nicio clasă nouă de problemă. Instantaneele `runlift.sql` și `sala.sql` regenerate. Vezi `supabase/sql/supabase-migration-sala-functii-admin.sql` |
 | 20261003173839 | `sala_03_corecturi` | runlift | Corecturile din review-ul ramurii, doar `create or replace` pe funcții existente (fără coloane, fără drepturi noi). `admin_list_events` nu mai întoarce rândurile `sala_*` — limita de 200 se aplica înaintea listei albe din client, deci prezențele marcate de mână împingeau renunțările afară din „Activitate recentă". `admin_sala_rezumat` spune `poll_sent` (cardul nu mai arată „0 vin" pentru un antrenament fără sondaj). `admin_sala_salveaza_config` nu mai scrie `enabled` peste un rând existent — îl schimbă doar comutatorul. `admin_sala_comanda` refuză sondajul/reminderul „acum" pentru un mâine anulat (`antrenament_anulat`) și nu mai pune a doua oară în coadă o comandă la fel care așteaptă. Anularea unei zile fără rând ia ora și locul din setările botului. `get_advisors`: nicio clasă nouă. Instantaneul `runlift.sql` regenerat (`sala.sql` neatins: tabelele din `public` nu se schimbă). Vezi `supabase/sql/supabase-migration-sala-corecturi.sql` |
 | 20261003175122 | `sala_04_mai_putine_date` | runlift | A doua rundă din review, tot doar `create or replace`. `admin_sala_date` nu mai trimite telefonul și emailul membrilor (niciun ecran nu le arată). `admin_sala_porneste_bot` creează rândul de setări dacă lipsește, în loc să raporteze o oprire care n-a schimbat nimic. `admin_sala_salveaza_config` taie orice spațiu alb din jurul textelor, nu doar spațiile. Instantaneul `runlift.sql` regenerat. `scripts/schema-snapshot-sala.sql` prinde de acum și triggerele tabelelor grupului (azi nu există niciunul, deci `sala.sql` nu se schimbă). Vezi `supabase/sql/supabase-migration-sala-mai-putine-date.sql` |
+| 20261004192325 | `sala_05_scoateri` | runlift | A treia rundă din review, doar `create or replace` pe `admin_sala_date`. Întoarce și `scoateri`: ultima comandă `kick_member` a fiecărui membru, oricât de veche. Până acum ecranele o căutau doar printre ultimele 30 de `comenzi`, deci după 30 de comenzi mai noi o scoatere eșuată dispărea din „Scoateri eșuate” și nu se mai putea reîncerca. Fără coloane și fără drepturi noi. Corpul din producție are același md5 ca instantaneul `runlift.sql` (actualizat). `get_advisors`: nicio clasă nouă. Vezi `supabase/sql/supabase-migration-sala-scoateri.sql` |
 
 **Verificarea copiei de siguranță, înainte de U11.** Criteriul din plan („niciun tabel nu are mai puține
 rânduri decât în copie") pică și fără pierderi: adminul șterge legitim rânduri (prezență golită,
 unirea a doi membri, un cont necunoscut legat sau făcut membru). Se verifică pe cheia primară,
-iar fiecare rând dispărut trebuie explicat de un eveniment `sala_*` (sau de gym-app, cât încă
-rulează). Numărul simplu de rânduri rămâne criteriu doar pentru `payments`, `training_sessions`,
-`attendance_log` și `bot_actions`, din care nimic nu șterge:
+iar fiecare rând dispărut trebuie explicat:
+
+- de un eveniment `sala_*` din `admin_events`;
+- de bot, care șterge singur un cont din `telegram_unmatched` când îl leagă de un membru, fără
+  eveniment `sala_*`;
+- de gym-app, cât încă rulează: șterge plăți, iar „anularea” ștergerii le pune înapoi cu alt
+  `id`. O plată din copie care lipsește poate fi deci una reintrodusă, nu una pierdută: caut-o
+  după membru, sumă și dată înainte s-o numeri pierdere.
+
+Numărul simplu de rânduri rămâne criteriu doar pentru `training_sessions`, `attendance_log` și
+`bot_actions`, din care nimic nu șterge. `payments` se verifică tot pe cheie, ca mai jos:
 
 ```sql
 -- Rânduri din copie care lipsesc acum, pe tabel (repetă pentru fiecare tabel cu `id`).
@@ -91,7 +100,10 @@ select 'attendance', c.id, null from sala_copie_20261003.attendance c
  where not exists (select 1 from public.attendance a where a.id = c.id)
 union all
 select 'telegram_unmatched', null, c.telegram_user_id::text from sala_copie_20261003.telegram_unmatched c
- where not exists (select 1 from public.telegram_unmatched u where u.telegram_user_id = c.telegram_user_id);
+ where not exists (select 1 from public.telegram_unmatched u where u.telegram_user_id = c.telegram_user_id)
+union all
+select 'payments', c.id, null from sala_copie_20261003.payments c
+ where not exists (select 1 from public.payments p where p.id = c.id);
 -- Explicațiile: select tip, detaliu, created_at from runlift.admin_events
 --   where tip in ('sala_prezenta', 'sala_unire', 'sala_legare', 'sala_membru_nou') order by created_at;
 ```

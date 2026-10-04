@@ -71,12 +71,49 @@ describe('textCard', () => {
   });
 
   it('rând programat fără sondaj, pentru o zi pe care orarul n-o acoperă: spune doar că n-a plecat', () => {
+    // Sondajul de vineri e pentru sâmbătă, deci joi rămâne următorul, fără sondaj.
     const t = textCard(
-      rezumat({ urmatorul: urmator({ session_date: '2026-10-10', poll_sent: false, vin: 0, nu_vin: 0 }) }),
+      rezumat({ poll_days: [5], urmatorul: urmator({ poll_sent: false, vin: 0, nu_vin: 0 }) }),
       ACUM
     );
     expect(t.stare).toBe('asteapta-sondajul');
+    expect(t.titlu).toBe('Următorul: Joi, 8 oct, 06:30');
     expect(t.detaliu).toBe('Sondajul n-a plecat încă.');
+  });
+
+  it('o zi anulată peste două săptămâni nu ascunde antrenamentul de joi', () => {
+    // Singurul rând de azi încolo e ziua anulată; joi n-are încă rând, dar
+    // sondajul pentru el pleacă azi la 12:00.
+    const t = textCard(rezumat({ urmatorul: urmator({ session_date: '2026-10-22', status: 'cancelled' }) }), ACUM);
+    expect(t).toEqual({
+      stare: 'asteapta-sondajul',
+      titlu: 'Următorul: Joi, 8 oct',
+      detaliu: 'Sondajul pleacă miercuri la 12:00.',
+    });
+  });
+
+  it('o zi reactivată departe, fără sondaj, nu ascunde antrenamentul de joi', () => {
+    const t = textCard(
+      rezumat({ urmatorul: urmator({ session_date: '2026-10-20', poll_sent: false, vin: 0, nu_vin: 0 }) }),
+      ACUM
+    );
+    expect(t.titlu).toBe('Următorul: Joi, 8 oct');
+    expect(t.detaliu).toBe('Sondajul pleacă miercuri la 12:00.');
+  });
+
+  it('o zi anulată departe, cu botul oprit: spune că botul e oprit', () => {
+    const t = textCard(
+      rezumat({ pornit: false, urmatorul: urmator({ session_date: '2026-10-22', status: 'cancelled' }) }),
+      ACUM
+    );
+    expect(t.stare).toBe('oprit');
+  });
+
+  it('ziua anulată e chiar următoarea din orar: rămâne „anulat"', () => {
+    // Fără joi, orarul (luni, miercuri) duce la marți 13; ziua anulată de joi e mai aproape.
+    const t = textCard(rezumat({ urmatorul: urmator({ status: 'cancelled', poll_sent: false, vin: 0, nu_vin: 0 }) }), ACUM);
+    expect(t.stare).toBe('anulat');
+    expect(t.titlu).toBe('Joi, 8 oct — anulat');
   });
 
   it('voturi marcate de mână înainte de sondaj se numără', () => {

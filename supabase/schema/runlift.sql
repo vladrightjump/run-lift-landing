@@ -883,6 +883,20 @@ begin
         'result', b.result, 'created_at', b.created_at, 'processed_at', b.processed_at
       ) order by b.created_at desc)
       from (select * from public.bot_actions order by created_at desc limit 30) b
+    ), '[]'::jsonb),
+    -- Ultima scoatere a fiecărui membru, oricât de veche: o scoatere eșuată
+    -- trebuie să rămână la vedere până e reîncercată.
+    'scoateri', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', b.id, 'action', b.action, 'member_id', b.member_id, 'status', b.status,
+        'result', b.result, 'created_at', b.created_at, 'processed_at', b.processed_at
+      ) order by b.created_at desc)
+      from (
+        select distinct on (k.member_id) k.*
+          from public.bot_actions k
+         where k.action = 'kick_member' and k.member_id is not null
+         order by k.member_id, k.created_at desc
+      ) b
     ), '[]'::jsonb)
   );
 end;

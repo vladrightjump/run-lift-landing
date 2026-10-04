@@ -243,6 +243,9 @@ const sala = {
     { id: 'c2', action: 'send_poll', member_id: null, status: 'done', result: null, created_at: cuZileInUrma(2), processed_at: cuZileInUrma(2) },
     { id: 'c3', action: 'send_message', member_id: null, status: 'failed', result: 'Bad Request: can\'t parse entities', created_at: cuZileInUrma(1), processed_at: cuZileInUrma(1) },
   ],
+  scoateri: [
+    { id: 'c1', action: 'kick_member', member_id: 'm-13', status: 'done', result: 'kicked', created_at: cuZileInUrma(4), processed_at: cuZileInUrma(4) },
+  ],
 };
 const urmatorulGrup = antrenamenteGrup[0];
 const rezumatSala = {

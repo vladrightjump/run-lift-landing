@@ -715,8 +715,9 @@ Browserul n-are cheia de service; fiecare funcție începe cu `admin_check_token
 **Citirile — două, ambele în bloc (KTD2).**
 
 - `admin_sala_date`: tot ce le trebuie celor patru ecrane, dintr-o cerere — setările, membrii (fără
-  telefon și email), antrenamentele și răspunsurile din ultimele 800 de zile, conturile nelegate și
-  ultimele 30 de comenzi. Analiza se calculează în browser (`src/admin/sala/statistici.ts`, portat
+  telefon și email), antrenamentele și răspunsurile din ultimele 800 de zile, conturile nelegate,
+  ultimele 30 de comenzi și, separat, ultima scoatere a fiecărui membru (`scoateri`, oricât de
+  veche, ca o scoatere eșuată să rămână reîncercabilă). Analiza se calculează în browser (`src/admin/sala/statistici.ts`, portat
   din gym-app cu testele lui). Ecranele o reîmprospătează la 15 secunde (`useSala.ts`).
 - `admin_sala_rezumat`: doar cât îi trebuie cardului de pe pornire (antrenamentul următor, cu
   `poll_sent`, câți vin și câți nu, plus orarul sondajului).

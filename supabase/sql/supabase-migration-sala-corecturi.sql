@@ -30,6 +30,12 @@
 --      locul din setările botului, nu valorile implicite ale coloanelor: după o
 --      reactivare, sondajul și ecranele arată ora și locul reale.
 --
+-- ÎNLOCUITĂ PARȚIAL: `admin_sala_salveaza_config` de aici e redefinită de
+-- `supabase-migration-sala-mai-putine-date.sql` (`sala_04`). O nouă rulare a
+-- acestui fișier după `sala_04` îi întoarce corectura (spațiile albe). Definiția
+-- live: `supabase/schema/runlift.sql`. Întoarcerile se fac în ordine inversă:
+-- întâi `sala_05`, apoi `sala_04`, abia apoi aceasta.
+--
 -- ÎNTOARCERE: rulează din nou corpurile din
 -- `supabase/sql/supabase-migration-sala-functii-admin.sql` pentru funcțiile
 -- 2–5 și corpul vechi al lui `admin_list_events` (fără `where e.tip not like

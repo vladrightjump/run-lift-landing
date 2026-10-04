@@ -299,6 +299,42 @@ describe('admin_sala_date', () => {
     expect([...ore].sort().reverse()).toEqual(ore);
   });
 
+  it('scoateri: ultima scoatere a fiecărui membru, oricât de veche, chiar dincolo de ultimele 30 de comenzi', async () => {
+    const ana = await membru('Ana', 555);
+    const ion = await membru('Ion', 556);
+    await db.query(
+      `insert into public.bot_actions (action, member_id, telegram_user_id, status, result, created_at) values
+         ('kick_member', $1, 555, 'failed', 'Bad Request: not enough rights', now() - interval '2 days'),
+         ('kick_member', $1, 555, 'done', 'kicked', now() - interval '1 day'),
+         ('kick_member', $2, 556, 'failed', 'Bad Request: not enough rights', now() - interval '3 days'),
+         ('kick_member', null, null, 'failed', 'fără membru', now() - interval '4 days')`,
+      [ana, ion]
+    );
+    // 31 de comenzi mai noi împing toate scoaterile afară din `comenzi`.
+    await db.query(
+      `insert into public.bot_actions (action, created_at)
+       select 'send_summary', now() - make_interval(mins => g) from generate_series(1, 31) g`
+    );
+    const d = await cheama<{
+      comenzi: { action: string }[];
+      scoateri: { member_id: string; action: string; status: string; result: string; created_at: string }[];
+    }>('admin_sala_date', ADMIN_TOKEN);
+    expect(d.comenzi.some((c) => c.action === 'kick_member')).toBe(false);
+    expect(d.scoateri.map((k) => [k.member_id, k.status])).toEqual([
+      [ana, 'done'],
+      [ion, 'failed'],
+    ]);
+    expect(Object.keys(d.scoateri[1]).sort()).toEqual(
+      ['action', 'created_at', 'id', 'member_id', 'processed_at', 'result', 'status'].sort()
+    );
+    expect(d.scoateri[1].result).toBe('Bad Request: not enough rights');
+  });
+
+  it('scoateri e o listă goală când nimeni n-a fost scos', async () => {
+    const d = await cheama<{ scoateri: unknown[] }>('admin_sala_date', ADMIN_TOKEN);
+    expect(d.scoateri).toEqual([]);
+  });
+
   it('nu întoarce nicio plată', async () => {
     const m = await membru('Maria');
     // O sumă pe care n-o poate conține întâmplător un uuid sau o dată.
@@ -356,6 +392,22 @@ describe('admin_sala_set_prezenta', () => {
     expect(a.rows).toEqual([{ response: 'yes', is_first_training: true }]);
     const j = await db.query(`select response, source from public.attendance_log`);
     expect(j.rows).toEqual([{ response: 'yes', source: 'manual' }]);
+  });
+
+  it('Covers R6. se poate marca de mână și un membru fără Telegram sau în pauză', async () => {
+    const faraCont = await membru('Fără cont');
+    const pauza = await membru('În pauză', 777);
+    await db.query(`update public.members set status = 'paused' where id = $1`, [pauza]);
+    const s = await antrenament('2026-10-06');
+    await cheama('admin_sala_set_prezenta', ADMIN_TOKEN, s, faraCont, 'yes');
+    await cheama('admin_sala_set_prezenta', ADMIN_TOKEN, s, pauza, 'yes');
+    const a = await db.query(`select member_id, response from public.attendance order by member_id`);
+    expect(a.rows).toEqual(
+      [
+        { member_id: faraCont, response: 'yes' },
+        { member_id: pauza, response: 'yes' },
+      ].sort((x, y) => x.member_id.localeCompare(y.member_id))
+    );
   });
 
   it('nu e prim antrenament dacă a mai venit înainte', async () => {

@@ -1,23 +1,33 @@
 name: CI + Deploy
 
-# Pe push în main: rulează TOATE verificările; doar dacă trec, declanșează
-# deploy-ul Vercel (deploy hook) și verifică pe LIVE că build-ul nou e chiar sus.
-# Auto-deploy-ul git al Vercel e dezactivat (vercel.json git.deploymentEnabled),
-# deci acest pipeline e singura cale spre producție.
+# Pe orice pull request spre main: rulează TOATE verificările (site + bot), fără
+# deploy. Regula de pe `main` (ruleset-ul descris în CI-CD.md) cere ca ele să fie
+# verzi înainte de merge.
+#
+# Pe push în main (adică merge-ul unui PR): aceleași verificări, apoi — doar dacă
+# trec — deploy-ul Vercel (deploy hook) și verificarea pe LIVE că build-ul nou e
+# chiar sus. Auto-deploy-ul git al Vercel e dezactivat (vercel.json
+# git.deploymentEnabled), deci acest pipeline e singura cale spre producție.
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
 
 concurrency:
-  # Un singur pipeline per branch; nu anulăm un deploy în curs.
+  # Un singur pipeline per PR sau branch. Pe un PR, un push nou face rularea
+  # veche inutilă, deci o anulăm; pe main nu anulăm niciodată un deploy în curs.
   group: ci-deploy-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  test:
-    name: Verificări (typecheck + teste + build)
+  # „Verificări" e împărțit în trei job-uri care rulează DEODATĂ (static, teste
+  # unitare, e2e în două bucăți), plus o poartă care le adună. Înainte erau pași
+  # la rând, într-un singur job: ~3m40s. Acum durează cât cel mai lung dintre ele.
+  static:
+    name: Verificări — linter, cod mort, typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,35 +38,49 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-
-      # Pragurile astea pică în câteva secunde, ÎNAINTE de orice compilare sau
-      # instalare de browser. O încălcare nouă de linter sau un export rămas
-      # nefolosit nu mai costă tot pipeline-ul ca să se vadă.
       - name: Linter + cod mort
         run: |
           npm run lint
           npm run deadcode
-
       - name: Typecheck (app + teste)
         run: |
           npm run typecheck
           npm run typecheck:tests
 
+  unit:
+    name: Verificări — teste unitare (cu acoperire)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       # Cu acoperire, nu doar cu rezultate: pragurile din `vitest.config.ts` sunt
       # un clichet — urcă pe măsură ce acoperirea crește, nu coboară niciodată.
       - name: Teste unitare (cu prag de acoperire)
         run: npm run test:coverage
 
-      # Build-ul urcă ÎNAINTEA testelor e2e, pentru că acelea rulează acum pe
-      # `dist/`, nu pe dev server. Tot aici pică garda CSP↔config, deci o
-      # nepotrivire de configurare se vede înainte să pornească browserul.
-      - name: Build (include garda CSP↔config + ștampila de versiune)
-        run: npm run build
+  e2e:
+    name: Verificări — e2e (${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    strategy:
+      # O bucată picată nu o oprește pe cealaltă: vezi toate eșecurile odată.
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
 
       # Browserul se schimbă doar când se schimbă versiunea Playwright din
       # lockfile, deci cheia e chiar ea. Fără cache, descărcarea costa ~28s la
-      # fiecare rulare. `--with-deps` (bibliotecile de sistem) rămâne pe calea
-      # de miss: pachetele apt nu sunt în cache-ul de browsere.
+      # fiecare rulare.
       - name: Versiunea Playwright (cheie de cache)
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
@@ -68,19 +92,32 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
-      - name: Instalează browserul Playwright
-        if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+      # Build-ul urcă ÎNAINTEA testelor e2e, pentru că acelea rulează pe `dist/`,
+      # nu pe dev server. Tot aici pică garda CSP↔config. Browserul (sau, pe
+      # cache hit, doar bibliotecile lui de sistem, prin apt) se instalează în
+      # ACELAȘI timp cu build-ul: sunt independente, iar apt-ul singur lua ~15s.
+      - name: Build (cu garda CSP↔config) + browserul Playwright, în paralel
+        env:
+          PW_CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          if [ "$PW_CACHE_HIT" = "true" ]; then
+            npx playwright install-deps chromium > "$RUNNER_TEMP/pw-install.log" 2>&1 &
+          else
+            npx playwright install --with-deps chromium > "$RUNNER_TEMP/pw-install.log" 2>&1 &
+          fi
+          PW_PID=$!
+          npm run build
+          if ! wait "$PW_PID"; then
+            echo "::error::Instalarea browserului Playwright a picat."
+            cat "$RUNNER_TEMP/pw-install.log"
+            exit 1
+          fi
 
-      # Pe cache hit lipsesc doar bibliotecile de sistem, nu și browserul.
-      - name: Instalează dependențele de sistem ale browserului
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
-      # Pe build-ul de producție, nu pe dev server: 58s în loc de 2m01s pe
-      # aceleași două worker-e, și verifică exact bundle-ul care se deployează.
+      # Pe build-ul de producție, nu pe dev server, și doar jumătatea lui din
+      # suită (`--shard`). Pe CI, Playwright folosește toate nucleele runner-ului
+      # (`workers` din `playwright.config.ts`).
       - name: Teste e2e (pe build-ul de producție)
-        run: npm run test:e2e:preview
+        run: npm run test:e2e:preview -- --shard=${{ matrix.shard }}/2
 
       # Reporterul e `list`, deci nu există raport HTML. Ce ajută la depanare
       # sunt urmele scrise de `trace: 'on-first-retry'`, în `test-results/`.
@@ -88,10 +125,37 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-traces
+          name: playwright-traces-${{ matrix.shard }}
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  # Poarta. Are NUMELE vechiului job unic, pe care îl cere regula de pe `main`
+  # (scripts/ruleset-main.json), deci regula nu se schimbă.
+  #
+  # `if: always()` e obligatoriu: fără el, când un job de mai sus pică, poarta e
+  # „skipped" — iar GitHub socotește o verificare obligatorie „skipped" ca
+  # TRECUTĂ. Așa, poarta rulează mereu și pică singură dacă ceva n-a reușit
+  # (inclusiv „cancelled" sau „skipped").
+  test:
+    name: Verificări (typecheck + teste + build)
+    needs: [static, unit, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Toate verificările au trecut
+        env:
+          STATIC: ${{ needs.static.result }}
+          UNIT: ${{ needs.unit.result }}
+          E2E: ${{ needs.e2e.result }}
+        run: |
+          echo "static=$STATIC unit=$UNIT e2e=$E2E"
+          for r in "$STATIC" "$UNIT" "$E2E"; do
+            if [ "$r" != "success" ]; then
+              echo "::error::O verificare n-a trecut (static=$STATIC, unit=$UNIT, e2e=$E2E)."
+              exit 1
+            fi
+          done
 
   # Botul de Telegram (`bot/`), deployat pe Railway din acest repo. Nu e un
   # pas al deploy-ului Vercel: serviciul Railway are „Wait for CI" pornit, deci
@@ -157,6 +221,9 @@ jobs:
   deploy:
     name: Deploy Vercel + verificare live
     needs: test
+    # Doar din main: nici un PR, nici o rulare manuală pornită de pe alt branch
+    # nu publică. Pe un PR job-ul apare „skipped", iar asta nu blochează merge-ul.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       # Job-ul are nevoie de exact două fișiere: scriptul de verificare și
