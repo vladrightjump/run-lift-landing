@@ -45,6 +45,7 @@ const SALA = {
   ],
   necunoscuti: [],
   comenzi: [],
+  scoateri: [],
 };
 
 const REZUMAT = {

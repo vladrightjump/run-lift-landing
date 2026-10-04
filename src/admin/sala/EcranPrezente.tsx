@@ -7,7 +7,7 @@ import {
   type SalaMembru,
 } from '../../lib/salaApi';
 import { Dialog } from '../eventTab/Dialog';
-import { antrenamentulUrmator, cineVine, raspunsul, zileAnulate } from './model';
+import { antrenamentulUrmator, cineVine, deMarcatDeMana, raspunsul, zileAnulate } from './model';
 import { dataLunga, frazaSondaj, urmatorulSondaj } from './sondaj';
 import { useSala } from './useSala';
 
@@ -39,7 +39,7 @@ export const EcranPrezente = () => {
     );
   }
 
-  const urm = antrenamentulUrmator(date);
+  const urm = antrenamentulUrmator(date, new Date());
   const marcheaza = (sesiune: string, m: SalaMembru, r: Raspuns) =>
     void fa(
       (t) => seteazaPrezenta(t, sesiune, m.id, r),
@@ -100,10 +100,11 @@ export const EcranPrezente = () => {
           onSubmit={(e) => {
             e.preventDefault();
             if (!ziDeAnulat) return;
-            void fa(
-              (t) => seteazaAntrenament(t, ziDeAnulat, true),
-              `${dataLunga(ziDeAnulat)} e anulat.`
-            ).then((ok) => ok && setZiDeAnulat(''));
+            // O altă zi aleasă cât se salvează rămâne în câmp.
+            const zi = ziDeAnulat;
+            void fa((t) => seteazaAntrenament(t, zi, true), `${dataLunga(zi)} e anulat.`).then(
+              (ok) => ok && setZiDeAnulat((z) => (z === zi ? '' : z))
+            );
           }}
         >
           <label className="admin-config-eticheta" htmlFor="sala-zi-anulare">
@@ -235,6 +236,13 @@ const AntrenamentUrmator = ({ date, antrenament: a, ocupat, onMarcheaza, onAnule
           onMarcheaza={onMarcheaza}
         />
       </div>
+      <MarcheazaDeMana
+        membri={deMarcatDeMana(date, a.id)}
+        sesiune={a.id}
+        buton="Marchează că vine"
+        ocupat={ocupat}
+        onMarcheaza={onMarcheaza}
+      />
 
       <div className="admin-table-actions">
         <button type="button" className="admin-btn-ghost" disabled={ocupat} onClick={onAnuleaza}>
@@ -324,6 +332,51 @@ const RandMembru = ({ membru: m, zi, sesiune, date, ocupat, onMarcheaza }: Props
   );
 };
 
+type PropsDeMana = {
+  membri: SalaMembru[];
+  sesiune: string;
+  buton: string;
+  ocupat: boolean;
+  onMarcheaza: (sesiune: string, m: SalaMembru, r: Raspuns) => void;
+};
+
+/**
+ * Cine nu primește sondajul (fără Telegram, sau în pauză) nu apare în coloane
+ * până nu e marcat: de aici îl adaugi (R6). Odată marcat, trece la „Vin", cu
+ * aceleași corecturi ca ceilalți.
+ */
+const MarcheazaDeMana = ({ membri, sesiune, buton, ocupat, onMarcheaza }: PropsDeMana) => {
+  const [ales, setAles] = useState('');
+  // Cine a fost marcat iese din listă; alegerea nu rămâne agățată de el.
+  const m = membri.find((x) => x.id === ales);
+  if (membri.length === 0) return null;
+  const id = `sala-de-mana-${sesiune}`;
+  return (
+    <form
+      className="admin-sala-anulare"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (m) onMarcheaza(sesiune, m, 'yes');
+      }}
+    >
+      <label className="admin-config-eticheta" htmlFor={id}>
+        Fără sondaj (fără Telegram sau în pauză)
+      </label>
+      <select id={id} value={m?.id ?? ''} disabled={ocupat} onChange={(e) => setAles(e.target.value)}>
+        <option value="">Alege un membru…</option>
+        {membri.map((x) => (
+          <option key={x.id} value={x.id}>
+            {x.full_name}
+          </option>
+        ))}
+      </select>
+      <button type="submit" className="admin-btn-ghost" disabled={ocupat || !m}>
+        {buton}
+      </button>
+    </form>
+  );
+};
+
 /** Fără antrenament creat: botul îl creează când trimite sondajul. */
 const FaraAntrenament = ({ date }: { date: SalaDate }) => {
   const s = urmatorulSondaj(date.config?.poll_days, date.config?.poll_time, new Date(), zileAnulate(date));
@@ -376,6 +429,13 @@ const AntrenamentTrecut = ({ date, antrenament: a, ocupat, onMarcheaza }: PropsT
           onMarcheaza={onMarcheaza}
         />
       </div>
+      <MarcheazaDeMana
+        membri={deMarcatDeMana(date, a.id)}
+        sesiune={a.id}
+        buton="Marchează că a venit"
+        ocupat={ocupat}
+        onMarcheaza={onMarcheaza}
+      />
     </details>
   );
 };

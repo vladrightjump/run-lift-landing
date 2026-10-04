@@ -66,5 +66,6 @@ export const dateSala = (peste: Partial<SalaDate> = {}): SalaDate => ({
   ],
   necunoscuti: [],
   comenzi: [],
+  scoateri: [],
   ...peste,
 });

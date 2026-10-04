@@ -21,8 +21,25 @@ export type TextCard = {
 
 const pluralVin = (n: number) => `${n} ${n === 1 ? 'vine' : 'vin'}`;
 
+type Rand = NonNullable<SalaRezumat['urmatorul']>;
+
+/** Un rând pentru care nu s-a votat: anulat, sau programat dar fără sondaj. */
+const faraVot = (u: Rand) => u.status === 'cancelled' || (!u.poll_sent && u.vin + u.nu_vin === 0);
+
 export const textCard = (r: SalaRezumat, acum: Date): TextCard => {
-  const u = r.urmatorul;
+  const rand = r.urmatorul;
+  // Rândul e cel mai apropiat de azi încolo, deci înaintea lui nu e nicio zi
+  // anulată în afară de el însuși.
+  const sondaj = urmatorulSondaj(
+    r.poll_days,
+    r.poll_time,
+    acum,
+    new Set(rand?.status === 'cancelled' ? [rand.session_date] : [])
+  );
+  // O zi anulată din timp (sau una reactivată, fără sondaj) nu e antrenamentul
+  // următor când orarul trimite înainte sondajul pentru o zi mai apropiată, care
+  // n-are încă rând. Ecranul „Prezențe" judecă la fel (`antrenamentulUrmator`).
+  const u = rand && faraVot(rand) && sondaj && sondaj.antrenament < rand.session_date ? null : rand;
 
   if (u && u.status === 'cancelled') {
     return {
@@ -50,7 +67,6 @@ export const textCard = (r: SalaRezumat, acum: Date): TextCard => {
     };
   }
 
-  const sondaj = urmatorulSondaj(r.poll_days, r.poll_time, acum);
   if (u) {
     return {
       stare: 'asteapta-sondajul',

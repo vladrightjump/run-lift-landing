@@ -1,4 +1,5 @@
 import type { SalaAntrenament, SalaDate, SalaMembru } from '../../lib/salaApi';
+import { urmatorulSondaj } from './sondaj';
 import type { StatSession } from './statistici';
 
 /**
@@ -33,15 +34,28 @@ export const sesiuniPentruStatistici = (d: SalaDate): StatSession[] => {
   }));
 };
 
-/** Primul antrenament neanulat de azi încolo (R5), sau `null`. */
-export const antrenamentulUrmator = (d: SalaDate): SalaAntrenament | null =>
-  d.antrenamente
-    .filter((a) => a.status !== 'cancelled' && a.session_date >= d.azi)
-    .sort((a, b) => a.session_date.localeCompare(b.session_date))[0] ?? null;
-
 /** Zilele de antrenament anulate (`YYYY-MM-DD`), pentru `urmatorulSondaj`. */
 export const zileAnulate = (d: SalaDate): Set<string> =>
   new Set(d.antrenamente.filter((a) => a.status === 'cancelled').map((a) => a.session_date));
+
+/**
+ * Primul antrenament neanulat de azi încolo (R5), sau `null` când următorul n-are
+ * încă rând (botul îl creează când trimite sondajul).
+ *
+ * Un rând fără sondaj și fără voturi (o zi reactivată, poate peste două
+ * săptămâni) nu e următorul dacă orarul trimite înainte sondajul pentru o zi mai
+ * apropiată: aia vine întâi, deși n-are rând. La fel judecă și cardul de pe
+ * pornire (`textCard`).
+ */
+export const antrenamentulUrmator = (d: SalaDate, acum: Date): SalaAntrenament | null => {
+  const rand =
+    d.antrenamente
+      .filter((a) => a.status !== 'cancelled' && a.session_date >= d.azi)
+      .sort((a, b) => a.session_date.localeCompare(b.session_date))[0] ?? null;
+  if (!rand || rand.poll_sent || d.raspunsuri.some((r) => r.session_id === rand.id)) return rand;
+  const s = urmatorulSondaj(d.config?.poll_days, d.config?.poll_time, acum, zileAnulate(d));
+  return s && s.antrenament < rand.session_date ? null : rand;
+};
 
 export type CineVine = {
   vin: SalaMembru[];
@@ -75,6 +89,23 @@ export const cineVine = (d: SalaDate, sesiune: string): CineVine => {
     (m) => m.status === 'active' && m.telegram_user_id != null && !auRaspuns.has(m.id)
   );
   return { vin: vin.sort(dupaNume), nuVin: nuVin.sort(dupaNume), nuAuRaspuns: nuAuRaspuns.sort(dupaNume) };
+};
+
+/**
+ * Membrii pe care sondajul nu-i întreabă — fără cont de Telegram, sau în pauză —
+ * și care n-au răspuns la antrenament. Prezența lor se pune doar de mână (R6),
+ * ca în gym-app. Cine a ieșit din grup nu apare.
+ */
+export const deMarcatDeMana = (d: SalaDate, sesiune: string): SalaMembru[] => {
+  const auRaspuns = new Set(d.raspunsuri.filter((r) => r.session_id === sesiune).map((r) => r.member_id));
+  return d.membri
+    .filter(
+      (m) =>
+        m.status !== 'cancelled' &&
+        !(m.status === 'active' && m.telegram_user_id != null) &&
+        !auRaspuns.has(m.id)
+    )
+    .sort(dupaNume);
 };
 
 /** Răspunsul unui membru la un antrenament, sau `null`. */

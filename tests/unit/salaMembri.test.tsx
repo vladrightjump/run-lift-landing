@@ -65,7 +65,7 @@ describe('Membrii grupului', () => {
     api.incarcaSala.mockResolvedValue(
       dateSala({
         membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'cancelled' })],
-        comenzi: [
+        scoateri: [
           comandaSala({ action: 'kick_member', member_id: 'ion', status: 'failed', result: 'Bad Request: not enough rights' }),
         ],
       })
@@ -82,7 +82,7 @@ describe('Membrii grupului', () => {
     api.incarcaSala.mockResolvedValue(
       dateSala({
         membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'cancelled' })],
-        comenzi: [comandaSala({ action: 'kick_member', member_id: 'ion', status: 'done' })],
+        scoateri: [comandaSala({ action: 'kick_member', member_id: 'ion', status: 'done' })],
       })
     );
     randeaza();
@@ -90,6 +90,51 @@ describe('Membrii grupului', () => {
     expect(screen.queryByRole('heading', { name: /Scoateri eșuate/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Ieșiți' }));
     expect((within(randul('Ion')).getByRole('button', { name: /Scoate din grup: E deja ieșit/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('o scoatere eșuată rămâne reîncercabilă și după 30 de comenzi mai noi', async () => {
+    // `comenzi` are doar ultimele 30; scoaterea eșuată e mai veche decât toate,
+    // deci o găsește doar `scoateri` (ultima scoatere a fiecărui membru).
+    api.incarcaSala.mockResolvedValue(
+      dateSala({
+        membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'cancelled' })],
+        comenzi: Array.from({ length: 30 }, (_, i) => comandaSala({ id: `c${i}`, action: 'send_summary', status: 'done' })),
+        scoateri: [comandaSala({ action: 'kick_member', member_id: 'ion', status: 'failed', result: 'Bad Request: not enough rights' })],
+      })
+    );
+    randeaza();
+    const sectiune = (await screen.findByRole('heading', { name: /Scoateri eșuate/ })).closest('section') as HTMLElement;
+    expect(within(sectiune).getByRole('button', { name: /Reîncearcă scoaterea lui Ion/ })).toBeTruthy();
+  });
+
+  it('un cont parcat al cărui id e deja al unui membru nu mai apare la „nelegate"', async () => {
+    // Botul l-a legat după utilizator (sau id-ul a fost scris din „Editează"),
+    // dar rândul parcat a rămas: n-ar avea niciun buton care să-l rezolve.
+    api.incarcaSala.mockResolvedValue(
+      dateSala({
+        necunoscuti: [
+          { telegram_user_id: 909, username: 'nou', first_name: 'Dan', last_name: null, created_at: 'x' },
+          { telegram_user_id: 1005, username: 'maria_tg', first_name: 'Maria', last_name: null, created_at: 'x' },
+        ],
+      })
+    );
+    randeaza();
+    const titlu = await screen.findByRole('heading', { name: /Conturi de Telegram nelegate/ });
+    expect(within(titlu).getByText('1')).toBeTruthy();
+    const sectiune = titlu.closest('section') as HTMLElement;
+    expect(within(sectiune).queryByLabelText(/contul lui Maria/)).toBeNull();
+    expect(within(sectiune).getByLabelText('Membrul de care se leagă contul lui Dan')).toBeTruthy();
+  });
+
+  it('fără conturi cu adevărat nelegate, secțiunea lipsește', async () => {
+    api.incarcaSala.mockResolvedValue(
+      dateSala({
+        necunoscuti: [{ telegram_user_id: 1005, username: 'maria_tg', first_name: 'Maria', last_name: null, created_at: 'x' }],
+      })
+    );
+    randeaza();
+    await screen.findByText('Ion');
+    expect(screen.queryByRole('heading', { name: /Conturi de Telegram nelegate/ })).toBeNull();
   });
 
   it('scoaterea unui membru obișnuit cere confirmare, apoi cheamă serverul', async () => {

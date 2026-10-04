@@ -115,6 +115,23 @@ describe('Botul de Telegram', () => {
     expect(await screen.findByText('Botul nu răspunde')).toBeTruthy();
   });
 
+  it('cât pleacă mesajul, textul nu se poate schimba; după succes se golește', async () => {
+    let gata: (id: string) => void = () => {};
+    api.trimiteComanda.mockImplementation(() => new Promise<string>((r) => (gata = r)));
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Textul sondajului');
+    const text = screen.getByLabelText('Textul mesajului') as HTMLTextAreaElement;
+    fireEvent.change(text, { target: { value: 'Salut' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Trimite în grup' }));
+    fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Trimite' }));
+    await waitFor(() => expect(text.disabled).toBe(true));
+    expect((screen.getByLabelText('Pomenește un membru') as HTMLSelectElement).disabled).toBe(true);
+    gata('id');
+    await waitFor(() => expect(text.disabled).toBe(false));
+    expect(text.value).toBe('');
+  });
+
   it('mesajul liber cu mențiune pleacă ca HTML cu link de Telegram', async () => {
     api.incarcaSala.mockResolvedValue(dateSala());
     randeaza();
@@ -233,6 +250,25 @@ describe('setările', () => {
     await waitFor(() => expect(buton('Oprește botul').disabled).toBe(false));
     expect((screen.getByLabelText('Titlu') as HTMLInputElement).value).toBe('Alergăm!');
     expect(screen.queryByText('Nesalvat')).toBeNull();
+  });
+
+  it('ce scrii cât se salvează rămâne în formular, ca modificare nesalvată', async () => {
+    let gata: () => void = () => {};
+    api.salveazaConfigBot.mockImplementation(() => new Promise<void>((r) => (gata = r)));
+    api.incarcaSala.mockResolvedValueOnce(dateSala());
+    api.incarcaSala.mockResolvedValue(dateSala({ config: configCu({ poll_title: 'Alergăm!' }) }));
+    randeaza();
+    await screen.findByText('Textul sondajului');
+    fireEvent.change(screen.getByLabelText('Titlu'), { target: { value: 'Alergăm!' } });
+    fireEvent.click(buton('Salvează setările'));
+    await waitFor(() => expect(api.salveazaConfigBot).toHaveBeenCalledTimes(1));
+    // Salvarea încă n-a răspuns; între timp se schimbă locul.
+    fireEvent.change(screen.getByLabelText('Locul'), { target: { value: 'Alt parc' } });
+    gata();
+    await waitFor(() => expect(buton('Oprește botul').disabled).toBe(false));
+    expect((screen.getByLabelText('Locul') as HTMLInputElement).value).toBe('Alt parc');
+    expect((screen.getByLabelText('Titlu') as HTMLInputElement).value).toBe('Alergăm!');
+    expect(screen.getByText('Nesalvat')).toBeTruthy();
   });
 });
 

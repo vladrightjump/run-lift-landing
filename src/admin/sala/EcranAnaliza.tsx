@@ -114,7 +114,7 @@ export const EcranAnaliza = () => {
         : b.prezente - a.prezente || a.membru.full_name.localeCompare(b.membru.full_name, 'ro')
     );
 
-  const scoateri = ultimeleScoateri(date.comenzi);
+  const scoateri = ultimeleScoateri(date.scoateri);
 
   // Curba procentului „vin", pe o grilă 100 × 44.
   const puncte = defalcari.map((b, i) => {
