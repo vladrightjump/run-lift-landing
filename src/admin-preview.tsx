@@ -182,6 +182,85 @@ const antrenamente = [
   },
 ];
 
+/* ---- Grupul din parc: membri, antrenamente marți și joi, voturi ---- */
+
+const zi = (z: number) => new Date(ACUM + z * 86_400_000).toISOString().slice(0, 10);
+const membriGrup = NUME.slice(0, 14).map(([nume, prenume], i) => ({
+  id: `m-${i}`,
+  full_name: `${prenume} ${nume}`,
+  status: i === 12 ? ('paused' as const) : i === 13 ? ('cancelled' as const) : ('active' as const),
+  is_admin: i === 0,
+  telegram_user_id: i === 11 ? null : 5_000_000 + i,
+  telegram_username: i % 3 === 0 ? `${prenume.toLowerCase()}_${i}` : null,
+  bot_dm_enabled: i < 3,
+  join_date: cuZileInUrma(120 - i).slice(0, 10),
+}));
+// Antrenamentul de mâine (sondajul a plecat) și opt trecute, câte două pe săptămână.
+const antrenamenteGrup = [1, -2, -5, -9, -12, -16, -19, -23, -26].map((z, i) => ({
+  id: `s-${i}`,
+  session_date: zi(z),
+  starts_at: '06:30',
+  location: 'Parcul Dumitru Râșcanu',
+  status: z < 0 ? ('done' as const) : ('scheduled' as const),
+  poll_sent: true,
+}));
+const raspunsuriGrup = antrenamenteGrup.flatMap((a, i) =>
+  membriGrup
+    .filter((m, j) => m.telegram_user_id !== null && (i + j) % 4 !== 0)
+    .map((m, j) => ({
+      session_id: a.id,
+      member_id: m.id,
+      response: (i + j) % 5 === 0 ? ('no' as const) : ('yes' as const),
+      is_first_training: false,
+      responded_at: cuOreInUrma(24 * (i * 3 + 1) + j),
+    }))
+);
+const configGrup = {
+  enabled: true,
+  poll_days: [1, 3],
+  poll_time: '12:00',
+  summary_days: [2, 4],
+  summary_time: '06:00',
+  training_time: '06:30',
+  location: 'Parcul Dumitru Râșcanu',
+  auto_reminder_enabled: true,
+  reminder_threshold: 6,
+  poll_title: null,
+  poll_yes_label: null,
+  poll_no_label: null,
+};
+const sala = {
+  azi: zi(0),
+  config: configGrup,
+  membri: membriGrup,
+  antrenamente: antrenamenteGrup,
+  raspunsuri: raspunsuriGrup,
+  necunoscuti: [
+    { telegram_user_id: 909_001, username: 'alergator_nou', first_name: 'Dan', last_name: null, created_at: cuOreInUrma(30) },
+  ],
+  comenzi: [
+    { id: 'c1', action: 'kick_member', member_id: 'm-13', status: 'done', result: 'kicked', created_at: cuZileInUrma(4), processed_at: cuZileInUrma(4) },
+    { id: 'c2', action: 'send_poll', member_id: null, status: 'done', result: null, created_at: cuZileInUrma(2), processed_at: cuZileInUrma(2) },
+    { id: 'c3', action: 'send_message', member_id: null, status: 'failed', result: 'Bad Request: can\'t parse entities', created_at: cuZileInUrma(1), processed_at: cuZileInUrma(1) },
+  ],
+};
+const urmatorulGrup = antrenamenteGrup[0];
+const rezumatSala = {
+  azi: sala.azi,
+  pornit: true,
+  poll_days: configGrup.poll_days,
+  poll_time: configGrup.poll_time,
+  urmatorul: {
+    session_date: urmatorulGrup.session_date,
+    starts_at: urmatorulGrup.starts_at,
+    location: urmatorulGrup.location,
+    status: urmatorulGrup.status,
+    poll_sent: urmatorulGrup.poll_sent,
+    vin: raspunsuriGrup.filter((r) => r.session_id === urmatorulGrup.id && r.response === 'yes').length,
+    nu_vin: raspunsuriGrup.filter((r) => r.session_id === urmatorulGrup.id && r.response === 'no').length,
+  },
+};
+
 const RASPUNSURI: Record<string, unknown> = {
   admin_check_token: true,
   admin_list_registrations: inscrieri,
@@ -194,6 +273,8 @@ const RASPUNSURI: Record<string, unknown> = {
   admin_get_event_config: [configPublicat],
   admin_list_training_reels: clipuri,
   admin_list_weekly_workout: antrenamente,
+  admin_sala_date: sala,
+  admin_sala_rezumat: rezumatSala,
   admin_login: 'token-preview',
   admin_logout: null,
 };

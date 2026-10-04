@@ -5,8 +5,9 @@ organizatorul în `/admin`. Pentru fiecare flux: ce vede, ce se întâmplă dede
 ce trebuie să atingi ca să-l schimbi.
 
 > Diagramele sunt Mermaid — se randează direct pe GitHub și în preview-ul Markdown din VS Code.
-> Documentul descrie codul de la commit-ul pe care a fost scris (19 sept 2026). Când schimbi un
-> flux, actualizează secțiunea lui și tabelul „Unde schimbi ce" de la final.
+> Documentul descrie codul de la commit-ul pe care a fost scris (19 sept 2026); secțiunile 3.1 și
+> 4.11, despre grupul din parc, sînt din 3 oct 2026. Când schimbi un flux, actualizează secțiunea
+> lui și tabelul „Unde schimbi ce" de la final.
 
 **Cuprins**
 
@@ -20,6 +21,7 @@ ce trebuie să atingi ca să-l schimbi.
    - [2.6 „Anunță-mă la lansare" + confirmarea din email](#26-anunță-mă-la-lansare--confirmarea-din-email)
    - [2.7 Linkurile din emailuri: `/renunt` și `/unsubscribe`](#27-linkurile-din-emailuri-renunt-și-unsubscribe)
 3. [Automatizări (fără om la tastatură)](#3-automatizări-fără-om-la-tastatură)
+   - [3.1 Botul de Telegram](#31-botul-de-telegram)
 4. [Admin — `/admin`](#4-admin--admin)
    - [4.1 Autentificarea](#41-autentificarea)
    - [4.2 Structura ecranului](#42-structura-ecranului)
@@ -32,6 +34,7 @@ ce trebuie să atingi ca să-l schimbi.
    - [4.9 Setup → Coming Soon](#49-setup--coming-soon)
    - [4.9b Antrenamentul săptămânii (bloc, nu tab)](#49b-antrenamentul-săptămânii-bloc-nu-tab)
    - [4.10 Selectorul de ediție și „+ Ediție nouă"](#410-selectorul-de-ediție-și--ediție-nouă)
+   - [4.11 Grupul din parc (botul de Telegram)](#411-grupul-din-parc-botul-de-telegram)
 5. [Emailurile: cine le declanșează](#5-emailurile-cine-le-declanșează)
 6. [Unde schimbi ce](#6-unde-schimbi-ce)
 7. [Neconcordanțe găsite la documentare](#7-neconcordanțe-găsite-la-documentare)
@@ -84,6 +87,9 @@ flowchart LR
 
 **Regula de aur:** sursa de adevăr pentru ediție e rândul `published` din `runlift.event_config`.
 `src/content/edition.ts` e doar instantaneul de build (primul cadru + meta de share).
+
+**Grupul din parc** stă alături, nu în harta de mai sus: tabelele lui sînt în schema `public`, iar
+singurul „server" din repo e botul de Telegram, pe Railway (`bot/`). Harta lui e în 4.11.
 
 ---
 
@@ -379,6 +385,30 @@ flowchart TD
 - Armare / inspecție cron: `supabase/sql/supabase-cron-reminder-ARM.sql`. Verificat live
   (18 sept 2026): jobul e activ, `*/15 * * * *`.
 
+### 3.1 Botul de Telegram
+
+Botul (`bot/`, pe Railway) are un tic pe minut (`node-cron`, la Chișinău) și un webhook. La fiecare
+tic citește `public.bot_config` — deci o setare salvată din admin intră în vigoare în cel mult un
+minut, fără redeploy — și:
+
+```mermaid
+flowchart TD
+  T["Tic, la fiecare minut"] --> Q["golește public.bot_actions<br/>(comenzile din admin, și cu botul oprit)"]
+  T --> C{"bot_config.enabled?"}
+  C -- da --> P{"zi + oră de sondaj?"}
+  P -- da --> SP["sondajul pentru mâine<br/>(creează rândul din training_sessions)"]
+  C -- da --> R{"zi + oră de rezumat?"}
+  R -- da --> MS["rezumatul, în privat, la admini"]
+  C -- da --> AR{"reminder automat pornit,<br/>cu 2h înainte, sub prag?"}
+  AR -- da --> RM["reminderul în grup"]
+  W["Webhook Telegram"] --> V["vot → attendance + attendance_log<br/>(cont necunoscut → membru nou)"]
+  W --> J["cineva intră în grup → telegram_unmatched"]
+  W --> S["/start în privat → membru nou"]
+```
+
+Pentru o zi anulată botul nu trimite sondaj. Lunea la 09:00 trimite adminilor lista inactivilor și
+la 09:05 verifică webhook-ul. Detaliile serviciului: `bot/README.md`.
+
 ---
 
 ## 4. Admin — `/admin`
@@ -409,7 +439,7 @@ flowchart TB
   TOP["Antet: faza de pe site acum (link spre /) · countdown spre anunț · Ieși din cont"]
   ED["Selector de ediție (curentă / arhivă) · + Ediție nouă"]
   LINIE["Linia de timp a ediției: anunț → înscrieri → remindere → start →<br/>după cursă → ediția următoare. Fiecare nod își spune starea în cuvinte<br/>și poartă acțiunea care-i aparține. Semnalele de atenție dedesubt."]
-  SAPT["„În fiecare săptămână”: antrenamentul — pornit/oprit + titlul curent"]
+  SAPT["„În fiecare săptămână”: antrenamentul — pornit/oprit + titlul curent<br/>+ cardul „Grupul din parc” (4.11)"]
   NAV["Navigare pe 3 grupuri (al doilea nivel)"]
   TOP --> ED --> LINIE --> SAPT --> NAV
   NAV --> O["Oameni — „Cine vine?”"]
@@ -422,6 +452,11 @@ flowchart TB
   C --> C3[Șabloane]
   S --> S1[Evenimentul]
   S --> S2[Coming Soon]
+  NAV --> G["Grupul din parc — „Cine vine la antrenament?”"]
+  G --> G1[Prezențe]
+  G --> G2[Membrii grupului]
+  G --> G3[Analiza prezențelor]
+  G --> G4[Botul de Telegram]
 ```
 
 - Datele (înscrieri, așteptare, jurnal email, activitate) se reîmprospătează periodic:
@@ -656,6 +691,108 @@ Două lucruri diferite care se confundă ușor:
 Ordinea obișnuită e cea din `GHID-EDITIE-NOUA.md` (ciorna + publicarea). Publicarea scrie oricum
 numărul ediției în `app_config`.
 
+### 4.11 Grupul din parc (botul de Telegram)
+
+Fostul gym-app, adus în admin: prezențele, membrii, analiza și botul. Ghidul de folosire, pentru
+organizator: **`GHID-GRUPUL-DIN-PARC.md`**. Aici: cum e făcut. Planul și deciziile (KTD1–KTD13):
+`docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md`.
+
+```mermaid
+flowchart LR
+  A["Adminul Run + Lift<br/>(aplicație statică, Vercel)"] -- "RPC cu token<br/>Content-Profile: runlift" --> F["runlift.admin_sala_*<br/>(SECURITY DEFINER)"]
+  F -- citește și scrie --> T[("public: members · training_sessions<br/>attendance · attendance_log · bot_config<br/>bot_actions · telegram_unmatched")]
+  F -- "urma fiecărei scrieri (sala_*)" --> E[("runlift.admin_events")]
+  B["Botul<br/>(Railway, bot/, cheie de service)"] -- "tic: orar, coadă, voturi" --> T
+  TG["Telegram"] -- webhook --> B
+  B -- "sondaje · mesaje · scoateri" --> TG
+```
+
+**Datele rămân pe loc.** Nu există o schemă nouă și nici o copie: adminul ajunge la tabelele din
+`public` prin funcții `runlift.admin_sala_*`, exact cum ajunge la ale lui din `runlift` (KTD1).
+Browserul n-are cheia de service; fiecare funcție începe cu `admin_check_token`. Plățile
+(`public.payments`) nu apar în nicio citire.
+
+**Citirile — două, ambele în bloc (KTD2).**
+
+- `admin_sala_date`: tot ce le trebuie celor patru ecrane, dintr-o cerere — setările, membrii (fără
+  telefon și email), antrenamentele și răspunsurile din ultimele 800 de zile, conturile nelegate și
+  ultimele 30 de comenzi. Analiza se calculează în browser (`src/admin/sala/statistici.ts`, portat
+  din gym-app cu testele lui). Ecranele o reîmprospătează la 15 secunde (`useSala.ts`).
+- `admin_sala_rezumat`: doar cât îi trebuie cardului de pe pornire (antrenamentul următor, cu
+  `poll_sent`, câți vin și câți nu, plus orarul sondajului).
+
+**Scrierile — câte o funcție îngustă pe acțiune (KTD3).** Fiecare lasă în `runlift.admin_events` un
+rând `sala_*` cu numele adminului (`sala_jurnal`). `admin_list_events` nu le întoarce, ca să nu
+împingă evenimentele edițiilor afară din „Activitate recentă".
+
+| Funcția | Ce face | Urma |
+|---|---|---|
+| `admin_sala_set_prezenta` | `yes` / `no` / `clear` pe un antrenament; jurnalul primește sursa `manual` | `sala_prezenta` |
+| `admin_sala_seteaza_antrenament` | anulează (creează rândul, cu ora și locul din setări) sau reactivează o zi | `sala_anulare` / `sala_reactivare` |
+| `admin_sala_salveaza_config` | orarul, locul, reminderul, textul sondajului; **nu** atinge `enabled` pe un rând existent | `sala_config` |
+| `admin_sala_porneste_bot` | comutatorul pornit/oprit (creează rândul de setări dacă lipsește) | `sala_pornire` |
+| `admin_sala_comanda` | pune în `bot_actions` o comandă „acum": `send_poll`, `send_summary`, `send_reminder`, `send_message` | `sala_comanda` |
+| `admin_sala_scoate_din_grup` | membrul → `cancelled` + comanda `kick_member` | `sala_scoatere` |
+| `admin_sala_salveaza_membru` | numele, contul de Telegram, starea, „admin" | `sala_membru` |
+| `admin_sala_leaga_cont` / `admin_sala_membru_din_cont` | un cont din `telegram_unmatched` → membru existent / membru nou | `sala_legare` / `sala_membru_nou` |
+| `admin_sala_uneste` | delegă la `public.merge_members` (închisă pentru cheia publică) | `sala_unire` |
+
+**Regulile stau pe server**, fiindcă formularul nu e singura cale spre funcții. Clientul le
+oglindește doar ca să spună motivul înainte de apăsare (`configBot.ts`, `DialogScoatere.tsx`).
+
+| Regula | Refuzul (`raise exception`) |
+|---|---|
+| Ore `HH:MM`, zile 0–6 fără dubluri, loc 1–120 caractere, prag 0–999 | `ora_invalida`, `zi_invalida`, `loc_invalid`, `prag_invalid` |
+| Titlul sondajului ≤ 80, butoanele ≤ 32 (spațiile albe din jur nu contează; gol = textul de azi) | `text_prea_lung` |
+| Adminii grupului și membrii fără Telegram nu se scot | `membru_admin`, `fara_telegram` |
+| Un cont de Telegram la un singur membru | `telegram_deja_legat` |
+| Sondaj sau reminder „acum" pentru un mâine anulat | `antrenament_anulat` |
+| O comandă la fel care încă așteaptă nu se mai pune în coadă (întoarce comanda existentă) | — |
+| Mesajul liber: nevid, cel mult 4096 de caractere (limita Telegram) | `mesaj_gol`, `mesaj_prea_lung` |
+
+Fiecare cod are un mesaj în `REFUZURI_SALA` / `MESAJE_REFUZ` (`src/lib/salaApi.ts`); un test pică
+dacă apare în SQL un cod pe care clientul nu-l știe. O eroare pe care serverul n-o numește ajunge
+în monitorizare (`logClientError`), iar la una de rețea toastul spune să verifici înainte să
+reîncerci.
+
+**O comandă, de la buton la rezultat (KTD12):**
+
+```mermaid
+sequenceDiagram
+  participant Adm as Adminul
+  participant Fn as admin_sala_comanda
+  participant Q as public.bot_actions
+  participant Bot as Botul (tic de 1 min)
+  participant Tg as Telegram
+  Adm->>Fn: cerere cu token
+  Fn->>Fn: token, lista închisă, mâine anulat?, una la fel în așteptare?
+  Fn->>Q: rând nou, pending
+  Fn-->>Adm: id-ul comenzii
+  Bot->>Q: la următorul tic citește pending
+  Bot->>Tg: execută
+  Bot->>Q: done / failed + motivul
+  Adm->>Fn: reîmprospătarea (15 s) arată rezultatul
+```
+
+**Starea botului** (`stareBot.ts`) se citește din coadă, fără niciun semnal din bot: o comandă în
+așteptare de peste 3 minute înseamnă că botul nu rulează. Cu coada goală, ecranul spune doar
+„nicio comandă blocată" și ora ultimei comenzi executate.
+
+**Textul sondajului (KTD6).** Coloanele `bot_config.poll_title` / `poll_yes_label` / `poll_no_label`
+și `training_sessions.poll_wording` există din `sala_02`; previzualizarea din admin
+(`sondaj.ts`) produce textul botului caracter cu caracter. Botul le citește abia din U10.
+
+**Unde stă codul.**
+
+| Ce | Unde |
+|---|---|
+| Ecranele și cardul | `src/admin/sala/Ecran*.tsx`, `CardGrup.tsx`; registrul: `adminNavigatie.ts` (grupul `grup`) |
+| Logica fără React | `src/admin/sala/*.ts` (`model`, `statistici`, `analiza`, `sondaj`, `textCard`, `stareBot`, `configBot`, `mesaj`) |
+| Clientul | `src/lib/salaApi.ts` (refolosește `rpc` din `adminApi.ts`) |
+| Funcțiile SQL | `supabase/sql/supabase-migration-sala-*.sql`; instantaneele `supabase/schema/runlift.sql` + `sala.sql` |
+| Teste | `tests/unit/sala*.test.ts(x)`, `tests/unit/sql/sala.test.ts` (PGlite, pe instantaneu), `tests/sala.spec.ts` (e2e) |
+| Botul | `bot/` (cod), `.railway/railway.ts` (serviciul Railway), job-ul `bot` din `ci-deploy.yml` |
+
 ---
 
 ## 5. Emailurile: cine le declanșează
@@ -705,6 +842,11 @@ Fiecare încercare lasă un rând în `email_log` (`log_emails`), vizibil în 4.
 | Un tab nou în admin | `adminNavigatie.ts` (grup + tab), `TabAdmin` din `stareCurenta.ts`, randarea în `AdminDashboard.tsx` | da |
 | O acțiune nouă în admin | RPC `admin_*` nou (SQL, cu `admin_check_token`) + wrapper în `src/lib/adminApi.ts` | da + migrare |
 | Un mod nou de formular public | `TABLE` + `validate*` în `submit-form` (altfel slăbești validarea) + `postForm` în `src/lib/supabase.ts` | da + Edge |
+| Orarul, locul, reminderul sau textul sondajului din grup | `/admin` → Botul de Telegram | nu |
+| O acțiune nouă pe grupul din parc | funcție `runlift.admin_sala_*` (migrare, cu `admin_check_token` + `sala_jurnal`) + wrapper în `src/lib/salaApi.ts` + codul de refuz în `REFUZURI_SALA` (testul pică dacă uiți) | da + migrare |
+| Comportamentul botului în Telegram | `bot/src/` → merge în `main`; Railway îl ia după CI verde | da (Railway) |
+| Setările serviciului Railway (sursă, cale urmărită, `/health`) | `.railway/railway.ts` → `railway config plan` / `apply` | CLI Railway |
+| Versiunea de Node (local, CI, Vercel, Railway) | `.nvmrc` + `engines` din `package.json` și `bot/package.json` | da |
 | Un șablon nou pentru reminder | rândul în `email_templates` + `REMINDER_TEMPLATE_KEYS` din `src/content/eventConfig.ts` **+ `TEMPLATES_PERMISE` din `send-email`** (testul pică dacă uiți) | da + Edge + SQL |
 
 Amintiri de proces (din `CI-CD.md` și `MIGRATIONS.md`): merge în `main` = deploy Vercel;

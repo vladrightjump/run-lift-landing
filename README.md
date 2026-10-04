@@ -36,6 +36,9 @@ run-lift-landing/
 
 ## Rulare locală
 
+Node 24 (LTS-ul curent), din `.nvmrc` — același în CI, pe Vercel și pe Railway (`engines`).
+Cu `fnm` sau `nvm`, `fnm use` / `nvm use` la rădăcina repo-ului.
+
 ```bash
 npm install
 npm run dev        # dev server pe http://localhost:5173
@@ -89,6 +92,14 @@ Git-connected: push pe `main` (GitHub `vladrightjump/run-lift-landing`) → Verc
 `npm run build` și publică. Domeniu: **parktraining.fit**. CSP-ul (`vercel.json`) trebuie să
 permită originul Supabase curent **și `challenges.cloudflare.com`** (Turnstile) — există teste
 care păzesc ambele. `VITE_TURNSTILE_SITE_KEY` e obligatorie la build-ul de producție.
+
+## Botul de Telegram (`bot/`)
+
+Botul grupului din parc (sondajul „vii mâine?", voturile, rezumatul, comenzile din admin)
+trăiește în `bot/` și rulează pe **Railway**, nu pe Vercel. Merge-ul în `main` îl deployează
+doar dacă trece job-ul `bot` din CI (Railway are „Wait for CI"). Serviciul Railway e descris
+în `.railway/railway.ts` și se schimbă cu `railway config plan` / `apply`. Detalii, variabile și
+întoarcere: **`bot/README.md`**. Se configurează din `/admin` → „Botul de Telegram".
 
 ## Teste
 
@@ -231,9 +242,11 @@ De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
 
 ## Documente
 
-- **`docs/FLUXURI.md`** — toate fluxurile de utilizator (public + `/admin`), cu diagrame.
+- **`docs/FLUXURI.md`** — toate fluxurile de utilizator (public + `/admin`, inclusiv grupul din parc), cu diagrame.
 - **`GHID-EDITIE-NOUA.md`** — runbook pas cu pas pentru o ediție nouă.
-- **`MIGRATIONS.md`** — migrările DB + granița față de gym-app/bot.
+- **`GHID-GRUPUL-DIN-PARC.md`** — grupul din parc din `/admin`: prezențe, membri, analiză, botul.
+- **`bot/README.md`** — botul de Telegram ca serviciu: deploy pe Railway, mutarea, întoarcerea.
+- **`MIGRATIONS.md`** — migrările DB + granița față de `public` (tabelele grupului din parc).
 - **`ANTI-BOT.md`** — Turnstile + lockdown RLS: cum funcționează, configurare, runbook de deploy.
 - **`ERROR-HANDLING.md`** — tratarea erorilor, monitoring și garda CSP↔config la build.
 - **`CI-CD.md`** — pipeline-ul de testare + deploy Vercel verificat pe live.

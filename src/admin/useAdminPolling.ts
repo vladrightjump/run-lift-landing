@@ -18,8 +18,12 @@ import { useCallback, useEffect, useRef } from 'react';
 export const ADMIN_REFRESH_MS = 15_000;
 
 export const useAdminPolling = (
-  /** Stabil (`useCallback`) — identitatea lui repornește intervalul. */
-  fetch: (signal: AbortSignal) => void,
+  /**
+   * Stabil (`useCallback`) — identitatea lui repornește intervalul. Poate
+   * întoarce promisiunea cererii: refresh-ul manual o dă mai departe, ca
+   * apelantul să poată aștepta datele proaspete.
+   */
+  fetch: (signal: AbortSignal) => void | Promise<void>,
   /**
    * `null` = o singură cerere, la montare.
    *
@@ -29,7 +33,7 @@ export const useAdminPolling = (
    * nimeni altcineva nu editează șabloanele în paralel.
    */
   intervalMs: number | null = ADMIN_REFRESH_MS
-): (() => void) => {
+): (() => Promise<void>) => {
   const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(() => {
@@ -38,7 +42,7 @@ export const useAdminPolling = (
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    fetch(controller.signal);
+    return Promise.resolve(fetch(controller.signal));
   }, [fetch]);
 
   useEffect(() => {

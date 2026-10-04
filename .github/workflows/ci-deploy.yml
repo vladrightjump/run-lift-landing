@@ -23,7 +23,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Același Node peste tot: local (fnm/nvm citesc `.nvmrc`), aici, pe
+          # Vercel și pe Railway (`engines` = 24.x). LTS-ul curent.
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
 
@@ -90,6 +92,67 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  # Botul de Telegram (`bot/`), deployat pe Railway din acest repo. Nu e un
+  # pas al deploy-ului Vercel: serviciul Railway are „Wait for CI" pornit, deci
+  # așteaptă ca TOATE job-urile de pe commit să treacă înainte să ia codul nou.
+  # Node din `.nvmrc` (24): `supabase-js` cade pe Node 20 la rulare (vezi
+  # bot/README.md și `bot/test/smoke.test.ts`).
+  bot:
+    name: Botul de Telegram (teste + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            bot/package-lock.json
+            .railway/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      # Serviciul Railway e descris în `.railway/railway.ts` (Infrastructure as
+      # Code). CI-ul nu-l aplică — `railway config apply` e un pas explicit —, dar
+      # nu lasă să intre în `main` un fișier pe care CLI-ul nu l-ar putea citi.
+      - name: Configurația Railway (.railway/) se compilează
+        working-directory: .railway
+        run: |
+          npm ci
+          npm run typecheck
+      # Testele și `tsc` nu pornesc botul: un import care cade abia la rulare
+      # (ESM fără `.js`, o dependență lipsă) ar trece verde și ar ajunge pe
+      # Railway. Aici `dist/` pornește de-adevăratelea și trebuie să răspundă pe
+      # `/health`. Fără variabile de Telegram și cu o bază falsă: nu pleacă
+      # nimic nicăieri, iar clientul Supabase se construiește abia la primul tic.
+      - name: Botul construit pornește și răspunde pe /health
+        env:
+          PORT: '3999'
+          SUPABASE_URL: http://127.0.0.1:9
+          SUPABASE_SERVICE_ROLE_KEY: ci-fara-cheie
+        run: |
+          node dist/index.js > pornire.log 2>&1 &
+          PID=$!
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:3999/health; then
+              kill "$PID"
+              exit 0
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              echo "Botul s-a oprit la pornire:"
+              cat pornire.log
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "Botul n-a răspuns pe /health în 20 de secunde:"
+          cat pornire.log
+          kill "$PID"
+          exit 1
 
   deploy:
     name: Deploy Vercel + verificare live

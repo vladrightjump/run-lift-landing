@@ -92,7 +92,7 @@ export class InvalidTokenError extends Error {
   }
 }
 
-const rpc = async <T>(fn: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<T> => {
+export const rpc = async <T>(fn: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<T> => {
   const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/${fn}`, {
     method: 'POST',
     headers: {

@@ -33,6 +33,10 @@ import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminEventTab } from './AdminEventTab';
 import { AdminComingSoonTab } from './AdminComingSoonTab';
 import { AdminAntrenamentTab } from './AdminAntrenamentTab';
+import { EcranPrezente } from './sala/EcranPrezente';
+import { EcranMembri } from './sala/EcranMembri';
+import { EcranAnaliza } from './sala/EcranAnaliza';
+import { EcranBot } from './sala/EcranBot';
 import { AdminClipuriTab } from './AdminClipuriTab';
 import { AdminCadru } from './AdminCadru';
 import { EcranPornire } from './EcranPornire';
@@ -341,6 +345,10 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     antrenament: null,
     'coming-soon': null,
     sabloane: null,
+    'grup-prezente': null,
+    'grup-membri': null,
+    'grup-analiza': null,
+    'grup-bot': null,
   };
 
   /**
@@ -692,6 +700,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         )}
 
         {tab === 'antrenament' && <AdminAntrenamentTab />}
+
+        {/* Grupul din parc. Ecranele își iau singure datele (un singur bloc,
+            vezi `sala/useSala.ts`): nu țin de ediția deschisă și n-au de ce să
+            încarce odată cu participanții. */}
+        {tab === 'grup-prezente' && <EcranPrezente />}
+        {tab === 'grup-membri' && <EcranMembri />}
+        {tab === 'grup-analiza' && <EcranAnaliza />}
+        {tab === 'grup-bot' && <EcranBot inregistreazaGardaIesire={inregistreazaGardaIesire} />}
 
         {tab === 'sabloane' && (
           <AdminTemplatesTab />

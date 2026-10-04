@@ -1,0 +1,8 @@
+# Botul de Telegram rulează pe Railway, nu pe Vercel. Build-ul site-ului nu-l
+# atinge (tsconfig, knip și vitest au globuri care nu-l prind); fără linia asta
+# s-ar urca degeaba la fiecare deploy.
+bot/
+
+# Configurația serviciului Railway al botului (Infrastructure as Code): o aplică
+# CLI-ul Railway, nu are ce căuta în build-ul site-ului.
+.railway/

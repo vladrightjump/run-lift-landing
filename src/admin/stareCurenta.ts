@@ -35,7 +35,13 @@ export type EcranAdmin =
   | 'eveniment'
   | 'clipuri'
   | 'antrenament'
-  | 'coming-soon';
+  | 'coming-soon'
+  // Grupul de antrenament din parc (fostul gym-app): botul de Telegram,
+  // prezențele și membrii. Nu țin de nicio ediție.
+  | 'grup-prezente'
+  | 'grup-membri'
+  | 'grup-analiza'
+  | 'grup-bot';
 
 /**
  * Reperul pe care-l raportează panoul de stare vine acum din `reperele.ts`.

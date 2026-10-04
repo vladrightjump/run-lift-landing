@@ -106,6 +106,10 @@ export const adminApiMock = (
     clearStoredToken: vi.fn(),
     adminLogin: vi.fn(async () => 'token-test'),
     checkToken: vi.fn(async () => true),
+    // `src/lib/salaApi.ts` (grupul din parc) cheamă serverul prin `rpc` din
+    // modulul ăsta. Fără el, cardul grupului de pe pornire ar arunca la import.
+    // `null` = nicio dată: cardul tace, exact ca la o cerere picată.
+    rpc: vi.fn(async () => null),
     adminLogout: vi.fn(async () => undefined),
 
     // Semnăturile sunt scrise explicit, nu deduse din `async () => …`: testele

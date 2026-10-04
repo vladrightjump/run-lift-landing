@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 21 septembrie 2026 (după `clipuri_din_youtube`).
+-- Ultima regenerare: 3 octombrie 2026 (după `sala_04_mai_putine_date`).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -113,6 +113,34 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.admin_delete_training_reel(p_token uuid, p_id uuid)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_numar int;
+  v_youtube text;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  select r.numar, r.youtube_id into v_numar, v_youtube from training_reels r where r.id = p_id;
+  if v_numar is null then raise exception 'not_found'; end if;
+
+  delete from training_reels where id = p_id;
+
+  update training_reels set numar = 0 - numar where numar > v_numar;
+  update training_reels set numar = (0 - numar) - 1 where numar < 0;
+
+  insert into admin_events (tip, detaliu)
+  values ('reel_delete', jsonb_build_object('id', p_id, 'numar', v_numar, 'youtube', v_youtube));
+
+  return v_numar;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.admin_delete_waitlist(p_token uuid, p_id uuid)
  RETURNS void
  LANGUAGE plpgsql
@@ -132,6 +160,38 @@ begin
   insert into admin_events (tip, detaliu)
   values ('admin_delete_waitlist', jsonb_build_object(
     'id', p_id, 'nume', v_nume, 'email', v_email, 'editie', v_ed));
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_delete_weekly_workout(p_token uuid, p_id uuid)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_numar int;
+  v_titlu text;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  -- Titlul se citeste INAINTE de stergere: dupa compactare, `numar` arata deja
+  -- spre alta saptamana si singur n-ar mai identifica nimic in jurnal.
+  select w.numar, w.titlu into v_numar, v_titlu from weekly_workout w
+  where w.id = p_id and w.status = 'published';
+  if v_numar is null then raise exception 'not_found'; end if;
+
+  delete from weekly_workout where numar = v_numar;
+
+  update weekly_workout set numar = 0 - numar where numar > v_numar;
+  update weekly_workout set numar = (0 - numar) - 1 where numar < 0;
+
+  insert into admin_events (tip, detaliu)
+  values ('workout_delete',
+          jsonb_build_object('id', p_id, 'numar', v_numar, 'titlu', v_titlu));
+
+  return v_numar;
 end;
 $function$
 ;
@@ -235,6 +295,9 @@ begin
   return query
     select e.id, e.created_at, e.tip, e.detaliu
     from admin_events e
+    -- Urma scrierilor din ecranele grupului rămâne în tabel (cine a făcut ce),
+    -- dar nu ocupă locurile fluxului edițiilor.
+    where e.tip not like 'sala\_%'
     order by e.created_at desc
     limit least(greatest(coalesce(p_limit, 200), 1), 1000);
 end;
@@ -276,6 +339,34 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.admin_list_training_reels(p_token uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  return coalesce(
+    (select jsonb_agg(
+       jsonb_build_object(
+         'id', r.id,
+         'numar', r.numar,
+         'youtube', r.youtube_id,
+         'caption', r.caption,
+         'url', r.url,
+         'vizibil', r.vizibil
+       )
+       order by r.numar
+     )
+     from training_reels r),
+    '[]'::jsonb
+  );
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.admin_list_waitlist(p_token uuid, p_editie integer DEFAULT NULL::integer)
  RETURNS TABLE(id uuid, created_at timestamp with time zone, nume text, telefon text, email text, editie smallint)
  LANGUAGE plpgsql
@@ -290,6 +381,23 @@ begin
     from event_waitlist w
     where w.editie = v_ed and w.deleted_at is null
     order by w.created_at asc;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_list_weekly_workout(p_token uuid)
+ RETURNS TABLE(id uuid, numar integer, status text, titlu text, corp text, vizibil boolean, creat_la timestamp with time zone)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  return query
+    select w.id, w.numar, w.status, w.titlu, w.corp, w.vizibil, w.creat_la
+    from weekly_workout w
+    order by w.numar asc, w.creat_la desc;
 end;
 $function$
 ;
@@ -333,6 +441,73 @@ CREATE OR REPLACE FUNCTION runlift.admin_logout(p_token uuid)
  SET search_path TO 'runlift'
 AS $function$
   delete from admin_sessions where token = p_token;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_move_training_reel(p_token uuid, p_id uuid, p_directie integer)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_numar int;
+  v_vecin int;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_directie is null or p_directie not in (-1, 1) then raise exception 'directie_invalida'; end if;
+
+  select r.numar into v_numar from training_reels r where r.id = p_id;
+  if v_numar is null then raise exception 'not_found'; end if;
+
+  v_vecin := v_numar + p_directie;
+  if not exists (select 1 from training_reels r where r.numar = v_vecin) then return v_numar; end if;
+
+  update training_reels set numar = 0 - v_numar where numar = v_numar;
+  update training_reels set numar = v_numar where numar = v_vecin;
+  update training_reels set numar = v_vecin where numar = 0 - v_numar;
+
+  insert into admin_events (tip, detaliu)
+  values ('reel_move', jsonb_build_object('id', p_id, 'din', v_numar, 'in', v_vecin));
+  return v_vecin;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_move_weekly_workout(p_token uuid, p_id uuid, p_directie integer)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_numar int;
+  v_vecin int;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_directie is null or p_directie not in (-1, 1) then
+    raise exception 'directie_invalida';
+  end if;
+
+  select w.numar into v_numar from weekly_workout w
+  where w.id = p_id and w.status = 'published';
+  if v_numar is null then raise exception 'not_found'; end if;
+
+  v_vecin := v_numar + p_directie;
+
+  if not exists (select 1 from weekly_workout w where w.numar = v_vecin) then
+    return v_numar;
+  end if;
+
+  update weekly_workout set numar = 0 - v_numar where numar = v_numar;
+  update weekly_workout set numar = v_numar where numar = v_vecin;
+  update weekly_workout set numar = v_vecin where numar = 0 - v_numar;
+
+  insert into admin_events (tip, detaliu)
+  values ('workout_move', jsonb_build_object('id', p_id, 'din', v_numar, 'in', v_vecin));
+
+  return v_vecin;
+end;
 $function$
 ;
 
@@ -582,6 +757,527 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.admin_restore_weekly_workout(p_token uuid, p_id uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare v_numar int;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  select w.numar into v_numar from weekly_workout w where w.id = p_id;
+  if v_numar is null then raise exception 'not_found'; end if;
+
+  update weekly_workout set status = 'superseded'
+    where status = 'published' and numar = v_numar and id <> p_id;
+  update weekly_workout set status = 'published' where id = p_id;
+
+  insert into admin_events (tip, detaliu)
+  values ('workout_restore', jsonb_build_object('id', p_id, 'numar', v_numar));
+
+  return p_id;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_comanda(p_token uuid, p_actiune text, p_html text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_id uuid;
+  v_html text := btrim(coalesce(p_html, ''));
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_actiune is null or p_actiune not in ('send_poll', 'send_summary', 'send_reminder', 'send_message') then
+    raise exception 'comanda_necunoscuta';
+  end if;
+  if p_actiune = 'send_message' then
+    if char_length(v_html) = 0 then raise exception 'mesaj_gol'; end if;
+    -- Limita fermă a Telegram pentru `sendMessage`.
+    if char_length(v_html) > 4096 then raise exception 'mesaj_prea_lung'; end if;
+  end if;
+
+  -- Sondajul și reminderul sunt despre antrenamentul de mâine. Pentru o zi
+  -- anulată botul nu trimite nimic, dar comanda ar fi ieșit „făcută".
+  if p_actiune in ('send_poll', 'send_reminder') and exists (
+    select 1 from public.training_sessions
+     where session_date = sala_azi() + 1 and status = 'cancelled'
+  ) then
+    raise exception 'antrenament_anulat';
+  end if;
+
+  -- O a doua apăsare cât prima încă așteaptă nu mai pune nimic în coadă: botul
+  -- ar trimite de două ori. Mesajul liber e altceva la fiecare apăsare.
+  if p_actiune <> 'send_message' then
+    select b.id into v_id from public.bot_actions b
+     where b.action = p_actiune and b.status = 'pending'
+     order by b.created_at desc limit 1;
+    if v_id is not null then return v_id; end if;
+  end if;
+
+  insert into public.bot_actions (action, payload)
+  values (p_actiune, case when p_actiune = 'send_message' then jsonb_build_object('html', v_html) end)
+  returning id into v_id;
+
+  perform sala_jurnal(p_token, 'sala_comanda', jsonb_build_object('actiune', p_actiune, 'comanda', v_id));
+  return v_id;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_date(p_token uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_de_la date := sala_azi() - 800;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  return jsonb_build_object(
+    'azi', sala_azi(),
+    'config', (
+      select to_jsonb(c) from public.bot_config c where c.id = 1
+    ),
+    'membri', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', m.id, 'full_name', m.full_name, 'status', m.status, 'is_admin', m.is_admin,
+        'telegram_user_id', m.telegram_user_id, 'telegram_username', m.telegram_username,
+        'bot_dm_enabled', m.bot_dm_enabled, 'join_date', m.join_date
+      ) order by m.full_name)
+      from public.members m
+    ), '[]'::jsonb),
+    'antrenamente', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', t.id, 'session_date', t.session_date, 'starts_at', to_char(t.starts_at, 'HH24:MI'),
+        'location', t.location, 'status', t.status, 'poll_sent', t.poll_message_id is not null
+      ) order by t.session_date desc)
+      from public.training_sessions t where t.session_date >= v_de_la
+    ), '[]'::jsonb),
+    'raspunsuri', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'session_id', a.session_id, 'member_id', a.member_id, 'response', a.response,
+        'is_first_training', a.is_first_training, 'responded_at', a.responded_at
+      ) order by a.responded_at desc)
+      from public.attendance a
+      join public.training_sessions t on t.id = a.session_id
+      where t.session_date >= v_de_la
+    ), '[]'::jsonb),
+    'necunoscuti', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'telegram_user_id', n.telegram_user_id, 'username', n.username,
+        'first_name', n.first_name, 'last_name', n.last_name, 'created_at', n.created_at
+      ) order by n.created_at desc)
+      from public.telegram_unmatched n
+    ), '[]'::jsonb),
+    'comenzi', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', b.id, 'action', b.action, 'member_id', b.member_id, 'status', b.status,
+        'result', b.result, 'created_at', b.created_at, 'processed_at', b.processed_at
+      ) order by b.created_at desc)
+      from (select * from public.bot_actions order by created_at desc limit 30) b
+    ), '[]'::jsonb)
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_leaga_cont(p_token uuid, p_telegram_id bigint, p_membru uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_n public.telegram_unmatched;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  select * into v_n from public.telegram_unmatched where telegram_user_id = p_telegram_id;
+  if v_n.telegram_user_id is null then raise exception 'cont_inexistent'; end if;
+  if not exists (select 1 from public.members where id = p_membru) then raise exception 'membru_inexistent'; end if;
+  if exists (select 1 from public.members where telegram_user_id = p_telegram_id and id <> p_membru) then
+    raise exception 'telegram_deja_legat';
+  end if;
+
+  update public.members set telegram_user_id = v_n.telegram_user_id, telegram_username = v_n.username
+   where id = p_membru;
+  delete from public.telegram_unmatched where telegram_user_id = p_telegram_id;
+
+  perform sala_jurnal(p_token, 'sala_legare', jsonb_build_object('membru', p_membru, 'telegram', p_telegram_id));
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_membru_din_cont(p_token uuid, p_telegram_id bigint, p_nume text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_n public.telegram_unmatched;
+  v_nume text;
+  v_id uuid;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  select * into v_n from public.telegram_unmatched where telegram_user_id = p_telegram_id;
+  if v_n.telegram_user_id is null then raise exception 'cont_inexistent'; end if;
+  if exists (select 1 from public.members where telegram_user_id = p_telegram_id) then
+    raise exception 'telegram_deja_legat';
+  end if;
+
+  v_nume := left(btrim(regexp_replace(coalesce(p_nume, ''), '\s+', ' ', 'g')), 80);
+  if char_length(v_nume) < 2 then
+    v_nume := coalesce('@' || v_n.username, 'Membru nou');
+  end if;
+
+  insert into public.members (full_name, status, telegram_user_id, telegram_username, bot_dm_enabled)
+  values (v_nume, 'active', v_n.telegram_user_id, v_n.username, false)
+  returning id into v_id;
+  delete from public.telegram_unmatched where telegram_user_id = p_telegram_id;
+
+  perform sala_jurnal(p_token, 'sala_membru_nou', jsonb_build_object('membru', v_id, 'nume', v_nume));
+  return v_id;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_porneste_bot(p_token uuid, p_pornit boolean)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_pornit is null then raise exception 'config_invalid'; end if;
+  -- Fără rând de setări, un `update` n-ar schimba nimic, iar ecranul ar spune
+  -- totuși „Botul e oprit". Rândul nou primește valorile implicite ale
+  -- coloanelor — aceleași pe care botul le folosește când nu găsește rândul.
+  insert into public.bot_config (id, enabled, updated_at) values (1, p_pornit, now())
+  on conflict (id) do update set enabled = excluded.enabled, updated_at = excluded.updated_at;
+  perform sala_jurnal(p_token, 'sala_pornire', jsonb_build_object('pornit', p_pornit));
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_rezumat(p_token uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_urm public.training_sessions;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  select * into v_urm from public.training_sessions t
+   where t.session_date >= sala_azi()
+   order by t.session_date limit 1;
+
+  return jsonb_build_object(
+    'azi', sala_azi(),
+    'pornit', (select c.enabled from public.bot_config c where c.id = 1),
+    'poll_days', (select c.poll_days from public.bot_config c where c.id = 1),
+    'poll_time', (select c.poll_time from public.bot_config c where c.id = 1),
+    'urmatorul', case when v_urm.id is null then null else jsonb_build_object(
+      'session_date', v_urm.session_date,
+      'starts_at', to_char(v_urm.starts_at, 'HH24:MI'),
+      'location', v_urm.location,
+      'status', v_urm.status,
+      'poll_sent', v_urm.poll_message_id is not null,
+      'vin', (select count(*) from public.attendance a where a.session_id = v_urm.id and a.response = 'yes'),
+      'nu_vin', (select count(*) from public.attendance a where a.session_id = v_urm.id and a.response = 'no')
+    ) end
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_salveaza_config(p_token uuid, p_config jsonb)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_zile_sondaj smallint[];
+  v_zile_rezumat smallint[];
+  v_text text;
+  v_cheie text;
+  v_prag integer;
+  -- `btrim` fără al doilea argument taie doar spațiile; clientul taie orice
+  -- spațiu alb, deci un titlu din tab-uri ar fi ieșit „text propriu" gol.
+  v_alb constant text := E' \t\r\n';
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_config is null or jsonb_typeof(p_config) <> 'object' then raise exception 'config_invalid'; end if;
+
+  -- Zilele: 0 = duminică … 6 = sâmbătă, fără dubluri. O listă goală e voie
+  -- (niciun sondaj programat, doar „trimite acum").
+  foreach v_cheie in array array['poll_days', 'summary_days'] loop
+    if jsonb_typeof(p_config -> v_cheie) is distinct from 'array'
+       or exists (
+         select 1 from jsonb_array_elements(p_config -> v_cheie) z
+          where jsonb_typeof(z) <> 'number' or (z #>> '{}') !~ '^[0-6]$'
+       )
+       or (select count(*) from jsonb_array_elements(p_config -> v_cheie))
+          <> (select count(distinct z) from jsonb_array_elements(p_config -> v_cheie) z)
+    then
+      raise exception 'zi_invalida';
+    end if;
+  end loop;
+  select coalesce(array_agg((z #>> '{}')::smallint order by (z #>> '{}')::smallint), '{}')
+    into v_zile_sondaj from jsonb_array_elements(p_config -> 'poll_days') z;
+  select coalesce(array_agg((z #>> '{}')::smallint order by (z #>> '{}')::smallint), '{}')
+    into v_zile_rezumat from jsonb_array_elements(p_config -> 'summary_days') z;
+
+  foreach v_cheie in array array['poll_time', 'summary_time', 'training_time'] loop
+    if coalesce(p_config ->> v_cheie, '') !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then
+      raise exception 'ora_invalida';
+    end if;
+  end loop;
+
+  v_text := btrim(coalesce(p_config ->> 'location', ''), v_alb);
+  if char_length(v_text) = 0 or char_length(v_text) > 120 then raise exception 'loc_invalid'; end if;
+
+  if jsonb_typeof(p_config -> 'enabled') is distinct from 'boolean'
+     or jsonb_typeof(p_config -> 'auto_reminder_enabled') is distinct from 'boolean'
+  then
+    raise exception 'config_invalid';
+  end if;
+
+  if jsonb_typeof(p_config -> 'reminder_threshold') is distinct from 'number'
+     or (p_config ->> 'reminder_threshold') !~ '^[0-9]{1,3}$'
+  then
+    raise exception 'prag_invalid';
+  end if;
+  v_prag := (p_config ->> 'reminder_threshold')::integer;
+
+  -- Textul sondajului: gol → null, adică textul de azi.
+  if char_length(btrim(coalesce(p_config ->> 'poll_title', ''), v_alb)) > 80
+     or char_length(btrim(coalesce(p_config ->> 'poll_yes_label', ''), v_alb)) > 32
+     or char_length(btrim(coalesce(p_config ->> 'poll_no_label', ''), v_alb)) > 32
+  then
+    raise exception 'text_prea_lung';
+  end if;
+
+  -- `enabled` intră doar la prima scriere, când rândul nu există. După aceea îl
+  -- schimbă numai comutatorul (`admin_sala_porneste_bot`): formularul poate
+  -- purta o valoare veche, citită înainte ca cineva să oprească botul.
+  insert into public.bot_config as c (
+    id, enabled, poll_days, poll_time, summary_days, summary_time, training_time, location,
+    auto_reminder_enabled, reminder_threshold, poll_title, poll_yes_label, poll_no_label, updated_at
+  ) values (
+    1,
+    (p_config ->> 'enabled')::boolean,
+    v_zile_sondaj,
+    p_config ->> 'poll_time',
+    v_zile_rezumat,
+    p_config ->> 'summary_time',
+    p_config ->> 'training_time',
+    v_text,
+    (p_config ->> 'auto_reminder_enabled')::boolean,
+    v_prag,
+    nullif(btrim(coalesce(p_config ->> 'poll_title', ''), v_alb), ''),
+    nullif(btrim(coalesce(p_config ->> 'poll_yes_label', ''), v_alb), ''),
+    nullif(btrim(coalesce(p_config ->> 'poll_no_label', ''), v_alb), ''),
+    now()
+  )
+  on conflict (id) do update set
+    poll_days = excluded.poll_days,
+    poll_time = excluded.poll_time,
+    summary_days = excluded.summary_days,
+    summary_time = excluded.summary_time,
+    training_time = excluded.training_time,
+    location = excluded.location,
+    auto_reminder_enabled = excluded.auto_reminder_enabled,
+    reminder_threshold = excluded.reminder_threshold,
+    poll_title = excluded.poll_title,
+    poll_yes_label = excluded.poll_yes_label,
+    poll_no_label = excluded.poll_no_label,
+    updated_at = excluded.updated_at;
+
+  perform sala_jurnal(p_token, 'sala_config', '{}'::jsonb);
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_salveaza_membru(p_token uuid, p_membru uuid, p_nume text, p_telegram_id bigint, p_telegram_user text, p_status text, p_admin boolean)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_nume text := btrim(regexp_replace(coalesce(p_nume, ''), '\s+', ' ', 'g'));
+  v_user text := nullif(regexp_replace(btrim(coalesce(p_telegram_user, '')), '^@', ''), '');
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if not exists (select 1 from public.members where id = p_membru) then raise exception 'membru_inexistent'; end if;
+  if char_length(v_nume) < 2 or char_length(v_nume) > 80 then raise exception 'nume_invalid'; end if;
+  if p_telegram_id is not null and (p_telegram_id < 100 or p_telegram_id > 999999999999999) then
+    raise exception 'telegram_invalid';
+  end if;
+  if v_user is not null and v_user !~ '^[A-Za-z0-9_]{1,40}$' then raise exception 'utilizator_invalid'; end if;
+  if p_status is null or p_status not in ('active', 'paused', 'cancelled') then raise exception 'status_invalid'; end if;
+  if p_admin is null then raise exception 'status_invalid'; end if;
+  if p_telegram_id is not null and exists (
+    select 1 from public.members where telegram_user_id = p_telegram_id and id <> p_membru
+  ) then
+    raise exception 'telegram_deja_legat';
+  end if;
+
+  update public.members set
+    full_name = v_nume,
+    telegram_user_id = p_telegram_id,
+    telegram_username = v_user,
+    status = p_status,
+    is_admin = p_admin
+  where id = p_membru;
+
+  perform sala_jurnal(p_token, 'sala_membru', jsonb_build_object('membru', p_membru, 'nume', v_nume));
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_scoate_din_grup(p_token uuid, p_membru uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_m public.members;
+  v_id uuid;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  select * into v_m from public.members where id = p_membru;
+  if v_m.id is null then raise exception 'membru_inexistent'; end if;
+  if v_m.is_admin then raise exception 'membru_admin'; end if;
+  if v_m.telegram_user_id is null then raise exception 'fara_telegram'; end if;
+
+  insert into public.bot_actions (action, member_id, telegram_user_id)
+  values ('kick_member', v_m.id, v_m.telegram_user_id)
+  returning id into v_id;
+  update public.members set status = 'cancelled' where id = v_m.id;
+
+  perform sala_jurnal(p_token, 'sala_scoatere',
+    jsonb_build_object('membru', v_m.id, 'nume', v_m.full_name, 'comanda', v_id));
+  return v_id;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune uuid, p_membru uuid, p_raspuns text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_primul boolean := false;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_raspuns is null or p_raspuns not in ('yes', 'no', 'clear') then
+    raise exception 'raspuns_invalid';
+  end if;
+  if not exists (select 1 from public.training_sessions where id = p_sesiune) then
+    raise exception 'antrenament_inexistent';
+  end if;
+  if not exists (select 1 from public.members where id = p_membru) then
+    raise exception 'membru_inexistent';
+  end if;
+
+  if p_raspuns = 'clear' then
+    delete from public.attendance where session_id = p_sesiune and member_id = p_membru;
+  else
+    if p_raspuns = 'yes' then
+      v_primul := not exists (
+        select 1 from public.attendance
+         where member_id = p_membru and response = 'yes' and session_id <> p_sesiune
+      );
+    end if;
+    insert into public.attendance (session_id, member_id, response, is_first_training, responded_at)
+    values (p_sesiune, p_membru, p_raspuns, v_primul, now())
+    on conflict (session_id, member_id) do update
+      set response = excluded.response,
+          is_first_training = excluded.is_first_training,
+          responded_at = excluded.responded_at;
+  end if;
+
+  insert into public.attendance_log (session_id, member_id, response, source)
+  values (p_sesiune, p_membru, p_raspuns, 'manual');
+
+  perform sala_jurnal(p_token, 'sala_prezenta',
+    jsonb_build_object('sesiune', p_sesiune, 'membru', p_membru, 'raspuns', p_raspuns));
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_data is null or p_anulat is null then raise exception 'data_invalida'; end if;
+
+  if p_anulat then
+    -- Ora și locul vin din setările botului, ca la rândul pe care îl creează
+    -- botul când trimite sondajul; fără setări, rămân valorile coloanelor.
+    insert into public.training_sessions (session_date, status, starts_at, location)
+    select p_data, 'cancelled',
+           coalesce(c.training_time::time, '06:30'::time),
+           coalesce(c.location, 'Parcul Dumitru Râșcanu')
+      from (select 1) x
+      left join public.bot_config c on c.id = 1
+    on conflict (session_date) do update set status = 'cancelled';
+  else
+    update public.training_sessions set status = 'scheduled'
+     where session_date = p_data and status = 'cancelled';
+  end if;
+
+  perform sala_jurnal(p_token, case when p_anulat then 'sala_anulare' else 'sala_reactivare' end,
+    jsonb_build_object('data', p_data));
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_nume text;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_pastrat is null or p_eliminat is null or p_pastrat = p_eliminat then raise exception 'acelasi_membru'; end if;
+  select full_name into v_nume from public.members where id = p_eliminat;
+  if v_nume is null or not exists (select 1 from public.members where id = p_pastrat) then
+    raise exception 'membru_inexistent';
+  end if;
+
+  perform public.merge_members(p_pastrat, p_eliminat);
+
+  perform sala_jurnal(p_token, 'sala_unire',
+    jsonb_build_object('pastrat', p_pastrat, 'eliminat', p_eliminat, 'nume_eliminat', v_nume));
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.admin_save_email_template(p_token uuid, p_cheie text, p_subiect text, p_text text)
  RETURNS void
  LANGUAGE plpgsql
@@ -618,6 +1314,108 @@ begin
   returning event_config.id into v_id;
 
   return v_id;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_save_training_reel(p_token uuid, p_id uuid, p_youtube text, p_caption text, p_url text, p_vizibil boolean)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_id uuid;
+  v_numar int;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  if p_id is null then
+    select coalesce(max(r.numar), 0) + 1 into v_numar from training_reels r;
+    insert into training_reels (numar, youtube_id, caption, url, vizibil)
+    values (v_numar, p_youtube, p_caption, p_url, coalesce(p_vizibil, true))
+    returning id into v_id;
+
+    insert into admin_events (tip, detaliu)
+    values ('reel_add', jsonb_build_object('id', v_id, 'numar', v_numar, 'youtube', p_youtube));
+
+    return v_id;
+  end if;
+
+  update training_reels
+  set youtube_id = p_youtube,
+      caption = p_caption,
+      url = p_url,
+      vizibil = coalesce(p_vizibil, true)
+  where id = p_id
+  returning id, numar into v_id, v_numar;
+
+  if v_id is null then raise exception 'not_found'; end if;
+
+  insert into admin_events (tip, detaliu)
+  values ('reel_edit', jsonb_build_object('id', v_id, 'numar', v_numar, 'youtube', p_youtube));
+
+  return v_id;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_save_weekly_workout(p_token uuid, p_id uuid, p_titlu text, p_corp text, p_vizibil boolean)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_numar int;
+  v_titlu text;
+  v_corp text;
+  v_nou_id uuid;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+
+  if coalesce(p_vizibil, false)
+     and char_length(btrim(coalesce(p_corp, ''), E' \t\r\n')) = 0
+  then
+    raise exception 'workout_empty';
+  end if;
+
+  if p_id is null then
+    select coalesce(max(w.numar), 0) + 1 into v_numar from weekly_workout w;
+
+    insert into weekly_workout (numar, status, titlu, corp, vizibil)
+    values (v_numar, 'published', coalesce(p_titlu, ''), coalesce(p_corp, ''),
+            coalesce(p_vizibil, false))
+    returning id into v_nou_id;
+
+    insert into admin_events (tip, detaliu)
+    values ('workout_save', jsonb_build_object('id', v_nou_id, 'numar', v_numar,
+                                               'vizibil', coalesce(p_vizibil, false)));
+    return v_nou_id;
+  end if;
+
+  select w.numar, w.titlu, w.corp into v_numar, v_titlu, v_corp
+  from weekly_workout w where w.id = p_id and w.status = 'published';
+  if v_numar is null then raise exception 'not_found'; end if;
+
+  if v_titlu is not distinct from coalesce(p_titlu, '')
+     and v_corp is not distinct from coalesce(p_corp, '')
+  then
+    update weekly_workout set vizibil = coalesce(p_vizibil, false) where id = p_id;
+    return p_id;
+  end if;
+
+  update weekly_workout set status = 'superseded' where id = p_id;
+
+  insert into weekly_workout (numar, status, titlu, corp, vizibil)
+  values (v_numar, 'published', coalesce(p_titlu, ''), coalesce(p_corp, ''),
+          coalesce(p_vizibil, false))
+  returning id into v_nou_id;
+
+  insert into admin_events (tip, detaliu)
+  values ('workout_save', jsonb_build_object('id', v_nou_id, 'numar', v_numar,
+                                             'vizibil', coalesce(p_vizibil, false)));
+  return v_nou_id;
 end;
 $function$
 ;
@@ -1439,6 +2237,46 @@ AS $function$
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.public_training_reels()
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'youtube', r.youtube_id,
+        'caption', r.caption,
+        'url', r.url
+      )
+      order by r.numar
+    ),
+    '[]'::jsonb
+  )
+  from runlift.training_reels r
+  where r.vizibil;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.public_weekly_workouts()
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object('numar', w.numar, 'titlu', w.titlu, 'corp', w.corp)
+      order by w.numar
+    ),
+    '[]'::jsonb
+  )
+  from runlift.weekly_workout w
+  where w.status = 'published' and w.vizibil;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.registrations_backup_sync()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -1506,6 +2344,34 @@ begin
 
   return new;
 end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.sala_azi()
+ RETURNS date
+ LANGUAGE sql
+ STABLE
+ SET search_path TO ''
+AS $function$
+  select (pg_catalog.now() at time zone 'Europe/Chisinau')::date;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.sala_jurnal(p_token uuid, p_tip text, p_detaliu jsonb)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+  insert into admin_events (tip, detaliu)
+  values (
+    p_tip,
+    coalesce(p_detaliu, '{}'::jsonb) || jsonb_build_object(
+      'admin',
+      (select u.username from admin_sessions s join admin_users u on u.id = s.user_id
+        where s.token = p_token)
+    )
+  );
 $function$
 ;
 
@@ -1771,6 +2637,26 @@ create table runlift.registrations_backup (
   data_nasterii date
 );
 
+create table runlift.training_reels (
+  id uuid default gen_random_uuid() not null,
+  numar integer not null,
+  youtube_id text not null,
+  caption text not null,
+  url text not null,
+  vizibil boolean default true not null,
+  creat_la timestamp with time zone default now() not null
+);
+
+create table runlift.weekly_workout (
+  id uuid default gen_random_uuid() not null,
+  status text not null,
+  titlu text not null,
+  corp text not null,
+  vizibil boolean default false not null,
+  creat_la timestamp with time zone default now() not null,
+  numar integer not null
+);
+
 alter table runlift.admin_events add constraint admin_events_pkey PRIMARY KEY (id);
 alter table runlift.admin_login_attempts add constraint admin_login_attempts_pkey PRIMARY KEY (username);
 alter table runlift.admin_sessions add constraint admin_sessions_pkey PRIMARY KEY (token);
@@ -1784,6 +2670,8 @@ alter table runlift.event_waitlist add constraint event_waitlist_pkey PRIMARY KE
 alter table runlift.launch_notifications add constraint launch_notifications_pkey PRIMARY KEY (id);
 alter table runlift.registrations add constraint registrations_pkey PRIMARY KEY (id);
 alter table runlift.registrations_backup add constraint registrations_backup_pkey PRIMARY KEY (id);
+alter table runlift.training_reels add constraint training_reels_pkey PRIMARY KEY (id);
+alter table runlift.weekly_workout add constraint weekly_workout_pkey PRIMARY KEY (id);
 alter table runlift.admin_sessions add constraint admin_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES runlift.admin_users(id);
 alter table runlift.event_config add constraint event_config_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'superseded'::text])));
 alter table runlift.launch_notifications add constraint launch_notifications_editie_check CHECK (((editie >= 1) AND (editie <= 100)));
@@ -1793,6 +2681,10 @@ alter table runlift.registrations add constraint registrations_echipa_check CHEC
 alter table runlift.registrations add constraint registrations_email_check CHECK (((email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'::text) AND (char_length(email) <= 254)));
 alter table runlift.registrations add constraint registrations_nume_check CHECK (((char_length(TRIM(BOTH FROM nume)) >= 3) AND (char_length(TRIM(BOTH FROM nume)) <= 100)));
 alter table runlift.registrations add constraint registrations_telefon_check CHECK ((telefon ~ '^\+?\d{8,15}$'::text));
+alter table runlift.training_reels add constraint training_reels_caption_ok CHECK ((length(btrim(caption)) > 0));
+alter table runlift.training_reels add constraint training_reels_url_ok CHECK ((url ~ '^https://www\.instagram\.com/(reel|p)/[A-Za-z0-9_-]{5,32}/$'::text));
+alter table runlift.training_reels add constraint training_reels_youtube_ok CHECK ((youtube_id ~ '^[A-Za-z0-9_-]{11}$'::text));
+alter table runlift.weekly_workout add constraint weekly_workout_status_check CHECK ((status = ANY (ARRAY['published'::text, 'superseded'::text])));
 
 CREATE INDEX admin_sessions_user_id_idx ON runlift.admin_sessions USING btree (user_id);
 CREATE INDEX email_log_editie_idx ON runlift.email_log USING btree (editie, created_at DESC);
@@ -1810,6 +2702,11 @@ CREATE UNIQUE INDEX launch_notifications_token_idx ON runlift.launch_notificatio
 CREATE INDEX registrations_editie_activi ON runlift.registrations USING btree (editie) WHERE (deleted_at IS NULL);
 CREATE UNIQUE INDEX registrations_email_editie_key ON runlift.registrations USING btree (lower(email), editie) WHERE (deleted_at IS NULL);
 CREATE UNIQUE INDEX registrations_token_renunt_idx ON runlift.registrations USING btree (token_renunt);
+CREATE UNIQUE INDEX training_reels_un_numar ON runlift.training_reels USING btree (numar);
+CREATE UNIQUE INDEX training_reels_un_youtube ON runlift.training_reels USING btree (youtube_id);
+CREATE INDEX weekly_workout_istoric ON runlift.weekly_workout USING btree (creat_la DESC);
+CREATE INDEX weekly_workout_program ON runlift.weekly_workout USING btree (numar);
+CREATE UNIQUE INDEX weekly_workout_un_publicat_pe_numar ON runlift.weekly_workout USING btree (numar) WHERE (status = 'published'::text);
 
 CREATE TRIGGER event_waitlist_cap_trg BEFORE INSERT ON runlift.event_waitlist FOR EACH ROW EXECUTE FUNCTION runlift.event_waitlist_cap();
 CREATE TRIGGER registrations_autopromote_trg AFTER UPDATE OF deleted_at ON runlift.registrations FOR EACH ROW WHEN (((old.deleted_at IS NULL) AND (new.deleted_at IS NOT NULL))) EXECUTE FUNCTION runlift.auto_promote_from_waitlist();
@@ -1835,10 +2732,18 @@ revoke all on function runlift.admin_delete_registration(p_token uuid, p_id uuid
 grant execute on function runlift.admin_delete_registration(p_token uuid, p_id uuid) to anon;
 grant execute on function runlift.admin_delete_registration(p_token uuid, p_id uuid) to authenticated;
 grant execute on function runlift.admin_delete_registration(p_token uuid, p_id uuid) to service_role;
+revoke all on function runlift.admin_delete_training_reel(p_token uuid, p_id uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_delete_training_reel(p_token uuid, p_id uuid) to anon;
+grant execute on function runlift.admin_delete_training_reel(p_token uuid, p_id uuid) to authenticated;
+grant execute on function runlift.admin_delete_training_reel(p_token uuid, p_id uuid) to service_role;
 revoke all on function runlift.admin_delete_waitlist(p_token uuid, p_id uuid) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_delete_waitlist(p_token uuid, p_id uuid) to anon;
 grant execute on function runlift.admin_delete_waitlist(p_token uuid, p_id uuid) to authenticated;
 grant execute on function runlift.admin_delete_waitlist(p_token uuid, p_id uuid) to service_role;
+revoke all on function runlift.admin_delete_weekly_workout(p_token uuid, p_id uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_delete_weekly_workout(p_token uuid, p_id uuid) to anon;
+grant execute on function runlift.admin_delete_weekly_workout(p_token uuid, p_id uuid) to authenticated;
+grant execute on function runlift.admin_delete_weekly_workout(p_token uuid, p_id uuid) to service_role;
 revoke all on function runlift.admin_get_event_config(p_token uuid, p_editie integer) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_get_event_config(p_token uuid, p_editie integer) to anon;
 grant execute on function runlift.admin_get_event_config(p_token uuid, p_editie integer) to authenticated;
@@ -1867,10 +2772,18 @@ revoke all on function runlift.admin_list_registrations(p_token uuid, p_editie i
 grant execute on function runlift.admin_list_registrations(p_token uuid, p_editie integer) to anon;
 grant execute on function runlift.admin_list_registrations(p_token uuid, p_editie integer) to authenticated;
 grant execute on function runlift.admin_list_registrations(p_token uuid, p_editie integer) to service_role;
+revoke all on function runlift.admin_list_training_reels(p_token uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_list_training_reels(p_token uuid) to anon;
+grant execute on function runlift.admin_list_training_reels(p_token uuid) to authenticated;
+grant execute on function runlift.admin_list_training_reels(p_token uuid) to service_role;
 revoke all on function runlift.admin_list_waitlist(p_token uuid, p_editie integer) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_list_waitlist(p_token uuid, p_editie integer) to anon;
 grant execute on function runlift.admin_list_waitlist(p_token uuid, p_editie integer) to authenticated;
 grant execute on function runlift.admin_list_waitlist(p_token uuid, p_editie integer) to service_role;
+revoke all on function runlift.admin_list_weekly_workout(p_token uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_list_weekly_workout(p_token uuid) to anon;
+grant execute on function runlift.admin_list_weekly_workout(p_token uuid) to authenticated;
+grant execute on function runlift.admin_list_weekly_workout(p_token uuid) to service_role;
 revoke all on function runlift.admin_login(p_username text, p_password text) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_login(p_username text, p_password text) to anon;
 grant execute on function runlift.admin_login(p_username text, p_password text) to authenticated;
@@ -1879,6 +2792,14 @@ revoke all on function runlift.admin_logout(p_token uuid) from public, anon, aut
 grant execute on function runlift.admin_logout(p_token uuid) to anon;
 grant execute on function runlift.admin_logout(p_token uuid) to authenticated;
 grant execute on function runlift.admin_logout(p_token uuid) to service_role;
+revoke all on function runlift.admin_move_training_reel(p_token uuid, p_id uuid, p_directie integer) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_move_training_reel(p_token uuid, p_id uuid, p_directie integer) to anon;
+grant execute on function runlift.admin_move_training_reel(p_token uuid, p_id uuid, p_directie integer) to authenticated;
+grant execute on function runlift.admin_move_training_reel(p_token uuid, p_id uuid, p_directie integer) to service_role;
+revoke all on function runlift.admin_move_weekly_workout(p_token uuid, p_id uuid, p_directie integer) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_move_weekly_workout(p_token uuid, p_id uuid, p_directie integer) to anon;
+grant execute on function runlift.admin_move_weekly_workout(p_token uuid, p_id uuid, p_directie integer) to authenticated;
+grant execute on function runlift.admin_move_weekly_workout(p_token uuid, p_id uuid, p_directie integer) to service_role;
 revoke all on function runlift.admin_promote_waitlist(p_token uuid, p_id uuid) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_promote_waitlist(p_token uuid, p_id uuid) to anon;
 grant execute on function runlift.admin_promote_waitlist(p_token uuid, p_id uuid) to authenticated;
@@ -1897,6 +2818,58 @@ revoke all on function runlift.admin_restore_event_config(p_token uuid, p_id uui
 grant execute on function runlift.admin_restore_event_config(p_token uuid, p_id uuid) to anon;
 grant execute on function runlift.admin_restore_event_config(p_token uuid, p_id uuid) to authenticated;
 grant execute on function runlift.admin_restore_event_config(p_token uuid, p_id uuid) to service_role;
+revoke all on function runlift.admin_restore_weekly_workout(p_token uuid, p_id uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_restore_weekly_workout(p_token uuid, p_id uuid) to anon;
+grant execute on function runlift.admin_restore_weekly_workout(p_token uuid, p_id uuid) to authenticated;
+grant execute on function runlift.admin_restore_weekly_workout(p_token uuid, p_id uuid) to service_role;
+revoke all on function runlift.admin_sala_comanda(p_token uuid, p_actiune text, p_html text) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_comanda(p_token uuid, p_actiune text, p_html text) to anon;
+grant execute on function runlift.admin_sala_comanda(p_token uuid, p_actiune text, p_html text) to authenticated;
+grant execute on function runlift.admin_sala_comanda(p_token uuid, p_actiune text, p_html text) to service_role;
+revoke all on function runlift.admin_sala_date(p_token uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_date(p_token uuid) to anon;
+grant execute on function runlift.admin_sala_date(p_token uuid) to authenticated;
+grant execute on function runlift.admin_sala_date(p_token uuid) to service_role;
+revoke all on function runlift.admin_sala_leaga_cont(p_token uuid, p_telegram_id bigint, p_membru uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_leaga_cont(p_token uuid, p_telegram_id bigint, p_membru uuid) to anon;
+grant execute on function runlift.admin_sala_leaga_cont(p_token uuid, p_telegram_id bigint, p_membru uuid) to authenticated;
+grant execute on function runlift.admin_sala_leaga_cont(p_token uuid, p_telegram_id bigint, p_membru uuid) to service_role;
+revoke all on function runlift.admin_sala_membru_din_cont(p_token uuid, p_telegram_id bigint, p_nume text) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_membru_din_cont(p_token uuid, p_telegram_id bigint, p_nume text) to anon;
+grant execute on function runlift.admin_sala_membru_din_cont(p_token uuid, p_telegram_id bigint, p_nume text) to authenticated;
+grant execute on function runlift.admin_sala_membru_din_cont(p_token uuid, p_telegram_id bigint, p_nume text) to service_role;
+revoke all on function runlift.admin_sala_porneste_bot(p_token uuid, p_pornit boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_porneste_bot(p_token uuid, p_pornit boolean) to anon;
+grant execute on function runlift.admin_sala_porneste_bot(p_token uuid, p_pornit boolean) to authenticated;
+grant execute on function runlift.admin_sala_porneste_bot(p_token uuid, p_pornit boolean) to service_role;
+revoke all on function runlift.admin_sala_rezumat(p_token uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_rezumat(p_token uuid) to anon;
+grant execute on function runlift.admin_sala_rezumat(p_token uuid) to authenticated;
+grant execute on function runlift.admin_sala_rezumat(p_token uuid) to service_role;
+revoke all on function runlift.admin_sala_salveaza_config(p_token uuid, p_config jsonb) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_salveaza_config(p_token uuid, p_config jsonb) to anon;
+grant execute on function runlift.admin_sala_salveaza_config(p_token uuid, p_config jsonb) to authenticated;
+grant execute on function runlift.admin_sala_salveaza_config(p_token uuid, p_config jsonb) to service_role;
+revoke all on function runlift.admin_sala_salveaza_membru(p_token uuid, p_membru uuid, p_nume text, p_telegram_id bigint, p_telegram_user text, p_status text, p_admin boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_salveaza_membru(p_token uuid, p_membru uuid, p_nume text, p_telegram_id bigint, p_telegram_user text, p_status text, p_admin boolean) to anon;
+grant execute on function runlift.admin_sala_salveaza_membru(p_token uuid, p_membru uuid, p_nume text, p_telegram_id bigint, p_telegram_user text, p_status text, p_admin boolean) to authenticated;
+grant execute on function runlift.admin_sala_salveaza_membru(p_token uuid, p_membru uuid, p_nume text, p_telegram_id bigint, p_telegram_user text, p_status text, p_admin boolean) to service_role;
+revoke all on function runlift.admin_sala_scoate_din_grup(p_token uuid, p_membru uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_scoate_din_grup(p_token uuid, p_membru uuid) to anon;
+grant execute on function runlift.admin_sala_scoate_din_grup(p_token uuid, p_membru uuid) to authenticated;
+grant execute on function runlift.admin_sala_scoate_din_grup(p_token uuid, p_membru uuid) to service_role;
+revoke all on function runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune uuid, p_membru uuid, p_raspuns text) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune uuid, p_membru uuid, p_raspuns text) to anon;
+grant execute on function runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune uuid, p_membru uuid, p_raspuns text) to authenticated;
+grant execute on function runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune uuid, p_membru uuid, p_raspuns text) to service_role;
+revoke all on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean) to anon;
+grant execute on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean) to authenticated;
+grant execute on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean) to service_role;
+revoke all on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) to anon;
+grant execute on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) to authenticated;
+grant execute on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) to service_role;
 revoke all on function runlift.admin_save_email_template(p_token uuid, p_cheie text, p_subiect text, p_text text) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_save_email_template(p_token uuid, p_cheie text, p_subiect text, p_text text) to anon;
 grant execute on function runlift.admin_save_email_template(p_token uuid, p_cheie text, p_subiect text, p_text text) to authenticated;
@@ -1905,6 +2878,14 @@ revoke all on function runlift.admin_save_event_config_draft(p_token uuid, p_edi
 grant execute on function runlift.admin_save_event_config_draft(p_token uuid, p_editie integer, p_config jsonb) to anon;
 grant execute on function runlift.admin_save_event_config_draft(p_token uuid, p_editie integer, p_config jsonb) to authenticated;
 grant execute on function runlift.admin_save_event_config_draft(p_token uuid, p_editie integer, p_config jsonb) to service_role;
+revoke all on function runlift.admin_save_training_reel(p_token uuid, p_id uuid, p_youtube text, p_caption text, p_url text, p_vizibil boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_save_training_reel(p_token uuid, p_id uuid, p_youtube text, p_caption text, p_url text, p_vizibil boolean) to anon;
+grant execute on function runlift.admin_save_training_reel(p_token uuid, p_id uuid, p_youtube text, p_caption text, p_url text, p_vizibil boolean) to authenticated;
+grant execute on function runlift.admin_save_training_reel(p_token uuid, p_id uuid, p_youtube text, p_caption text, p_url text, p_vizibil boolean) to service_role;
+revoke all on function runlift.admin_save_weekly_workout(p_token uuid, p_id uuid, p_titlu text, p_corp text, p_vizibil boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_save_weekly_workout(p_token uuid, p_id uuid, p_titlu text, p_corp text, p_vizibil boolean) to anon;
+grant execute on function runlift.admin_save_weekly_workout(p_token uuid, p_id uuid, p_titlu text, p_corp text, p_vizibil boolean) to authenticated;
+grant execute on function runlift.admin_save_weekly_workout(p_token uuid, p_id uuid, p_titlu text, p_corp text, p_vizibil boolean) to service_role;
 revoke all on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to anon;
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to authenticated;
@@ -1995,6 +2976,14 @@ revoke all on function runlift.public_stats() from public, anon, authenticated, 
 grant execute on function runlift.public_stats() to anon;
 grant execute on function runlift.public_stats() to authenticated;
 grant execute on function runlift.public_stats() to service_role;
+revoke all on function runlift.public_training_reels() from public, anon, authenticated, service_role;
+grant execute on function runlift.public_training_reels() to anon;
+grant execute on function runlift.public_training_reels() to authenticated;
+grant execute on function runlift.public_training_reels() to service_role;
+revoke all on function runlift.public_weekly_workouts() from public, anon, authenticated, service_role;
+grant execute on function runlift.public_weekly_workouts() to anon;
+grant execute on function runlift.public_weekly_workouts() to authenticated;
+grant execute on function runlift.public_weekly_workouts() to service_role;
 revoke all on function runlift.registrations_backup_sync() from public, anon, authenticated, service_role;
 grant execute on function runlift.registrations_backup_sync() to anon;
 grant execute on function runlift.registrations_backup_sync() to authenticated;
@@ -2003,6 +2992,8 @@ revoke all on function runlift.registrations_guard() from public, anon, authenti
 grant execute on function runlift.registrations_guard() to anon;
 grant execute on function runlift.registrations_guard() to authenticated;
 grant execute on function runlift.registrations_guard() to service_role;
+revoke all on function runlift.sala_azi() from public, anon, authenticated, service_role;
+revoke all on function runlift.sala_jurnal(p_token uuid, p_tip text, p_detaliu jsonb) from public, anon, authenticated, service_role;
 revoke all on function runlift.scrie_scalarele_editiei(p_config jsonb) from public, anon, authenticated, service_role;
 grant execute on function runlift.scrie_scalarele_editiei(p_config jsonb) to service_role;
 revoke all on function runlift.semnaleaza_locuri_epuizate() from public, anon, authenticated, service_role;
@@ -2205,676 +3196,9 @@ grant insert on table runlift.registrations_backup to service_role;
 grant update on table runlift.registrations_backup to service_role;
 grant delete on table runlift.registrations_backup to service_role;
 alter table runlift.registrations_backup enable row level security;
-
--- (nicio politică: după lockdown-ul anti-bot, nimeni nu scrie direct din browser)
-
--- ===========================================================================
--- Programul antrenamentelor (supabase-migration-program-antrenamente.sql)
--- ===========================================================================
-
--- Antrenamentul săptămânii e un PROGRAM numerotat: Săptămâna 1, 2, 3 … N.
---
--- De ce numerotat și nu invers cronologic: cine abia începe să alerge n-are de
--- unde porni într-o arhivă. Un program are un început, iar numărul e ce-l
--- face parcurgibil — „începe de la Săptămâna 1" e o instrucțiune, „vezi ce-a
--- fost săptămâna trecută" nu e.
---
--- De ce un tabel propriu și nu documentul ediției: cadența. Documentul ediției
--- se schimbă de câteva ori pe ediție; antrenamentul, în fiecare săptămână.
--- Programul nu aparține niciunei ediții și rămâne valabil între ele.
---
--- Trei reguli stau AICI, nu în formular, pentru că formularul nu e singura cale
--- spre tabel:
---
---  1. `vizibil și corp gol` se refuză. Altfel o scriere directă ar produce o
---     săptămână goală la un URL pe care organizatorul tocmai l-a trimis.
---  2. Comutatorul de vizibilitate peticește rândul publicat; doar titlul sau
---     corpul schimbat scrie o versiune nouă. Altfel o pornire-oprire dublă ar
---     adăuga patru rânduri identice, iar „Versiuni anterioare" — care există ca
---     să repari o suprascriere — ar deveni inutilizabil exact pentru asta.
---  3. Renumerotarea trece printr-un interval-tampon. Vezi
---     `admin_move_weekly_workout` pentru de ce un singur `update` nu e sigur.
-
--- ---------------------------------------------------------------------------
--- 1. Tabelul
--- ---------------------------------------------------------------------------
-
-create table if not exists runlift.weekly_workout (
-  id uuid primary key default gen_random_uuid(),
-  -- Poziția în program: 1…N, fără goluri. E POZIȚIE, nu identificator etern —
-  -- mutarea și ștergerea renumerotează. Un program căruia îi lipsește
-  -- Săptămâna 2 e un program stricat, nu un program cu o gaură.
-  numar int not null,
-  status text not null check (status in ('published', 'superseded')),
-  titlu text not null,
-  corp text not null,
-  -- Vizibilă pe site. Per săptămână, nu pe toată pagina: antrenamentul de
-  -- săptămâna viitoare se scrie din timp și se ține ascuns până luni.
-  vizibil boolean not null default false,
-  creat_la timestamptz not null default now()
-);
-
--- Un singur rând publicat PER SĂPTĂMÂNĂ (înainte era unul în tot tabelul).
--- Versiunile înlocuite poartă același `numar`, deci „Versiuni anterioare"
--- devine per săptămână fără niciun mecanism nou.
-create unique index if not exists weekly_workout_un_publicat_pe_numar
-  on runlift.weekly_workout (numar) where status = 'published';
-
--- Programul se citește crescător…
-create index if not exists weekly_workout_program
-  on runlift.weekly_workout (numar);
-
--- …iar versiunile unei săptămâni, invers cronologic.
-create index if not exists weekly_workout_istoric
-  on runlift.weekly_workout (creat_la desc);
-
--- RLS fără politici, ca la restul schemei: nimic nu se citește direct cu cheia
--- publică. Fără asta, `anon` ar putea citi rândurile `superseded` și
--- săptămânile ascunse — adică exact ce funcția publică ascunde.
+revoke all on table runlift.training_reels from public, anon, authenticated, service_role;
+alter table runlift.training_reels enable row level security;
 revoke all on table runlift.weekly_workout from public, anon, authenticated, service_role;
 alter table runlift.weekly_workout enable row level security;
 
--- ---------------------------------------------------------------------------
--- 2. Salvarea
--- ---------------------------------------------------------------------------
---
--- `p_id` null înseamnă „săptămână nouă" și primește automat numărul următor:
--- organizatorul nu tastează și nu alege niciun număr. `p_id` dat înseamnă
--- „editez săptămâna asta" și păstrează numărul.
---
--- `p_id` e id-ul rândului PUBLICAT al săptămânii, nu numărul ei. Un număr
--- trimis dintr-un ecran rămas în urmă după o renumerotare ar fi lovit altă
--- săptămână decât cea apăsată.
 
-create or replace function runlift.admin_save_weekly_workout(
-  p_token uuid,
-  p_id uuid,
-  p_titlu text,
-  p_corp text,
-  p_vizibil boolean
-)
-returns uuid
-language plpgsql
-security definer
-set search_path to 'runlift'
-as $function$
-declare
-  v_numar int;
-  v_titlu text;
-  v_corp text;
-  v_nou_id uuid;
-begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-
-  -- Regula 1. `btrim` cu setul explicit, nu `trim`: `trim` scoate DOAR spații,
-  -- iar un corp de forma "   \n  " ar fi trecut drept scris. `coalesce`
-  -- înaintea lui, fiindcă un corp `null` e tot gol.
-  if coalesce(p_vizibil, false)
-     and char_length(btrim(coalesce(p_corp, ''), E' \t\r\n')) = 0
-  then
-    raise exception 'workout_empty';
-  end if;
-
-  if p_id is null then
-    select coalesce(max(w.numar), 0) + 1 into v_numar from weekly_workout w;
-
-    insert into weekly_workout (numar, status, titlu, corp, vizibil)
-    values (v_numar, 'published', coalesce(p_titlu, ''), coalesce(p_corp, ''),
-            coalesce(p_vizibil, false))
-    returning id into v_nou_id;
-
-    insert into admin_events (tip, detaliu)
-    values ('workout_save', jsonb_build_object('id', v_nou_id, 'numar', v_numar,
-                                               'vizibil', coalesce(p_vizibil, false)));
-    return v_nou_id;
-  end if;
-
-  select w.numar, w.titlu, w.corp into v_numar, v_titlu, v_corp
-  from weekly_workout w where w.id = p_id and w.status = 'published';
-  if v_numar is null then raise exception 'not_found'; end if;
-
-  -- Regula 2. Conținut neschimbat → petic pe loc, același id, nicio versiune.
-  if v_titlu is not distinct from coalesce(p_titlu, '')
-     and v_corp is not distinct from coalesce(p_corp, '')
-  then
-    update weekly_workout set vizibil = coalesce(p_vizibil, false) where id = p_id;
-    return p_id;
-  end if;
-
-  update weekly_workout set status = 'superseded' where id = p_id;
-
-  insert into weekly_workout (numar, status, titlu, corp, vizibil)
-  values (v_numar, 'published', coalesce(p_titlu, ''), coalesce(p_corp, ''),
-          coalesce(p_vizibil, false))
-  returning id into v_nou_id;
-
-  insert into admin_events (tip, detaliu)
-  values ('workout_save', jsonb_build_object('id', v_nou_id, 'numar', v_numar,
-                                             'vizibil', coalesce(p_vizibil, false)));
-  return v_nou_id;
-end;
-$function$;
-
--- ---------------------------------------------------------------------------
--- 3. Ordinea programului
--- ---------------------------------------------------------------------------
-
-create or replace function runlift.admin_move_weekly_workout(
-  p_token uuid,
-  p_id uuid,
-  p_directie int
-)
-returns int
-language plpgsql
-security definer
-set search_path to 'runlift'
-as $function$
-declare
-  v_numar int;
-  v_vecin int;
-begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-  if p_directie is null or p_directie not in (-1, 1) then
-    raise exception 'directie_invalida';
-  end if;
-
-  select w.numar into v_numar from weekly_workout w
-  where w.id = p_id and w.status = 'published';
-  if v_numar is null then raise exception 'not_found'; end if;
-
-  v_vecin := v_numar + p_directie;
-
-  -- La capăt de program nu există vecin. Nu e o eroare — butonul e dezactivat
-  -- în ecran, dar ecranul nu e singura cale spre RPC.
-  if not exists (select 1 from weekly_workout w where w.numar = v_vecin) then
-    return v_numar;
-  end if;
-
-  -- Schimbul trece printr-un interval-tampon NEGATIV, în trei pași.
-  --
-  -- De ce nu un singur `update … set numar = case numar when A then B …`:
-  -- indexul de unicitate e PARȚIAL, deci nu poate fi `deferrable` — numai
-  -- constrângerile pot fi, iar o constrângere unică parțială nu există în
-  -- Postgres. Verificarea se face rând cu rând, în timpul instrucțiunii, așa că
-  -- primul rând schimbat scrie peste un număr încă ocupat de al doilea.
-  --
-  -- Nu e o teorie: forma cu `case` pică măsurat, cu „duplicate key value
-  -- violates unique constraint weekly_workout_un_publicat_pe_numar". La fel și
-  -- orice `set numar = numar + 1` pe mai multe rânduri.
-  --
-  -- Numerele reale sunt >= 1, deci intervalul negativ nu se poate ciocni de nimic.
-  update weekly_workout set numar = 0 - v_numar where numar = v_numar;
-  update weekly_workout set numar = v_numar where numar = v_vecin;
-  update weekly_workout set numar = v_vecin where numar = 0 - v_numar;
-
-  insert into admin_events (tip, detaliu)
-  values ('workout_move', jsonb_build_object('id', p_id, 'din', v_numar, 'in', v_vecin));
-
-  return v_vecin;
-end;
-$function$;
-
-create or replace function runlift.admin_delete_weekly_workout(p_token uuid, p_id uuid)
-returns int
-language plpgsql
-security definer
-set search_path to 'runlift'
-as $function$
-declare
-  v_numar int;
-  v_titlu text;
-begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-
-  -- Titlul se citește ÎNAINTE de ștergere, pentru jurnal: după compactare,
-  -- `numar` arată deja spre altă săptămână, deci singur n-ar mai identifica
-  -- nimic pentru cine citește `admin_events` peste o lună.
-  select w.numar, w.titlu into v_numar, v_titlu from weekly_workout w
-  where w.id = p_id and w.status = 'published';
-  if v_numar is null then raise exception 'not_found'; end if;
-
-  -- Săptămâna, cu tot cu versiunile ei. Ștergerea e definitivă: soft-delete ar
-  -- fi cerut un filtru în fiecare RPC și în indexul de unicitate, pentru un
-  -- gest rar pe care confirmarea din ecran îl acoperă deja.
-  delete from weekly_workout where numar = v_numar;
-
-  -- Compactarea trece prin același tampon. Aici forma naivă
-  -- (`set numar = numar - 1 where numar > v_numar`) se ÎNTÂMPLĂ să treacă:
-  -- rândurile sunt inserate crescător, deci ordinea fizică coincide cu ordinea
-  -- în care coborârea e sigură. E o coincidență de așezare pe disc, nu o
-  -- garanție — mutările rescriu tupluri și pot schimba acea ordine. Tamponul o
-  -- face independentă de ea.
-  update weekly_workout set numar = 0 - numar where numar > v_numar;
-  update weekly_workout set numar = (0 - numar) - 1 where numar < 0;
-
-  insert into admin_events (tip, detaliu)
-  values ('workout_delete',
-          jsonb_build_object('id', p_id, 'numar', v_numar, 'titlu', v_titlu));
-
-  return v_numar;
-end;
-$function$;
-
--- ---------------------------------------------------------------------------
--- 4. Programul și revenirea
--- ---------------------------------------------------------------------------
-
-create or replace function runlift.admin_list_weekly_workout(p_token uuid)
-returns table (
-  id uuid,
-  numar int,
-  status text,
-  titlu text,
-  corp text,
-  vizibil boolean,
-  creat_la timestamptz
-)
-language plpgsql
-security definer
-set search_path to 'runlift'
-as $function$
-begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-
-  return query
-    select w.id, w.numar, w.status, w.titlu, w.corp, w.vizibil, w.creat_la
-    from weekly_workout w
-    order by w.numar asc, w.creat_la desc;
-end;
-$function$;
-
--- Revenirea e ÎN CADRUL unei săptămâni: versiunea aleasă îi ia locul celei
--- publicate din aceeași poziție. Restul programului nu se clintește.
-create or replace function runlift.admin_restore_weekly_workout(p_token uuid, p_id uuid)
-returns uuid
-language plpgsql
-security definer
-set search_path to 'runlift'
-as $function$
-declare v_numar int;
-begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-
-  select w.numar into v_numar from weekly_workout w where w.id = p_id;
-  if v_numar is null then raise exception 'not_found'; end if;
-
-  update weekly_workout set status = 'superseded'
-    where status = 'published' and numar = v_numar and id <> p_id;
-  update weekly_workout set status = 'published' where id = p_id;
-
-  insert into admin_events (tip, detaliu)
-  values ('workout_restore', jsonb_build_object('id', p_id, 'numar', v_numar));
-
-  return p_id;
-end;
-$function$;
-
--- ---------------------------------------------------------------------------
--- 5. Ce vede publicul
--- ---------------------------------------------------------------------------
---
--- Tot programul vizibil, într-un singur răspuns: alegerea unei săptămâni din
--- selector nu mai cere nimic de la server. Un al doilea RPC „dă-mi săptămâna N"
--- ar fi însemnat un tur la server la fiecare apăsare, pentru un conținut care
--- încape într-un răspuns.
---
--- Array GOL, nu `null`, când nu e nimic vizibil — `jsonb_agg` pe zero rânduri
--- dă `null`, iar pagina ar fi trebuit să trateze două forme pentru aceeași
--- situație. Cele trei situații pe care ea le tratează la fel (nimic scris, tot
--- ascuns, doar versiuni înlocuite) rămân nedistinse deliberat: un vizitator
--- n-are de ce să afle care dintre ele e cazul.
---
--- Ascunderea NU renumerotează: cu Săptămâna 3 ascunsă, publicul vede 1, 2, 4.
--- Numerele recalculate peste cele vizibile ar fi mutat numărul săptămânii
--- curente la fiecare ascundere, iar un `#s3` trimis ieri ar fi dus altundeva azi.
-
-create or replace function runlift.public_weekly_workouts()
-returns jsonb
-language sql
-stable
-security definer
-set search_path to ''
-as $function$
-  select coalesce(
-    jsonb_agg(
-      jsonb_build_object('numar', w.numar, 'titlu', w.titlu, 'corp', w.corp)
-      order by w.numar
-    ),
-    '[]'::jsonb
-  )
-  from runlift.weekly_workout w
-  where w.status = 'published' and w.vizibil;
-$function$;
-
--- ---------------------------------------------------------------------------
--- 6. Drepturi
--- ---------------------------------------------------------------------------
---
--- RPC-urile de admin sunt deschise rolului `anon` din acelaşi motiv ca toate
--- celelalte: /admin se autentifică prin `p_token`, nu printr-o sesiune
--- Postgres. Verificarea tokenului din corpul fiecăreia e apărarea reală.
-
-revoke all on function runlift.admin_save_weekly_workout(uuid, uuid, text, text, boolean)
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_save_weekly_workout(uuid, uuid, text, text, boolean)
-  to anon, authenticated, service_role;
-
-revoke all on function runlift.admin_move_weekly_workout(uuid, uuid, int)
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_move_weekly_workout(uuid, uuid, int)
-  to anon, authenticated, service_role;
-
-revoke all on function runlift.admin_delete_weekly_workout(uuid, uuid)
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_delete_weekly_workout(uuid, uuid)
-  to anon, authenticated, service_role;
-
-revoke all on function runlift.admin_list_weekly_workout(uuid)
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_list_weekly_workout(uuid)
-  to anon, authenticated, service_role;
-
-revoke all on function runlift.admin_restore_weekly_workout(uuid, uuid)
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_restore_weekly_workout(uuid, uuid)
-  to anon, authenticated, service_role;
-
-revoke all on function runlift.public_weekly_workouts()
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.public_weekly_workouts()
-  to anon, authenticated, service_role;
-
--- ===========================================================================
--- Clipurile de antrenament (`training_reels`) — adăugat 21 septembrie 2026,
--- mutat pe YouTube în aceeași zi (`clipuri_din_youtube`)
--- ===========================================================================
-
--- ---------------------------------------------------------------------------
--- Clipurile de antrenament, ca listă proprie
--- ---------------------------------------------------------------------------
---
--- De ce un tabel propriu și nu documentul de ediție: clipurile de antrenament
--- NU aparțin niciunei ediții. Marțea și joia din parc nu se mută odată cu
--- cursa, iar o ediție nouă n-are de ce să moștenească sau să piardă banda.
--- Aceeași situație ca `weekly_workout`, rezolvată la fel.
---
--- CLIPURILE nu stau aici. Sunt încărcate pe YouTube, iar tabelul ține doar
--- identificatorul lor plus PREZENTAREA: ordinea, legenda, linkul spre postare
--- și dacă se văd. Tot ce e aici se editează din `/admin`, fără deploy.
---
--- Fără versionare (spre deosebire de `weekly_workout`): nu există ciornă și nici
--- „revino la versiunea trecută" pentru o legendă. Un istoric aici ar fi fost
--- ceremonie.
-
-create table if not exists runlift.training_reels (
-  id uuid primary key default gen_random_uuid(),
-  -- Poziția în bandă. Organizatorul n-o tastează niciodată: se atribuie la
-  -- adăugare și se schimbă doar prin „mută".
-  numar int not null,
-  -- Identificatorul clipului pe YouTube (11 caractere), nu un link și nu o cale.
-  youtube_id text not null,
-  -- O linie sub card. NU e opțională: e ce citește un cititor de ecran, fiindcă
-  -- elementul de redare e ascuns din arborele de accesibilitate.
-  caption text not null,
-  -- Postarea reală de pe Instagram, pentru cine vrea clipul întreg. Rămâne
-  -- Instagram și după mutarea găzduirii pe YouTube: un clip nelistat n-are unde
-  -- să trimită pe cineva, iar publicul e acolo.
-  url text not null,
-  vizibil boolean not null default true,
-  creat_la timestamptz not null default now(),
-
-  -- Aceleași forme ca gardele din client. Serverul rămâne autoritatea: o
-  -- scriere directă în DB n-are voie să pună în pagină un `src` arbitrar.
-  constraint training_reels_youtube_ok check (youtube_id ~ '^[A-Za-z0-9_-]{11}$'),
-  constraint training_reels_caption_ok check (length(btrim(caption)) > 0),
-  constraint training_reels_url_ok check (url ~ '^https://www\.instagram\.com/(reel|p)/[A-Za-z0-9_-]{5,32}/$')
-);
-
--- Ordinea e o permutare, nu o sugestie: două clipuri pe același număr ar randa
--- nedeterminist. Mutarea trece prin negative tocmai ca să nu lovească indexul.
-create unique index if not exists training_reels_un_numar
-  on runlift.training_reels (numar);
-
--- Un clip o singură dată: două carduri cu același identificator sunt o greșeală
--- de lipit, nu o intenție.
-create unique index if not exists training_reels_un_youtube
-  on runlift.training_reels (youtube_id);
-
--- RLS fără politici, ca la restul schemei: nimic nu se citește direct cu cheia
--- publică. Fără asta, `anon` ar putea citi clipurile ascunse — adică exact ce
--- funcția publică ascunde.
-revoke all on table runlift.training_reels from public, anon, authenticated, service_role;
-alter table runlift.training_reels enable row level security;
-
--- ---------------------------------------------------------------------------
--- Lista publică
--- ---------------------------------------------------------------------------
---
--- Aceeași formă ca `public_weekly_workouts`: RPC stabil peste un tabel închis,
--- citit cu cheia publicabilă. `id` și `numar` nu ies: pagina randează în
--- ordinea primită și n-are ce face cu ele.
-
-create or replace function runlift.public_training_reels()
-returns jsonb
-language sql
-stable
-security definer
-set search_path to ''
-as $$
-  select coalesce(
-    jsonb_agg(
-      jsonb_build_object(
-        'youtube', r.youtube_id,
-        'caption', r.caption,
-        'url', r.url
-      )
-      order by r.numar
-    ),
-    '[]'::jsonb
-  )
-  from runlift.training_reels r
-  where r.vizibil;
-$$;
-
--- ---------------------------------------------------------------------------
--- Lista de admin
--- ---------------------------------------------------------------------------
-
-create or replace function runlift.admin_list_training_reels(p_token uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path to 'runlift'
-as $$
-begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-
-  return coalesce(
-    (select jsonb_agg(
-       jsonb_build_object(
-         'id', r.id,
-         'numar', r.numar,
-         'youtube', r.youtube_id,
-         'caption', r.caption,
-         'url', r.url,
-         'vizibil', r.vizibil
-       )
-       order by r.numar
-     )
-     from training_reels r),
-    '[]'::jsonb
-  );
-end;
-$$;
-
--- ---------------------------------------------------------------------------
--- Salvarea
--- ---------------------------------------------------------------------------
---
--- `p_id` null înseamnă „clip nou" și primește automat numărul următor:
--- organizatorul nu tastează și nu alege niciun număr. `p_id` dat înseamnă
--- „editez clipul ăsta" și păstrează numărul.
-
-create or replace function runlift.admin_save_training_reel(
-  p_token uuid,
-  p_id uuid,
-  p_youtube text,
-  p_caption text,
-  p_url text,
-  p_vizibil boolean
-)
-returns uuid
-language plpgsql
-security definer
-set search_path to 'runlift'
-as $$
-declare
-  v_id uuid;
-  v_numar int;
-begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-
-  if p_id is null then
-    select coalesce(max(r.numar), 0) + 1 into v_numar from training_reels r;
-    insert into training_reels (numar, youtube_id, caption, url, vizibil)
-    values (v_numar, p_youtube, p_caption, p_url, coalesce(p_vizibil, true))
-    returning id into v_id;
-
-    insert into admin_events (tip, detaliu)
-    values ('reel_add', jsonb_build_object('id', v_id, 'numar', v_numar, 'youtube', p_youtube));
-
-    return v_id;
-  end if;
-
-  update training_reels
-  set youtube_id = p_youtube,
-      caption = p_caption,
-      url = p_url,
-      vizibil = coalesce(p_vizibil, true)
-  where id = p_id
-  returning id, numar into v_id, v_numar;
-
-  if v_id is null then raise exception 'not_found'; end if;
-
-  insert into admin_events (tip, detaliu)
-  values ('reel_edit', jsonb_build_object('id', v_id, 'numar', v_numar, 'youtube', p_youtube));
-
-  return v_id;
-end;
-$$;
-
--- ---------------------------------------------------------------------------
--- Mutarea
--- ---------------------------------------------------------------------------
---
--- Schimbul trece printr-un număr negativ temporar: un singur `update` care
--- încearcă să pună două rânduri pe același număr ar lovi indexul unic.
-
-create or replace function runlift.admin_move_training_reel(
-  p_token uuid,
-  p_id uuid,
-  p_directie int
-)
-returns int
-language plpgsql
-security definer
-set search_path to 'runlift'
-as $$
-declare
-  v_numar int;
-  v_vecin int;
-begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-  if p_directie is null or p_directie not in (-1, 1) then
-    raise exception 'directie_invalida';
-  end if;
-
-  select r.numar into v_numar from training_reels r where r.id = p_id;
-  if v_numar is null then raise exception 'not_found'; end if;
-
-  v_vecin := v_numar + p_directie;
-
-  -- La capăt de bandă nu există vecin, iar asta nu e o eroare.
-  if not exists (select 1 from training_reels r where r.numar = v_vecin) then
-    return v_numar;
-  end if;
-
-  update training_reels set numar = 0 - v_numar where numar = v_numar;
-  update training_reels set numar = v_numar where numar = v_vecin;
-  update training_reels set numar = v_vecin where numar = 0 - v_numar;
-
-  insert into admin_events (tip, detaliu)
-  values ('reel_move', jsonb_build_object('id', p_id, 'din', v_numar, 'in', v_vecin));
-
-  return v_vecin;
-end;
-$$;
-
--- ---------------------------------------------------------------------------
--- Ștergerea
--- ---------------------------------------------------------------------------
---
--- Definitivă, și compactează numerele ca să nu rămână o gaură în ordine. Clipul
--- de pe YouTube nu se atinge: scoaterea din bandă nu e o ștergere de pe gazdă.
-
-create or replace function runlift.admin_delete_training_reel(p_token uuid, p_id uuid)
-returns int
-language plpgsql
-security definer
-set search_path to 'runlift'
-as $$
-declare
-  v_numar int;
-  v_youtube text;
-begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-
-  -- Identificatorul se citește ÎNAINTE de ștergere: după compactare, `numar`
-  -- arată deja spre alt clip și singur n-ar mai identifica nimic în jurnal.
-  select r.numar, r.youtube_id into v_numar, v_youtube from training_reels r where r.id = p_id;
-  if v_numar is null then raise exception 'not_found'; end if;
-
-  delete from training_reels where id = p_id;
-
-  update training_reels set numar = 0 - numar where numar > v_numar;
-  update training_reels set numar = (0 - numar) - 1 where numar < 0;
-
-  insert into admin_events (tip, detaliu)
-  values ('reel_delete', jsonb_build_object('id', p_id, 'numar', v_numar, 'youtube', v_youtube));
-
-  return v_numar;
-end;
-$$;
-
--- ---------------------------------------------------------------------------
--- Drepturi
--- ---------------------------------------------------------------------------
---
--- Grant-ul pe funcție nu e autorizarea: `anon` poate CHEMA funcțiile de admin,
--- dar fără un token valid nu trece de prima linie. Verificarea tokenului din
--- corpul fiecăreia e apărarea reală.
-
-revoke all on function runlift.public_training_reels()
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.public_training_reels()
-  to anon, authenticated, service_role;
-
-revoke all on function runlift.admin_list_training_reels(uuid)
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_list_training_reels(uuid)
-  to anon, authenticated, service_role;
-
-revoke all on function runlift.admin_save_training_reel(uuid, uuid, text, text, text, boolean)
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_save_training_reel(uuid, uuid, text, text, text, boolean)
-  to anon, authenticated, service_role;
-
-revoke all on function runlift.admin_move_training_reel(uuid, uuid, int)
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_move_training_reel(uuid, uuid, int)
-  to anon, authenticated, service_role;
-
-revoke all on function runlift.admin_delete_training_reel(uuid, uuid)
-  from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_delete_training_reel(uuid, uuid)
-  to anon, authenticated, service_role;

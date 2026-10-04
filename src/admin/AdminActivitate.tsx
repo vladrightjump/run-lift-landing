@@ -17,7 +17,7 @@ export const AdminActivitate = ({ events }: { events: AdminEvent[] | null }) => 
       <div className="admin-table-head admin-wait-head">
         <h2>
           Activitate recentă{' '}
-          <span className="admin-wait-count">{(events ?? []).length}</span>
+          <span className="admin-wait-count">{(events ?? []).filter(activitateVizibila).length}</span>
         </h2>
         <span className="admin-wait-note">
           Renunțări din linkul de email, promovări automate din lista de așteptare (când se

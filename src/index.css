@@ -2157,3 +2157,174 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
+
+  /* ---- Grupul din parc (botul de Telegram, prezențele, membrii) ----
+     Aceleași straturi ca restul adminului — suprafață, chenar, lime ca semnal —
+     cu o singură excepție deliberată: cifrele de pe „Prezențe" sînt mari, în
+     Anton, fiindcă se citesc de pe telefon, în parc, la 6 dimineața. */
+  .admin-sala { display: grid; gap: 20px; min-width: 0; }
+  .admin-sala-card { margin-top: 0; }
+
+  .admin-sala-urmator {
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    padding: 20px 24px; display: grid; gap: 10px; min-width: 0;
+  }
+  .admin-sala-zi {
+    margin: 0; font-family: Anton, sans-serif; font-size: 34px; line-height: 1.05;
+    letter-spacing: 0.5px; text-transform: uppercase; color: var(--e3-text-bright);
+  }
+  .admin-sala-cand { margin: 0; font-size: 14px; color: var(--e3-muted-strong); line-height: 1.45; }
+
+  .admin-sala-cifre {
+    margin: 6px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
+    background: var(--e3-border); border: 1px solid var(--e3-border);
+  }
+  .admin-sala-cifre--patru { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .admin-sala-cifra { background: var(--e3-bg-deep); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+  .admin-sala-cifra dt {
+    order: 2; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--e3-muted);
+  }
+  .admin-sala-cifra dd {
+    order: 1; margin: 0; font-family: Anton, sans-serif; font-size: 44px; line-height: 1; color: var(--e3-text);
+  }
+  .admin-sala-cifra--vin dd { color: var(--e3-accent); }
+  .admin-sala-sub { order: 3; font-size: 12px; color: var(--e3-muted); }
+
+  .admin-sala-coloane { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .admin-sala-coloane--doua { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-sala-coloana { min-width: 0; }
+  .admin-sala-coloana-titlu {
+    margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--e3-muted-strong);
+  }
+
+  .admin-sala-lista { list-style: none; margin: 0; padding: 0; display: grid; }
+  .admin-sala-rand {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+    padding: 9px 0; border-bottom: 1px solid var(--e3-hairline); min-width: 0;
+  }
+  .admin-sala-rand:last-child { border-bottom: 0; }
+  .admin-sala-nume { flex: 1 1 140px; min-width: 0; font-size: 14px; color: var(--e3-text); overflow-wrap: anywhere; }
+  .admin-sala-detaliu { font-size: 12px; color: var(--e3-muted); overflow-wrap: anywhere; }
+  .admin-sala-actiuni { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .admin-sala-membru .admin-sala-detaliu { flex: 1 1 220px; }
+  .admin-sala-motiv { flex-basis: 100%; font-size: 12px; color: var(--e3-warn); }
+  .admin-sala-eticheta-mica {
+    margin-left: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--e3-bg); background: var(--e3-muted-strong);
+  }
+
+  .admin-sala-marcaj { display: inline-flex; gap: 4px; }
+  .admin-sala-buton, .admin-sala-filtru {
+    background: transparent; border: 1px solid var(--e3-border); color: var(--e3-muted-strong); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600; padding: 7px 11px; min-height: 34px;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .admin-sala-buton:hover:not(:disabled), .admin-sala-filtru:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
+  .admin-sala-buton.activ, .admin-sala-filtru.activ { background: var(--e3-accent); border-color: var(--e3-accent); color: var(--e3-bg); }
+  .admin-sala-buton:disabled:not(.activ) { opacity: 0.45; cursor: default; }
+
+  .admin-sala-filtre { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .admin-sala-cauta { flex: 1 1 220px; min-width: 0; }
+  .admin-sala-anulare { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+
+  .admin-sala-trecut { border-bottom: 1px solid var(--e3-hairline); padding: 8px 0; }
+  .admin-sala-trecut summary { display: flex; gap: 12px; align-items: baseline; cursor: pointer; list-style: none; }
+  .admin-sala-trecut summary::-webkit-details-marker { display: none; }
+  .admin-sala-trecut[open] .admin-sala-coloane { margin-top: 12px; }
+
+  .admin-sala-comanda { font-size: 12px; color: var(--e3-muted); }
+  .admin-sala-comanda--done { color: var(--e3-accent); }
+  .admin-sala-comanda--failed { color: var(--e3-danger); }
+  .admin-sala-comanda--pending { color: var(--e3-warn); }
+
+  .admin-sala-necunoscuti { border-color: var(--e3-warn); }
+  .admin-sala-cont select { max-width: 220px; }
+  .admin-sala-formular { display: grid; gap: 8px; }
+  .admin-sala-bifa { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--e3-text); }
+
+  /* Analiza */
+  .admin-sala-bare {
+    display: flex; align-items: flex-end; gap: 3px; height: 150px;
+    padding: 8px 0; border-bottom: 1px solid var(--e3-border); overflow-x: auto;
+  }
+  .admin-sala-bara {
+    flex: 1 1 10px; max-width: 56px; height: 100%; padding: 0; border: 0; background: transparent;
+    display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; opacity: 0.7;
+  }
+  .admin-sala-bara.activ, .admin-sala-bara:hover { opacity: 1; outline: 1px solid var(--e3-muted-dim); }
+  .admin-sala-bara-vin { display: block; background: var(--e3-accent); }
+  .admin-sala-bara-nu { display: block; background: var(--e3-warn); }
+  .admin-sala-bara-tacere { display: block; background: var(--e3-muted-dim); }
+  .admin-sala-curba { width: 100%; height: 56px; margin-top: 8px; }
+  .admin-sala-curba polyline { fill: none; stroke: var(--e3-accent); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+  .admin-sala-mix { display: flex; height: 14px; border: 1px solid var(--e3-border); }
+  .admin-sala-progres { flex: 0 0 96px; height: 6px; background: var(--e3-hairline); }
+  .admin-sala-progres span { display: block; height: 100%; background: var(--e3-accent); }
+  .admin-sala-stare--activ { color: var(--e3-accent); }
+  .admin-sala-stare--inactiv { color: var(--e3-warn); }
+  .admin-sala-stare--niciodata { color: var(--e3-muted); }
+  .admin-sala-istoric { flex-basis: 100%; display: grid; gap: 8px; padding: 4px 0 6px; }
+  .admin-sala-puncte { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+  .admin-sala-punct { width: 12px; height: 12px; background: var(--e3-muted-dim); }
+  .admin-sala-punct--yes { background: var(--e3-accent); }
+  .admin-sala-punct--no { background: var(--e3-warn); }
+
+  /* Botul */
+  .admin-sala-stare-bot {
+    border: 1px solid var(--e3-border); background: var(--e3-surface); padding: 18px 24px;
+    display: grid; gap: 8px; justify-items: start;
+  }
+  .admin-sala-stare-bot--normal { border-left: 4px solid var(--e3-accent); }
+  .admin-sala-stare-bot--oprit { border-left: 4px solid var(--e3-muted-dim); }
+  .admin-sala-stare-bot--nu-raspunde { border-left: 4px solid var(--e3-danger); }
+  .admin-sala-stare-bot .admin-sala-zi { font-size: 26px; }
+
+  .admin-sala-text-sondaj { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .admin-sala-telegram { margin: 0; display: grid; gap: 6px; max-width: 360px; }
+  .admin-sala-telegram-mesaj {
+    background: var(--e3-surface-tint); border: 1px solid var(--e3-border); padding: 10px 12px;
+    font-size: 14px; line-height: 1.4; color: var(--e3-text);
+  }
+  .admin-sala-telegram-mesaj p { margin: 0; }
+  .admin-sala-telegram-butoane { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .admin-sala-telegram-butoane span {
+    text-align: center; padding: 8px; font-size: 13px; font-weight: 600;
+    background: var(--e3-surface); border: 1px solid var(--e3-border); overflow-wrap: anywhere;
+  }
+  .admin-sala-probleme { margin: 0; padding: 10px 14px 10px 30px; border: 1px solid var(--e3-danger); color: var(--e3-danger); font-size: 13px; }
+  .admin-sala-nesalvat { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--e3-warn); }
+  .admin-sala-comenzi { justify-content: flex-start; }
+  .admin-sala-citat { white-space: pre-wrap; border-left: 3px solid var(--e3-border); padding-left: 12px; color: var(--e3-text); }
+
+  @media (max-width: 720px) {
+    /* Pe telefon, cele trei liste stau una sub alta, iar cifrele rămân pe un
+       rând: sînt primul lucru căutat pe ecran. */
+    .admin-sala-coloane, .admin-sala-coloane--doua, .admin-sala-text-sondaj { grid-template-columns: minmax(0, 1fr); }
+    .admin-sala-cifre--patru { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-sala-cifra { padding: 12px; }
+    .admin-sala-cifra dd { font-size: 34px; }
+    .admin-sala-zi { font-size: 26px; }
+    .admin-sala-urmator, .admin-sala-stare-bot { padding: 16px; }
+    .admin-sala-progres { flex-basis: 64px; }
+    /* Sub 16px, Safari pe iOS dă zoom la focus și pagina sare în lateral —
+       aceeași regulă ca la formularele publice (tests/mobil.spec.ts). */
+    .admin-sala input, .admin-sala select, .admin-sala textarea,
+    .admin-sala-formular input, .admin-sala-formular select { font-size: 16px; }
+  }
+
+  /* Câmpurile din ecranele grupului care nu stau într-un `.admin-config-camp`
+     (căutarea, selectoarele de pe rând, data de anulat, mesajul liber) — același
+     aspect ca restul formularelor din admin. */
+  .admin-sala input[type="search"], .admin-sala input[type="date"], .admin-sala select,
+  .admin-sala textarea, .admin-sala-formular input, .admin-sala-formular select {
+    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    min-height: 42px; padding: 0 12px; font-size: 14px; font-family: inherit; min-width: 0;
+    box-sizing: border-box; color-scheme: dark;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .admin-sala textarea { width: 100%; padding: 10px 12px; resize: vertical; line-height: 1.45; }
+  .admin-sala input:focus, .admin-sala select:focus, .admin-sala textarea:focus,
+  .admin-sala-formular input:focus, .admin-sala-formular select:focus {
+    outline: none; border-color: var(--e3-accent); box-shadow: 0 0 0 3px rgba(201,242,75,0.18);
+  }

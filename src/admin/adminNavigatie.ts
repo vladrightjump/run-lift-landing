@@ -18,7 +18,7 @@ import type { EcranAdmin } from './stareCurenta';
  */
 
 export type GrupNav = {
-  cheie: 'desfasurare' | 'oameni' | 'comunicare' | 'continut';
+  cheie: 'desfasurare' | 'oameni' | 'comunicare' | 'continut' | 'grup';
   eticheta: string;
   /** Ce răspunde grupul, în cuvintele organizatorului. */
   intrebare: string;
@@ -101,6 +101,37 @@ export const GRUPURI: GrupNav[] = [
         cheie: 'coming-soon',
         eticheta: 'Coming Soon',
         descriere: 'Comutatorul ecranului de dinainte de lansare și țintele numărătorilor',
+      },
+    ],
+  },
+  // Al cincilea grup: antrenamentul din parc, condus prin botul de Telegram.
+  // Recurent, nu episodic — nu ține de nicio ediție, ca „Antrenamente" de mai
+  // sus. Numele nu se repetă cu el: acolo e programul de pe pagina publică,
+  // aici sînt oamenii care vin la parc.
+  {
+    cheie: 'grup',
+    eticheta: 'Grupul din parc',
+    intrebare: 'Cine vine la antrenament?',
+    ecrane: [
+      {
+        cheie: 'grup-prezente',
+        eticheta: 'Prezențe',
+        descriere: 'Antrenamentul următor: cine vine, cine nu și cine n-a răspuns la sondaj',
+      },
+      {
+        cheie: 'grup-membri',
+        eticheta: 'Membrii grupului',
+        descriere: 'Conturile de Telegram, duplicatele și scoaterea din grup',
+      },
+      {
+        cheie: 'grup-analiza',
+        eticheta: 'Analiza prezențelor',
+        descriere: 'Cine vine des, cine s-a rărit și cum arată fiecare antrenament',
+      },
+      {
+        cheie: 'grup-bot',
+        eticheta: 'Botul de Telegram',
+        descriere: 'Orarul și textul sondajului, comenzile și dacă botul răspunde',
       },
     ],
   },

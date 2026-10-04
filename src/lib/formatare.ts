@@ -27,7 +27,7 @@ const caData = (valoare: Date | string): Date =>
  * cursei, nu ora lui — altfel „reminderul pleacă la 18:00" înseamnă alt moment
  * pentru fiecare care citește.
  */
-const FUS = 'Europe/Chisinau';
+export const FUS = 'Europe/Chisinau';
 
 const ziLunaOraFmt = new Intl.DateTimeFormat('ro-RO', {
   day: 'numeric',

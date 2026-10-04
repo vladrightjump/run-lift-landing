@@ -97,9 +97,24 @@ describe('funcțiile de admin cer un token de sesiune', () => {
                 + (select count(*) from runlift.event_waitlist)
                 + (select count(*) from runlift.email_templates)
                 + (select count(*) from runlift.event_config)
-                + (select count(*) from runlift.weekly_workout) as n`
+                + (select count(*) from runlift.weekly_workout)
+                -- Tabelele grupului de antrenament: funcțiile admin_sala_* scriu în public.
+                + (select count(*) from public.members)
+                + (select count(*) from public.training_sessions)
+                + (select count(*) from public.attendance)
+                + (select count(*) from public.attendance_log)
+                + (select count(*) from public.bot_config)
+                + (select count(*) from public.bot_actions)
+                + (select count(*) from public.telegram_unmatched) as n`
         )
       ).rows[0].n;
+
+    // Câte un rând în fiecare tabel al grupului, ca o ștergere să se vadă și ea.
+    const m = await db.query<{ id: string }>(`insert into public.members (full_name, telegram_user_id) values ('Ion', 555) returning id`);
+    const s = await db.query<{ id: string }>(`insert into public.training_sessions (session_date) values ('2026-10-08') returning id`);
+    await db.query(`insert into public.attendance (session_id, member_id, response) values ($1, $2, 'yes')`, [s.rows[0].id, m.rows[0].id]);
+    await db.query(`insert into public.bot_config (id) values (1)`);
+    await db.query(`insert into public.telegram_unmatched (telegram_user_id) values (909)`);
 
     const inainte = await numara();
     for (const f of await functii('admin\\_%')) {
@@ -161,6 +176,11 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
       'admin_move_weekly_workout', 'admin_delete_weekly_workout',
       'admin_list_training_reels', 'admin_save_training_reel',
       'admin_move_training_reel', 'admin_delete_training_reel',
+      // Grupul de antrenament (tabelele din `public`, fostul gym-app).
+      'admin_sala_date', 'admin_sala_rezumat', 'admin_sala_set_prezenta',
+      'admin_sala_seteaza_antrenament', 'admin_sala_salveaza_config', 'admin_sala_porneste_bot',
+      'admin_sala_comanda', 'admin_sala_scoate_din_grup', 'admin_sala_salveaza_membru',
+      'admin_sala_leaga_cont', 'admin_sala_membru_din_cont', 'admin_sala_uneste',
     ],
   ];
 
@@ -175,6 +195,9 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
     'maybe_send_reminder',
     'scrie_scalarele_editiei',
     'forteaza_editia_curenta',
+    // Ajutoarele funcțiilor grupului: ziua la Chișinău și urma scrierilor.
+    'sala_azi',
+    'sala_jurnal',
   ];
 
   it('inventarul e complet — o funcție nouă nu poate trece neobservată', async () => {

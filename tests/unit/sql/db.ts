@@ -22,6 +22,13 @@ const SCHEMA_SQL = readFileSync(
   'utf8'
 );
 
+/**
+ * Tabelele grupului de antrenament din `public` (fostul gym-app + botul de
+ * Telegram), tot ca instantaneu generat din producție. Se încarcă după
+ * `runlift.sql`: funcțiile `runlift.admin_sala_*` citesc din ele.
+ */
+const SALA_SQL = readFileSync(resolve(__dirname, '../../../supabase/schema/sala.sql'), 'utf8');
+
 const INFRASTRUCTURA = `
   create role anon nologin;
   create role authenticated nologin;
@@ -32,6 +39,11 @@ const INFRASTRUCTURA = `
   create extension pgcrypto schema extensions;
   create schema runlift;
   grant usage on schema runlift to anon, authenticated, service_role;
+
+  -- payments.recorded_by refera conturile Supabase Auth. Din ele ne trebuie
+  -- doar cheia, ca sa existe tinta cheii externe.
+  create schema auth;
+  create table auth.users (id uuid primary key);
 
   create schema net;
   create table net._apeluri (id bigserial primary key, url text, body jsonb, headers jsonb, creat timestamptz default now());
@@ -60,6 +72,18 @@ const TABELE = [
   'training_reels',
 ];
 
+/** Tabelele grupului de antrenament, din `public`. */
+const TABELE_SALA = [
+  'members',
+  'payments',
+  'training_sessions',
+  'attendance',
+  'attendance_log',
+  'bot_config',
+  'bot_actions',
+  'telegram_unmatched',
+];
+
 export const ADMIN_TOKEN = '11111111-1111-1111-1111-111111111111';
 
 /** Parola operatorului creat de `reseteaza`. */
@@ -74,6 +98,7 @@ export const porneste = async (): Promise<BazaTest> => {
   await db.exec('set check_function_bodies = off;');
   await db.exec(INFRASTRUCTURA);
   await db.exec(SCHEMA_SQL);
+  await db.exec(SALA_SQL);
   return db;
 };
 
@@ -91,7 +116,10 @@ export type Reper = {
 /** Golește datele și repune reperele ediției. Se cheamă în `beforeEach`. */
 export const reseteaza = async (db: BazaTest, r: Reper = {}): Promise<void> => {
   await db.exec('reset role');
-  await db.exec(`truncate ${TABELE.map((t) => `runlift.${t}`).join(', ')} cascade; truncate net._apeluri;`);
+  await db.exec(
+    `truncate ${[...TABELE.map((t) => `runlift.${t}`), ...TABELE_SALA.map((t) => `public.${t}`)].join(', ')} cascade;
+     truncate net._apeluri;`
+  );
   const editie = r.editie ?? 7;
   /**
    * Reperele implicite se măsoară față de ACUM, nu scrise ca dată.

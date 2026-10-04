@@ -24,8 +24,11 @@ export type ResursaAdmin<T> = {
   date: T | null;
   /** Adevărat doar dacă a picat ȘI n-avem încă nimic de arătat. */
   eroare: boolean;
-  /** Reîncarcă acum, anulând cererea în zbor. */
-  reincarca: () => void;
+  /**
+   * Reîncarcă acum, anulând cererea în zbor. Promisiunea se împlinește când
+   * răspunsul a ajuns pe ecran (sau cererea a picat ori a fost anulată).
+   */
+  reincarca: () => Promise<void>;
 };
 
 export const useAdminResource = <T>(
@@ -43,17 +46,19 @@ export const useAdminResource = <T>(
   dateRef.current = date;
 
   const cere = useCallback(
-    (signal: AbortSignal) => {
+    (signal: AbortSignal) =>
       incarca(token, signal)
         .then((raspuns) => {
+          // O cerere anulată poate totuși să se rezolve (cu un corp gol): nu are
+          // voie să înlocuiască datele bune cu nimic.
+          if (signal.aborted) return;
           setDate(raspuns);
           setEroare(false);
         })
         .catch((err) => {
           if (signal.aborted || onAuthError(err)) return;
           setEroare((precedent) => precedent || dateRef.current === null);
-        });
-    },
+        }),
     [incarca, token, onAuthError]
   );
 
