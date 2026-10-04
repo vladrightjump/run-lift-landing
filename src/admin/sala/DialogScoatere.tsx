@@ -36,7 +36,11 @@ const DialogScoatere = ({ membru, ocupat, onConfirma, onInchide }: PropsDialog) 
   </Dialog>
 );
 
-/** Ultima comandă de scoatere pentru fiecare membru (comenzile vin cea mai nouă prima). */
+/**
+ * Ultima comandă de scoatere pentru fiecare membru (comenzile vin cea mai nouă
+ * prima). Din `scoateri`, nu din ultimele 30 de `comenzi`: o scoatere eșuată
+ * trebuie să rămână reîncercabilă oricâte comenzi au venit după ea.
+ */
 export const ultimeleScoateri = (comenzi: SalaComanda[]): Map<string, SalaComanda> => {
   const m = new Map<string, SalaComanda>();
   for (const c of comenzi) {

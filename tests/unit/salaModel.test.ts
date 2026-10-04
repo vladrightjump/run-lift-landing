@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   antrenamentulUrmator,
   cineVine,
+  deMarcatDeMana,
   raspunsul,
   sesiuniPentruStatistici,
 } from '../../src/admin/sala/model';
@@ -41,12 +42,59 @@ const date = (peste: Partial<SalaDate> = {}): SalaDate => ({
   ],
   necunoscuti: [],
   comenzi: [],
+  scoateri: [],
   ...peste,
 });
 
+// Miercuri 7 octombrie, 10:00 la Chișinău.
+const ACUM = new Date('2026-10-07T10:00:00+03:00');
+const ORAR: SalaDate['config'] = {
+  enabled: true,
+  poll_days: [1, 3],
+  poll_time: '12:00',
+  summary_days: [2, 4],
+  summary_time: '06:00',
+  training_time: '06:30',
+  location: 'Parc',
+  auto_reminder_enabled: true,
+  reminder_threshold: 6,
+  poll_title: null,
+  poll_yes_label: null,
+  poll_no_label: null,
+};
+
 describe('antrenamentulUrmator', () => {
   it('primul neanulat de azi încolo', () => {
-    expect(antrenamentulUrmator(date())?.id).toBe('s3');
+    expect(antrenamentulUrmator(date(), ACUM)?.id).toBe('s3');
+  });
+
+  it('o zi reactivată departe, fără sondaj, nu trece înaintea zilei pe care orarul o întreabă azi', () => {
+    // Singurul rând viitor e marți 20, reactivat; sondajul de azi (12:00) e pentru joi 8.
+    const d = date({ config: ORAR });
+    d.antrenamente = [
+      { id: 's9', session_date: '2026-10-20', starts_at: '06:30', location: 'Parc', status: 'scheduled', poll_sent: false },
+      ...d.antrenamente.filter((a) => a.id !== 's3'),
+    ];
+    expect(antrenamentulUrmator(d, ACUM)).toBeNull();
+  });
+
+  it('un rând fără sondaj, dar cu voturi puse de mână, rămâne următorul', () => {
+    const d = date({ config: ORAR });
+    d.antrenamente = [
+      { id: 's9', session_date: '2026-10-20', starts_at: '06:30', location: 'Parc', status: 'scheduled', poll_sent: false },
+      ...d.antrenamente.filter((a) => a.id !== 's3'),
+    ];
+    d.raspunsuri.push({ session_id: 's9', member_id: 'ana', response: 'yes', is_first_training: false, responded_at: '2026-10-07T08:00:00Z' });
+    expect(antrenamentulUrmator(d, ACUM)?.id).toBe('s9');
+  });
+
+  it('un rând fără sondaj, mai aproape decât orarul, rămâne următorul', () => {
+    const d = date({ config: ORAR });
+    d.antrenamente = [
+      { id: 's9', session_date: '2026-10-07', starts_at: '06:30', location: 'Parc', status: 'scheduled', poll_sent: false },
+      ...d.antrenamente.filter((a) => a.id !== 's3'),
+    ];
+    expect(antrenamentulUrmator(d, ACUM)?.id).toBe('s9');
   });
 
   it('sare peste unul anulat', () => {
@@ -54,16 +102,16 @@ describe('antrenamentulUrmator', () => {
     d.antrenamente.unshift({
       id: 's4', session_date: '2026-10-07', starts_at: '06:30', location: 'Parc', status: 'cancelled', poll_sent: false,
     });
-    expect(antrenamentulUrmator(d)?.id).toBe('s3');
+    expect(antrenamentulUrmator(d, ACUM)?.id).toBe('s3');
   });
 
   it('azi se socotește „de acum încolo"', () => {
     const d = date({ azi: '2026-10-08' });
-    expect(antrenamentulUrmator(d)?.id).toBe('s3');
+    expect(antrenamentulUrmator(d, ACUM)?.id).toBe('s3');
   });
 
   it('fără antrenament viitor → null', () => {
-    expect(antrenamentulUrmator(date({ azi: '2026-10-09' }))).toBeNull();
+    expect(antrenamentulUrmator(date({ azi: '2026-10-09' }), ACUM)).toBeNull();
   });
 });
 
@@ -113,5 +161,23 @@ describe('raspunsul', () => {
   it('găsește răspunsul unui membru sau întoarce null', () => {
     expect(raspunsul(date(), 's3', 'ana')).toBe('yes');
     expect(raspunsul(date(), 's3', 'maria')).toBeNull();
+  });
+});
+
+describe('deMarcatDeMana', () => {
+  it('îi dă pe cei fără sondaj (fără Telegram sau în pauză) care n-au răspuns, fără cei ieșiți', () => {
+    const d = date();
+    d.membri.push(membru('pauza', { status: 'paused' }));
+    expect(deMarcatDeMana(d, 's3').map((m) => m.id)).toEqual(['fara', 'pauza']);
+  });
+
+  it('cine a răspuns deja nu mai e în listă', () => {
+    const d = date();
+    d.raspunsuri.push({ session_id: 's3', member_id: 'fara', response: 'yes', is_first_training: false, responded_at: '2026-10-07T08:00:00Z' });
+    expect(deMarcatDeMana(d, 's3')).toEqual([]);
+  });
+
+  it('un membru activ cu Telegram nu e aici: e la „n-au răspuns"', () => {
+    expect(deMarcatDeMana(date(), 's3').some((m) => m.id === 'maria')).toBe(false);
   });
 });

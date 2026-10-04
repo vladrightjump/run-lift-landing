@@ -153,6 +153,81 @@ describe('Prezențe — zilele anulate și istoricul', () => {
     await waitFor(() => expect(zi.value).toBe(''));
   });
 
+  it('o altă zi aleasă cât se anulează prima rămâne în câmp', async () => {
+    let gata: () => void = () => {};
+    api.seteazaAntrenament.mockImplementation(() => new Promise<void>((r) => (gata = r)));
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByRole('heading', { name: 'Joi, 8 oct' });
+    const zi = screen.getByLabelText('Anulează o zi') as HTMLInputElement;
+    fireEvent.change(zi, { target: { value: '2026-10-15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Anulează ziua' }));
+    await waitFor(() => expect(api.seteazaAntrenament).toHaveBeenCalledWith('tok', '2026-10-15', true));
+    fireEvent.change(zi, { target: { value: '2026-10-22' } });
+    gata();
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' })));
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Anulează ziua' }) as HTMLButtonElement).disabled).toBe(false));
+    expect(zi.value).toBe('2026-10-22');
+  });
+
+  it('Covers R6. un membru fără Telegram se marchează de mână la antrenamentul următor', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    const urmator = (await screen.findByRole('heading', { name: 'Joi, 8 oct' })).closest('section') as HTMLElement;
+    const alege = within(urmator).getByLabelText('Fără sondaj (fără Telegram sau în pauză)') as HTMLSelectElement;
+    expect(within(alege).getByRole('option', { name: 'Fara' })).toBeTruthy();
+    const marcheaza = within(urmator).getByRole('button', { name: 'Marchează că vine' }) as HTMLButtonElement;
+    expect(marcheaza.disabled).toBe(true);
+    fireEvent.change(alege, { target: { value: 'fara' } });
+    fireEvent.click(marcheaza);
+    await waitFor(() => expect(api.seteazaPrezenta).toHaveBeenCalledWith('tok', 's2', 'fara', 'yes'));
+  });
+
+  it('lista „fără sondaj" are membrii în pauză, dar nu pe cei ieșiți și nici pe cei care au răspuns', async () => {
+    const d = dateSala();
+    d.membri.push(membruSala('pauza', { status: 'paused' }), membruSala('plecat', { status: 'cancelled', telegram_user_id: null }));
+    d.raspunsuri.push({ session_id: 's2', member_id: 'fara', response: 'yes', is_first_training: false, responded_at: '2026-10-07T09:10:00Z' });
+    api.incarcaSala.mockResolvedValue(d);
+    randeaza();
+    const urmator = (await screen.findByRole('heading', { name: 'Joi, 8 oct' })).closest('section') as HTMLElement;
+    const optiuni = within(within(urmator).getByLabelText('Fără sondaj (fără Telegram sau în pauză)'))
+      .getAllByRole('option')
+      .map((o) => o.textContent);
+    expect(optiuni).toEqual(['Alege un membru…', 'Pauza']);
+    // „Fara" a fost marcat: e acum la „Vin", cu corecturile obișnuite.
+    expect(within(coloana(/^Vin/)).getByText('Fara')).toBeTruthy();
+  });
+
+  it('un membru fără Telegram se marchează de mână și la un antrenament trecut', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    const zi = (await screen.findByText('Marți, 6 oct')).closest('details') as HTMLElement;
+    fireEvent.change(within(zi).getByLabelText('Fără sondaj (fără Telegram sau în pauză)'), { target: { value: 'fara' } });
+    fireEvent.click(within(zi).getByRole('button', { name: 'Marchează că a venit' }));
+    await waitFor(() => expect(api.seteazaPrezenta).toHaveBeenCalledWith('tok', 's1', 'fara', 'yes'));
+  });
+
+  it('o zi reactivată departe, fără sondaj, nu ascunde antrenamentul pe care orarul îl întreabă înainte', async () => {
+    const primul = urmatorulSondaj([1, 3], '12:00', new Date());
+    expect(primul).not.toBeNull();
+    const departe = new Date(`${primul!.antrenament}T12:00:00Z`);
+    departe.setUTCDate(departe.getUTCDate() + 14);
+    const ziDeparte = departe.toISOString().slice(0, 10);
+    api.incarcaSala.mockResolvedValue(
+      dateSala({
+        azi: primul!.data,
+        antrenamente: [
+          { id: 'r', session_date: ziDeparte, starts_at: '06:30', location: 'Parc', status: 'scheduled', poll_sent: false },
+        ],
+        raspunsuri: [],
+      })
+    );
+    randeaza();
+    const titlu = await screen.findByRole('heading', { level: 2 });
+    expect(titlu.textContent).toBe(dataLunga(primul!.antrenament));
+    expect(screen.queryByRole('heading', { name: dataLunga(ziDeparte) })).toBeNull();
+  });
+
   it('„×" șterge răspunsul cuiva', async () => {
     api.incarcaSala.mockResolvedValue(dateSala());
     randeaza();

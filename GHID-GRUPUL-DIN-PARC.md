@@ -24,7 +24,7 @@ propoziție despre antrenamentul următor, fără să intri în vreun ecran.
 |---|---|
 | „Joi, 8 oct, 06:30" · „12 vin · 3 nu" | Sondajul a plecat; cifrele cresc pe măsură ce votează lumea |
 | „Următorul: Joi, 8 oct" · „Sondajul pleacă miercuri la 12:00." | Sondajul pentru antrenamentul următor n-a plecat încă |
-| „… — anulat" | Antrenamentul următor e anulat; botul nu trimite sondaj pentru el |
+| „… — anulat" | Antrenamentul următor e anulat; botul nu trimite sondaj pentru el. O zi anulată din timp, mai departe decât antrenamentul pe care orarul îl întreabă înainte, nu ia locul acestuia |
 | „Botul e oprit" | Sondajele programate nu pleacă (vezi „Botul de Telegram") |
 | „Niciun sondaj programat" | Nu e aleasă nicio zi de sondaj |
 
@@ -34,8 +34,10 @@ Butonul **Prezențe** de pe card deschide ecranul cu numele.
 
 ## Prezențe — „câți vin la antrenamentul următor?"
 
-**Antrenamentul următor** e primul neanulat de azi încolo (ziua de la Chișinău). Sus: data, ora,
-locul și dacă sondajul a plecat. Dedesubt, trei cifre mari și trei liste:
+**Antrenamentul următor** e primul neanulat de azi încolo (ziua de la Chișinău). O zi reactivată
+departe, fără sondaj, nu trece înaintea zilei pentru care orarul trimite sondajul mai devreme:
+atunci ecranul arată ziua din orar și când pleacă sondajul ei. Sus: data, ora, locul și dacă
+sondajul a plecat. Dedesubt, trei cifre mari și trei liste:
 
 - **vin** și **nu vin** — cine a răspuns la sondaj (sau a fost marcat de mână);
 - **n-au răspuns** — doar membrii activi cu cont de Telegram, adică cei care chiar au primit
@@ -45,6 +47,10 @@ Ecranul se reîmprospătează singur la 15 secunde: voturile din grup apar făr�
 
 **Corectura de mână.** Lângă fiecare nume: **Vine**, **Nu** și **×** (șterge răspunsul). Pentru cine
 a venit fără să apese în Telegram. Fiecare corectură rămâne în jurnal, cu numele organizatorului.
+
+**Cine nu primește sondajul** (fără Telegram, sau în pauză) nu apare în liste până nu-l marchezi:
+alege-l din **Fără sondaj** și apasă **Marchează că vine** (la antrenamentele trecute, **Marchează
+că a venit**). Apoi trece la „vin", cu aceleași corecturi ca ceilalți.
 
 **Anularea unei zile.**
 
@@ -67,6 +73,9 @@ nu-i știe încă. Cine votează devine membru de la sine, cu numele din Telegra
 - **leagă** de un membru existent (de exemplu, cineva înscris de mână, fără Telegram), sau
 - faci din cont un **Membru nou**.
 
+Un cont pe care botul l-a legat singur (după `@utilizator`) sau al cărui id l-ai scris la un membru
+din **Editează** nu mai apare aici, chiar dacă rândul lui a rămas în bază.
+
 **Lista.** Caută după nume sau `@utilizator`; filtrează **Activi / În pauză / Ieșiți / Toți**. Pe
 fiecare rând: contul de Telegram, starea, ultima prezență și, dacă a fost cerută, starea scoaterii
 din grup.
@@ -81,8 +90,9 @@ de Telegram în cel mult un minut. Istoricul de prezențe rămâne. Butonul e bl
 - pentru membrii **fără cont de Telegram** (botul n-are pe cine scoate);
 - pentru cine **e deja ieșit**.
 
-Dacă Telegram refuză scoaterea, membrul apare sus, la **Scoateri eșuate**, cu motivul. Cel mai
-des, botul nu (mai) e admin în grup. Rezolvă cauza, apoi **Reîncearcă scoaterea**.
+Dacă Telegram refuză scoaterea, membrul apare sus, la **Scoateri eșuate**, cu motivul, oricâte
+comenzi au venit după ea. Cel mai des, botul nu (mai) e admin în grup. Rezolvă cauza, apoi
+**Reîncearcă scoaterea**.
 
 **Unește doi membri (duplicat)**, pentru aceeași persoană înregistrată de două ori. Alegi pe cine
 **păstrezi** și **duplicatul**; răspunsurile duplicatului trec pe cel păstrat, contul de Telegram

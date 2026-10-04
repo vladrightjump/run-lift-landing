@@ -150,8 +150,11 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
         onSubmit={(e) => {
           e.preventDefault();
           if (probleme.length > 0 || !nesalvat) return;
+          // Ce scrii cât se salvează nu se pierde: ciorna se golește doar dacă n-a
+          // mai fost atinsă de la apăsare (fiecare schimbare face o ciornă nouă).
+          const trimisa = ciorna;
           void fa((t) => salveazaConfigBot(t, { ...forma, enabled: salvat.enabled }), 'Setările botului sunt salvate.').then(
-            (ok) => ok && setCiorna(null)
+            (ok) => ok && setCiorna((c) => (c === trimisa ? null : c))
           );
         }}
       >
@@ -435,16 +438,20 @@ const MesajGrup = ({ membri, ocupat, onTrimite }: PropsMesaj) => {
         Alege un membru din listă ca să-l pomenești: în text apare „@Nume", iar în Telegram devine o
         mențiune care îl anunță.
       </p>
+      {/* Blocate cât pleacă o scriere: după trimitere, textul se golește, deci ce
+          s-ar scrie între timp s-ar pierde. */}
       <textarea
         aria-label="Textul mesajului"
         rows={4}
         value={text}
+        disabled={ocupat}
         onChange={(e) => setText(e.target.value)}
       />
       <div className="admin-sala-filtre">
         <select
           aria-label="Pomenește un membru"
           value=""
+          disabled={ocupat}
           onChange={(e) => {
             const m = deMentionat.find((x) => x.id === e.target.value);
             if (!m) return;

@@ -97,6 +97,8 @@ export type SalaDate = {
   necunoscuti: SalaNecunoscut[];
   /** Ultimele 30, cea mai nouă prima. */
   comenzi: SalaComanda[];
+  /** Ultima scoatere (`kick_member`) a fiecărui membru, oricât de veche. */
+  scoateri: SalaComanda[];
 };
 
 /** Ce-i trebuie cardului de pe pornire. */

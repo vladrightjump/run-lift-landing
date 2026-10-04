@@ -71,10 +71,16 @@ export const EcranMembri = () => {
     );
   }
 
-  const scoateri = ultimeleScoateri(date.comenzi);
+  const scoateri = ultimeleScoateri(date.scoateri);
   // Serverul îi trece pe „ieșit" încă de la cerere, deci sub filtrul implicit
   // („Activi") o scoatere eșuată n-ar mai fi vizibilă. Stă deasupra listei.
   const esuate = date.membri.filter((m) => scoateri.get(m.id)?.status === 'failed' && m.status === 'cancelled');
+  // Un cont rămâne parcat și după ce un membru primește id-ul lui pe alt drum
+  // (votul găsit după utilizator, sau id-ul scris în „Editează"). Legat deja,
+  // n-are ce căuta aici: altfel ar sta în listă fără niciun buton care să-l
+  // rezolve (alegerea arată doar membrii fără cont).
+  const legate = new Set(date.membri.map((m) => m.telegram_user_id).filter((id) => id != null));
+  const nelegate = date.necunoscuti.filter((c) => !legate.has(c.telegram_user_id));
   const termen = cauta.trim().toLowerCase().replace(/^@/, '');
   const vizibili = date.membri.filter(
     (m) =>
@@ -86,17 +92,17 @@ export const EcranMembri = () => {
 
   return (
     <div className="admin-sala">
-      {date.necunoscuti.length > 0 && (
+      {nelegate.length > 0 && (
         <section className="admin-config-grup admin-sala-necunoscuti" aria-labelledby="sala-necunoscuti">
           <h3 id="sala-necunoscuti">
-            Conturi de Telegram nelegate <span className="admin-tab-alert">{date.necunoscuti.length}</span>
+            Conturi de Telegram nelegate <span className="admin-tab-alert">{nelegate.length}</span>
           </h3>
           <p className="admin-config-hint">
             Au intrat în grup, dar nu sunt legați de niciun membru. Cine votează devine membru de la
             sine; restul îi legi de aici de un membru existent — sau faci din cont un membru nou.
           </p>
           <ul className="admin-sala-lista">
-            {date.necunoscuti.map((c) => (
+            {nelegate.map((c) => (
               <ContNelegat
                 key={c.telegram_user_id}
                 nume={numeCont(c)}

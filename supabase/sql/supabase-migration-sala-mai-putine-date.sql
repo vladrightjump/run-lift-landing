@@ -16,6 +16,11 @@
 --   3. `admin_sala_salveaza_config` taie orice spațiu alb din jurul textelor
 --      (tab-uri, rânduri noi), nu doar spațiile — ca verificarea din client.
 --
+-- ÎNLOCUITĂ PARȚIAL: `admin_sala_date` de aici e redefinită de
+-- `supabase-migration-sala-scoateri.sql` (`sala_05`, adaugă `scoateri`). O nouă
+-- rulare după `sala_05` scoate cheia, iar ecranele „Membrii" și „Analiza" o cer.
+-- Definiția live: `supabase/schema/runlift.sql`.
+--
 -- ÎNTOARCERE: corpurile funcțiilor 1–2 din
 -- `supabase/sql/supabase-migration-sala-functii-admin.sql` și 3 din
 -- `supabase/sql/supabase-migration-sala-corecturi.sql`.
