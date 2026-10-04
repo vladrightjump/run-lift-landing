@@ -1,19 +1,26 @@
 name: CI + Deploy
 
-# Pe push în main: rulează TOATE verificările; doar dacă trec, declanșează
-# deploy-ul Vercel (deploy hook) și verifică pe LIVE că build-ul nou e chiar sus.
-# Auto-deploy-ul git al Vercel e dezactivat (vercel.json git.deploymentEnabled),
-# deci acest pipeline e singura cale spre producție.
+# Pe orice pull request spre main: rulează TOATE verificările (site + bot), fără
+# deploy. Regula de pe `main` (ruleset-ul descris în CI-CD.md) cere ca ele să fie
+# verzi înainte de merge.
+#
+# Pe push în main (adică merge-ul unui PR): aceleași verificări, apoi — doar dacă
+# trec — deploy-ul Vercel (deploy hook) și verificarea pe LIVE că build-ul nou e
+# chiar sus. Auto-deploy-ul git al Vercel e dezactivat (vercel.json
+# git.deploymentEnabled), deci acest pipeline e singura cale spre producție.
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
 
 concurrency:
-  # Un singur pipeline per branch; nu anulăm un deploy în curs.
+  # Un singur pipeline per PR sau branch. Pe un PR, un push nou face rularea
+  # veche inutilă, deci o anulăm; pe main nu anulăm niciodată un deploy în curs.
   group: ci-deploy-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -157,6 +164,9 @@ jobs:
   deploy:
     name: Deploy Vercel + verificare live
     needs: test
+    # Doar din main: nici un PR, nici o rulare manuală pornită de pe alt branch
+    # nu publică. Pe un PR job-ul apare „skipped", iar asta nu blochează merge-ul.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       # Job-ul are nevoie de exact două fișiere: scriptul de verificare și
