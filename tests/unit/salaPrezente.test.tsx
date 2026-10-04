@@ -201,9 +201,9 @@ describe('Prezențe — zilele anulate și istoricul', () => {
   it('un membru fără Telegram se marchează de mână și la un antrenament trecut', async () => {
     api.incarcaSala.mockResolvedValue(dateSala());
     randeaza();
-    const trecut = (await screen.findByText('Marți, 6 oct')).closest('details') as HTMLElement;
-    fireEvent.change(within(trecut).getByLabelText('Fără sondaj (fără Telegram sau în pauză)'), { target: { value: 'fara' } });
-    fireEvent.click(within(trecut).getByRole('button', { name: 'Marchează că a venit' }));
+    const zi = (await screen.findByText('Marți, 6 oct')).closest('details') as HTMLElement;
+    fireEvent.change(within(zi).getByLabelText('Fără sondaj (fără Telegram sau în pauză)'), { target: { value: 'fara' } });
+    fireEvent.click(within(zi).getByRole('button', { name: 'Marchează că a venit' }));
     await waitFor(() => expect(api.seteazaPrezenta).toHaveBeenCalledWith('tok', 's1', 'fara', 'yes'));
   });
 
