@@ -15,12 +15,13 @@ const RPC = '**/rest/v1/rpc/*';
 const azi = new Date().toISOString().slice(0, 10);
 const plus = (zile: number) => new Date(Date.now() + zile * 86_400_000).toISOString().slice(0, 10);
 
-const membri = ['Ana Rusu', 'Ion Ceban', 'Maria Lungu', 'Roma Admin'].map((nume, i) => ({
+// „Dan Fără Cont" n-are Telegram: nu primește sondajul, deci se marchează de mână (R6).
+const membri = ['Ana Rusu', 'Ion Ceban', 'Maria Lungu', 'Roma Admin', 'Dan Fără Cont'].map((nume, i) => ({
   id: `m${i}`,
   full_name: nume,
   status: 'active',
   is_admin: i === 3,
-  telegram_user_id: 1000 + i,
+  telegram_user_id: i === 4 ? null : 1000 + i,
   telegram_username: null,
   bot_dm_enabled: false,
   join_date: '2026-07-01',
@@ -155,6 +156,20 @@ test.describe('grupul din parc, pe telefon', () => {
     await expect(page.getByLabel('Grupul din parc')).toBeVisible();
     const lat = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(lat).toBeLessThanOrEqual(375);
+  });
+
+  test('pe „Prezențe", cine n-are Telegram se marchează de mână, cu butonul apăsabil', async ({ page }) => {
+    const scrieri = await deschideAdminul(page, '#grup-prezente');
+    const urmator = page.locator('section.admin-sala-urmator');
+    await urmator.getByLabel('Fără sondaj (fără Telegram sau în pauză)').selectOption({ label: 'Dan Fără Cont' });
+    const marcheaza = urmator.getByRole('button', { name: 'Marchează că vine' });
+    const cutie = await marcheaza.boundingBox();
+    expect(cutie?.height ?? 0).toBeGreaterThanOrEqual(32);
+    expect((cutie?.x ?? 0) + (cutie?.width ?? 0)).toBeLessThanOrEqual(375);
+    await marcheaza.click();
+    await expect
+      .poll(() => scrieri.find((s) => s.rpc === 'admin_sala_set_prezenta')?.corp)
+      .toEqual({ p_token: expect.any(String), p_sesiune: 's2', p_membru: 'm4', p_raspuns: 'yes' });
   });
 
   test('pe „Prezențe", butoanele de marcare rămân apăsabile', async ({ page }) => {

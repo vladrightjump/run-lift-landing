@@ -16,8 +16,14 @@
 --   • validarea respinge, nu „repară": o oră `25:00` e o eroare, nu `23:00`;
 --   • nu există ștergere definitivă a unui membru (KTD7).
 --
--- Re-rulabilă: coloanele cu `if not exists`, funcțiile cu `create or replace`,
--- drepturile se pun de la zero.
+-- Re-rulabilă DOAR ÎNAINTE de `supabase-migration-sala-corecturi.sql` (`sala_03`):
+-- coloanele cu `if not exists`, funcțiile cu `create or replace`, drepturile se
+-- pun de la zero. După `sala_03`–`sala_05`, o nouă rulare ar întoarce pe tăcute
+-- corecturile lor: `admin_sala_date` (din nou cu telefonul și emailul membrilor,
+-- fără `scoateri`), `admin_sala_rezumat`, `admin_sala_seteaza_antrenament`,
+-- `admin_sala_salveaza_config` (din nou suprascrie `enabled`),
+-- `admin_sala_porneste_bot` și `admin_sala_comanda` (din nou fără dedublare).
+-- Definiția live a fiecărei funcții e în `supabase/schema/runlift.sql`.
 --
 -- ÎNTOARCERE: doar adaugă (funcții și coloane nule). Se întoarce cu `drop function`
 -- pe funcțiile `runlift.admin_sala_*` / `runlift.sala_*` și `alter table … drop
