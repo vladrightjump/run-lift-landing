@@ -92,7 +92,7 @@ export const EcranAcum = ({ semnale, faza, config, inscrisi, asteptare, onEcran,
   };
   const laActiune = (el: ElementDeRezolvat) => {
     const a = el.actiune;
-    if (!a) return;
+    if (!a || a.inAsteptare) return;
     if (a.reia) {
       const comanda = a.reia;
       void fa((t) => trimiteComanda(t, comanda), 'Comanda a plecat din nou spre bot.');
@@ -126,7 +126,7 @@ export const EcranAcum = ({ semnale, faza, config, inscrisi, asteptare, onEcran,
                 <button
                   type="button"
                   className="admin-buton"
-                  disabled={Boolean(el.actiune.reia) && ocupat}
+                  disabled={el.actiune.inAsteptare || (Boolean(el.actiune.reia) && ocupat)}
                   onClick={() => laActiune(el)}
                 >
                   {el.actiune.reia && ocupat ? 'Se reia…' : el.actiune.eticheta}

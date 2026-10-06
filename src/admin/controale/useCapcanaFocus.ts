@@ -12,6 +12,32 @@ import { useEffect, useRef, type KeyboardEvent, type RefObject } from 'react';
 const FOCUSABILE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** Candidatul din DOM trebuie să fie și disponibil în ordinea reală de Tab. */
+const disponibil = (el: HTMLElement): boolean => {
+  if (el.matches(':disabled, input[type="hidden"]')) return false;
+  for (let nod: HTMLElement | null = el; nod; nod = nod.parentElement) {
+    if (nod.hidden || nod.hasAttribute('inert')) return false;
+    const stil = getComputedStyle(nod);
+    if (stil.display === 'none' || stil.visibility === 'hidden' || stil.visibility === 'collapse') return false;
+  }
+  return true;
+};
+
+/** Ordinea de Tab a browserului: întâi `tabindex` pozitiv, crescător, apoi restul în ordinea din DOM. */
+const ordineTab = (el: HTMLElement): number => (el.tabIndex > 0 ? el.tabIndex : Number.MAX_SAFE_INTEGER);
+
+const opririTab = (cutie: HTMLElement | null): HTMLElement[] => {
+  const candidati = [...(cutie?.querySelectorAll<HTMLElement>(FOCUSABILE) ?? [])]
+    .filter((el) => el.tabIndex >= 0 && disponibil(el));
+  return candidati.filter((el) => {
+    if (!(el instanceof HTMLInputElement) || el.type !== 'radio' || !el.name) return true;
+    const grup = candidati.filter((alt): alt is HTMLInputElement =>
+      alt instanceof HTMLInputElement && alt.type === 'radio' && alt.name === el.name && alt.form === el.form
+    );
+    return el === (grup.find((radio) => radio.checked) ?? grup[0]);
+  }).sort((a, b) => ordineTab(a) - ordineTab(b));
+};
+
 /**
  * Unde cade focusul la deschidere, în ordinea asta: un element marcat explicit,
  * varianta deja aleasă dintr-o listă (cine deschide alegerea ediției vrea să
@@ -39,7 +65,7 @@ export const useCapcanaFocus = (
     deUnde.current = document.activeElement;
     const el = cutie.current;
     const tinta =
-      el?.querySelector<HTMLElement>(PREFERAT) ?? el?.querySelector<HTMLElement>(FOCUSABILE) ?? el;
+      [...(el?.querySelectorAll<HTMLElement>(PREFERAT) ?? [])].find(disponibil) ?? opririTab(el)[0] ?? el;
     tinta?.focus({ preventScroll: true });
     return () => {
       const anterior = deUnde.current as HTMLElement | null;
@@ -61,18 +87,20 @@ export const useCapcanaFocus = (
 
     // Lista se recitește la fiecare Tab: ce e focusabil se schimbă sub
     // degete (un buton se activează după ce alegi o dată).
-    const lista = [...(cutie.current?.querySelectorAll<HTMLElement>(FOCUSABILE) ?? [])];
-    if (lista.length === 0) return;
-    const primul = lista[0];
-    const ultimul = lista[lista.length - 1];
-    const activ = document.activeElement;
-
-    if (e.shiftKey && (activ === primul || activ === cutie.current)) {
+    const lista = opririTab(cutie.current);
+    if (lista.length === 0) {
       e.preventDefault();
-      ultimul.focus();
-    } else if (!e.shiftKey && activ === ultimul) {
-      e.preventDefault();
-      primul.focus();
+      cutie.current?.focus();
+      return;
     }
+    // Tab-ul se ia doar la margini, unde browserul l-ar scoate din suprapunere.
+    // Între ele rămâne al browserului: într-un câmp de dată sau oră, Tab trece
+    // întâi prin segmente (zi, lună, an), iar un grup radio e o singură oprire.
+    // Un Tab preluat peste tot ar sări de pe lună direct la controlul următor.
+    const index = lista.indexOf(document.activeElement as HTMLElement);
+    const laMargine = index < 0 || (e.shiftKey ? index === 0 : index === lista.length - 1);
+    if (!laMargine) return;
+    e.preventDefault();
+    lista[e.shiftKey ? lista.length - 1 : 0].focus();
   };
 };

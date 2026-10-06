@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   seteazaAntrenament,
   seteazaPrezenta,
@@ -10,6 +10,7 @@ import { Dialog } from '../eventTab/Dialog';
 import { antrenamentulUrmator, cineVine, deMarcatDeMana, raspunsul, zileAnulate } from './model';
 import { dataLunga, frazaSondaj, urmatorulSondaj } from './sondaj';
 import { useSala } from './useSala';
+import { citesteFiltruUrmatorul, uitaFiltruUrmatorul, type FiltruUrmatorul } from './filtruUrmatorul';
 
 /**
  * Prezențe — „câți vin la antrenamentul următor?" (R5–R7, F1).
@@ -25,8 +26,19 @@ import { useSala } from './useSala';
 
 type Raspuns = 'yes' | 'no' | 'clear';
 
+const FILTRE: [FiltruUrmatorul, string][] = [
+  ['toti', 'Toți'],
+  ['vin', 'Vin'],
+  ['nu', 'Nu vin'],
+  ['fara', 'Fără răspuns'],
+];
+
 export const EcranPrezente = () => {
   const { date, eroare, ocupat, fa } = useSala();
+  // Filtrul cerut din Acum (R10) se consumă o dată, la deschidere; de aici
+  // încolo e al ecranului, iar „Toți" întoarce toate răspunsurile.
+  const [filtru, setFiltru] = useState<FiltruUrmatorul>(() => citesteFiltruUrmatorul() ?? 'toti');
+  useEffect(uitaFiltruUrmatorul, []);
   const [deAnulat, setDeAnulat] = useState<SalaAntrenament | null>(null);
   const [ziDeAnulat, setZiDeAnulat] = useState('');
   const [trecuteVizibile, setTrecuteVizibile] = useState(6);
@@ -59,6 +71,8 @@ export const EcranPrezente = () => {
         <AntrenamentUrmator
           date={date}
           antrenament={urm}
+          filtru={filtru}
+          onFiltru={setFiltru}
           ocupat={ocupat}
           onMarcheaza={marcheaza}
           onAnuleaza={() => setDeAnulat(urm)}
@@ -183,13 +197,16 @@ export const EcranPrezente = () => {
 type PropsUrmator = {
   date: SalaDate;
   antrenament: SalaAntrenament;
+  filtru: FiltruUrmatorul;
+  onFiltru: (filtru: FiltruUrmatorul) => void;
   ocupat: boolean;
   onMarcheaza: (sesiune: string, m: SalaMembru, r: Raspuns) => void;
   onAnuleaza: () => void;
 };
 
-const AntrenamentUrmator = ({ date, antrenament: a, ocupat, onMarcheaza, onAnuleaza }: PropsUrmator) => {
+const AntrenamentUrmator = ({ date, antrenament: a, filtru, onFiltru, ocupat, onMarcheaza, onAnuleaza }: PropsUrmator) => {
   const c = cineVine(date, a.id);
+  const arata = (lista: FiltruUrmatorul) => filtru === 'toti' || filtru === lista;
   const sondaj = a.poll_sent
     ? 'Sondajul a plecat în grup.'
     : (() => {
@@ -222,19 +239,39 @@ const AntrenamentUrmator = ({ date, antrenament: a, ocupat, onMarcheaza, onAnule
         </div>
       </dl>
 
+      <div className="admin-cs-comutator" role="group" aria-label="Filtrează răspunsurile">
+        {FILTRE.map(([cheie, eticheta]) => (
+          <button
+            key={cheie}
+            type="button"
+            className={`admin-sala-filtru${filtru === cheie ? ' activ' : ''}`}
+            aria-pressed={filtru === cheie}
+            onClick={() => onFiltru(cheie)}
+          >
+            {eticheta}
+          </button>
+        ))}
+      </div>
+
       <div className="admin-sala-coloane">
-        <ListaRaspuns zi={dataLunga(a.session_date)} titlu="Vin" membri={c.vin} gol="Nimeni încă." sesiune={a.id} date={date} ocupat={ocupat} onMarcheaza={onMarcheaza} />
-        <ListaRaspuns zi={dataLunga(a.session_date)} titlu="Nu vin" membri={c.nuVin} gol="Nimeni." sesiune={a.id} date={date} ocupat={ocupat} onMarcheaza={onMarcheaza} />
-        <ListaRaspuns
-          zi={dataLunga(a.session_date)}
-          titlu="N-au răspuns"
-          membri={c.nuAuRaspuns}
-          gol="Au răspuns toți."
-          sesiune={a.id}
-          date={date}
-          ocupat={ocupat}
-          onMarcheaza={onMarcheaza}
-        />
+        {arata('vin') && (
+          <ListaRaspuns zi={dataLunga(a.session_date)} titlu="Vin" membri={c.vin} gol="Nimeni încă." sesiune={a.id} date={date} ocupat={ocupat} onMarcheaza={onMarcheaza} />
+        )}
+        {arata('nu') && (
+          <ListaRaspuns zi={dataLunga(a.session_date)} titlu="Nu vin" membri={c.nuVin} gol="Nimeni." sesiune={a.id} date={date} ocupat={ocupat} onMarcheaza={onMarcheaza} />
+        )}
+        {arata('fara') && (
+          <ListaRaspuns
+            zi={dataLunga(a.session_date)}
+            titlu="N-au răspuns"
+            membri={c.nuAuRaspuns}
+            gol="Au răspuns toți."
+            sesiune={a.id}
+            date={date}
+            ocupat={ocupat}
+            onMarcheaza={onMarcheaza}
+          />
+        )}
       </div>
       <MarcheazaDeMana
         membri={deMarcatDeMana(date, a.id)}

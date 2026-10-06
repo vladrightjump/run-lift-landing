@@ -201,6 +201,27 @@ describe('„De rezolvat" (R9)', () => {
     );
   });
 
+  it.each(['send_poll', 'send_summary', 'send_reminder'] as const)('%s: eșec → reluare în coadă → succes, cu eșecul păstrat în jurnal', (action) => {
+    const esec = { id: 'c1', action, member_id: null, status: 'failed' as const, result: 'Rețea', created_at: '2026-10-07T17:13:00Z', processed_at: '2026-10-07T17:13:10Z' };
+    const reluare = { ...esec, id: 'c2', status: 'pending' as const, created_at: '2026-10-07T17:14:00Z', processed_at: null };
+    const lista = (comenzi: SalaDate['comenzi']) => deRezolvat({ ...semnale, nelivrate: 0, asteptare: 0 }, 'landing', sala({ comenzi }), ACUM);
+    expect(lista([esec])[0].actiune).toMatchObject({ reia: action, inAsteptare: false });
+    expect(lista([reluare, esec])[0].actiune).toMatchObject({ reia: action, inAsteptare: true });
+    expect(lista([esec, { ...reluare, status: 'done' }])).toEqual([]);
+    // Dacă și reluarea eșuează, rămâne o singură acțiune pentru ultima încercare.
+    expect(lista([esec, { ...reluare, status: 'failed' }]).map((c) => c.cheie)).toEqual(['comanda-c2']);
+    // Succesul altei comenzi nu ascunde eșecul acesteia.
+    expect(lista([esec, { ...reluare, action: 'send_message', status: 'done' }])).toHaveLength(1);
+  });
+
+  it('o scoatere eșuată dispare după ce scoaterea aceluiași membru reușește', () => {
+    const esec = { id: 'k1', action: 'kick_member' as const, member_id: 'm1', status: 'failed' as const, result: 'Fără drepturi', created_at: '2026-10-07T17:13:00Z', processed_at: '2026-10-07T17:13:10Z' };
+    const lista = (comenzi: SalaDate['comenzi']) => deRezolvat({ ...semnale, nelivrate: 0, asteptare: 0 }, 'landing', sala({ comenzi }), ACUM);
+    expect(lista([{ ...esec, id: 'k2', status: 'done', created_at: '2026-10-07T17:20:00Z' }, esec])).toEqual([]);
+    // Alt membru scos între timp nu rezolvă eșecul primului.
+    expect(lista([{ ...esec, id: 'k2', member_id: 'm2', status: 'done', created_at: '2026-10-07T17:20:00Z' }, esec]).map((c) => c.cheie)).toEqual(['comanda-k1']);
+  });
+
   it('o comandă eșuată ieri nu mai stă la „De rezolvat"', () => {
     const veche = sala({
       comenzi: [

@@ -250,7 +250,7 @@ export type ElementDeRezolvat = {
   titlu: string;
   detaliu: string;
   urgent: boolean;
-  actiune?: { eticheta: string; ecran?: EcranAdmin; reia?: ComandaAcum };
+  actiune?: { eticheta: string; ecran?: EcranAdmin; reia?: ComandaAcum; inAsteptare?: boolean };
 };
 
 const NUME_COMANDA: Record<SalaComanda['action'], string> = {
@@ -313,15 +313,29 @@ export const deRezolvat = (
     }
     for (const c of sala.comenzi) {
       if (c.status !== 'failed' || aziLaChisinau(new Date(c.created_at)) !== azi) continue;
-      const reluabila = c.action !== 'kick_member';
+      // Numai comenzile fără payload se pot relua din acest rezumat.
+      const reluabila = c.action === 'send_poll' || c.action === 'send_summary' || c.action === 'send_reminder';
+      // Reluarea creează un rând nou, iar eșecul rămâne în jurnal: îl stingem
+      // când o încercare ulterioară de azi, cu aceeași țintă, s-a terminat (dacă
+      // a eșuat și ea, rămâne doar ea). Un mesaj în grup nu se poate potrivi —
+      // conținutul lui nu vine cu jurnalul.
+      const ulterioare = c.action === 'send_message' ? [] : sala.comenzi.filter((alta) =>
+        alta.action === c.action && alta.member_id === c.member_id &&
+        Date.parse(alta.created_at) > Date.parse(c.created_at) &&
+        aziLaChisinau(new Date(alta.created_at)) === azi
+      );
+      if (ulterioare.some((alta) => alta.status === 'done' || alta.status === 'failed')) continue;
+      const inAsteptare = reluabila && ulterioare.some((alta) => alta.status === 'pending');
       out.push({
         cheie: `comanda-${c.id}`,
         titlu: `${NUME_COMANDA[c.action]} de azi, ${oraLaChisinau(c.created_at)}, n-a plecat`,
-        detaliu: c.result ?? 'Comanda a eșuat.',
+        detaliu: inAsteptare ? 'Reluarea este în coadă. Așteptăm răspunsul botului.' : c.result ?? 'Comanda a eșuat.',
         urgent: true,
         actiune: reluabila
-          ? { eticheta: 'Reîncearcă', reia: c.action as ComandaAcum }
-          : { eticheta: 'Vezi', ecran: 'grup-membri' },
+          ? { eticheta: inAsteptare ? 'Se reia…' : 'Reîncearcă', reia: c.action as ComandaAcum, inAsteptare }
+          : c.action === 'send_message'
+            ? { eticheta: 'Deschide mesajele', ecran: 'grup-bot' }
+            : { eticheta: 'Vezi', ecran: 'grup-membri' },
       });
     }
   }

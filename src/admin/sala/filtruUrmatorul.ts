@@ -19,12 +19,24 @@ export const cereFiltruUrmatorul = (f: FiltruUrmatorul) => {
   }
 };
 
-export const iaFiltruUrmatorul = (): FiltruUrmatorul | null => {
+/**
+ * Doar citește: starea ecranului îl ia la inițializare, care trebuie să fie
+ * pură (React o poate chema de două ori). Ștergerea e separată, mai jos.
+ */
+export const citesteFiltruUrmatorul = (): FiltruUrmatorul | null => {
   try {
     const f = sessionStorage.getItem(CHEIE);
-    sessionStorage.removeItem(CHEIE);
     return f === 'vin' || f === 'nu' || f === 'fara' || f === 'toti' ? f : null;
   } catch {
     return null;
+  }
+};
+
+/** Odată deschis ecranul, cererea s-a onorat; un Back nu o mai moștenește. */
+export const uitaFiltruUrmatorul = () => {
+  try {
+    sessionStorage.removeItem(CHEIE);
+  } catch {
+    // Fără stocare n-avem ce uita.
   }
 };

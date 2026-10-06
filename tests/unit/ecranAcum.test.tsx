@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, within, fireEvent, waitFor } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { EcranAcum } from '../../src/admin/EcranAcum';
-import { iaFiltruUrmatorul } from '../../src/admin/sala/filtruUrmatorul';
+import { citesteFiltruUrmatorul } from '../../src/admin/sala/filtruUrmatorul';
 import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig';
 import { dateSala } from './helpers/salaFixtures';
 import type { SemnaleAdmin } from '../../src/admin/stareCurenta';
@@ -107,7 +107,7 @@ describe('Acum pe desktop', () => {
     const card = (await screen.findByRole('heading', { name: /după sondaj/ })).parentElement as HTMLElement;
     fireEvent.click(within(card).getByRole('button', { name: /^2\s*fără răspuns$/ }));
     expect(onEcran).toHaveBeenCalledWith('grup-prezente');
-    expect(iaFiltruUrmatorul()).toBe('fara');
+    expect(citesteFiltruUrmatorul()).toBe('fara');
   });
 
   it('cât timp datele grupului nu sosesc, cardul antrenamentului e schelet, nu zero', () => {
@@ -149,6 +149,28 @@ describe('Acum pe desktop', () => {
     randeaza();
     fireEvent.click(await screen.findByRole('button', { name: 'Reîncearcă' }));
     await waitFor(() => expect(api.trimiteComanda).toHaveBeenCalledWith('tok', 'send_summary'));
+  });
+
+  it('o reluare pending blochează retrimiterea, inclusiv după reîncărcarea paginii', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala({ comenzi: [
+      { id: 'c1', action: 'send_summary', member_id: null, status: 'failed', result: 'Rețea', created_at: '2026-10-07T17:13:00Z', processed_at: null },
+      { id: 'c2', action: 'send_summary', member_id: null, status: 'pending', result: null, created_at: '2026-10-07T17:14:00Z', processed_at: null },
+    ] }));
+    randeaza();
+    const buton = await screen.findByRole('button', { name: 'Se reia…' });
+    expect((buton as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(buton);
+    expect(api.trimiteComanda).not.toHaveBeenCalled();
+  });
+
+  it('mesajele personalizate eșuate deschid editorul fără RPC de retrimitere gol', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala({ comenzi: [
+      { id: 'c1', action: 'send_message', member_id: null, status: 'failed', result: 'Rețea', created_at: '2026-10-07T17:13:00Z', processed_at: null },
+    ] }));
+    const { onEcran } = randeaza();
+    fireEvent.click(await screen.findByRole('button', { name: 'Deschide mesajele' }));
+    expect(onEcran).toHaveBeenCalledWith('grup-bot');
+    expect(api.trimiteComanda).not.toHaveBeenCalled();
   });
 
   it('cardul ediției arată ocuparea și reperul următor', async () => {

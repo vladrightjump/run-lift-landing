@@ -95,15 +95,29 @@ const deschideAdminul = async (page: Page, ecran = '') => {
 };
 
 test.describe('grupul din parc', () => {
-  test('cardul de pe pornire arată câți vin și deschide „Prezențe"', async ({ page }) => {
-    await deschideAdminul(page);
-    const card = page.getByLabel('Grupul din parc', { exact: true });
-    await expect(card).toContainText('1 vine · 1 nu');
-    await card.getByRole('button', { name: 'Prezențe' }).click();
-    await expect(page).toHaveURL(/#grup-prezente$/);
-    await expect(page.getByText('Antrenamentul următor')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Vin 1', exact: true })).toBeVisible();
-  });
+  for (const [buton, filtru, nume] of [
+    [/^1\s*vin$/, 'Vin', 'Ana Rusu'],
+    [/^1\s*nu pot$/, 'Nu vin', 'Ion Ceban'],
+    [/^2\s*fără răspuns$/, 'Fără răspuns', 'Maria Lungu'],
+  ] as const) {
+    test(`Acum deschide prezențele cu filtrul ${filtru}`, async ({ page }) => {
+      await deschideAdminul(page);
+      const card = page.getByRole('region', { name: /după sondaj/ });
+      await card.getByRole('button', { name: buton }).click();
+      await expect(page).toHaveURL(/#grup-prezente$/);
+      const urmator = page.locator('section.admin-sala-urmator');
+      const filtre = urmator.getByRole('group', { name: 'Filtrează răspunsurile' });
+      await expect(filtre.getByRole('button', { name: filtru, exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await expect(urmator.getByText(nume, { exact: true })).toBeVisible();
+      for (const alt of ['Ana Rusu', 'Ion Ceban', 'Maria Lungu'].filter((n) => n !== nume)) {
+        await expect(urmator.getByText(alt, { exact: true })).toHaveCount(0);
+      }
+      await filtre.getByRole('button', { name: 'Toți', exact: true }).click();
+      for (const n of ['Ana Rusu', 'Ion Ceban', 'Maria Lungu']) {
+        await expect(urmator.getByText(n, { exact: true })).toBeVisible();
+      }
+    });
+  }
 
   test('scoaterea unui membru obișnuit trimite cererea, după confirmare', async ({ page }) => {
     const scrieri = await deschideAdminul(page, '#grup-membri');
@@ -133,7 +147,7 @@ test.describe('grupul din parc, pe telefon', () => {
   // starea „Se încarcă…", când nu e nimic care să poată ieși din pagină. Butonul
   // numit e cel principal al ecranului și trebuie să rămână apăsabil pe telefon.
   const ecrane: [string, (p: Page) => Locator, (p: Page) => Locator][] = [
-    ['#grup-prezente', (p) => p.getByText('Antrenamentul următor'), (p) => p.getByRole('button', { name: 'Anulează antrenamentul' })],
+    ['#grup-prezente', (p) => p.getByText('Antrenamentul următor', { exact: true }), (p) => p.getByRole('button', { name: 'Anulează antrenamentul' })],
     ['#grup-membri', (p) => p.getByRole('heading', { name: 'Membrii' }), (p) => p.getByRole('button', { name: 'Editează' }).first()],
     ['#grup-analiza', (p) => p.getByRole('heading', { name: 'Fiecare antrenament' }), (p) => p.getByRole('button', { name: 'Istoric' }).first()],
     ['#grup-bot', (p) => p.getByText('Textul sondajului'), (p) => p.getByRole('button', { name: 'Trimite sondajul acum' })],
@@ -151,9 +165,9 @@ test.describe('grupul din parc, pe telefon', () => {
     });
   }
 
-  test('#desfasurare: fără scroll orizontal la 375px, cu cardul grupului', async ({ page }) => {
-    await deschideAdminul(page, '#desfasurare');
-    await expect(page.getByLabel('Grupul din parc')).toBeVisible();
+  test('#acum: fără scroll orizontal la 375px, cu cardul antrenamentului', async ({ page }) => {
+    await deschideAdminul(page, '#acum');
+    await expect(page.getByRole('region', { name: /după sondaj/ })).toBeVisible();
     const lat = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(lat).toBeLessThanOrEqual(375);
   });

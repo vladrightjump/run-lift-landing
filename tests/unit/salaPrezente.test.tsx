@@ -6,6 +6,7 @@ import { SubmitHttpError } from '../../src/lib/supabase';
 import { dateSala, membruSala } from './helpers/salaFixtures';
 import { dataLunga, urmatorulSondaj } from '../../src/admin/sala/sondaj';
 import type { SalaAntrenament } from '../../src/lib/salaApi';
+import { cereFiltruUrmatorul } from '../../src/admin/sala/filtruUrmatorul';
 
 const api = vi.hoisted(() => ({
   incarcaSala: vi.fn(),
@@ -47,6 +48,27 @@ describe('Prezențe', () => {
     expect(tacuti.getByText('Maria')).toBeTruthy();
     expect(tacuti.getByText('Roma')).toBeTruthy();
     expect(tacuti.queryByText('Fara')).toBeNull();
+  });
+
+  it('se deschide cu filtrul cerut din Acum, o singură dată, iar „Toți" le arată pe toate (R10)', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    cereFiltruUrmatorul('fara');
+    const { unmount } = randeaza();
+    const filtre = within(await screen.findByRole('group', { name: 'Filtrează răspunsurile' }));
+    expect(filtre.getByRole('button', { name: 'Fără răspuns' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(coloana(/^N-au răspuns/)).getByText('Maria')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /^Vin/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^Nu vin/ })).toBeNull();
+
+    fireEvent.click(filtre.getByRole('button', { name: 'Toți' }));
+    expect(within(coloana(/^Vin/)).getByText('Ana')).toBeTruthy();
+    expect(within(coloana(/^Nu vin/)).getByText('Ion')).toBeTruthy();
+
+    // A doua deschidere (Back, sau din navigare) nu mai moștenește filtrul.
+    unmount();
+    randeaza();
+    await screen.findByRole('heading', { name: 'Joi, 8 oct' });
+    expect(within(coloana(/^Vin/)).getByText('Ana')).toBeTruthy();
   });
 
   it('un membru inactiv fără răspuns nu apare la „n-au răspuns"', async () => {

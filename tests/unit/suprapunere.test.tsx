@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Suprapunere, pozitiePopover } from '../../src/admin/controale/Suprapunere';
 import { MeniuActiuni } from '../../src/admin/controale/MeniuActiuni';
 import { Toast, useToast } from '../../src/admin/controale/Toast';
+import { GrupRadio } from '../../src/admin/controale/GrupRadio';
 
 /**
  * Suprapunerea comună (U2, KTD5): popover, foaie de jos, panou, dialog.
@@ -120,6 +121,72 @@ describe('Suprapunere', () => {
     expect(onInchis).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Deschide' }));
+  });
+
+  it('Tab ignoră controalele ascunse, dezactivate și tabindex=-1', () => {
+    render(<Suprapunere tip="dialog" titlu="Filtre" onInchide={vi.fn()}>
+      <button hidden data-focus-initial>Ascuns</button>
+      <div style={{ display: 'none' }}><button>În container ascuns</button></div>
+      <fieldset disabled><input aria-label="Dezactivat" /></fieldset>
+      <button tabIndex={-1}>În afara ordinii</button>
+      <button>Primul</button><button>Ultimul</button>
+    </Suprapunere>);
+    const primul = screen.getByRole('button', { name: 'Primul' });
+    const ultimul = screen.getByRole('button', { name: 'Ultimul' });
+    expect(document.activeElement).toBe(primul);
+    fireEvent.keyDown(primul, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(ultimul);
+    fireEvent.keyDown(ultimul, { key: 'Tab' });
+    expect(document.activeElement).toBe(primul);
+  });
+
+  it('într-un grup radio, oprirea de Tab e varianta aleasă, nu prima (R34)', () => {
+    // Ca în dialogul de prezență: grupul e primul control, iar după o alegere
+    // cu săgețile focusul stă pe a doua sau a treia variantă.
+    render(<Suprapunere tip="dialog" titlu="Ana Popescu" onInchide={vi.fn()}>
+      <GrupRadio eticheta="Prezența" valoare="da" onSchimba={vi.fn()} optiuni={[
+        { valoare: 'nestiut', eticheta: 'Nu se știe' },
+        { valoare: 'da', eticheta: 'A venit' },
+        { valoare: 'nu', eticheta: 'N-a venit' },
+      ]} />
+      <button>Salvează</button>
+    </Suprapunere>);
+    const ales = screen.getByRole('radio', { name: 'A venit' });
+    const salveaza = screen.getByRole('button', { name: 'Salvează' });
+    expect(document.activeElement).toBe(ales);
+    fireEvent.keyDown(ales, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(salveaza);
+    fireEvent.keyDown(salveaza, { key: 'Tab' });
+    expect(document.activeElement).toBe(ales);
+  });
+
+  it('între prima și ultima oprire, Tab-ul rămâne al browserului', () => {
+    // Ca în dialogul de ediție nouă: Tab-ul nativ trece întâi prin segmentele
+    // datei (zi, lună, an) și abia apoi la ora. Capcana intervine doar la margini.
+    render(<Suprapunere tip="dialog" titlu="Ediția 9" onInchide={vi.fn()}>
+      <input aria-label="Data cursei" type="date" />
+      <input aria-label="Ora startului" type="time" />
+      <button>Anulează</button>
+    </Suprapunere>);
+    const data = screen.getByLabelText('Data cursei');
+    const ora = screen.getByLabelText('Ora startului');
+    expect(document.activeElement).toBe(data);
+    expect(fireEvent.keyDown(data, { key: 'Tab' })).toBe(true);
+    expect(document.activeElement).toBe(data);
+    ora.focus();
+    expect(fireEvent.keyDown(ora, { key: 'Tab' })).toBe(true);
+    expect(fireEvent.keyDown(ora, { key: 'Tab', shiftKey: true })).toBe(true);
+    expect(document.activeElement).toBe(ora);
+  });
+
+  it('fără controale disponibile, Tab rămâne pe dialog', () => {
+    render(<Suprapunere tip="dialog" titlu="Se salvează" onInchide={vi.fn()}>
+      <button disabled>Salvează</button>
+    </Suprapunere>);
+    const dialog = screen.getByRole('dialog');
+    expect(document.activeElement).toBe(dialog);
+    expect(fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true })).toBe(false);
+    expect(document.activeElement).toBe(dialog);
   });
 
   it('clicul în afară închide', () => {

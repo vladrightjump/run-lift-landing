@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
-import type { adminApiMock } from './helpers/adminHarness';
+import { logEntry, type adminApiMock } from './helpers/adminHarness';
+import type { AdminEdition, AdminEmailLogEntry } from '../../src/lib/adminApi';
 
 /**
  * Primul test de componentă din backoffice. Până acum `src/admin/` avea zero
@@ -37,6 +38,7 @@ vi.mock('../../src/lib/supabase', async (orig) => ({
 
 const { AdminDashboard } = await import('../../src/admin/AdminDashboard');
 const { SNAPSHOT_CONFIG } = await import('../../src/content/eventConfig');
+const { EventConfigProvider } = await import('../../src/hooks/useEventConfig');
 
 afterEach(() => {
   cleanup();
@@ -56,6 +58,17 @@ const randeaza = (ecran = 'participanti') => {
   window.location.hash = `#${ecran}`;
   return render(<AdminDashboard token="token-test" onLogout={() => {}} />);
 };
+
+/** Un rând din inventarul edițiilor; numărătorile nu contează aici. */
+const editieInventar = (editie: number, este_curenta: boolean): AdminEdition => ({
+  editie,
+  participanti: 2,
+  asteptare: 0,
+  lansare: 0,
+  prima: '2026-08-01T10:00:00Z',
+  ultima: '2026-08-20T10:00:00Z',
+  este_curenta,
+});
 
 /** Șina din stânga: toate zonele și filele, pe desktop (U7). */
 const sina = () => screen.getByRole('navigation', { name: 'Zone și ecrane' });
@@ -135,6 +148,82 @@ describe('AdminDashboard — semnalele de atenție (R6)', () => {
     await screen.findByRole('heading', { level: 1, name: 'Acum' });
     await waitFor(() => expect(api.current!.listEmailLog).toHaveBeenCalled());
     expect(screen.queryByText(/email nelivrat|emailuri nelivrate/)).toBeNull();
+  });
+
+  it('cu o arhivă deschisă, numărul de pe zona Acum urmărește tot ediția curentă', async () => {
+    // Defectul: semnalele ediției curente se actualizau doar când ediția
+    // deschisă ERA cea curentă, deci pe toată vizita într-o arhivă numărul din
+    // șină rămânea înghețat pe ce era la intrare.
+    const curenta = SNAPSHOT_CONFIG.number;
+    api.current!.listEditions.mockResolvedValue([
+      editieInventar(curenta - 1, false),
+      editieInventar(curenta, true),
+    ]);
+    let jurnalCurent: AdminEmailLogEntry[] = [];
+    api.current!.listEmailLog.mockImplementation(async (_token, editie) =>
+      editie === curenta ? jurnalCurent : []
+    );
+    randeaza();
+    await screen.findByText('Ana Popescu');
+    const numarAcum = () =>
+      within(sina()).getByRole('button', { name: /^Acum/ }).querySelector('.admin-numar');
+    expect(numarAcum()).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Ediția'), { target: { value: String(curenta - 1) } });
+    await screen.findByText(`Ediția ${curenta - 1} e încheiată.`);
+
+    // Între timp, pe ediția curentă pică un email; următorul poll trebuie să-l vadă.
+    jurnalCurent = [
+      logEntry({ id: 'e9', email: 'ana@exemplu.ro', subiect: 'Reminder', status: 'esuat' }),
+    ];
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await waitFor(() => expect(numarAcum()?.textContent).toBe('1'));
+  });
+});
+
+describe('AdminDashboard — publicarea mută ediția curentă', () => {
+  it('inventarul edițiilor urmează ediția publicată, ca Acum să n-o deschidă drept arhivă', async () => {
+    // Publicarea scrie `current_event_edition` pe numărul publicat. Cu
+    // inventarul citit doar la montare, legătura „Participanți" de pe Acum
+    // deschidea ediția tocmai publicată cu bannerul de arhivă și fără scrieri.
+    const curenta = SNAPSHOT_CONFIG.number;
+    api.current!.listEditions.mockResolvedValue([editieInventar(curenta, true)]);
+    // Aceeași funcție la ambele randări: alta nouă ar reface ea însăși inventarul.
+    const onLogout = () => {};
+    window.location.hash = '#acum';
+    const { rerender } = render(
+      <EventConfigProvider override={SNAPSHOT_CONFIG}>
+        <AdminDashboard token="token-test" onLogout={onLogout} />
+      </EventConfigProvider>
+    );
+    await waitFor(() => expect(api.current!.listEditions).toHaveBeenCalledTimes(1));
+
+    api.current!.listEditions.mockResolvedValue([
+      editieInventar(curenta, false),
+      editieInventar(curenta + 1, true),
+    ]);
+    const publicata = {
+      ...SNAPSHOT_CONFIG,
+      number: curenta + 1,
+      start: '2099-09-19T07:00:00',
+      registrationDeadline: '2099-09-19T06:00:00',
+      launchAt: '2099-09-17T12:00:00',
+    };
+    rerender(
+      <EventConfigProvider override={publicata}>
+        <AdminDashboard token="token-test" onLogout={onLogout} />
+      </EventConfigProvider>
+    );
+    await waitFor(() => expect(api.current!.listEditions).toHaveBeenCalledTimes(2));
+
+    const card = (
+      await screen.findByRole('heading', { name: new RegExp(`^Ediția ${curenta + 1} ·`) })
+    ).closest('section') as HTMLElement;
+    fireEvent.click(within(card).getByRole('button', { name: /^Participanți/ }));
+
+    await screen.findByRole('option', { name: new RegExp(`^Ediția ${curenta + 1} .* curentă$`) });
+    expect(screen.queryByText(/e încheiată/)).toBeNull();
   });
 });
 
