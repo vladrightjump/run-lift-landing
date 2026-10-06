@@ -11,8 +11,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export type ToastAdmin = { kind: 'error' | 'success'; msg: string; undo?: () => void };
 type ToastAfisat = ToastAdmin & { id: number };
 
-export const DURATA_CU_ANULARE = 6000;
-export const DURATA_SIMPLA = 3200;
+const DURATA_CU_ANULARE = 6000;
+const DURATA_SIMPLA = 3200;
 
 export const useToast = () => {
   const [toast, setToast] = useState<ToastAfisat | null>(null);

@@ -22,7 +22,7 @@ import { useEsteTelefon } from './useEsteTelefon';
  * prindă un `position: fixed` care nu e înăuntrul lui.
  */
 
-export type TipSuprapunere = 'popover' | 'panou' | 'dialog';
+type TipSuprapunere = 'popover' | 'panou' | 'dialog';
 type Prezentare = 'popover' | 'panou' | 'dialog' | 'foaie';
 
 /** Scrise întregi, nu compuse: garda de clase (`claseCss.test.ts`) le caută literal. */

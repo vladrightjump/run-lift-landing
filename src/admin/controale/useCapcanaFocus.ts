@@ -9,7 +9,7 @@ import { useEffect, useRef, type KeyboardEvent, type RefObject } from 'react';
  * două feluri de „se închide cu Escape" în același admin.
  */
 
-export const FOCUSABILE =
+const FOCUSABILE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**

@@ -13,7 +13,7 @@ import {
 import { Icon, type NumeIcon } from './controale/Icon';
 import { useEsteTelefon } from './controale/useEsteTelefon';
 
-type Props = {
+export type PropsCadru = {
   ecran: EcranAdmin;
   onEcran: (ecran: EcranAdmin) => void;
   faza: FazaSite;
@@ -56,7 +56,7 @@ export const AdminCadru = ({
   selectorEditie,
   onLogout,
   children,
-}: Props) => {
+}: PropsCadru) => {
   const telefon = useEsteTelefon();
   const zonaActiva = zonaEcranului(ecran);
   const zona = ZONE.find((z) => z.cheie === zonaActiva) ?? ZONE[0];

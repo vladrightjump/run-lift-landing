@@ -38,8 +38,9 @@ import { EcranMembri } from './sala/EcranMembri';
 import { EcranAnaliza } from './sala/EcranAnaliza';
 import { EcranBot } from './sala/EcranBot';
 import { AdminClipuriTab } from './AdminClipuriTab';
-import { AdminCadru } from './AdminCadru';
-import { EcranPornire } from './EcranPornire';
+import { EcranAcum } from './EcranAcum';
+import { CadruCuSemnale } from './CadruCuSemnale';
+import { FurnizorSala } from './sala/useSala';
 import { useEcranCurent } from './useEcranCurent';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
@@ -58,7 +59,7 @@ import { AdminAsteptare } from './AdminAsteptare';
 import { AdminCifre } from './AdminCifre';
 import { AdminRandAdaugare } from './AdminRandAdaugare';
 import { DialogPrezenta } from './DialogPrezenta';
-import { fazaSite, semnaleDeAtentie, type EcranAdmin } from './stareCurenta';
+import { fazaSite, type EcranAdmin } from './stareCurenta';
 import { ECRAN_IMPLICIT, estePeEditie } from './adminNavigatie';
 import { LiniaDeTimp } from './LiniaDeTimp';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
@@ -627,14 +628,15 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
 
   return (
     <FurnizorSesiuneAdmin token={token} onAuthError={handleAuthError} showToast={showToast}>
-      <AdminCadru
+      <FurnizorSala>
+      <CadruCuSemnale
+        semnale={semnale}
         ecran={tab}
         onEcran={schimbaTab}
         faza={fazaAcum}
         countdown={
           cd.done ? null : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`
         }
-        atentie={semnaleDeAtentie(semnale, fazaAcum).length}
         contorEcran={contorEcran}
         onLogout={onLogout}
         selectorEditie={
@@ -661,11 +663,14 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         )}
 
         {tab === 'acum' && (
-          <EcranPornire
+          <EcranAcum
             semnale={semnale}
+            faza={fazaAcum}
+            config={config}
+            inscrisi={rows === null ? null : all.length}
+            asteptare={waitlist === null ? null : waitAll.length}
             onEcran={schimbaTab}
             onEditieNoua={porneșteEditiaUrmatoare}
-            arhiva={arhiva}
           />
         )}
 
@@ -898,7 +903,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         <AdminActivitate events={events} />
         </>
         )}
-      </AdminCadru>
+      </CadruCuSemnale>
+      </FurnizorSala>
 
       {prezentaRow && (
         <DialogPrezenta

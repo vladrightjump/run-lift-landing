@@ -89,7 +89,7 @@ describe('AdminDashboard', () => {
     // are o trimitere reușită pe alt subiect. Cheia e adresă+subiect.
     randeaza('acum');
 
-    expect(await screen.findByRole('button', { name: /^1 email n-a ajuns la destinatar/ })).toBeDefined();
+    expect(await screen.findByText('1 email nelivrat')).toBeDefined();
   });
 
   it('insigna NU raportează „complet" cât timp o comunicare datorată lipsește', async () => {
@@ -124,7 +124,8 @@ describe('AdminDashboard — semnalele de atenție (R6)', () => {
 
   it('un clic pe semnalul de livrare duce la ecranul unde se rezolvă', async () => {
     randeaza('acum');
-    fireEvent.click(await screen.findByRole('button', { name: /email n-a ajuns/ }));
+    const rand = (await screen.findByText('1 email nelivrat')).closest('li') as HTMLElement;
+    fireEvent.click(within(rand).getByRole('button', { name: 'Vezi' }));
     await waitFor(() => expect(window.location.hash).toBe('#livrare'));
   });
 
@@ -133,7 +134,7 @@ describe('AdminDashboard — semnalele de atenție (R6)', () => {
     randeaza('acum');
     await screen.findByRole('heading', { level: 1, name: 'Acum' });
     await waitFor(() => expect(api.current!.listEmailLog).toHaveBeenCalled());
-    expect(screen.queryByRole('button', { name: /n-a ajuns|n-au ajuns/ })).toBeNull();
+    expect(screen.queryByText(/email nelivrat|emailuri nelivrate/)).toBeNull();
   });
 });
 

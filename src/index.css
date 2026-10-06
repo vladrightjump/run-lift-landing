@@ -2252,27 +2252,8 @@
     border: 1px solid var(--pa-line); background: var(--pa-surface);
     display: grid; gap: 0;
   }
-  .admin-saptamanal-cap { padding: 12px 24px 0; }
   .admin-saptamanal-eticheta {
     font-size: 11px; font-weight: 700; color: var(--pa-muted);
-  }
-  .admin-saptamanal-rand {
-    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
-    padding: 10px 24px 16px;
-  }
-  .admin-saptamanal-stare {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: 13px; font-weight: 600; color: var(--pa-text-2);
-  }
-  .admin-saptamanal-stare.pornit { color: var(--pa-accent-text); }
-  .admin-saptamanal-punct {
-    width: 9px; height: 9px; border-radius: 50%; flex: none;
-    background: var(--pa-muted-2);
-  }
-  .admin-saptamanal-stare.pornit .admin-saptamanal-punct { background: var(--pa-accent); }
-  .admin-saptamanal-titlu {
-    flex: 1 1 auto; min-width: 0; font-size: 14px; color: var(--pa-text);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
 
@@ -2281,7 +2262,6 @@
      cu o singură excepție deliberată: cifrele de pe „Prezențe" sînt mari, în
      Anton, fiindcă se citesc de pe telefon, în parc, la 6 dimineața. */
   .admin-sala { display: grid; gap: 20px; min-width: 0; }
-  .admin-sala-card { margin-top: 0; }
 
   .admin-sala-urmator {
     border: 1px solid var(--pa-line); background: var(--pa-surface);
@@ -2442,4 +2422,176 @@
   .admin-sala input:focus, .admin-sala select:focus, .admin-sala textarea:focus,
   .admin-sala-formular input:focus, .admin-sala-formular select:focus {
     outline: none; border-color: var(--pa-accent-text); box-shadow: 0 0 0 3px var(--pa-focus-soft);
+  }
+
+  /* ==== Acum (U8) ==== */
+  .admin-vh {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .admin-acum { display: grid; gap: 16px; }
+  .admin-acum-sub {
+    margin: -10px 0 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
+    font-size: 14px; font-weight: 500; color: var(--pa-muted);
+  }
+  .admin-viu { display: inline-flex; align-items: center; gap: 6px; color: var(--pa-ok-text); font-weight: 600; }
+  .admin-viu-punct {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--pa-graph);
+    animation: admin-puls 2s infinite;
+  }
+  @keyframes admin-puls {
+    0% { box-shadow: 0 0 0 0 rgba(77, 100, 16, 0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(77, 100, 16, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(77, 100, 16, 0); }
+  }
+  .admin-acum-titlu { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--pa-text); }
+  .admin-numar--titlu { margin-left: 0; }
+  .admin-acum-viu { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--pa-ok-text); }
+
+  /* Săptămâna, desktop: șapte coloane. */
+  .admin-sapt {
+    display: grid; gap: 10px; padding: 14px;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+  }
+  .admin-sapt-cap { display: flex; align-items: baseline; gap: 10px; }
+  .admin-sapt-interval { font-size: 13.5px; color: var(--pa-muted); }
+  .admin-sapt-grila {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; min-height: 190px;
+  }
+  .admin-sapt-zi { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: var(--pa-r); background: var(--pa-surface-2); }
+  .admin-sapt-zi--azi { background: var(--pa-accent-soft); box-shadow: inset 0 0 0 1px rgba(77, 100, 16, 0.35); }
+  .admin-sapt-data { margin: 0; display: flex; align-items: baseline; gap: 6px; padding: 2px 4px 6px; font-size: 12.5px; font-weight: 600; color: var(--pa-muted); }
+  .admin-sapt-data b { font-size: 18px; color: var(--pa-text); }
+  .admin-sapt-azi { color: var(--pa-ok-text); }
+  .admin-sapt-ev {
+    display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px; text-align: left;
+    border: 1px solid var(--pa-line); border-radius: var(--pa-r); background: var(--pa-surface);
+    font-family: var(--pa-font); font-size: 12.5px; color: var(--pa-text);
+    animation: admin-intra var(--pa-dur) var(--pa-ease) both;
+  }
+  .admin-sapt-ev b { font-size: 13px; font-weight: 700; }
+  .admin-sapt-ev span { color: var(--pa-muted); }
+  button.admin-sapt-ev { cursor: pointer; transition: border-color var(--pa-dur-fast) ease, transform var(--pa-dur-fast) ease; }
+  button.admin-sapt-ev:hover { border-color: var(--pa-line-strong); transform: translateY(-1px); }
+  .admin-sapt-ev--antrenament { border-left: 3px solid var(--pa-graph); }
+  .admin-sapt-ev--cursa { border-left: 3px solid var(--pa-graph-warn); }
+  .admin-sapt-ev--termen { border-left: 3px solid var(--pa-danger); }
+  .admin-sapt-ev--anuntul { border-left: 3px solid var(--pa-graph-2); }
+  .admin-sapt-ev--trecut { opacity: 0.7; }
+  .admin-sapt-ev--sondaj { background: transparent; border-style: dashed; }
+  @keyframes admin-intra { from { opacity: 0; transform: translateY(4px); } }
+
+  .admin-acum-coloane {
+    display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px; align-items: start;
+  }
+  .admin-acum-bloc { display: grid; gap: 8px; }
+  .admin-acum-card {
+    display: grid; gap: 10px; padding: 14px;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+  }
+  .admin-acum-card-text { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--pa-muted); }
+  .admin-acum-card-loc { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--pa-muted); }
+  .admin-acum-editie { display: flex; align-items: center; gap: 14px; }
+  .admin-acum-editie > div { display: grid; gap: 2px; }
+
+  /* „De rezolvat": inbox, fiecare rând cu acțiunea lui. */
+  .admin-inbox { list-style: none; margin: 0; padding: 0; background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg); overflow: hidden; }
+  .admin-inbox-rand { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--pa-line); animation: admin-intra var(--pa-dur) var(--pa-ease) both; }
+  .admin-inbox-rand:first-child { border-top: 0; }
+  .admin-inbox-icon { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: var(--pa-r); background: var(--pa-surface-2); color: var(--pa-muted); }
+  .admin-inbox-icon--urgent { background: var(--pa-danger-soft); color: var(--pa-danger); }
+  .admin-inbox-text { flex: 1; min-width: 0; }
+  .admin-inbox-titlu { margin: 0; font-size: 15px; font-weight: 600; color: var(--pa-text); }
+  .admin-inbox-detaliu { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--pa-muted); }
+  .admin-inbox-gol {
+    margin: 0; padding: 14px; font-size: 14px; color: var(--pa-muted);
+    background: var(--pa-surface); border: 1px dashed var(--pa-line-strong); border-radius: var(--pa-r-lg);
+  }
+
+  /* Butonul obișnuit și legătura cu săgeată. */
+  .admin-buton {
+    flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; padding: 0 16px; cursor: pointer; white-space: nowrap;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); color: var(--pa-text);
+    font-family: var(--pa-font); font-size: 15px; font-weight: 600;
+  }
+  .admin-buton:hover:not(:disabled) { border-color: var(--pa-line-strong); background: var(--pa-surface-2); }
+  .admin-buton:disabled { opacity: 0.55; cursor: not-allowed; }
+  .admin-link {
+    justify-self: start; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0;
+    border: 0; background: none; cursor: pointer;
+    font-family: var(--pa-font); font-size: 14.5px; font-weight: 600; color: var(--pa-accent-text);
+  }
+  .admin-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* Cardul antrenamentului: bara răspunsurilor și cele trei cifre. */
+  .admin-raport { display: flex; gap: 2px; height: 8px; border-radius: 2px; overflow: hidden; }
+  .admin-raport span { display: block; min-width: 3px; transition: flex-grow var(--pa-dur-slow) var(--pa-ease); }
+  .admin-raport-vin { background: var(--pa-graph); }
+  .admin-raport-nu { background: var(--pa-graph-2); }
+  .admin-raport-fara { background: var(--pa-graph-warn); }
+  .admin-cifre-antr { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .admin-cifra-buton {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 0; min-height: 56px; padding: 4px 6px;
+    border: 0; background: none; cursor: pointer; text-align: left;
+    font-family: var(--pa-font); font-size: 12.5px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-cifra-buton:hover { background: var(--pa-surface-2); }
+  .admin-cifra { display: inline-block; font-family: var(--pa-font-display); font-weight: 400; font-size: 30px; line-height: 1.05; color: var(--pa-text); }
+  .admin-cifra--atentie { color: var(--pa-warn); }
+  .admin-salt { animation: admin-salt var(--pa-dur-slow) var(--pa-ease-arc); }
+  @keyframes admin-salt { 40% { transform: scale(1.12); } }
+
+  /* Inelul ocupării. */
+  .admin-inel { display: block; flex: none; }
+  .admin-inel-fond { fill: none; stroke: var(--pa-surface-3); }
+  .admin-inel-plin { fill: none; stroke: var(--pa-graph); transition: stroke-dashoffset 700ms var(--pa-ease); }
+  .admin-inel-text { font-family: var(--pa-font-display); font-size: 19px; fill: var(--pa-text); }
+
+  /* Skeleton: încărcarea nu arată niciodată zero (R35). */
+  .admin-schelet {
+    border-radius: var(--pa-r);
+    background: linear-gradient(90deg, var(--pa-surface-2) 0%, var(--pa-surface-3) 50%, var(--pa-surface-2) 100%);
+    background-size: 200% 100%; animation: admin-schelet 1.1s linear infinite;
+  }
+  .admin-schelet--rand { height: 16px; width: 60%; }
+  .admin-schelet--bloc { height: 64px; }
+  .admin-schelet--inel { width: 64px; height: 64px; border-radius: 50%; flex: none; }
+  @keyframes admin-schelet { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+  /* Telefon: banda săptămânii și agenda. */
+  .admin-banda { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .admin-banda-zi { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 6px; border-radius: var(--pa-r-lg); }
+  .admin-banda-zi--azi { background: var(--pa-ink); color: var(--pa-ink-text); }
+  .admin-banda-scurt { font-size: 12px; font-weight: 600; color: var(--pa-muted); }
+  .admin-banda-zi--azi .admin-banda-scurt { color: var(--pa-surface-3); }
+  .admin-banda-numar { font-size: 17px; font-weight: 700; }
+  .admin-banda-puncte { display: flex; gap: 3px; height: 6px; }
+  .admin-punct { width: 6px; height: 6px; border-radius: 50%; background: var(--pa-graph-2); }
+  .admin-punct--antrenament { background: var(--pa-graph); }
+  .admin-punct--cursa { background: var(--pa-graph-warn); }
+  .admin-punct--termen { background: var(--pa-danger); }
+  .admin-punct--sondaj { background: var(--pa-line-control); }
+  .admin-banda-zi--azi .admin-punct { background: var(--pa-accent); }
+  .admin-agenda { list-style: none; margin: 0; padding: 0; background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg); overflow: hidden; }
+  .admin-agenda-rand { border-top: 1px solid var(--pa-line); }
+  .admin-agenda-rand:first-child { border-top: 0; }
+  .admin-agenda-rand--trecut { opacity: 0.62; }
+  .admin-agenda-buton {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px;
+    border: 0; background: none; text-align: left; font-family: var(--pa-font); color: var(--pa-text);
+  }
+  button.admin-agenda-buton { cursor: pointer; }
+  button.admin-agenda-buton:hover { background: var(--pa-surface-2); }
+  button.admin-agenda-buton > .admin-icon { color: var(--pa-muted); }
+  .admin-agenda-cand { width: 52px; flex: none; font-size: 13px; color: var(--pa-muted); }
+  .admin-agenda-cand b { color: var(--pa-text); font-size: 14px; }
+  .admin-agenda-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .admin-agenda-titlu { font-size: 15px; font-weight: 600; }
+  .admin-agenda-detaliu { font-size: 13.5px; color: var(--pa-muted); }
+  @media (max-width: 1100px) {
+    .admin-acum-coloane { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .admin-acum-coloane > .admin-acum-bloc { grid-column: 1 / -1; }
   }

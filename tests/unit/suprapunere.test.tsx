@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { useState } from 'react';
-import { Suprapunere } from '../../src/admin/controale/Suprapunere';
+import { Suprapunere, pozitiePopover } from '../../src/admin/controale/Suprapunere';
 import { MeniuActiuni } from '../../src/admin/controale/MeniuActiuni';
 import { Toast, useToast } from '../../src/admin/controale/Toast';
 
@@ -233,5 +233,29 @@ describe('Toast', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Anulează' }));
     expect(undo).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/prezentă/)).toBeNull();
+  });
+});
+
+describe('poziția popoverului', () => {
+  const ecran = { width: 1280, height: 800 };
+  const cutie = { width: 320, height: 300 };
+
+  it('stă sub declanșator când încape', () => {
+    expect(pozitiePopover({ top: 100, bottom: 140, left: 200 }, cutie, ecran)).toEqual({ top: 146, left: 200, deruleaza: 0 });
+  });
+
+  it('urcă deasupra când dedesubt nu încape', () => {
+    expect(pozitiePopover({ top: 600, bottom: 640, left: 200 }, cutie, ecran)).toEqual({ top: 294, left: 200, deruleaza: 0 });
+  });
+
+  it('cere derulare când nu încape nici sus, nici jos, ca să nu acopere declanșatorul', () => {
+    const p = pozitiePopover({ top: 200, bottom: 240, left: 200 }, { width: 320, height: 700 }, ecran);
+    expect(p.deruleaza).toBeGreaterThan(0);
+    expect(p.top).toBe(246 - p.deruleaza);
+  });
+
+  it('nu iese din ecran pe orizontală', () => {
+    expect(pozitiePopover({ top: 100, bottom: 140, left: 1200 }, cutie, ecran).left).toBe(1280 - 320 - 12);
+    expect(pozitiePopover({ top: 100, bottom: 140, left: 2 }, cutie, ecran).left).toBe(12);
   });
 });
