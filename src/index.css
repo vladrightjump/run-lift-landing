@@ -732,15 +732,6 @@
   .admin-checking { border: none; background: transparent; }
 
   /* ---- Top bar ---- */
-  .admin-topbar {
-    position: sticky; top: 0; z-index: 20;
-    background: color-mix(in srgb, var(--pa-bg) 92%, transparent); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--pa-line);
-    padding: 14px clamp(20px, 5vw, 40px);
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px 16px; flex-wrap: wrap;
-  }
-  .admin-topbar-meta { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
   /* Chip-ul de faza din antetul lipit: ce vede un vizitator ACUM.
      Culoarea e a fazei, nu decor - „Coming Soon" si „Landing cu inscrieri" sint
      doua lumi diferite pentru cine intra pe site. */
@@ -766,10 +757,11 @@
   .admin-faza.faza-cine-vine .admin-faza-punct { background: var(--pa-accent); }
   .admin-faza.faza-coming-soon .admin-faza-punct { background: var(--pa-muted); }
   .admin-cd {
-    display: flex; align-items: center; gap: 8px;
+    margin: 0; display: inline-flex; align-items: center; gap: 8px;
     font-size: 13px; font-weight: 600; color: var(--pa-accent-text); font-variant-numeric: tabular-nums;
   }
   .admin-logout {
+    min-height: 40px; white-space: nowrap;
     background: transparent; border: 1px solid var(--pa-line); color: var(--pa-muted); cursor: pointer;
     font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600; padding: 8px 14px;
     transition: border-color 0.2s ease, color 0.2s ease;
@@ -778,10 +770,107 @@
 
   /* ---- Dashboard layout ---- */
   .admin-main {
-    max-width: 1200px; margin: 0 auto;
-    padding: clamp(28px, 5vw, 48px) clamp(20px, 5vw, 40px);
-    display: grid; gap: clamp(28px, 4vw, 40px);
+    min-width: 0; max-width: 1160px; padding: 24px 28px 48px;
+    display: grid; gap: clamp(18px, 3vw, 28px); align-content: start;
   }
+  .admin-main:focus { outline: none; }
+
+  /* ---- Cadrul: antet, șină, file, bară de jos (U7) ----
+     Desktop: șina stângă arată toate zonele și filele deodată. Telefon:
+     zonele stau jos, unde ajunge degetul mare, iar filele sub titlu. */
+  .admin-cadru {
+    min-height: 100dvh; display: grid;
+    grid-template-columns: 248px minmax(0, 1fr); grid-template-rows: auto 1fr;
+  }
+  .admin-cadru--telefon { display: block; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .admin-cadru--telefon .admin-main { padding: 16px 16px 28px; }
+  .admin-antet {
+    grid-column: 1 / -1; position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 56px; padding: 8px 20px;
+    background: color-mix(in srgb, var(--pa-bg) 92%, transparent); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--pa-line);
+  }
+  .admin-cadru--telefon .admin-antet { padding: 6px 12px 6px 16px; }
+  .admin-antet .admin-logo { font-size: 19px; white-space: nowrap; }
+  .admin-antet .admin-logo .accent { color: var(--pa-accent-ink); background: var(--pa-accent); padding: 0 4px; border-radius: 3px; }
+  .admin-antet-dreapta { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .admin-sina {
+    position: sticky; top: 56px; align-self: start; height: calc(100dvh - 56px); overflow: auto;
+    padding: 18px 12px; border-right: 1px solid var(--pa-line); background: var(--pa-surface-2);
+  }
+  .admin-sina-zona { margin-bottom: 10px; }
+  .admin-sina-zona-buton {
+    display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 10px;
+    border: 0; background: none; cursor: pointer; text-align: left;
+    font-family: var(--pa-font); font-weight: 700; font-size: 14.5px; color: var(--pa-text);
+  }
+  .admin-sina-zona-buton:hover { background: var(--pa-surface-3); }
+  .admin-sina-zona-buton[aria-current="page"] { background: var(--pa-surface); box-shadow: 0 0 0 1px var(--pa-line); }
+  .admin-numar {
+    margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px;
+    display: inline-grid; place-items: center; border-radius: var(--pa-r-pill);
+    background: var(--pa-warn-soft); color: var(--pa-warn); font-size: 12px; font-weight: 700;
+  }
+  .admin-sina-file { list-style: none; margin: 2px 0 0 20px; padding: 0 0 0 10px; border-left: 1px solid var(--pa-line); }
+  .admin-sina-fila {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; min-height: 36px; padding: 0 10px; border: 0; background: none; cursor: pointer;
+    text-align: left; font-family: var(--pa-font); font-size: 14px; font-weight: 500; color: var(--pa-muted);
+  }
+  .admin-sina-fila:hover { color: var(--pa-text); background: var(--pa-surface-3); }
+  .admin-sina-fila[aria-current="page"] { background: var(--pa-accent); color: var(--pa-accent-ink); font-weight: 700; }
+  .admin-sina-contor { font-size: 12.5px; font-weight: 600; opacity: 0.8; }
+  .admin-sina-nota {
+    margin: 18px 0 0; padding: 12px 10px 0; border-top: 1px solid var(--pa-line);
+    font-size: 12.5px; line-height: 1.45; color: var(--pa-muted);
+  }
+  .admin-zona-cap { display: grid; gap: 6px; }
+  .admin-zona-titlu {
+    margin: 0; font-family: var(--pa-font-display); font-weight: 400; font-size: 32px; line-height: 1;
+    letter-spacing: 0.5px; text-transform: uppercase; color: var(--pa-text);
+  }
+  .admin-cadru--telefon .admin-zona-titlu { font-size: 28px; }
+  .admin-zona-sub { margin: 0; max-width: 70ch; font-size: 14px; font-weight: 500; color: var(--pa-muted); }
+  .admin-file {
+    display: flex; overflow-x: auto; scrollbar-width: none;
+    margin: 0 -16px; padding: 0 16px; border-bottom: 1px solid var(--pa-line);
+  }
+  .admin-file::-webkit-scrollbar { display: none; }
+  .admin-fila {
+    flex: none; min-height: 44px; padding: 0 12px; margin-bottom: -1px; cursor: pointer;
+    border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; white-space: nowrap;
+    font-family: var(--pa-font); font-size: 14.5px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-fila[aria-current="page"] { color: var(--pa-text); border-bottom-color: var(--pa-text); }
+  .admin-subfile {
+    justify-self: start; max-width: 100%; overflow-x: auto; display: inline-flex; gap: 2px; padding: 3px;
+    background: var(--pa-surface-2); border: 1px solid var(--pa-line); border-radius: calc(var(--pa-r) + 3px);
+  }
+  .admin-subfila {
+    flex: none; min-height: 40px; padding: 0 14px; border: 0; background: transparent; cursor: pointer;
+    white-space: nowrap; font-family: var(--pa-font); font-size: 14.5px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-subfila:hover { color: var(--pa-text); }
+  .admin-subfila[aria-current="page"] { background: var(--pa-ink); color: var(--pa-ink-text); }
+  .admin-bara-jos {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--pa-surface); border-top: 1px solid var(--pa-line); padding-bottom: env(safe-area-inset-bottom);
+  }
+  .admin-bara-jos-zona {
+    position: relative; min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; border: 0; border-radius: 0; background: none; cursor: pointer;
+    font-family: var(--pa-font); font-size: 12px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-bara-jos-zona[aria-current="page"] { color: var(--pa-text); }
+  .admin-bara-jos-icon {
+    display: grid; place-items: center; width: 52px; height: 30px; border-radius: var(--pa-r-pill);
+    transition: background-color var(--pa-dur) ease, color var(--pa-dur) ease;
+  }
+  .admin-bara-jos-zona[aria-current="page"] .admin-bara-jos-icon { background: var(--pa-accent); color: var(--pa-accent-ink); }
+  .admin-numar--bara { position: absolute; top: 6px; left: calc(50% + 10px); margin: 0; background: var(--pa-warn); color: #fff; }
+  .admin-cadru--telefon ~ .admin-toast-zona { bottom: calc(76px + env(safe-area-inset-bottom)); }
 
   /* ---- Panoul „Acum" ----
      Prima întrebare cu care se deschide backoffice-ul e „unde suntem?", nu
@@ -825,12 +914,10 @@
      La 40 de participanți, „Adaugă" și „Export CSV" ies din ecran după al
      zecelea rând și trebuie să te întorci sus ca să ajungi la ele.
 
-     `top` e sub antetul sticky (`.admin-topbar`): 14px padding × 2 + 26px
-     conținut. Sub 900px antetul se rupe pe două rânduri și constanta n-ar mai
-     fi adevărată, deci acolo bara rămâne în flux. */
+     `top` e sub antetul sticky (`.admin-antet`), înalt de 56px. */
   @media (min-width: 900px) {
     .admin-participanti-head {
-      position: sticky; top: 54px; z-index: 3;
+      position: sticky; top: 56px; z-index: 3;
       /* Opac, nu translucid: rândurile trebuie să treacă PE SUB, nu prin el. */
       background: var(--pa-surface);
     }
@@ -1079,7 +1166,6 @@
      paginii. O lista are aceeasi inaltime oricate ecrane s-ar aduna. */
   /* Comutatorul foloseste primitiva comuna; aici ramane doar asezarea lui in
      antet, pe un rand in loc de doua. */
-  .admin-comutator .admin-control { display: flex; align-items: center; gap: 8px; }
 
   /* ---- Primitivele de control ----
      Controlul se alege dupa FORMA alegerii, nu dupa ce e mai rapid de randat.
@@ -1195,17 +1281,6 @@
 
   /* Alerta de livrare, in antet: un email care n-a ajuns trebuie sa te
      gaseasca pe orice ecran, nu doar daca te intorci acasa. */
-  .admin-alerta-livrare {
-    display: flex; align-items: center; gap: 4px; cursor: pointer;
-    background: none; border: 1px solid var(--pa-danger); padding: 5px 10px;
-    color: var(--pa-danger); font-family: Archivo, sans-serif;
-    font-size: 12px; font-weight: 700;
-  }
-  .admin-alerta-livrare:hover { background: var(--pa-surface); }
-  .admin-alerta-livrare:active { transform: translateY(1px); }
-  .admin-alerta-livrare:focus-visible {
-    outline: 2px solid var(--pa-accent-text); outline-offset: 2px;
-  }
 
   /* Saritura peste antet. Antetul are acum faza, numaratoarea, alerta,
      comutatorul de ecrane si iesirea din cont — cinci opriri de tabulare
@@ -1223,68 +1298,18 @@
   /* ---- Calea de intoarcere ----
      Apare doar cand ai unde sa te intorci. Pe ecranul de pornire ar fi un
      buton care nu duce nicaieri. */
-  .admin-cale { display: flex; align-items: center; gap: 10px; }
-  .admin-cale-inapoi {
-    background: none; border: none; cursor: pointer; padding: 4px 0;
-    color: var(--pa-text-2); font-family: Archivo, sans-serif;
-    font-size: 13px; font-weight: 600;
-  }
-  .admin-cale-inapoi:hover { color: var(--pa-accent-text); }
-  .admin-cale-inapoi:active { transform: translateY(1px); }
-  .admin-cale-inapoi:focus-visible {
-    outline: 2px solid var(--pa-accent-text); outline-offset: 2px;
-  }
-  .admin-cale-separator { color: var(--pa-muted-2); }
-  .admin-cale-aici {
-    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 700;
-    color: var(--pa-text);
-  }
 
   /* ---- Registrul de ecrane, pe ecranul de pornire ----
      A fost o bara cu doua niveluri. Nivelul al doilea cumpara spatiu cat timp
      bara statea deasupra fiecarui ecran; de cand registrul are ecranul lui,
      ascunderea a sapte ecrane dupa un grup inchis cumpara doar un clic in
      plus si intrebarea "in care dintre ele sta?". */
-  .admin-registru { display: grid; gap: 28px; }
-  .admin-registru-grup { display: grid; gap: 12px; }
-  .admin-registru-titlu {
-    display: flex; align-items: baseline; gap: 12px; margin: 0;
-    font-family: var(--pa-font); font-weight: 700; font-size: 15px; color: var(--pa-text);
-  }
-  .admin-registru-intrebare {
-    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 500;
-    letter-spacing: 0; text-transform: none; color: var(--pa-muted-2);
-  }
-  .admin-registru-lista {
-    list-style: none; margin: 0; padding: 0;
-    display: grid; gap: 10px;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  }
   /* Tinta e tot cardul, nu numele din el: un buton de marimea unui rand de
      text e greu de nimerit pe telefon si imposibil de nimerit grabit. */
-  .admin-registru-ecran {
-    display: grid; gap: 4px; width: 100%; height: 100%; text-align: left;
-    cursor: pointer; padding: 14px 16px;
-    background: var(--pa-surface); border: 1px solid var(--pa-line);
-    transition: border-color 0.2s ease, background 0.2s ease;
-  }
-  .admin-registru-ecran:hover { border-color: var(--pa-accent-text); }
   /* Apasarea trebuie sa se simta. Fara ea, cardul raspunde la trecerea
      cursorului dar nu si la clic — exact cind ai nevoie de confirmare. */
-  .admin-registru-ecran:active { transform: translateY(1px); }
-  .admin-registru-ecran:focus-visible {
-    outline: 2px solid var(--pa-accent-text); outline-offset: 2px;
-  }
-  .admin-registru-nume {
-    font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700;
-    color: var(--pa-text);
-  }
   /* Descrierea e raspunsul la "ce e aici?". Statea in `title`, deci se citea
      numai la hover, numai cu mouse, si niciodata de un cititor de ecran. */
-  .admin-registru-descriere {
-    font-size: 12px; line-height: 1.45; color: var(--pa-muted-2);
-    text-wrap: pretty;
-  }
 
   /* Badge de alerta (ex. emailuri nelivrate). */
   .admin-tab-alert {
@@ -1673,8 +1698,6 @@
 
     /* Registrul trece pe o coloana: doua carduri de 260px nu incap pe 390px,
        iar unul rupt pe jumatate se citeste mai greu decat unul lat. */
-    .admin-registru-lista { grid-template-columns: 1fr; }
-    .admin-registru { gap: 20px; }
 
     /* Lista de editii ocupa toata latimea; 260px fixi ar iesi din ecran. */
     .admin-editions { padding: 12px 14px; gap: 10px; }
@@ -1690,8 +1713,6 @@
 
     /* Antetul: chip-ul de faza ramane, countdown-ul la secunda dispare - pe
        telefon nu incap amandoua, iar faza e cea care conteaza. */
-    .admin-topbar { padding: 10px 14px; }
-    .admin-topbar-meta { gap: 10px; }
     .admin-cd { display: none; }
   }
 

@@ -57,6 +57,14 @@ const randeaza = (ecran = 'participanti') => {
   return render(<AdminDashboard token="token-test" onLogout={() => {}} />);
 };
 
+/** Șina din stânga: toate zonele și filele, pe desktop (U7). */
+const sina = () => screen.getByRole('navigation', { name: 'Zone și ecrane' });
+/** Un clic în șină, după eticheta zonei sau a filei (contorul nu contează). */
+const mergiLa = async (eticheta: string) => {
+  await screen.findByRole('navigation', { name: 'Zone și ecrane' });
+  fireEvent.click(within(sina()).getByRole('button', { name: new RegExp(`^${eticheta}`) }));
+};
+
 
 describe('AdminDashboard', () => {
   it('randează un rând pentru fiecare participant al ediției', async () => {
@@ -79,15 +87,9 @@ describe('AdminDashboard', () => {
   it('numără emailurile nelivrate prin logica din deliveryLog, nu printr-o copie', async () => {
     // Un eșec pe „Reminder" trebuie să rămână numărat chiar dacă aceeași adresă
     // are o trimitere reușită pe alt subiect. Cheia e adresă+subiect.
-    randeaza('desfasurare');
+    randeaza('acum');
 
-    await screen.findByLabelText('Desfășurarea ediției');
-    const alerta = await waitFor(() => {
-      const el = document.querySelector('.admin-tab-alert');
-      expect(el).not.toBeNull();
-      return el;
-    });
-    expect(alerta?.textContent).toBe('1');
+    expect(await screen.findByRole('button', { name: /^1 email n-a ajuns la destinatar/ })).toBeDefined();
   });
 
   it('insigna NU raportează „complet" cât timp o comunicare datorată lipsește', async () => {
@@ -106,28 +108,31 @@ describe('AdminDashboard', () => {
   });
 });
 
-describe('AdminDashboard — alerta de livrare', () => {
-  it('te găsește pe orice ecran, nu doar acasă', async () => {
-    // Cât timp navigația era permanentă, alerta călătorea cu ea. De când
-    // registrul stă pe ecranul de pornire, o alertă lăsată acolo s-ar vedea
-    // numai dacă te întorci — exact pe dos față de ce cere un email nelivrat.
+describe('AdminDashboard — semnalele de atenție (R6)', () => {
+  it('numărul de pe zona Acum te găsește pe orice ecran', async () => {
+    // Semnalele nu mai stau ca bandă în antet: apar pe Acum și ca număr pe
+    // zona Acum, care se vede din orice zonă.
     randeaza('sabloane');
     await screen.findByText('Șabloane de email');
-    const alerta = await screen.findByRole('button', { name: /emailuri n-au ajuns|email n-a ajuns/ });
-    expect(alerta.textContent).toContain('1');
+    const acum = await waitFor(() => {
+      const buton = within(sina()).getByRole('button', { name: /^Acum/ });
+      expect(buton.querySelector('.admin-numar')).not.toBeNull();
+      return buton;
+    });
+    expect(Number(acum.querySelector('.admin-numar')?.textContent)).toBeGreaterThan(0);
   });
 
-  it('un clic pe ea duce la ecranul unde se rezolvă', async () => {
-    randeaza('sabloane');
-    await screen.findByText('Șabloane de email');
+  it('un clic pe semnalul de livrare duce la ecranul unde se rezolvă', async () => {
+    randeaza('acum');
     fireEvent.click(await screen.findByRole('button', { name: /email n-a ajuns/ }));
     await waitFor(() => expect(window.location.hash).toBe('#livrare'));
   });
 
-  it('fără emailuri nelivrate nu apare deloc', async () => {
+  it('fără emailuri nelivrate, semnalul de livrare nu apare', async () => {
     api.current!.listEmailLog.mockResolvedValue([]);
-    randeaza('sabloane');
-    await screen.findByText('Șabloane de email');
+    randeaza('acum');
+    await screen.findByRole('heading', { level: 1, name: 'Acum' });
+    await waitFor(() => expect(api.current!.listEmailLog).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: /n-a ajuns|n-au ajuns/ })).toBeNull();
   });
 });
@@ -189,23 +194,28 @@ describe('AdminDashboard — undo la ștergere', () => {
 
 describe('AdminDashboard — navigarea între taburi', () => {
   /**
-   * Deschide un ecran așa cum o face organizatorul: din registrul de pe
-   * ecranul de pornire. Toate grupurile sînt deschise, deci ecranul se alege
-   * dintr-un singur clic.
+   * Deschide un ecran așa cum o face organizatorul: din șină. Șabloanele sunt
+   * o subfilă a Mesajelor din Evenimente, deci drumul are doi pași.
    */
-  const deschide = async (eticheta: string) => {
-    randeaza('desfasurare');
-    await screen.findByLabelText('Desfășurarea ediției');
-    fireEvent.click(await screen.findByRole('button', { name: new RegExp(eticheta) }));
+  const deschide = async (eticheta: 'Șabloane' | 'Livrare') => {
+    randeaza('acum');
+    await mergiLa('Mesaje');
+    fireEvent.click(
+      await screen.findByRole('button', { name: eticheta === 'Șabloane' ? 'Șabloane comune' : 'Livrare' })
+    );
   };
 
-  it('aterizarea e pe desfășurare, nu pe tabelul de participanți', async () => {
-    // R4: prima întrebare la deschiderea backoffice-ului e „unde e ediția?",
-    // nu „cine s-a înscris".
+  it('aterizarea e pe Acum, nu pe tabelul de participanți', async () => {
     window.location.hash = '';
     render(<AdminDashboard token="token-test" onLogout={() => {}} />);
-    expect(await screen.findByLabelText('Desfășurarea ediției')).toBeDefined();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Acum' })).toBeDefined();
     expect(screen.queryByLabelText('Caută în lista de participanți')).toBeNull();
+  });
+
+  it('o adresă veche duce în zona nouă (AE5)', async () => {
+    randeaza('livrare');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Evenimente' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Livrare' }).getAttribute('aria-current')).toBe('page');
   });
 
   it('deschiderea „Șabloane" schimbă vederea și lasă participanții în urmă', async () => {
@@ -259,9 +269,8 @@ describe('AdminDashboard — ciorna nesalvată din tabul „Evenimentul"', () =>
         published_at: '2026-08-01T10:00:00Z',
       },
     ]);
-    randeaza('desfasurare');
-    await screen.findByLabelText('Desfășurarea ediției');
-    fireEvent.click(await screen.findByRole('button', { name: /Evenimentul/ }));
+    randeaza('acum');
+    await mergiLa('Detalii și publicare');
     // Pornirea unei ciorne din ediția publicată: din clipa asta există ceva de
     // pierdut.
     fireEvent.click(
@@ -272,9 +281,8 @@ describe('AdminDashboard — ciorna nesalvată din tabul „Evenimentul"', () =>
     await screen.findByRole('button', { name: 'Renunță' });
   };
 
-  /** Calea de întoarcere din cadru — drumul obișnuit de ieșire dintr-un ecran. */
-  const inapoi = () =>
-    fireEvent.click(screen.getByRole('button', { name: /Desfășurarea ediției/ }));
+  /** Zona Acum din șină — drumul obișnuit de ieșire dintr-un ecran. */
+  const inapoi = () => fireEvent.click(within(sina()).getByRole('button', { name: /^Acum/ }));
 
   it('plecarea de pe ecran întreabă, iar „nu" păstrează ecranul și ciorna', async () => {
     const confirma = vi.spyOn(window, 'confirm').mockReturnValue(false);
@@ -293,7 +301,7 @@ describe('AdminDashboard — ciorna nesalvată din tabul „Evenimentul"', () =>
 
     inapoi();
 
-    await waitFor(() => expect(screen.getByLabelText('Desfășurarea ediției')).toBeDefined());
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Acum' })).toBeDefined());
     expect(screen.queryByRole('button', { name: 'Renunță' })).toBeNull();
   });
 });

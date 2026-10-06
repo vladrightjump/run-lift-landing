@@ -1,60 +1,87 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { EcranAdmin, FazaSite } from './stareCurenta';
 import { ETICHETA_FAZA } from './stareCurenta';
-import { GRUPURI, etichetaEcranului } from './adminNavigatie';
-import { ListaDerulanta } from './controale/ListaDerulanta';
+import {
+  ZONE,
+  contorFila,
+  ecranulDinRegistru,
+  filaEcranului,
+  zonaEcranului,
+  type ZonaAdmin,
+  type ZonaRegistru,
+} from './adminNavigatie';
+import { Icon, type NumeIcon } from './controale/Icon';
+import { useEsteTelefon } from './controale/useEsteTelefon';
 
 type Props = {
   ecran: EcranAdmin;
   onEcran: (ecran: EcranAdmin) => void;
   faza: FazaSite;
-  /** Numărătoarea spre anunț, cât timp n-a trecut. */
+  /** Numărătoarea spre anunț, cât timp n-a trecut. Se vede în Evenimente. */
   countdown: string | null;
-  /** Emailuri nelivrate — alerta care trebuie să te găsească pe orice ecran. */
-  nelivrate: number;
+  /** Câte semnale cer atenție — numărul de pe zona Acum (R6). */
+  atentie: number;
+  contorEcran: Record<EcranAdmin, number | null>;
+  /** Selectorul de ediție. Cadrul îl pune sub titlu, deasupra filelor (R4). */
+  selectorEditie?: ReactNode;
   onLogout: () => void;
   children: ReactNode;
 };
 
-/** Ecranul pe care se aterizează și la care duce calea de întoarcere. */
-const ACASA: EcranAdmin = 'desfasurare';
+const ICON_ZONA: Record<ZonaAdmin, NumeIcon> = {
+  acum: 'acum',
+  antrenamente: 'antrenamente',
+  evenimente: 'evenimente',
+  site: 'site',
+};
 
 /**
- * Cadrul backoffice-ului: antetul, calea de întoarcere și exact un ecran.
+ * Cadrul adminului (U7): antet pe un rând, zonele și filele lor.
  *
- * Înlocuiește stiva permanentă. Înainte, deasupra oricărei treburi stăteau
- * cinci blocuri — selectorul de ediție, bannerul de arhivă, linia de timp cu
- * butoanele ei, blocul săptămânal și bara de navigație pe două rânduri — iar
- * ecranul pe care voiai să ajungi începea sub ele. Două dintre blocuri erau
- * ele însele suprafețe interactive, deci concurau cu ecranul de dedesubt.
+ * Desktop: o șină stângă arată deodată toate zonele și filele — tot adminul
+ * dintr-o privire, fără lista derulantă „Ecran" de dinainte (R3).
+ * Telefon: zonele stau într-o bară de jos, unde ajunge degetul mare, iar
+ * filele zonei într-un rând derulabil sub titlu.
  *
- * Ce rămâne permanent: antetul și, când nu ești acasă, calea de întoarcere.
- * Nimic altceva. Un al doilea bloc de funcționalitate deasupra ecranului ar
- * readuce exact problema.
- *
- * Comutatorul de ecrane e o listă derulantă, nu o bară de butoane. Zece ecrane
- * în butoane se rup pe două rânduri și mănâncă din nou capul paginii; o listă
- * are aceeași înălțime oricâte ecrane s-ar aduna. Grupurile rămân vizibile în
- * listă, ca alegerea să nu ceară să știi dinainte unde stă ce cauți.
+ * Semnalele de atenție nu mai stau ca bandă în antet; apar pe Acum și ca
+ * număr pe zona Acum (R6). Antetul rămâne un singur rând și pe telefon.
  */
 export const AdminCadru = ({
   ecran,
   onEcran,
   faza,
   countdown,
-  nelivrate,
+  atentie,
+  contorEcran,
+  selectorEditie,
   onLogout,
   children,
-}: Props) => (
-    <>
-      {/* Prima oprire de tabulare pe orice ecran. Fără ea, tastatura trece de
-          fiecare dată prin fază, numărătoare, alertă, comutator și ieșirea din
-          cont înainte să ajungă la treaba pentru care ai deschis ecranul.
+}: Props) => {
+  const telefon = useEsteTelefon();
+  const zonaActiva = zonaEcranului(ecran);
+  const zona = ZONE.find((z) => z.cheie === zonaActiva) ?? ZONE[0];
+  const fila = filaEcranului(ecran);
 
-          Buton, nu ancoră cu `href="#ecran"`: fragmentul e ocupat — el ține
-          ecranul curent. O ancoră ar fi scris „#ecran" în adresă, pe care
-          `useEcranCurent` l-ar fi citit ca ecran necunoscut și te-ar fi trimis
-          acasă. Adică pe dos față de ce promite butonul. */}
+  /**
+   * Ultima filă vizitată în fiecare zonă, cât ține sesiunea (R38). Cine se
+   * întoarce în Evenimente după un drum prin Antrenamente vrea înapoi la
+   * Participanți, nu la Rezumat.
+   */
+  const ultima = useRef<Partial<Record<ZonaAdmin, EcranAdmin>>>({});
+  useEffect(() => {
+    ultima.current[zonaActiva] = ecran;
+  }, [ecran, zonaActiva]);
+
+  const mergiLaZona = (z: ZonaRegistru) =>
+    onEcran(ultima.current[z.cheie] ?? z.file[0].ecrane[0].cheie);
+
+  const numar = (z: ZonaRegistru) => (z.cheie === 'acum' && atentie > 0 ? atentie : null);
+
+  return (
+    <>
+      {/* Prima oprire de tabulare pe orice ecran. Fără ea, tastatura trece
+          prin antet și prin toată șina înainte să ajungă la treaba pentru care
+          ai deschis ecranul. Buton, nu ancoră: fragmentul ține ecranul curent. */}
       <button
         type="button"
         className="admin-sari"
@@ -63,91 +90,150 @@ export const AdminCadru = ({
         Sari la ecran
       </button>
 
-      <header className="admin-topbar">
-        <div className="brand">
+      <div className={`admin-cadru${telefon ? ' admin-cadru--telefon' : ''}`}>
+        <header className="admin-antet">
           <span className="admin-logo">
             Run <span className="accent">+</span> Lift
           </span>
-          <span className="admin-badge">Backoffice</span>
-        </div>
-
-        <div className="admin-topbar-meta">
-          {/* Ce vede un vizitator ACUM. Întrebarea nu se pune o dată la
-              deschidere: se pune de fiecare dată când te pregătești să schimbi
-              ceva, deci stă în antet, nu pe un ecran anume. */}
-          <a
-            className={`admin-faza faza-${faza}`}
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Deschide site-ul public într-un tab nou"
-          >
-            <span className="admin-faza-punct" aria-hidden="true" />
-            <span className="admin-faza-eticheta">Pe site</span>
-            <span className="admin-faza-valoare">{ETICHETA_FAZA[faza]}</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-
-          {/* Numărătoarea spre anunț dispare după ce trece: un „Anunțul e live"
-              lipit permanent în antet e zgomot, nu informație. */}
-          {countdown && (
-            <span className="admin-cd">
-              <span className="countdown-dot" />
-              {countdown}
-            </span>
-          )}
-
-          {/* Cât timp navigația era permanentă, alerta de livrare călătorea cu
-              ea. De când registrul stă pe ecranul de pornire, o alertă lăsată
-              acolo s-ar vedea numai dacă te întorci acasă — exact pe dos față
-              de ce cere un email care n-a ajuns. */}
-          {nelivrate > 0 && (
-            <button
-              type="button"
-              className="admin-alerta-livrare"
-              onClick={() => onEcran('livrare')}
-            >
-              <span className="admin-tab-alert">{nelivrate}</span>
-              {nelivrate === 1 ? 'email n-a ajuns' : 'emailuri n-au ajuns'}
+          <div className="admin-antet-dreapta">
+            {/* Ce vede un vizitator ACUM. Pe telefon nu încape lângă cont fără
+                să rupă antetul pe două rânduri. */}
+            {!telefon && (
+              <a
+                className={`admin-faza faza-${faza}`}
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Deschide site-ul public într-un tab nou"
+              >
+                <span className="admin-faza-punct" aria-hidden="true" />
+                <span className="admin-faza-eticheta">Pe site</span>
+                <span className="admin-faza-valoare">{ETICHETA_FAZA[faza]}</span>
+              </a>
+            )}
+            <button type="button" className="admin-logout" onClick={onLogout}>
+              Ieși din cont
             </button>
-          )}
-
-          <div className="admin-comutator">
-            <ListaDerulanta
-              eticheta="Ecran"
-              valoare={ecran}
-              onSchimba={onEcran}
-              optiuni={GRUPURI.map((g) => ({
-                eticheta: `${g.eticheta} — ${g.intrebare}`,
-                optiuni: g.ecrane.map((e) => ({ valoare: e.cheie, eticheta: e.eticheta })),
-              }))}
-            />
           </div>
+        </header>
 
-          <button type="button" className="admin-logout" onClick={onLogout}>
-            Ieși din cont
-          </button>
-        </div>
-      </header>
-
-      <main className="admin-main" id="ecran" tabIndex={-1}>
-        {/* Calea de întoarcere apare doar când ai unde să te întorci. Pe ecranul
-            de pornire ar fi un buton care nu duce nicăieri. */}
-        {ecran !== ACASA && (
-          <nav className="admin-cale" aria-label="Calea de întoarcere">
-            <button type="button" className="admin-cale-inapoi" onClick={() => onEcran(ACASA)}>
-              <span aria-hidden="true">←</span> {etichetaEcranului(ACASA)}
-            </button>
-            <span className="admin-cale-separator" aria-hidden="true">
-              /
-            </span>
-            <span className="admin-cale-aici" aria-current="page">
-              {etichetaEcranului(ecran)}
-            </span>
+        {!telefon && (
+          <nav className="admin-sina" aria-label="Zone și ecrane">
+            {ZONE.map((z) => {
+              const activa = z.cheie === zonaActiva;
+              const faraFile = z.file.length === 1 && z.file[0].ecrane.length === 1;
+              return (
+                <div key={z.cheie} className="admin-sina-zona">
+                  <button
+                    type="button"
+                    className="admin-sina-zona-buton"
+                    aria-current={activa && faraFile ? 'page' : undefined}
+                    onClick={() => mergiLaZona(z)}
+                  >
+                    <Icon nume={ICON_ZONA[z.cheie]} marime={18} />
+                    {z.eticheta}
+                    {numar(z) !== null && <span className="admin-numar">{numar(z)}</span>}
+                  </button>
+                  {!faraFile && (
+                    <ul className="admin-sina-file">
+                      {z.file.map((f) => {
+                        const n = contorFila(f, contorEcran);
+                        return (
+                          <li key={f.cheie}>
+                            <button
+                              type="button"
+                              className="admin-sina-fila"
+                              aria-current={f === fila ? 'page' : undefined}
+                              onClick={() => onEcran(f.ecrane[0].cheie)}
+                            >
+                              {f.eticheta}
+                              {n !== null && <span className="admin-sina-contor">{n}</span>}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+            <p className="admin-sina-nota">
+              Ediția aleasă contează doar în Evenimente. Antrenamentele și site-ul nu depind de ea.
+            </p>
           </nav>
         )}
 
-        {children}
-      </main>
+        <main className="admin-main" id="ecran" tabIndex={-1}>
+          <header className="admin-zona-cap">
+            <h1 className="admin-zona-titlu">{zona.eticheta}</h1>
+            {zonaActiva !== 'acum' && (
+              <p className="admin-zona-sub">{ecranulDinRegistru(ecran)?.descriere}</p>
+            )}
+            {zonaActiva === 'evenimente' && countdown && (
+              <p className="admin-cd">
+                <span className="countdown-dot" />
+                {countdown}
+              </p>
+            )}
+          </header>
+
+          {selectorEditie}
+
+          {telefon && zona.file.length > 1 && (
+            <nav className="admin-file" aria-label={`Ecrane din ${zona.eticheta}`}>
+              {zona.file.map((f) => (
+                <button
+                  key={f.cheie}
+                  type="button"
+                  className="admin-fila"
+                  aria-current={f === fila ? 'page' : undefined}
+                  onClick={() => onEcran(f.ecrane[0].cheie)}
+                >
+                  {f.eticheta}
+                </button>
+              ))}
+            </nav>
+          )}
+
+          {fila.ecrane.length > 1 && (
+            <nav className="admin-subfile" aria-label={fila.eticheta}>
+              {fila.ecrane.map((e) => (
+                <button
+                  key={e.cheie}
+                  type="button"
+                  className="admin-subfila"
+                  aria-current={e.cheie === ecran ? 'page' : undefined}
+                  onClick={() => onEcran(e.cheie)}
+                >
+                  {e.eticheta}
+                </button>
+              ))}
+            </nav>
+          )}
+
+          {children}
+        </main>
+
+        {telefon && (
+          <nav className="admin-bara-jos" aria-label="Zone">
+            {ZONE.map((z) => (
+              <button
+                key={z.cheie}
+                type="button"
+                className="admin-bara-jos-zona"
+                aria-current={z.cheie === zonaActiva ? 'page' : undefined}
+                onClick={() => mergiLaZona(z)}
+              >
+                <span className="admin-bara-jos-icon">
+                  <Icon nume={ICON_ZONA[z.cheie]} marime={22} />
+                </span>
+                {z.eticheta}
+                {numar(z) !== null && <span className="admin-numar admin-numar--bara">{numar(z)}</span>}
+              </button>
+            ))}
+          </nav>
+        )}
+      </div>
     </>
   );
+};

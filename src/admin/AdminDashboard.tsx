@@ -58,7 +58,9 @@ import { AdminAsteptare } from './AdminAsteptare';
 import { AdminCifre } from './AdminCifre';
 import { AdminRandAdaugare } from './AdminRandAdaugare';
 import { DialogPrezenta } from './DialogPrezenta';
-import { fazaSite, type EcranAdmin } from './stareCurenta';
+import { fazaSite, semnaleDeAtentie, type EcranAdmin } from './stareCurenta';
+import { ECRAN_IMPLICIT, estePeEditie } from './adminNavigatie';
+import { LiniaDeTimp } from './LiniaDeTimp';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
 import { ziSiLuna } from '../lib/formatare';
@@ -72,21 +74,6 @@ type Props = {
   onLogout: () => void;
 };
 
-/**
- * Ecranele care filtrează pe ediție — singurele care arată selectorul.
- *
- * Banda de clipuri, programul săptămânal și Coming Soon nu aparțin niciunei
- * ediții: pe ele selectorul n-ar filtra nimic, iar un control care nu face
- * nimic pe ecranul unde stă e exact blocul permanent pentru care s-a desfăcut
- * pagina.
- */
-const ECRANE_PE_EDITIE: ReadonlySet<EcranAdmin> = new Set<EcranAdmin>([
-  'participanti',
-  'lansare',
-  'email',
-  'livrare',
-  'eveniment',
-]);
 
 
 export const AdminDashboard = ({ token, onLogout }: Props) => {
@@ -112,7 +99,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // acțiunile liniei de timp, semnalele de atenție), iar o gardă pusă pe unul
   // singur ar fi o gardă cu trei sferturi de gaură.
   const { ecran: tab, schimba: schimbaTab, inregistreazaGardaIesire } =
-    useEcranCurent('desfasurare');
+    useEcranCurent(ECRAN_IMPLICIT);
   // Semnalele pentru panoul „Acum". Ciorna și amprenta de build trăiesc în
   // tabul „Eveniment"; aici le citim doar ca să putem spune, din prima pagină,
   // că a rămas ceva nepublicat.
@@ -316,6 +303,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
    * citește organizatorul în clipa în care intră.
    */
   const contorEcran: Record<EcranAdmin, number | null> = {
+    acum: null,
     desfasurare: null,
     participanti: rows === null ? null : all.length,
     email: null,
@@ -628,6 +616,15 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     URL.revokeObjectURL(a.href);
   };
 
+  /** Semnalele pentru Acum și pentru numărul de pe zona Acum (R6, R9). */
+  const semnale = {
+    nelivrate,
+    asteptare: waitAll.length,
+    ciornaNepublicata,
+    metaInUrma,
+    arhiva,
+  };
+
   return (
     <FurnizorSesiuneAdmin token={token} onAuthError={handleAuthError} showToast={showToast}>
       <AdminCadru
@@ -637,25 +634,25 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         countdown={
           cd.done ? null : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`
         }
-        nelivrate={nelivrate}
+        atentie={semnaleDeAtentie(semnale, fazaAcum).length}
+        contorEcran={contorEcran}
         onLogout={onLogout}
+        selectorEditie={
+          /* Selectorul de ediție apare DOAR pe ecranele care filtrează pe
+             ediție (R4). Pe antrenamente sau pe site n-ar filtra nimic, iar un
+             control care nu face nimic pe ecranul pe care stă minte. */
+          estePeEditie(tab) ? (
+            <AdminEditionTabs
+              editions={editions}
+              selected={editie}
+              onSelect={setEditie}
+              onCreate={handleCreateEdition}
+              creating={creatingEdition}
+            />
+          ) : undefined
+        }
       >
-        {/* Selectorul de ediție apare DOAR pe ecranele care filtrează pe
-            ediție. Pe „Clipuri" sau „Antrenamente" nu filtra nimic: banda și
-            programul săptămânal nu aparțin niciunei ediții, iar un control care
-            nu face nimic pe ecranul pe care stă e exact genul de bloc permanent
-            pentru care s-a desfăcut pagina. */}
-        {ECRANE_PE_EDITIE.has(tab) && (
-          <AdminEditionTabs
-            editions={editions}
-            selected={editie}
-            onSelect={setEditie}
-            onCreate={handleCreateEdition}
-            creating={creatingEdition}
-          />
-        )}
-
-        {arhiva && ECRANE_PE_EDITIE.has(tab) && (
+        {arhiva && estePeEditie(tab) && (
           <div className="admin-banner" role="status">
             <strong>Ediția {editie} e încheiată.</strong> O vezi ca arhivă: datele rămân
             întregi, dar nu se mai poate adăuga, edita sau șterge nimic. Exportul CSV
@@ -663,20 +660,21 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </div>
         )}
 
-        {tab === 'desfasurare' && (
+        {tab === 'acum' && (
           <EcranPornire
-            semnale={{
-              nelivrate,
-              asteptare: waitAll.length,
-              ciornaNepublicata,
-              metaInUrma,
-              arhiva,
-            }}
+            semnale={semnale}
             onEcran={schimbaTab}
             onEditieNoua={porneșteEditiaUrmatoare}
             arhiva={arhiva}
-            contorEcran={contorEcran}
-            nelivrate={nelivrate}
+          />
+        )}
+
+        {tab === 'desfasurare' && (
+          <LiniaDeTimp
+            semnale={semnale}
+            onTab={schimbaTab}
+            onEditieNoua={porneșteEditiaUrmatoare}
+            arhiva={arhiva}
           />
         )}
 

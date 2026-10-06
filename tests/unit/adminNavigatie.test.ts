@@ -1,23 +1,27 @@
 import { describe, it, expect } from 'vitest';
 import {
-  GRUPURI,
+  ZONE,
   TOATE_ECRANELE,
-  grupulEcranului,
+  zonaEcranului,
+  filaEcranului,
   etichetaEcranului,
-  contorGrup,
+  esteEcran,
+  estePeEditie,
+  contorZona,
+  ECRAN_IMPLICIT,
 } from '../../src/admin/adminNavigatie';
 import type { EcranAdmin } from '../../src/admin/stareCurenta';
 
 /**
- * Registrul de ecrane.
+ * Registrul de zone și file (U6, KTD3 din planul redesignului adminului).
  *
- * Ce se păzește aici: registrul e singura listă de ecrane. Dacă un ecran
- * dispare din grupuri, devine inaccesibil — ecran mort, fără niciun mesaj.
- * Antrenamentele au fost exact asta până acum: ajungeai la ele dintr-o manetă
- * a cromului, nu din registru.
+ * Ce se păzește: registrul e singura listă de ecrane. Un ecran care dispare
+ * din zone devine inaccesibil — ecran mort, fără niciun mesaj. Și: adresele
+ * vechi (`#livrare`, `#grup-bot`) rămân valabile, fiindcă sunt cheile filelor.
  */
 
-const TOATE_CHEILE: EcranAdmin[] = [
+/** Cele 14 ecrane de dinainte de redesign. Toate trebuie să aibă un loc (R1). */
+const CHEI_VECHI: EcranAdmin[] = [
   'desfasurare',
   'participanti',
   'lansare',
@@ -34,96 +38,89 @@ const TOATE_CHEILE: EcranAdmin[] = [
   'grup-bot',
 ];
 
-describe('niciun ecran nu rămâne în afara registrului', () => {
-  it('fiecare ecran existent stă într-un grup', () => {
-    const inGrupuri = TOATE_ECRANELE.map((e) => e.cheie).sort();
-    expect(inGrupuri).toEqual([...TOATE_CHEILE].sort());
+describe('zonele', () => {
+  it('sunt patru, în ordinea Acum · Antrenamente · Evenimente · Site', () => {
+    expect(ZONE.map((z) => z.cheie)).toEqual(['acum', 'antrenamente', 'evenimente', 'site']);
   });
 
-  it('niciun ecran nu apare în două grupuri', () => {
+  it('fiecare dintre cele 14 ecrane vechi e o filă validă (R1)', () => {
+    for (const cheie of CHEI_VECHI) expect(esteEcran(cheie)).toBe(true);
+  });
+
+  it('niciun ecran nu apare de două ori', () => {
     const chei = TOATE_ECRANELE.map((e) => e.cheie);
     expect(new Set(chei).size).toBe(chei.length);
   });
 
-  it('fiecare grup are cel puțin o frunză', () => {
-    // Un grup gol ar fi un buton care duce la nimic: `onEcran(g.ecrane[0])` ar
-    // arunca, iar navigația ar cădea la primul click.
-    for (const g of GRUPURI) expect(g.ecrane.length).toBeGreaterThan(0);
-  });
-
-  it('fiecare ecran își găsește grupul', () => {
-    for (const cheie of TOATE_CHEILE) {
-      const grup = grupulEcranului(cheie);
-      expect(GRUPURI.some((g) => g.cheie === grup)).toBe(true);
+  it('fiecare zonă are cel puțin o filă, iar fiecare filă cel puțin un ecran', () => {
+    for (const z of ZONE) {
+      expect(z.file.length).toBeGreaterThan(0);
+      for (const f of z.file) expect(f.ecrane.length).toBeGreaterThan(0);
     }
   });
 
-  it('un ecran necunoscut cade pe primul grup, nu pe nimic', () => {
-    // Configurare greșită, nu stare de rulare: ecranul nu trebuie să rămână gol.
-    expect(grupulEcranului('nu-exista' as EcranAdmin)).toBe(GRUPURI[0].cheie);
-  });
-
-  it('fiecare ecran are etichetă', () => {
-    for (const cheie of TOATE_CHEILE) expect(etichetaEcranului(cheie).length).toBeGreaterThan(0);
-  });
-
-  it('fiecare ecran are o descriere vizibilă, nu doar un nume', () => {
-    // Descrierile existau și înainte, dar ajungeau doar în `title`. Ecranul
-    // care le arată are nevoie ca fiecare să fie scrisă.
-    for (const e of TOATE_ECRANELE) expect(e.descriere.length).toBeGreaterThan(0);
-  });
-
-  it('antrenamentele sînt un ecran ca oricare altul', () => {
-    // R5: până acum se ajungea la ele dintr-o manetă a cromului paginii.
-    expect(TOATE_ECRANELE.some((e) => e.cheie === 'antrenament')).toBe(true);
+  it('fiecare ecran are etichetă și descriere vizibilă', () => {
+    for (const e of TOATE_ECRANELE) {
+      expect(etichetaEcranului(e.cheie).length).toBeGreaterThan(0);
+      expect(e.descriere.length).toBeGreaterThan(0);
+    }
   });
 });
 
-describe('contorul grupului spune ce e înăuntru', () => {
-  const contoare = (over: Partial<Record<EcranAdmin, number | null>>) =>
-    ({
-      desfasurare: null,
-      participanti: null,
-      lansare: null,
-      email: null,
-      livrare: null,
-      sabloane: null,
-      eveniment: null,
-      clipuri: null,
-      antrenament: null,
-      'coming-soon': null,
-      ...over,
-    }) as Record<EcranAdmin, number | null>;
-
-  const oameni = GRUPURI.find((g) => g.cheie === 'oameni')!;
-
-  it('însumează frunzele — cu grupul închis, numărul trebuie să spună tot', () => {
-    expect(contorGrup(oameni, contoare({ participanti: 20, lansare: 41 }))).toBe(61);
+describe('adresele (R5, KTD3)', () => {
+  it('Covers AE5: `livrare` duce în Evenimente → Mesaje → Livrare', () => {
+    expect(zonaEcranului('livrare')).toBe('evenimente');
+    const fila = filaEcranului('livrare');
+    expect(fila.eticheta).toBe('Mesaje');
+    expect(fila.ecrane.find((e) => e.cheie === 'livrare')?.eticheta).toBe('Livrare');
   });
 
-  it('date nesosite (null) nu contează ca zero', () => {
-    // Un „0" afișat în timpul încărcării e o minciună scurtă, dar tocmai pe aia
-    // o citește organizatorul când intră.
-    expect(contorGrup(oameni, contoare({}))).toBeNull();
-    expect(contorGrup(oameni, contoare({ participanti: 20 }))).toBe(20);
+  it('cheile vechi își găsesc zona din harta ecranelor', () => {
+    expect(zonaEcranului('grup-bot')).toBe('antrenamente');
+    expect(zonaEcranului('grup-prezente')).toBe('antrenamente');
+    expect(zonaEcranului('desfasurare')).toBe('evenimente');
+    expect(zonaEcranului('participanti')).toBe('evenimente');
+    expect(zonaEcranului('antrenament')).toBe('site');
+    expect(zonaEcranului('coming-soon')).toBe('site');
+  });
+
+  it('aterizarea implicită e Acum', () => {
+    expect(ECRAN_IMPLICIT).toBe('acum');
+    expect(zonaEcranului('acum')).toBe('acum');
+  });
+
+  it('o cheie necunoscută nu e ecran și cade pe Acum', () => {
+    expect(esteEcran('nu-exista')).toBe(false);
+    expect(zonaEcranului('nu-exista' as EcranAdmin)).toBe('acum');
   });
 });
 
-describe('grupul din parc (R3)', () => {
-  it('stă în al cincilea grup, cu cele patru ecrane', () => {
-    expect(GRUPURI).toHaveLength(5);
-    expect(GRUPURI[4].ecrane.map((e) => e.cheie)).toEqual([
-      'grup-prezente',
-      'grup-membri',
-      'grup-analiza',
-      'grup-bot',
-    ]);
+describe('ediția aleasă (R4)', () => {
+  it('contează doar pe filele din Evenimente, nu și pe șabloanele comune', () => {
+    const peEditie = TOATE_ECRANELE.filter((e) => estePeEditie(e.cheie)).map((e) => e.cheie).sort();
+    expect(peEditie).toEqual(['email', 'eveniment', 'lansare', 'livrare', 'participanti'].sort());
+    for (const cheie of peEditie) expect(zonaEcranului(cheie)).toBe('evenimente');
+    expect(estePeEditie('sabloane')).toBe(false);
+  });
+});
+
+describe('contorul unei zone', () => {
+  const contor = (valori: Partial<Record<EcranAdmin, number | null>>) =>
+    Object.fromEntries(TOATE_ECRANELE.map((e) => [e.cheie, valori[e.cheie] ?? null])) as Record<
+      EcranAdmin,
+      number | null
+    >;
+  const evenimente = ZONE.find((z) => z.cheie === 'evenimente')!;
+
+  it('e suma filelor', () => {
+    expect(contorZona(evenimente, contor({ participanti: 22, livrare: 1 }))).toBe(23);
   });
 
-  it('niciun nume nu se repetă cu alt ecran sau grup, „Antrenamente" inclus', () => {
-    const etichete = [...GRUPURI.map((g) => g.eticheta), ...TOATE_ECRANELE.map((e) => e.eticheta)];
-    expect(new Set(etichete).size).toBe(etichete.length);
-    const intrebari = GRUPURI.map((g) => g.intrebare);
-    expect(new Set(intrebari).size).toBe(intrebari.length);
+  it('o filă încă neîncărcată (null) nu se numără ca zero', () => {
+    expect(contorZona(evenimente, contor({ participanti: 22 }))).toBe(22);
+  });
+
+  it('dacă nicio filă nu are încă un număr, contorul e null', () => {
+    expect(contorZona(evenimente, contor({}))).toBeNull();
   });
 });

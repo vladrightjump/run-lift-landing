@@ -2,15 +2,12 @@ import type { EcranAdmin, SemnaleAdmin } from './stareCurenta';
 import { LiniaDeTimp } from './LiniaDeTimp';
 import { BlocSaptamanal } from './BlocSaptamanal';
 import { CardGrup } from './sala/CardGrup';
-import { AdminNav } from './AdminNav';
 
 type Props = {
   semnale: SemnaleAdmin;
   onEcran: (ecran: EcranAdmin) => void;
   onEditieNoua: () => void;
   arhiva: boolean;
-  contorEcran: Record<EcranAdmin, number | null>;
-  nelivrate: number;
 };
 
 /**
@@ -32,8 +29,6 @@ export const EcranPornire = ({
   onEcran,
   onEditieNoua,
   arhiva,
-  contorEcran,
-  nelivrate,
 }: Props) => (
   <>
     <LiniaDeTimp
@@ -53,6 +48,5 @@ export const EcranPornire = ({
         linie. Spune câți vin la antrenamentul următor fără un clic. */}
     <CardGrup onDeschide={() => onEcran('grup-prezente')} />
 
-    <AdminNav onEcran={onEcran} contorEcran={contorEcran} nelivrate={nelivrate} />
   </>
 );
