@@ -27,3 +27,6 @@ coverage/
 
 # Starea locală a CLI-ului Supabase (versiunea descărcată la ultima rulare).
 supabase/.temp/
+
+# Prototipuri locale (ce-prototype) — nu se comit
+.context/compound-engineering/
