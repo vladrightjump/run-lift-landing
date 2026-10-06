@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { AdminLogin } from './AdminLogin';
 import { AdminDashboard } from './AdminDashboard';
 import {
@@ -15,10 +15,33 @@ type Session =
   | { status: 'authenticated'; token: string };
 
 /**
+ * Rădăcina temei „Panoul" (KTD2 din planul redesignului adminului).
+ *
+ * Jetoanele adminului stau pe `.admin-app`, iar clasa de pe `<html>` vopsește
+ * și fundalul paginii — fără ea, derularea peste margine ar arăta fundalul
+ * închis al paginii publice sub un admin luminos. Pagina publică nu poartă
+ * niciuna dintre clase, deci rămâne neschimbată.
+ */
+export const RadacinaAdmin = ({ children }: { children: ReactNode }) => {
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add('admin-pagina');
+    return () => html.classList.remove('admin-pagina');
+  }, []);
+  return <div className="admin-app">{children}</div>;
+};
+
+/**
  * Backoffice-ul (/admin): validează token-ul salvat la încărcare,
  * apoi arată login-ul sau dashboard-ul.
  */
-export const AdminApp = () => {
+export const AdminApp = () => (
+  <RadacinaAdmin>
+    <SesiuneAdmin />
+  </RadacinaAdmin>
+);
+
+const SesiuneAdmin = () => {
   const [session, setSession] = useState<Session>(() => {
     const token = getStoredToken();
     return token ? { status: 'checking' } : { status: 'anonymous' };
