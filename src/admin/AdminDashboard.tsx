@@ -63,17 +63,13 @@ import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFing
 import { parseEventConfig } from '../content/eventConfig';
 import { ziSiLuna } from '../lib/formatare';
 import { FurnizorSesiuneAdmin } from './adminSession';
+import { Toast, useToast } from './controale/Toast';
 import { rezumaAcoperire, motivUndoEsuat } from './dashboardRezumate';
+import { Dialog } from './eventTab/Dialog';
 
 type Props = {
   token: string;
   onLogout: () => void;
-};
-
-type AdminToast = {
-  kind: 'error' | 'success';
-  msg: string;
-  undo?: () => void;
 };
 
 /**
@@ -108,7 +104,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ nume: '', telefon: '', email: '' });
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<AdminToast | null>(null);
+  const { toast, arata: showToast, inchide: inchideToast } = useToast();
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
   const [prezentaRow, setPrezentaRow] = useState<AdminRegistration | null>(null);
   // Ecranul curent, garda de ieșire și fragmentul din adresă trăiesc împreună
@@ -125,7 +121,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // de ediție nouă pe ecran. Se stinge imediat ce tabul a onorat-o.
   const [deschideDialogEditie, setDeschideDialogEditie] = useState(false);
   const [metaInUrma, setMetaInUrma] = useState(false);
-  const toastTimerRef = useRef<number | null>(null);
   // Ediția și capacitatea vin din configul PUBLICAT, nu din bundle: după ce
   // publicarea nu mai cere deploy, un backoffice deschis dintr-un build vechi ar
   // filtra ediția greșită — și nu mai există banner care să explice de ce.
@@ -158,12 +153,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     },
     [onLogout]
   );
-
-  const showToast = useCallback((next: AdminToast) => {
-    if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-    setToast(next);
-    toastTimerRef.current = window.setTimeout(() => setToast(null), next.undo ? 6000 : 3200);
-  }, []);
 
   // refresh() e stabil; ref-ul evită să-l recreăm la fiecare schimbare de listă.
   const rowsRef = useRef<AdminRegistration[] | null>(null);
@@ -294,14 +283,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     editiePrecedentaRef.current = editie;
   }, [editie]);
 
-  // Poll-ul stă în `useAdminPolling`; aici rămâne doar cronometrul toast-ului,
-  // care nu ține de ciclul de date.
-  useEffect(
-    () => () => {
-      if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-    },
-    []
-  );
 
   const all = rows ?? [];
   const q = query.trim().toLowerCase();
@@ -931,55 +912,30 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       )}
 
       {confirmRow && (
-        <div
-          className="admin-confirm-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConfirmRow(null);
-          }}
-        >
-          <div className="admin-confirm" role="alertdialog" aria-modal="true">
-            <h3>Ștergi înscrierea?</h3>
-            <p>
-              <strong>{confirmRow.nume}</strong> ({confirmRow.email}) va fi șters din listă.
-              Poți anula imediat după, din notificarea de jos.
-            </p>
-            <div className="admin-confirm-actions">
-              <button
-                type="button"
-                className="admin-confirm-delete"
-                onClick={() => {
-                  handleDelete(confirmRow);
-                  setConfirmRow(null);
-                }}
-              >
-                Da, șterge
-              </button>
-              <button type="button" className="admin-confirm-cancel" onClick={() => setConfirmRow(null)}>
-                Anulează
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className={`admin-toast${toast.kind === 'error' ? ' error' : ''}`} role="status">
-          <span className="dot" />
-          <span>{toast.msg}</span>
-          {toast.undo && (
+        <Dialog titlu="Ștergi înscrierea?" rol="alertdialog" onInchide={() => setConfirmRow(null)}>
+          <p>
+            <strong>{confirmRow.nume}</strong> ({confirmRow.email}) va fi șters din listă.
+            Poți anula imediat după, din notificarea de jos.
+          </p>
+          <div className="admin-confirm-actions">
             <button
               type="button"
+              className="admin-confirm-delete"
               onClick={() => {
-                toast.undo?.();
-                if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-                setToast(null);
+                handleDelete(confirmRow);
+                setConfirmRow(null);
               }}
             >
+              Da, șterge
+            </button>
+            <button type="button" className="admin-confirm-cancel" onClick={() => setConfirmRow(null)}>
               Anulează
             </button>
-          )}
-        </div>
+          </div>
+        </Dialog>
       )}
+
+      <Toast toast={toast} onInchide={inchideToast} />
     </FurnizorSesiuneAdmin>
   );
 };

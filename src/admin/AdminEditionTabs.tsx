@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import type { AdminEdition } from '../lib/adminApi';
+import { Dialog } from './eventTab/Dialog';
 
 type Props = {
   editions: AdminEdition[] | null;
@@ -94,46 +95,38 @@ export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creat
       </div>
 
       {confirmOpen && (
-        <div
-          className="admin-confirm-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConfirmOpen(false);
-          }}
-        >
-          <div className="admin-confirm" role="alertdialog" aria-modal="true">
-            <h3>Deschizi ediția {urmatoarea ?? 'următoare'}?</h3>
-            <p>
-              Ediția {curenta} se închide și rămâne în arhivă — nimic nu se șterge. Înscrierile
-              noi vor intra pe ediția {urmatoarea ?? 'următoare'}, iar ediția nouă pornește goală.
-            </p>
-            <p className="admin-confirm-note">
-              Se șterg și reperele de timp ale ediției încheiate (deadline de înscriere + data
-              startului), ca să nu blocheze înscrierile și să nu declanșeze reminderul vechi.
-              Butonul ăsta mută doar unde intră înscrierile noi — datele ediției (dată, loc,
-              locuri, secțiuni) le pui din <strong>Setup → Evenimentul</strong> și le publici de
-              acolo. Fără editări în cod, fără deploy.
-            </p>
-            <div className="admin-confirm-actions">
-              <button
-                type="button"
-                className="admin-btn-accent"
-                onClick={() => {
-                  setConfirmOpen(false);
-                  onCreate();
-                }}
-              >
-                Da, deschide ediția {urmatoarea ?? ''}
-              </button>
-              <button
-                type="button"
-                className="admin-confirm-cancel"
-                onClick={() => setConfirmOpen(false)}
-              >
-                Anulează
-              </button>
-            </div>
+        <Dialog titlu={`Deschizi ediția ${urmatoarea ?? 'următoare'}?`} rol="alertdialog" clasa="admin-confirm--neutru" onInchide={() => setConfirmOpen(false)}>
+          <p>
+            Ediția {curenta} se închide și rămâne în arhivă — nimic nu se șterge. Înscrierile
+            noi vor intra pe ediția {urmatoarea ?? 'următoare'}, iar ediția nouă pornește goală.
+          </p>
+          <p className="admin-confirm-note">
+            Se șterg și reperele de timp ale ediției încheiate (deadline de înscriere + data
+            startului), ca să nu blocheze înscrierile și să nu declanșeze reminderul vechi.
+            Butonul ăsta mută doar unde intră înscrierile noi — datele ediției (dată, loc,
+            locuri, secțiuni) le pui din <strong>Setup → Evenimentul</strong> și le publici de
+            acolo. Fără editări în cod, fără deploy.
+          </p>
+          <div className="admin-confirm-actions">
+            <button
+              type="button"
+              className="admin-btn-accent"
+              onClick={() => {
+                setConfirmOpen(false);
+                onCreate();
+              }}
+            >
+              Da, deschide ediția {urmatoarea ?? ''}
+            </button>
+            <button
+              type="button"
+              className="admin-confirm-cancel"
+              onClick={() => setConfirmOpen(false)}
+            >
+              Anulează
+            </button>
           </div>
-        </div>
+        </Dialog>
       )}
     </>
   );

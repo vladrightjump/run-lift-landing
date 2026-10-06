@@ -166,3 +166,19 @@ describe('DialogPrezenta — cât timp salvează', () => {
     );
   });
 });
+
+describe('DialogPrezenta — tastatura (R34)', () => {
+  it('primește focusul la deschidere și se închide cu Escape', () => {
+    const { onInchide } = monteaza();
+    const dialog = screen.getByRole('dialog', { name: 'Ana Popescu' });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(onInchide).toHaveBeenCalledTimes(1);
+  });
+
+  it('numărul de concurs nu mai e un câmp numeric nativ, cu săgeți', () => {
+    monteaza();
+    expect(camp('Număr de concurs').type).toBe('text');
+    expect(camp('Număr de concurs').inputMode).toBe('numeric');
+  });
+});

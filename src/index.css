@@ -668,10 +668,7 @@
     from { opacity: 0; transform: translateY(-6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  @keyframes admin-toast-in {
-    from { opacity: 0; transform: translate(-50%, 16px); }
-    to   { opacity: 1; transform: translate(-50%, 0); }
-  }
+  @keyframes admin-toast-in { from { opacity: 0; transform: translateY(16px) scale(0.96); } }
 
   .admin-logo { font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1px; text-transform: uppercase; }
   .admin-logo .accent { color: var(--pa-accent-text); }
@@ -1876,44 +1873,98 @@
   .admin-email-note { font-size: 12px; color: var(--pa-muted-2); }
 
   /* ---- Confirmare ștergere ---- */
-  .admin-confirm-overlay {
-    position: fixed; inset: 0; z-index: 60;
-    /* Derularea din dialog nu se scurge în pagina de dedesubt. */
-    overscroll-behavior: contain;
-    background: var(--pa-scrim); backdrop-filter: blur(3px);
-    display: flex; align-items: center; justify-content: center; padding: 24px;
+  /* ---- Dialogul central (prezentarea „dialog" a suprapunerii, U2) ----
+     Neutru implicit: confirmarea unei ciorne nu cere ezitarea roșului.
+     Roșul stă pe butonul care distruge ceva, nu pe tot dialogul. */
+  .admin-dialog {
+    position: fixed; z-index: 61; left: 50%; top: 50%;
+    width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto;
+    transform: translate(-50%, -50%);
+    background: var(--pa-pop); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+    box-shadow: var(--pa-shadow); padding: 22px; display: grid; gap: 14px;
+    animation: admin-dialog-in var(--pa-dur) var(--pa-ease) both;
   }
-  .admin-confirm {
-    background: var(--pa-surface); border: 1px solid var(--pa-danger);
-    padding: 28px; max-width: 420px; width: 100%;
-    display: grid; gap: 14px; animation: fade-up 0.25s ease-out;
-    box-shadow: 0 20px 48px rgba(40, 44, 20, 0.16);
-  }
-  .admin-confirm h3 {
-    margin: 0; font-family: var(--pa-font); font-weight: 700;
-    font-size: 22px; color: var(--pa-danger);
-  }
+  .admin-dialog .admin-supr-antet { margin: 0; }
+  .admin-dialog .admin-supr-titlu { font-size: 19px; }
   .admin-confirm p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--pa-muted); overflow-wrap: anywhere; }
   .admin-confirm p strong { color: var(--pa-text); }
-  .admin-confirm-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .admin-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .admin-confirm-delete {
-    background: var(--pa-danger-solid); color: var(--pa-accent-ink); border: none; cursor: pointer;
-    font-family: var(--pa-font); font-weight: 600; font-size: 15px; padding: 12px 22px;
-    transition: background 0.2s ease, transform 0.15s ease;
+    min-height: 44px; padding: 0 18px; border: 1px solid var(--pa-danger-solid); cursor: pointer;
+    background: var(--pa-danger-solid); color: #fff;
+    font-family: var(--pa-font); font-weight: 600; font-size: 15px;
   }
-  .admin-confirm-delete:hover { background: var(--pa-danger); transform: translateY(-2px); }
-  .admin-confirm-delete:active { transform: translateY(0) scale(0.96); }
+  .admin-confirm-delete:hover:not(:disabled) { background: var(--pa-danger); border-color: var(--pa-danger); }
   .admin-confirm-cancel {
-    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-muted); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600; padding: 12px 22px;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    min-height: 44px; padding: 0 18px; cursor: pointer;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); color: var(--pa-text);
+    font-family: var(--pa-font); font-size: 15px; font-weight: 600;
   }
-  .admin-confirm-cancel:hover { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
+  .admin-confirm-cancel:hover:not(:disabled) { border-color: var(--pa-line-strong); background: var(--pa-surface-2); }
+  /* Varianta neutră: acțiunea principală e lime, nu roșie — creează, salvează. */
+  .admin-confirm--neutru .admin-confirm-delete {
+    background: var(--pa-accent); border-color: var(--pa-accent); color: var(--pa-accent-ink);
+  }
+  .admin-confirm--neutru .admin-confirm-delete:hover:not(:disabled) { background: var(--pa-accent-hover); border-color: var(--pa-accent-hover); }
+  @keyframes admin-dialog-in { from { opacity: 0; transform: translate(-50%, -46%); } }
 
-  /* Același dialog, dar pentru o acțiune care nu distruge nimic: crearea unei
-     ciorne. Roșul de ștergere ar cere o ezitare pe care nimic n-o justifică. */
-  .admin-confirm--neutru { border-color: var(--pa-line); max-width: 520px; }
-  .admin-confirm--neutru h3 { color: var(--pa-text); }
+  /* ---- Suprapuneri: popover, foaie de jos, panou (U2, KTD5) ---- */
+  .admin-supr-fundal {
+    position: fixed; inset: 0; z-index: 60; background: var(--pa-scrim);
+    overscroll-behavior: contain; animation: admin-fade-in var(--pa-dur) ease both;
+  }
+  .admin-supr-fundal--clar { background: transparent; animation: none; }
+  .admin-confirm-overlay { backdrop-filter: blur(2px); }
+  .admin-supr { outline: none; }
+  .admin-supr-antet { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .admin-supr-titlu { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.25; color: var(--pa-text); }
+  .admin-popover {
+    position: fixed; z-index: 61; top: 0; left: 0;
+    min-width: 260px; max-width: min(400px, calc(100vw - 24px));
+    max-height: min(520px, calc(100dvh - 32px)); overflow: auto; padding: 6px;
+    background: var(--pa-pop); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+    box-shadow: var(--pa-shadow); animation: admin-pop-in var(--pa-dur-fast) ease-out both;
+  }
+  .admin-foaie {
+    position: fixed; z-index: 61; left: 0; right: 0; bottom: 0;
+    max-height: 88dvh; overflow: auto; padding: 6px 16px calc(18px + env(safe-area-inset-bottom));
+    background: var(--pa-pop); border-radius: var(--pa-r-sheet) var(--pa-r-sheet) 0 0;
+    box-shadow: var(--pa-shadow); animation: admin-sheet-in var(--pa-dur-slow) var(--pa-ease) both;
+  }
+  .admin-foaie-maner { width: 40px; height: 4px; border-radius: 2px; background: var(--pa-line-strong); margin: 6px auto 10px; }
+  .admin-panou {
+    position: fixed; z-index: 61; top: 0; right: 0; bottom: 0;
+    width: min(440px, 100vw); overflow: auto; padding: 18px 24px 32px;
+    background: var(--pa-pop); border-left: 1px solid var(--pa-line);
+    box-shadow: var(--pa-shadow); animation: admin-panel-in var(--pa-dur-slow) var(--pa-ease) both;
+  }
+  @keyframes admin-fade-in { from { opacity: 0; } }
+  @keyframes admin-pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+  @keyframes admin-sheet-in { from { transform: translateY(100%); } }
+  @keyframes admin-panel-in { from { transform: translateX(100%); } }
+
+  /* Butonul doar cu iconiță: 44 px de țintă, numele în aria-label. */
+  .admin-buton-icon {
+    width: 44px; height: 44px; flex: none; display: inline-grid; place-items: center;
+    padding: 0; border: 0; background: transparent; color: var(--pa-muted); cursor: pointer;
+  }
+  .admin-buton-icon:hover { background: var(--pa-surface-2); color: var(--pa-text); }
+  .admin-buton-icon[aria-expanded="true"] { background: var(--pa-surface-3); color: var(--pa-text); }
+  .admin-icon { display: block; flex: none; }
+
+  /* ---- Meniul „⋯" ---- */
+  .admin-meniu { min-width: 240px; display: flex; flex-direction: column; }
+  .admin-foaie.admin-meniu { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .admin-meniu-item {
+    display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px;
+    border: 0; background: transparent; text-align: left; cursor: pointer;
+    font-family: var(--pa-font); font-size: 15px; font-weight: 500; color: var(--pa-text);
+  }
+  .admin-meniu-item .admin-icon { color: var(--pa-muted); }
+  .admin-meniu-item:hover:not(:disabled), .admin-meniu-item:focus-visible { background: var(--pa-surface-2); }
+  .admin-meniu-item:disabled { color: var(--pa-muted-2); cursor: not-allowed; }
+  .admin-meniu-item--distructiv, .admin-meniu-item--distructiv .admin-icon { color: var(--pa-danger); }
+  .admin-meniu-sep { border: 0; border-top: 1px solid var(--pa-line); margin: 4px 0; }
 
   /* ---- Ce moștenește ciorna nouă ---- */
   .admin-mostenire { margin: 0; display: grid; gap: 1px; background: var(--pa-line); border: 1px solid var(--pa-line); }
@@ -1941,24 +1992,28 @@
     border: 1px solid var(--pa-accent-text); color: var(--pa-accent-text);
   }
 
-  /* ---- Toast (bottom-center, cu undo) ---- */
+  /* ---- Toast (jos, centrat, cu „Anulează") ----
+     Bară închisă pe un admin luminos: singurul lucru care plutește peste tot și
+     trebuie văzut cu coada ochiului. Acțiunea e lime pe cerneală. */
+  .admin-toast-zona {
+    position: fixed; left: 0; right: 0; bottom: 24px; z-index: 70;
+    display: flex; justify-content: center; padding: 0 12px; pointer-events: none;
+  }
   .admin-toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    z-index: 50; display: flex; align-items: center; gap: 14px;
-    background: var(--pa-surface); border: 1px solid var(--pa-line-strong); padding: 14px 20px;
-    box-shadow: 0 12px 32px rgba(40, 44, 20, 0.16); animation: admin-toast-in 0.3s ease-out;
-    max-width: min(90vw, 480px);
+    pointer-events: auto; display: flex; align-items: center; gap: 12px;
+    min-height: 52px; max-width: min(520px, 100%); padding: 6px 6px 6px 16px;
+    background: var(--pa-ink); color: var(--pa-ink-text); border-radius: var(--pa-r-lg);
+    box-shadow: var(--pa-shadow); animation: admin-toast-in var(--pa-dur-slow) var(--pa-ease-arc) both;
   }
-  .admin-toast .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pa-accent); flex-shrink: 0; }
-  .admin-toast.error { border-color: var(--pa-danger); }
-  .admin-toast.error .dot { background: var(--pa-danger-solid); }
-  .admin-toast span { font-size: 14px; font-weight: 600; color: var(--pa-text); }
-  .admin-toast button {
-    background: transparent; border: 1px solid var(--pa-line-strong); color: var(--pa-accent-text); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 700; padding: 6px 12px;
-    transition: background 0.2s ease, color 0.2s ease;
+  .admin-toast-punct { width: 8px; height: 8px; border-radius: 50%; background: var(--pa-accent); flex: none; }
+  .admin-toast.error .admin-toast-punct { background: #ff8f80; }
+  .admin-toast-text { font-size: 14.5px; font-weight: 600; }
+  .admin-toast-actiune {
+    min-height: 40px; padding: 0 14px; border: 0; background: transparent; cursor: pointer;
+    color: var(--pa-accent); font-family: var(--pa-font); font-size: 14.5px; font-weight: 700;
   }
-  .admin-toast button:hover { background: var(--pa-accent); color: var(--pa-accent-ink); }
+  .admin-toast-actiune:hover { background: rgba(201, 242, 75, 0.12); }
+  .admin-toast-actiune:focus-visible { outline-color: var(--pa-accent); }
 
   /* ---- Reduced motion ---- */
   @media (prefers-reduced-motion: reduce) {
@@ -2022,18 +2077,6 @@
   .admin-tpl-field input:focus, .admin-tpl-field textarea:focus { border-color: var(--pa-accent-text); }
   /* ---- Dialogul de prezență (prezent / număr / timp final) ---- */
   .admin-prezenta { display: grid; gap: 14px; text-align: left; }
-  .admin-prezenta-grup {
-    display: grid; gap: 8px; margin: 0; padding: 12px 14px;
-    border: 1px solid var(--pa-line);
-  }
-  .admin-prezenta-grup legend {
-    padding: 0 6px; font-size: 11px; font-weight: 700; color: var(--pa-muted);
-  }
-  .admin-prezenta-optiune {
-    display: flex; align-items: center; gap: 9px;
-    font-size: 14px; color: var(--pa-text); cursor: pointer;
-  }
-  .admin-prezenta-optiune input { accent-color: var(--pa-accent-text); cursor: pointer; }
   .admin-prezenta .admin-config-hint { margin: -6px 0 0; }
 
   /* Un reminder fără {link_renunt}: pleacă, dar fără butonul care schimbă ceva. */

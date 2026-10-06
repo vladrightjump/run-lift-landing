@@ -48,6 +48,7 @@ export const GrupRadio = <T extends string>({
               name={nume}
               value={o.valoare}
               checked={valoare === o.valoare}
+              disabled={dezactivat}
               onChange={() => onSchimba(o.valoare)}
             />
             <span className="admin-radio-text">

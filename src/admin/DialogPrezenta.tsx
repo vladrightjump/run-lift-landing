@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { AdminRegistration, Prezenta } from '../lib/adminApi';
+import { GrupRadio } from './controale/GrupRadio';
+import { Dialog } from './eventTab/Dialog';
 
 /**
  * Prezența, numărul și timpul final ale unui rând.
@@ -66,90 +68,68 @@ export const DialogPrezenta = ({ rand, ocupat, onSalveaza, onInchide }: Props) =
   };
 
   return (
-    <div className="admin-confirm-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onInchide();
-      }}>
-      <div
-        className="admin-confirm admin-prezenta"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Prezența pentru ${rand.nume}`}
-      >
-        <h3>{rand.nume}</h3>
+    <Dialog titlu={rand.nume} clasa="admin-prezenta admin-confirm--neutru" onInchide={onInchide}>
+      {/*
+        Trei stări, nu o bifă. O bifă are doar „da" și „nu", iar „nu" ar fi
+        scris din prima clipă pe toată lista — adică ar afirma absența
+        fiecărui înscris cu săptămâni înainte de cursă. „Încă nu se știe" e
+        starea implicită și trebuie să rămână spunibilă.
+      */}
+      <GrupRadio
+        eticheta="A venit?"
+        valoare={prezent === null ? 'nu-se-stie' : prezent ? 'da' : 'nu'}
+        optiuni={[
+          { valoare: 'nu-se-stie', eticheta: 'Încă nu se știe' },
+          { valoare: 'da', eticheta: 'A venit' },
+          { valoare: 'nu', eticheta: 'N-a venit' },
+        ]}
+        onSchimba={(v) => setPrezent(v === 'nu-se-stie' ? null : v === 'da')}
+        dezactivat={ocupat}
+      />
 
-        <fieldset className="admin-prezenta-grup">
-          <legend>A venit?</legend>
-          {/*
-            Trei stări, nu o bifă. O bifă are doar „da" și „nu", iar „nu" ar fi
-            scris din prima clipă pe toată lista — adică ar afirma absența
-            fiecărui înscris cu săptămâni înainte de cursă. „Încă nu se știe" e
-            starea implicită și trebuie să rămână spunibilă.
-          */}
-          {(
-            [
-              [null, 'Încă nu se știe'],
-              [true, 'A venit'],
-              [false, 'N-a venit'],
-            ] as const
-          ).map(([valoare, eticheta]) => (
-            <label key={String(valoare)} className="admin-prezenta-optiune">
-              <input
-                type="radio"
-                name="prezent"
-                disabled={ocupat}
-                checked={prezent === valoare}
-                onChange={() => setPrezent(valoare)}
-              />
-              {eticheta}
-            </label>
-          ))}
-        </fieldset>
+      <label className="admin-config-camp">
+        <span>Număr de concurs</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          disabled={ocupat}
+          value={numar}
+          onChange={(e) => setNumar(e.target.value)}
+        />
+      </label>
 
-        <label className="admin-config-camp">
-          <span>Număr de concurs</span>
-          <input
-            type="number"
-            min={1}
-            inputMode="numeric"
-            autoComplete="off"
-            disabled={ocupat}
-            value={numar}
-            onChange={(e) => setNumar(e.target.value)}
-          />
-        </label>
+      <label className="admin-config-camp">
+        <span>Timp final</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="32:15"
+          disabled={ocupat}
+          value={timp}
+          onChange={(e) => setTimp(e.target.value)}
+        />
+      </label>
+      <p className="admin-config-hint">
+        Minute și secunde („32:15") sau cu ore („1:02:15"). Lasă gol dacă nu se aplică.
+      </p>
 
-        <label className="admin-config-camp">
-          <span>Timp final</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="32:15"
-            disabled={ocupat}
-            value={timp}
-            onChange={(e) => setTimp(e.target.value)}
-          />
-        </label>
-        <p className="admin-config-hint">
-          Minute și secunde („32:15") sau cu ore („1:02:15"). Lasă gol dacă nu se aplică.
+      {eroare && (
+        <p className="admin-config-eroare" role="alert">
+          {eroare}
         </p>
+      )}
 
-        {eroare && (
-          <p className="admin-config-eroare" role="alert">
-            {eroare}
-          </p>
-        )}
-
-        <div className="admin-confirm-actions">
-          <button type="button" className="admin-confirm-cancel" onClick={onInchide} disabled={ocupat}>
-            Renunță
-          </button>
-          <button type="button" className="admin-confirm-delete" onClick={salveaza} disabled={ocupat}>
-            Salvează
-          </button>
-        </div>
+      <div className="admin-confirm-actions">
+        <button type="button" className="admin-confirm-cancel" onClick={onInchide} disabled={ocupat}>
+          Renunță
+        </button>
+        <button type="button" className="admin-confirm-delete" onClick={salveaza} disabled={ocupat}>
+          Salvează
+        </button>
       </div>
-    </div>
+    </Dialog>
   );
 };
