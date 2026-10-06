@@ -23,6 +23,7 @@ import {
   ultimulAnunt,
   variabileNesuportate,
 } from './anunt';
+import { Dialog } from './eventTab/Dialog';
 
 /**
  * Anunțul unei ediții noi către toți participanții de până acum.
@@ -400,33 +401,25 @@ export const AnuntIstoric = ({ editie, emailLog, readOnly, audiente }: Props) =>
       </div>
 
       {confirmare && (
-        <div
-          className="admin-confirm-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConfirmare(false);
-          }}
-        >
-          <div className="admin-confirm" role="alertdialog" aria-modal="true">
-            <h3>Trimiți anunțul?</h3>
-            <p>
-              Pleacă la <strong>{ramasi.length}</strong>{' '}
-              {ramasi.length === 1 ? 'om care a alergat' : 'oameni care au alergat'} cu voi.
-              Emailul pleacă acum și nu se poate retrage.
-            </p>
-            <div className="admin-confirm-actions">
-              <button type="button" className="admin-confirm-delete" onClick={trimite}>
-                Da, trimite
-              </button>
-              <button
-                type="button"
-                className="admin-confirm-cancel"
-                onClick={() => setConfirmare(false)}
-              >
-                Anulează
-              </button>
-            </div>
+        <Dialog titlu="Trimiți anunțul?" rol="alertdialog" clasa="admin-confirm--neutru" onInchide={() => setConfirmare(false)}>
+          <p>
+            Pleacă la <strong>{ramasi.length}</strong>{' '}
+            {ramasi.length === 1 ? 'om care a alergat' : 'oameni care au alergat'} cu voi.
+            Emailul pleacă acum și nu se poate retrage.
+          </p>
+          <div className="admin-confirm-actions">
+            <button type="button" className="admin-confirm-delete" onClick={trimite}>
+              Da, trimite
+            </button>
+            <button
+              type="button"
+              className="admin-confirm-cancel"
+              onClick={() => setConfirmare(false)}
+            >
+              Anulează
+            </button>
           </div>
-        </div>
+        </Dialog>
       )}
     </section>
   );

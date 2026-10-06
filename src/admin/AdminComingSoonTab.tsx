@@ -7,6 +7,7 @@ import { useNow } from '../hooks/useNow';
 import { useSesiuneAdmin } from './adminSession';
 import { fazaSite } from './stareCurenta';
 import { laDatetimeLocal, dinDatetimeLocal, descrieMoment } from './eventConfigFields';
+import { Dialog } from './eventTab/Dialog';
 
 /** „2026-08-19T12:00:00" — local, fără fus. Aceeași formă ca în document. */
 const LOCAL_ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
@@ -316,43 +317,35 @@ export const AdminComingSoonTab = () => {
       </div>
 
       {confirma && (
-        <div
-          className="admin-confirm-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConfirma(false);
-          }}
-        >
-          <div className="admin-confirm" role="alertdialog" aria-modal="true">
-            <h3>Aplici schimbarea acum?</h3>
-            <p>
-              Site-ul public trece <strong>imediat</strong> pe{' '}
-              <strong>{show ? 'Coming Soon' : 'landing-ul cu înscrieri'}</strong>, cu numărătoarea
-              spre {descrieMoment(launchAt, publicat.tz, acum) || launchAt}.
-            </p>
-            <p className="admin-confirm-note">
-              Nu trece prin ciornă. Versiunea de acum rămâne salvată, deci o poți întoarce din
-              „Versiuni anterioare", în tabul „Eveniment".
-            </p>
-            <div className="admin-confirm-actions">
-              <button
-                type="button"
-                className="admin-btn-accent"
-                disabled={aplica}
-                onClick={aplicaAcum}
-              >
-                {aplica ? 'Se aplică…' : 'Da, aplică'}
-              </button>
-              <button
-                type="button"
-                className="admin-confirm-cancel"
-                disabled={aplica}
-                onClick={() => setConfirma(false)}
-              >
-                Anulează
-              </button>
-            </div>
+        <Dialog titlu="Aplici schimbarea acum?" rol="alertdialog" clasa="admin-confirm--neutru" onInchide={() => setConfirma(false)}>
+          <p>
+            Site-ul public trece <strong>imediat</strong> pe{' '}
+            <strong>{show ? 'Coming Soon' : 'landing-ul cu înscrieri'}</strong>, cu numărătoarea
+            spre {descrieMoment(launchAt, publicat.tz, acum) || launchAt}.
+          </p>
+          <p className="admin-confirm-note">
+            Nu trece prin ciornă. Versiunea de acum rămâne salvată, deci o poți întoarce din
+            „Versiuni anterioare", în tabul „Eveniment".
+          </p>
+          <div className="admin-confirm-actions">
+            <button
+              type="button"
+              className="admin-btn-accent"
+              disabled={aplica}
+              onClick={aplicaAcum}
+            >
+              {aplica ? 'Se aplică…' : 'Da, aplică'}
+            </button>
+            <button
+              type="button"
+              className="admin-confirm-cancel"
+              disabled={aplica}
+              onClick={() => setConfirma(false)}
+            >
+              Anulează
+            </button>
           </div>
-        </div>
+        </Dialog>
       )}
     </section>
   );

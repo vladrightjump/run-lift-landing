@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useState, type ReactNode } from 'react';
 import { incarcaSala, refuzSala, MESAJE_REFUZ, type SalaDate } from '../../lib/salaApi';
 import { useAdminResource } from '../useAdminResource';
+import { ADMIN_REFRESH_MS } from '../useAdminPolling';
 import { useSesiuneAdmin } from '../adminSession';
 import { logClientError } from '../../lib/monitoring';
 import { isNetworkOrCspError, isTimeoutError } from '../../lib/supabase';
@@ -26,13 +27,16 @@ const NU_STIM =
  * rețea, nu știm dacă scrierea a ajuns: toastul spune să verifici înainte să
  * reîncerci, ca o comandă pentru bot să nu plece de două ori.
  */
-export const useSala = () => {
+/** O cerere care nu pleacă: consumatorul citește din furnizorul comun. */
+const NICIO_CERERE = () => new Promise<SalaDate>(() => {});
+
+const useSalaIncarcata = (activ: boolean) => {
   const { token, onAuthError, showToast } = useSesiuneAdmin();
   const incarca = useCallback(
-    (t: string, signal: AbortSignal) => incarcaSala(t, signal),
-    []
+    (t: string, signal: AbortSignal) => (activ ? incarcaSala(t, signal) : NICIO_CERERE()),
+    [activ]
   );
-  const { date, eroare, reincarca } = useAdminResource<SalaDate>(incarca);
+  const { date, eroare, reincarca } = useAdminResource<SalaDate>(incarca, activ ? ADMIN_REFRESH_MS : null);
   const [ocupat, setOcupat] = useState(false);
 
   const fa = async (actiune: (token: string) => Promise<unknown>, reusit: string): Promise<boolean> => {
@@ -62,4 +66,26 @@ export const useSala = () => {
   };
 
   return { date, eroare, ocupat, fa, reincarca };
+};
+
+type Sala = ReturnType<typeof useSalaIncarcata>;
+const SalaComuna = createContext<Sala | null>(null);
+
+/**
+ * Un singur bloc al grupului pentru tot dashboardul (U8): cadrul îl citește
+ * pentru numărul de pe Acum, ecranul Acum pentru săptămână și card, iar
+ * ecranele grupului pentru restul. O cerere la 15 secunde, nu câte una pe
+ * consumator.
+ */
+export const FurnizorSala = ({ children }: { children: ReactNode }) =>
+  createElement(SalaComuna.Provider, { value: useSalaIncarcata(true) }, children);
+
+/**
+ * Datele grupului: din furnizorul comun, când există; altfel ecranul își
+ * încarcă singur blocul (ecranele randate separat, ca în teste).
+ */
+export const useSala = (): Sala => {
+  const comun = useContext(SalaComuna);
+  const propriu = useSalaIncarcata(comun === null);
+  return comun ?? propriu;
 };

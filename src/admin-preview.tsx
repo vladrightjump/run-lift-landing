@@ -16,6 +16,7 @@ import './index.css';
 // Pentru cardul `.an-card`, pe care tabul de antrenament îl randează ca previzualizare.
 import './public.css';
 import { AdminDashboard } from './admin/AdminDashboard';
+import { RadacinaAdmin } from './admin/AdminApp';
 import { SNAPSHOT_CONFIG } from './content/eventConfig';
 import type { AdminReelRow } from './lib/adminApi';
 
@@ -299,6 +300,8 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AdminDashboard token="token-preview" onLogout={() => location.reload()} />
+    <RadacinaAdmin>
+      <AdminDashboard token="token-preview" onLogout={() => location.reload()} />
+    </RadacinaAdmin>
   </StrictMode>
 );

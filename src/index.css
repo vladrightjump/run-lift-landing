@@ -562,6 +562,97 @@
   .foot-organizers a:hover { text-decoration: underline; }
 
   /* ==== Admin backoffice (/admin) ==== */
+  /* Tema „Panoul" (KTD2). Jetoanele adminului, separate de `--e3-*` ale
+     paginii publice: o schimbare pe landing nu vopsește backoffice-ul, iar o
+     temă întunecată a adminului înseamnă doar alt bloc de valori aici (R32).
+     Lime-ul e DOAR umplere, cu text închis; textul și graficele de accent
+     sunt măslinii, fiindcă lime pe alb n-are contrast (R31, R36). */
+  .admin-pagina, .admin-app {
+    --pa-bg: #eeede4;
+    --pa-surface: #fbfaf6;
+    --pa-surface-2: #f3f2ea;
+    --pa-surface-3: #e9e8de;
+    --pa-line: #dad8c9;
+    --pa-line-soft: #e6e4d8;
+    --pa-line-strong: #c6c4b3;
+    --pa-line-control: #85887a;
+    --pa-text: #16180f;
+    --pa-text-2: #343729;
+    --pa-muted: #565a4a;
+    --pa-muted-2: #63675a;
+    --pa-accent: #c9f24b;
+    --pa-accent-hover: #d6f86a;
+    --pa-accent-ink: #16180f;
+    --pa-accent-text: #3f5208;
+    --pa-accent-soft: #e9f6c0;
+    --pa-graph: #4d6410;
+    --pa-graph-2: #8c8f80;
+    --pa-graph-warn: #b26b00;
+    --pa-ok-text: #3f5208;
+    --pa-warn: #8a5300;
+    --pa-warn-soft: #fbecd2;
+    --pa-danger: #b42318;
+    --pa-danger-solid: #c4321f;
+    --pa-danger-soft: #fde7e4;
+    --pa-input: #ffffff;
+    --pa-pop: #ffffff;
+    --pa-ink: #16180f;
+    --pa-ink-text: #f3f2ea;
+    --pa-scrim: rgba(22, 24, 15, 0.38);
+    --pa-focus: #16180f;
+    --pa-focus-soft: rgba(77, 100, 16, 0.22);
+    --pa-r: 6px;
+    --pa-r-lg: 10px;
+    --pa-r-sheet: 16px;
+    --pa-r-pill: 999px;
+    --pa-shadow: 0 16px 40px rgba(40, 44, 20, 0.16), 0 1px 2px rgba(40, 44, 20, 0.08);
+    --pa-shadow-sm: 0 1px 2px rgba(40, 44, 20, 0.06);
+    --pa-dur-fast: 150ms;
+    --pa-dur: 220ms;
+    --pa-dur-slow: 300ms;
+    --pa-ease: cubic-bezier(0.2, 0.9, 0.25, 1);
+    --pa-ease-arc: cubic-bezier(0.3, 1.5, 0.5, 1);
+    --pa-font: Archivo, system-ui, sans-serif;
+    --pa-font-display: Anton, sans-serif;
+  }
+  html.admin-pagina, html.admin-pagina body { background: var(--pa-bg); color: var(--pa-text); }
+  .admin-app {
+    min-height: 100dvh; background: var(--pa-bg); color: var(--pa-text);
+    font-family: var(--pa-font); font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+  .admin-app ::selection { background: var(--pa-accent); color: var(--pa-accent-ink); }
+  .admin-app :focus-visible { outline: 2px solid var(--pa-focus); outline-offset: 2px; }
+  /* Colțuri mici, diferite după rol (R31). `:where` nu adaugă specificitate:
+     orice regulă proprie a unui control câștigă. */
+  .admin-app :where(button, input, select, textarea) { border-radius: var(--pa-r); }
+  .admin-app :where(button) { transition: background-color var(--pa-dur-fast) ease, border-color var(--pa-dur-fast) ease, color var(--pa-dur-fast) ease, transform var(--pa-dur-fast) ease; }
+  .admin-app :where(button:not(:disabled)):active { transform: translateY(1px); }
+  .admin-app :where(input, textarea, select)::placeholder { color: var(--pa-muted-2); }
+
+  /* Clasele publice refolosite în admin, pe paleta Panoul. */
+  .admin-app .btn-submit {
+    background: var(--pa-accent); color: var(--pa-accent-ink); border-radius: var(--pa-r);
+    font-family: var(--pa-font); font-weight: 700; letter-spacing: 0; text-transform: none;
+  }
+  .admin-app .btn-submit:hover { background: var(--pa-accent-hover); box-shadow: none; }
+  .admin-app .field > .label { color: var(--pa-text); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+  .admin-app .field .muted { color: var(--pa-muted); }
+  .admin-app .countdown-dot { background: var(--pa-graph); }
+  .admin-app .spinner { border-color: var(--pa-line); border-top-color: var(--pa-graph); }
+  .admin-app .form-loading .label { color: var(--pa-muted); letter-spacing: 0; text-transform: none; }
+  .admin-app .checkbox { color: var(--pa-text); }
+  .admin-app .checkbox input[type="checkbox"] { accent-color: var(--pa-graph); }
+  .admin-app .slots-label { color: var(--pa-muted); letter-spacing: 0; text-transform: none; }
+
+  /* Mișcarea e răspuns, nu decor (R30). Cu mișcare redusă, totul e instantaneu. */
+  @media (prefers-reduced-motion: reduce) {
+    .admin-app *, .admin-app *::before, .admin-app *::after {
+      animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important; scroll-behavior: auto !important;
+    }
+  }
+
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
     20%      { transform: translateX(-8px); }
@@ -577,23 +668,19 @@
     from { opacity: 0; transform: translateY(-6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  @keyframes admin-toast-in {
-    from { opacity: 0; transform: translate(-50%, 16px); }
-    to   { opacity: 1; transform: translate(-50%, 0); }
-  }
+  @keyframes admin-toast-in { from { opacity: 0; transform: translateY(16px) scale(0.96); } }
 
   .admin-logo { font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1px; text-transform: uppercase; }
-  .admin-logo .accent { color: var(--e3-accent); }
+  .admin-logo .accent { color: var(--pa-accent-text); }
   .admin-badge {
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--e3-bg); background: var(--e3-accent); padding: 4px 10px;
+    font-size: 11px; font-weight: 700; color: var(--pa-accent-ink); background: var(--pa-accent); padding: 4px 10px;
   }
 
   /* ---- Auth ---- */
   .admin-auth {
     min-height: 100dvh; display: flex; align-items: center; justify-content: center;
     padding: 24px; box-sizing: border-box;
-    background: radial-gradient(ellipse 70% 50% at 50% 0%, var(--e3-surface) 0%, var(--e3-bg) 70%);
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, var(--pa-surface) 0%, var(--pa-input) 70%);
   }
   .admin-auth-box { width: 100%; max-width: 400px; }
   .admin-auth-brand {
@@ -602,7 +689,7 @@
   }
   .admin-auth-brand .admin-logo { font-size: 26px; }
   .admin-auth-form {
-    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
     padding: clamp(28px, 6vw, 40px); display: grid; gap: 20px;
     animation: fade-up 0.5s ease-out 0.12s both;
   }
@@ -612,92 +699,178 @@
     margin: 0; font-family: Anton, sans-serif; font-weight: 400;
     font-size: 26px; letter-spacing: 1px; text-transform: uppercase;
   }
-  .admin-auth-head p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--e3-muted); }
+  .admin-auth-head p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--pa-muted); }
   .admin-auth .field input[type="password"] {
-    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    background: var(--pa-input); border: 1px solid var(--pa-line); color: var(--pa-text);
     font-family: Archivo, sans-serif; font-size: 15px; padding: 13px 14px;
     outline: none; width: 100%; box-sizing: border-box;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
   }
   .admin-auth .field input[type="password"]:focus {
-    border-color: var(--e3-accent); box-shadow: 0 0 0 3px rgba(201,242,75,0.18); transform: translateY(-1px);
+    border-color: var(--pa-accent-text); box-shadow: 0 0 0 3px var(--pa-focus-soft); transform: translateY(-1px);
   }
   .admin-password-wrap { position: relative; }
   .admin-password-wrap input { padding-right: 88px !important; }
   .admin-password-toggle {
     position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
     background: transparent; border: none; cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
-    letter-spacing: 1px; text-transform: uppercase; color: var(--e3-muted);
+    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700; color: var(--pa-muted);
     padding: 6px 8px; transition: color 0.2s ease;
   }
-  .admin-password-toggle:hover { color: var(--e3-accent); }
+  .admin-password-toggle:hover { color: var(--pa-accent-text); }
   .admin-auth-error {
-    margin: 0; font-size: 14px; color: var(--e3-danger);
+    margin: 0; font-size: 14px; color: var(--pa-danger);
     display: flex; align-items: center; gap: 8px;
   }
-  .admin-auth-error .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--e3-danger); flex-shrink: 0; }
+  .admin-auth-error .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pa-danger-solid); flex-shrink: 0; }
   .admin-auth-submit { font-size: 17px; padding: 15px; margin-top: 0; }
   .admin-auth-countdown {
-    margin: 24px 0 0; text-align: center; font-size: 13px; color: var(--e3-muted-dim);
+    margin: 24px 0 0; text-align: center; font-size: 13px; color: var(--pa-muted-2);
     display: flex; align-items: center; justify-content: center; gap: 8px;
     animation: fade-up 0.5s ease-out 0.24s both;
   }
   .admin-checking { border: none; background: transparent; }
 
   /* ---- Top bar ---- */
-  .admin-topbar {
-    position: sticky; top: 0; z-index: 20;
-    background: rgba(18,20,16,0.92); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--e3-border);
-    padding: 14px clamp(20px, 5vw, 40px);
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px 16px; flex-wrap: wrap;
-  }
-  .admin-topbar-meta { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
   /* Chip-ul de faza din antetul lipit: ce vede un vizitator ACUM.
      Culoarea e a fazei, nu decor - „Coming Soon" si „Landing cu inscrieri" sint
      doua lumi diferite pentru cine intra pe site. */
   .admin-faza {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 5px 11px; border: 1px solid var(--e3-border);
-    background: var(--e3-bg); text-decoration: none;
-    font-size: 12px; font-weight: 600; color: var(--e3-muted);
+    padding: 5px 11px; border: 1px solid var(--pa-line);
+    background: var(--pa-input); text-decoration: none;
+    font-size: 12px; font-weight: 600; color: var(--pa-muted);
     transition: border-color 0.2s ease, color 0.2s ease;
   }
-  .admin-faza:hover { border-color: var(--e3-accent-dim); color: var(--e3-text); }
+  .admin-faza:hover { border-color: var(--pa-line-strong); color: var(--pa-text); }
   .admin-faza-eticheta {
-    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
-    color: var(--e3-muted-dim);
+    font-size: 10px;
+    color: var(--pa-muted-2);
   }
-  .admin-faza-valoare { color: var(--e3-text-bright); }
+  .admin-faza-valoare { color: var(--pa-text); }
   .admin-faza-punct {
-    width: 7px; height: 7px; border-radius: 50%; background: var(--e3-muted-dim);
+    width: 7px; height: 7px; border-radius: 50%; background: var(--pa-muted-2);
     flex: none;
   }
-  .admin-faza.faza-landing .admin-faza-punct { background: var(--e3-accent); }
-  .admin-faza.faza-landing .admin-faza-valoare { color: var(--e3-accent); }
-  .admin-faza.faza-cine-vine .admin-faza-punct { background: var(--e3-accent); }
-  .admin-faza.faza-coming-soon .admin-faza-punct { background: var(--e3-muted); }
+  .admin-faza.faza-landing .admin-faza-punct { background: var(--pa-accent); }
+  .admin-faza.faza-landing .admin-faza-valoare { color: var(--pa-accent-text); }
+  .admin-faza.faza-cine-vine .admin-faza-punct { background: var(--pa-accent); }
+  .admin-faza.faza-coming-soon .admin-faza-punct { background: var(--pa-muted); }
   .admin-cd {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; font-weight: 600; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--e3-accent); font-variant-numeric: tabular-nums;
+    margin: 0; display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--pa-accent-text); font-variant-numeric: tabular-nums;
   }
   .admin-logout {
-    background: transparent; border: 1px solid var(--e3-border); color: var(--e3-muted); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
-    letter-spacing: 1.5px; text-transform: uppercase; padding: 8px 14px;
+    min-height: 40px; white-space: nowrap;
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-muted); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600; padding: 8px 14px;
     transition: border-color 0.2s ease, color 0.2s ease;
   }
-  .admin-logout:hover { border-color: var(--e3-danger); color: var(--e3-danger); }
+  .admin-logout:hover { border-color: var(--pa-danger); color: var(--pa-danger); }
 
   /* ---- Dashboard layout ---- */
   .admin-main {
-    max-width: 1200px; margin: 0 auto;
-    padding: clamp(28px, 5vw, 48px) clamp(20px, 5vw, 40px);
-    display: grid; gap: clamp(28px, 4vw, 40px);
+    min-width: 0; max-width: 1160px; padding: 24px 28px 48px;
+    display: grid; gap: clamp(18px, 3vw, 28px); align-content: start;
   }
+  .admin-main:focus { outline: none; }
+
+  /* ---- Cadrul: antet, șină, file, bară de jos (U7) ----
+     Desktop: șina stângă arată toate zonele și filele deodată. Telefon:
+     zonele stau jos, unde ajunge degetul mare, iar filele sub titlu. */
+  .admin-cadru {
+    min-height: 100dvh; display: grid;
+    grid-template-columns: 248px minmax(0, 1fr); grid-template-rows: auto 1fr;
+  }
+  .admin-cadru--telefon { display: block; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .admin-cadru--telefon .admin-main { padding: 16px 16px 28px; }
+  .admin-antet {
+    grid-column: 1 / -1; position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 56px; padding: 8px 20px;
+    background: color-mix(in srgb, var(--pa-bg) 92%, transparent); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--pa-line);
+  }
+  .admin-cadru--telefon .admin-antet { padding: 6px 12px 6px 16px; }
+  .admin-antet .admin-logo { font-size: 19px; white-space: nowrap; }
+  .admin-antet .admin-logo .accent { color: var(--pa-accent-ink); background: var(--pa-accent); padding: 0 4px; border-radius: 3px; }
+  .admin-antet-dreapta { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .admin-sina {
+    position: sticky; top: 56px; align-self: start; height: calc(100dvh - 56px); overflow: auto;
+    padding: 18px 12px; border-right: 1px solid var(--pa-line); background: var(--pa-surface-2);
+  }
+  .admin-sina-zona { margin-bottom: 10px; }
+  .admin-sina-zona-buton {
+    display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 10px;
+    border: 0; background: none; cursor: pointer; text-align: left;
+    font-family: var(--pa-font); font-weight: 700; font-size: 14.5px; color: var(--pa-text);
+  }
+  .admin-sina-zona-buton:hover { background: var(--pa-surface-3); }
+  .admin-sina-zona-buton[aria-current="page"] { background: var(--pa-surface); box-shadow: 0 0 0 1px var(--pa-line); }
+  .admin-numar {
+    margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px;
+    display: inline-grid; place-items: center; border-radius: var(--pa-r-pill);
+    background: var(--pa-warn-soft); color: var(--pa-warn); font-size: 12px; font-weight: 700;
+  }
+  .admin-sina-file { list-style: none; margin: 2px 0 0 20px; padding: 0 0 0 10px; border-left: 1px solid var(--pa-line); }
+  .admin-sina-fila {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; min-height: 36px; padding: 0 10px; border: 0; background: none; cursor: pointer;
+    text-align: left; font-family: var(--pa-font); font-size: 14px; font-weight: 500; color: var(--pa-muted);
+  }
+  .admin-sina-fila:hover { color: var(--pa-text); background: var(--pa-surface-3); }
+  .admin-sina-fila[aria-current="page"] { background: var(--pa-accent); color: var(--pa-accent-ink); font-weight: 700; }
+  .admin-sina-contor { font-size: 12.5px; font-weight: 600; opacity: 0.8; }
+  .admin-sina-nota {
+    margin: 18px 0 0; padding: 12px 10px 0; border-top: 1px solid var(--pa-line);
+    font-size: 12.5px; line-height: 1.45; color: var(--pa-muted);
+  }
+  .admin-zona-cap { display: grid; gap: 6px; }
+  .admin-zona-titlu {
+    margin: 0; font-family: var(--pa-font-display); font-weight: 400; font-size: 32px; line-height: 1;
+    letter-spacing: 0.5px; text-transform: uppercase; color: var(--pa-text);
+  }
+  .admin-cadru--telefon .admin-zona-titlu { font-size: 28px; }
+  .admin-zona-sub { margin: 0; max-width: 70ch; font-size: 14px; font-weight: 500; color: var(--pa-muted); }
+  .admin-file {
+    display: flex; overflow-x: auto; scrollbar-width: none;
+    margin: 0 -16px; padding: 0 16px; border-bottom: 1px solid var(--pa-line);
+  }
+  .admin-file::-webkit-scrollbar { display: none; }
+  .admin-fila {
+    flex: none; min-height: 44px; padding: 0 12px; margin-bottom: -1px; cursor: pointer;
+    border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; white-space: nowrap;
+    font-family: var(--pa-font); font-size: 14.5px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-fila[aria-current="page"] { color: var(--pa-text); border-bottom-color: var(--pa-text); }
+  .admin-subfile {
+    justify-self: start; max-width: 100%; overflow-x: auto; display: inline-flex; gap: 2px; padding: 3px;
+    background: var(--pa-surface-2); border: 1px solid var(--pa-line); border-radius: calc(var(--pa-r) + 3px);
+  }
+  .admin-subfila {
+    flex: none; min-height: 40px; padding: 0 14px; border: 0; background: transparent; cursor: pointer;
+    white-space: nowrap; font-family: var(--pa-font); font-size: 14.5px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-subfila:hover { color: var(--pa-text); }
+  .admin-subfila[aria-current="page"] { background: var(--pa-ink); color: var(--pa-ink-text); }
+  .admin-bara-jos {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--pa-surface); border-top: 1px solid var(--pa-line); padding-bottom: env(safe-area-inset-bottom);
+  }
+  .admin-bara-jos-zona {
+    position: relative; min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; border: 0; border-radius: 0; background: none; cursor: pointer;
+    font-family: var(--pa-font); font-size: 12px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-bara-jos-zona[aria-current="page"] { color: var(--pa-text); }
+  .admin-bara-jos-icon {
+    display: grid; place-items: center; width: 52px; height: 30px; border-radius: var(--pa-r-pill);
+    transition: background-color var(--pa-dur) ease, color var(--pa-dur) ease;
+  }
+  .admin-bara-jos-zona[aria-current="page"] .admin-bara-jos-icon { background: var(--pa-accent); color: var(--pa-accent-ink); }
+  .admin-numar--bara { position: absolute; top: 6px; left: calc(50% + 10px); margin: 0; background: var(--pa-warn); color: #fff; }
+  .admin-cadru--telefon ~ .admin-toast-zona { bottom: calc(76px + env(safe-area-inset-bottom)); }
 
   /* ---- Panoul „Acum" ----
      Prima întrebare cu care se deschide backoffice-ul e „unde suntem?", nu
@@ -706,28 +879,27 @@
   /* ---- Stats ---- */
   .admin-stats {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1px; background: var(--e3-border); border: 1px solid var(--e3-border);
+    gap: 1px; background: var(--pa-line); border: 1px solid var(--pa-line);
   }
-  .admin-stat { background: var(--e3-surface); padding: 22px 24px; display: grid; gap: 6px; }
+  .admin-stat { background: var(--pa-surface); padding: 22px 24px; display: grid; gap: 6px; }
   .admin-stat-label {
-    font-size: 12px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--e3-muted);
+    font-size: 12px; font-weight: 700; color: var(--pa-muted);
   }
   .admin-stat-value {
     font-family: Anton, sans-serif; font-size: 40px; line-height: 1;
-    color: var(--e3-text); display: inline-block; animation: stat-pop 0.4s ease-out;
+    color: var(--pa-text); display: inline-block; animation: stat-pop 0.4s ease-out;
     font-variant-numeric: tabular-nums;
   }
-  .admin-stat-value.accent { color: var(--e3-accent); }
-  .admin-stat-value.low { color: var(--e3-danger); }
-  .admin-stat-total { font-size: 20px; color: var(--e3-muted-dim); }
+  .admin-stat-value.accent { color: var(--pa-accent-text); }
+  .admin-stat-value.low { color: var(--pa-danger); }
+  .admin-stat-total { font-size: 20px; color: var(--pa-muted-2); }
 
   /* ---- Occupancy ---- */
   .admin-occupancy {
-    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
     padding: 18px 24px; display: grid; gap: 12px;
   }
-  .admin-occupancy-count { font-size: 13px; color: var(--e3-muted); }
+  .admin-occupancy-count { font-size: 13px; color: var(--pa-muted); }
   .admin-slot { height: 10px; }
 
   /* ---- Participants table ---- */
@@ -735,91 +907,85 @@
   .admin-table-head {
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; flex-wrap: wrap;
-    border: 1px solid var(--e3-border); border-bottom: none;
-    background: var(--e3-surface); padding: 16px 24px;
+    border: 1px solid var(--pa-line); border-bottom: none;
+    background: var(--pa-surface); padding: 16px 24px;
   }
   /* Titlul, căutarea și acțiunile rămân la vedere cât timp derulezi lista.
      La 40 de participanți, „Adaugă" și „Export CSV" ies din ecran după al
      zecelea rând și trebuie să te întorci sus ca să ajungi la ele.
 
-     `top` e sub antetul sticky (`.admin-topbar`): 14px padding × 2 + 26px
-     conținut. Sub 900px antetul se rupe pe două rânduri și constanta n-ar mai
-     fi adevărată, deci acolo bara rămâne în flux. */
+     `top` e sub antetul sticky (`.admin-antet`), înalt de 56px. */
   @media (min-width: 900px) {
     .admin-participanti-head {
-      position: sticky; top: 54px; z-index: 3;
+      position: sticky; top: 56px; z-index: 3;
       /* Opac, nu translucid: rândurile trebuie să treacă PE SUB, nu prin el. */
-      background: var(--e3-surface);
+      background: var(--pa-surface);
     }
   }
   /* Câte rânduri a lăsat căutarea — altfel o listă scurtă arată la fel ca o
      căutare fără rezultate pe care ai uitat că e activă. */
   .admin-table-rezultate {
-    font-size: 13px; color: var(--e3-muted); font-variant-numeric: tabular-nums;
+    font-size: 13px; color: var(--pa-muted); font-variant-numeric: tabular-nums;
   }
   .admin-table-head h2 {
-    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
-    font-size: 22px; letter-spacing: 1px; text-transform: uppercase;
+    margin: 0; font-family: var(--pa-font); font-weight: 700;
+    font-size: 22px;
   }
   .admin-table-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .admin-search {
-    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    background: var(--pa-input); border: 1px solid var(--pa-line); color: var(--pa-text);
     font-family: Archivo, sans-serif; font-size: 14px; padding: 10px 14px;
     outline: none; width: 240px; box-sizing: border-box;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
-  .admin-search:focus { border-color: var(--e3-accent); box-shadow: 0 0 0 3px rgba(201,242,75,0.18); }
+  .admin-search:focus { border-color: var(--pa-accent-text); box-shadow: 0 0 0 3px var(--pa-focus-soft); }
   .admin-btn-outline {
-    background: transparent; border: 1px solid var(--e3-accent-dim); color: var(--e3-accent); cursor: pointer;
-    font-family: Anton, sans-serif; font-size: 14px; letter-spacing: 1px;
-    text-transform: uppercase; padding: 11px 18px;
+    background: transparent; border: 1px solid var(--pa-line-strong); color: var(--pa-accent-text); cursor: pointer;
+    font-family: var(--pa-font); font-weight: 600; font-size: 14px; padding: 11px 18px;
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  .admin-btn-outline:hover { background: var(--e3-accent); color: var(--e3-bg); border-color: var(--e3-accent); }
+  .admin-btn-outline:hover { background: var(--pa-accent); color: var(--pa-accent-ink); border-color: var(--pa-accent-text); }
   .admin-btn-accent {
-    background: var(--e3-accent); color: var(--e3-bg); border: none; cursor: pointer;
-    font-family: Anton, sans-serif; font-size: 14px; letter-spacing: 1px;
-    text-transform: uppercase; padding: 11px 18px;
+    background: var(--pa-accent); color: var(--pa-accent-ink); border: none; cursor: pointer;
+    font-family: var(--pa-font); font-weight: 600; font-size: 14px; padding: 11px 18px;
     transition: background 0.2s ease, transform 0.15s ease;
   }
-  .admin-btn-accent:hover { background: var(--e3-accent-hover); transform: translateY(-2px); }
+  .admin-btn-accent:hover { background: var(--pa-accent-hover); transform: translateY(-2px); }
   .admin-btn-accent:active { transform: translateY(0) scale(0.96); }
-  .admin-btn-accent:disabled { background: var(--e3-border); color: var(--e3-muted-dim); cursor: not-allowed; transform: none; }
+  .admin-btn-accent:disabled { background: var(--pa-line); color: var(--pa-muted-2); cursor: not-allowed; transform: none; }
 
   /* ---- Inline add form ---- */
   .admin-add-row {
-    border: 1px solid var(--e3-accent-dim); border-bottom: none; background: #161A12;
+    border: 1px solid var(--pa-line-strong); border-bottom: none; background: var(--pa-surface-2);
     padding: 16px 24px; display: flex; gap: 10px; flex-wrap: wrap;
     align-items: flex-end; animation: row-in 0.3s ease-out;
   }
   .admin-add-field { display: grid; gap: 6px; flex: 1; min-width: 130px; }
   .admin-add-field.grow { flex: 1.4; min-width: 160px; }
   .admin-add-field span {
-    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted);
+    font-size: 11px; font-weight: 700; color: var(--pa-muted);
   }
   .admin-add-field input {
-    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    background: var(--pa-input); border: 1px solid var(--pa-line); color: var(--pa-text);
     font-family: Archivo, sans-serif; font-size: 14px; padding: 10px 13px;
     outline: none; width: 100%; box-sizing: border-box;
     transition: border-color 0.2s ease;
   }
-  .admin-add-field input:focus { border-color: var(--e3-accent); }
+  .admin-add-field input:focus { border-color: var(--pa-accent-text); }
   .admin-add-cancel {
     background: transparent; border: none; cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600;
-    letter-spacing: 1px; text-transform: uppercase; color: var(--e3-muted);
+    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600; color: var(--pa-muted);
     text-decoration: underline; padding: 11px 6px; transition: color 0.2s ease;
   }
-  .admin-add-cancel:hover { color: var(--e3-danger); }
+  .admin-add-cancel:hover { color: var(--pa-danger); }
 
   /* ---- Table rows ---- */
-  .admin-table-wrap { border: 1px solid var(--e3-border); background: var(--e3-surface); overflow-x: auto; }
+  .admin-table-wrap { border: 1px solid var(--pa-line); background: var(--pa-surface); overflow-x: auto; }
   .admin-table { min-width: 860px; }
   .admin-row {
     display: grid; grid-template-columns: 48px 1.5fr 1fr 1.5fr 0.9fr 180px;
     gap: 12px; align-items: center; padding: 14px 24px;
-    border-bottom: 1px solid var(--e3-hairline);
+    border-bottom: 1px solid var(--pa-line-soft);
     transition: background 0.15s ease;
     /* Rândurile sosesc în cascadă, nu toate odată — la 40 de participanți, un
        bloc care apare instantaneu se citește ca un salt de layout. `--i` vine
@@ -828,11 +994,10 @@
     animation: row-in 0.35s ease-out both;
     animation-delay: min(calc(var(--i, 0) * 22ms), 400ms);
   }
-  .admin-row:hover { background: var(--e3-surface-hover); }
+  .admin-row:hover { background: var(--pa-surface-2); }
   .admin-row-head {
-    padding: 12px 24px; border-bottom: 1px solid var(--e3-border);
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--e3-muted-dim); animation: none;
+    padding: 12px 24px; border-bottom: 1px solid var(--pa-line);
+    font-size: 11px; font-weight: 700; color: var(--pa-muted-2); animation: none;
   }
   /* NU face `.admin-row-head` sticky: e înăuntrul lui `.admin-table-wrap`, care
      are `overflow-x: auto` — iar asta îl face container de scroll pe AMBELE axe
@@ -842,32 +1007,31 @@
      Ce se poate lipi e bara de deasupra, care stă în afara containerului. */
   .admin-row-head:hover { background: transparent; }
   .admin-row-head .right { text-align: right; }
-  .admin-cell-nr { font-family: Anton, sans-serif; font-size: 14px; color: var(--e3-muted-dim); font-variant-numeric: tabular-nums; }
-  .admin-cell-name { font-size: 15px; font-weight: 600; color: var(--e3-text); }
-  .admin-cell-link { font-size: 14px; color: var(--e3-muted-strong); font-variant-numeric: tabular-nums; transition: color 0.2s ease; }
-  .admin-cell-link:hover { color: var(--e3-accent); }
+  .admin-cell-nr { font-family: var(--pa-font); font-weight: 700; font-size: 14px; color: var(--pa-muted-2); font-variant-numeric: tabular-nums; }
+  .admin-cell-name { font-size: 15px; font-weight: 600; color: var(--pa-text); }
+  .admin-cell-link { font-size: 14px; color: var(--pa-text-2); font-variant-numeric: tabular-nums; transition: color 0.2s ease; }
+  .admin-cell-link:hover { color: var(--pa-accent-text); }
   .admin-cell-link.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .admin-cell-date { font-size: 13px; color: var(--e3-muted); font-variant-numeric: tabular-nums; }
+  .admin-cell-date { font-size: 13px; color: var(--pa-muted); font-variant-numeric: tabular-nums; }
   .admin-cell-actions { display: flex; gap: 6px; justify-content: flex-end; }
   .admin-btn-delete {
-    background: transparent; border: 1px solid #3A2A2A; color: var(--e3-danger); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
-    letter-spacing: 1px; text-transform: uppercase; padding: 7px 10px;
+    background: transparent; border: 1px solid var(--pa-danger-soft); color: var(--pa-danger); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700; padding: 7px 10px;
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  .admin-btn-delete:hover { background: var(--e3-danger); color: var(--e3-bg); border-color: var(--e3-danger); }
-  .admin-empty { padding: 36px 24px; text-align: center; font-size: 15px; color: var(--e3-muted); }
+  .admin-btn-delete:hover { background: var(--pa-danger-solid); color: var(--pa-accent-ink); border-color: var(--pa-danger); }
+  .admin-empty { padding: 36px 24px; text-align: center; font-size: 15px; color: var(--pa-muted); }
 
   /* Tabelele au min-width și scrollează orizontal pe telefon. Umbra din dreapta
      spune că mai e conținut; dispare singură la capăt (background-attachment:
      local pe straturile de gradient). */
   .admin-table-wrap {
     background:
-      linear-gradient(90deg, var(--e3-surface) 30%, rgba(26,29,23,0)) left / 40px 100% no-repeat local,
-      linear-gradient(90deg, rgba(26,29,23,0), var(--e3-surface) 70%) right / 40px 100% no-repeat local,
-      radial-gradient(farthest-side at 0 50%, rgba(10,14,8,0.5), rgba(10,14,8,0)) left / 16px 100% no-repeat scroll,
-      radial-gradient(farthest-side at 100% 50%, rgba(10,14,8,0.5), rgba(10,14,8,0)) right / 16px 100% no-repeat scroll,
-      var(--e3-surface);
+      linear-gradient(90deg, var(--pa-surface) 30%, color-mix(in srgb, var(--pa-surface) 0%, transparent)) left / 40px 100% no-repeat local,
+      linear-gradient(90deg, color-mix(in srgb, var(--pa-surface) 0%, transparent), var(--pa-surface) 70%) right / 40px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgba(40, 44, 20, 0.14), rgba(40, 44, 20, 0)) left / 16px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgba(40, 44, 20, 0.14), rgba(40, 44, 20, 0)) right / 16px 100% no-repeat scroll,
+      var(--pa-surface);
   }
 
   /* ---- Skeleton (admin) ----
@@ -876,7 +1040,7 @@
      Perechea de pe landing stă în edition3.css. */
   .admin-skel {
     height: 12px; border-radius: 2px;
-    background: linear-gradient(90deg, var(--e3-border) 0%, var(--e3-surface-hover) 50%, var(--e3-border) 100%);
+    background: linear-gradient(90deg, var(--pa-line) 0%, var(--pa-surface-2) 50%, var(--pa-line) 100%);
     background-size: 200% 100%;
     animation: admin-shimmer 1.4s ease-in-out infinite;
   }
@@ -896,11 +1060,11 @@
   /* ---- Lista de așteptare ---- */
   .admin-wait-head { display: block; }
   .admin-wait-count {
-    display: inline-block; background: var(--e3-border); color: var(--e3-accent);
+    display: inline-block; background: var(--pa-line); color: var(--pa-accent-text);
     font-family: Anton, sans-serif; font-size: 13px; padding: 2px 10px;
     margin-left: 6px; vertical-align: middle; font-variant-numeric: tabular-nums;
   }
-  .admin-wait-note { display: block; margin-top: 8px; font-size: 13px; color: var(--e3-muted); }
+  .admin-wait-note { display: block; margin-top: 8px; font-size: 13px; color: var(--pa-muted); }
   .admin-wait.admin-table { min-width: 900px; }
   .admin-wait.admin-table .admin-row {
     grid-template-columns: 48px 1.4fr 1fr 1.4fr 0.9fr 200px;
@@ -936,66 +1100,65 @@
     padding: 12px 24px; font-family: inherit; color: inherit;
     transition: background 0.15s ease;
   }
-  .admin-livrare-main:hover { background: var(--e3-surface-hover); }
+  .admin-livrare-main:hover { background: var(--pa-surface-2); }
   .admin-livrare-main .right { text-align: right; }
-  .admin-livrare-row.esuat { border-left: 3px solid var(--e3-danger); }
-  .admin-livrare-row.deschis .admin-livrare-main { background: var(--e3-surface-hover); }
-  .admin-livrare-email { display: block; font-size: 12px; font-weight: 400; color: var(--e3-muted-dim); }
-  .admin-cell-subject { font-size: 14px; color: var(--e3-muted-strong); }
+  .admin-livrare-row.esuat { border-left: 3px solid var(--pa-danger); }
+  .admin-livrare-row.deschis .admin-livrare-main { background: var(--pa-surface-2); }
+  .admin-livrare-email { display: block; font-size: 12px; font-weight: 400; color: var(--pa-muted-2); }
+  .admin-cell-subject { font-size: 14px; color: var(--pa-text-2); }
   .admin-livrare-detaliu {
     padding: 0 24px 16px; display: grid; gap: 10px;
     animation: row-in 0.25s ease-out;
   }
   .admin-livrare-eroare {
-    margin: 0; font-size: 13px; line-height: 1.6; color: var(--e3-danger);
+    margin: 0; font-size: 13px; line-height: 1.6; color: var(--pa-danger);
     overflow-wrap: anywhere;
   }
-  .admin-livrare-eroare strong { color: var(--e3-danger); }
+  .admin-livrare-eroare strong { color: var(--pa-danger); }
   .admin-livrare-rejucare {
     display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
   }
   .admin-livrare-nota {
     margin: 0; flex: 1 1 220px; font-size: 12px; line-height: 1.5;
-    color: var(--e3-muted-dim); overflow-wrap: anywhere;
+    color: var(--pa-muted-2); overflow-wrap: anywhere;
   }
   .admin-livrare-text {
     margin: 0; padding: 12px 14px; max-height: 260px; overflow: auto;
-    background: var(--e3-bg); border: 1px solid var(--e3-hairline);
+    background: var(--pa-input); border: 1px solid var(--pa-line-soft);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
-    line-height: 1.6; color: var(--e3-muted); white-space: pre-wrap; overflow-wrap: anywhere;
+    line-height: 1.6; color: var(--pa-muted); white-space: pre-wrap; overflow-wrap: anywhere;
   }
   .admin-btn-promote {
-    background: transparent; border: 1px solid #3A4A22; color: var(--e3-accent); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
-    letter-spacing: 1px; text-transform: uppercase; padding: 7px 10px;
+    background: transparent; border: 1px solid var(--pa-line-strong); color: var(--pa-accent-text); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700; padding: 7px 10px;
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  .admin-btn-promote:hover { background: var(--e3-accent); color: var(--e3-bg); border-color: var(--e3-accent); }
+  .admin-btn-promote:hover { background: var(--pa-accent); color: var(--pa-accent-ink); border-color: var(--pa-accent-text); }
 
   /* ---- Activitate recentă (feed audit) ---- */
   .admin-activity {
-    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
     display: flex; flex-direction: column;
   }
   .admin-activity-item {
     display: flex; align-items: center; gap: 10px; padding: 12px 20px;
-    border-bottom: 1px solid var(--e3-hairline); font-size: 14px;
+    border-bottom: 1px solid var(--pa-line-soft); font-size: 14px;
     animation: row-in 0.35s ease-out;
   }
   .admin-activity-item:last-child { border-bottom: none; }
   .admin-activity-dot {
-    width: 8px; height: 8px; border-radius: 50%; background: var(--e3-accent); flex: none;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--pa-accent); flex: none;
   }
-  .admin-activity-text { flex: 1; color: var(--e3-text); }
+  .admin-activity-text { flex: 1; color: var(--pa-text); }
   .admin-activity-text strong { font-weight: 700; }
-  .admin-activity-email { color: var(--e3-muted); font-variant-numeric: tabular-nums; }
+  .admin-activity-email { color: var(--pa-muted); font-variant-numeric: tabular-nums; }
   .admin-activity-mail {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
-    color: var(--e3-danger, #e0574a); flex: none;
+    font-size: 11px; font-weight: 700;
+    color: var(--pa-danger); flex: none;
   }
-  .admin-activity-mail.ok { color: var(--e3-accent); }
+  .admin-activity-mail.ok { color: var(--pa-accent-text); }
   .admin-activity-time {
-    font-size: 12px; color: var(--e3-muted); font-variant-numeric: tabular-nums; flex: none;
+    font-size: 12px; color: var(--pa-muted); font-variant-numeric: tabular-nums; flex: none;
   }
 
   /* ---- Comutatorul de ecrane, in antet ----
@@ -1003,7 +1166,6 @@
      paginii. O lista are aceeasi inaltime oricate ecrane s-ar aduna. */
   /* Comutatorul foloseste primitiva comuna; aici ramane doar asezarea lui in
      antet, pe un rand in loc de doua. */
-  .admin-comutator .admin-control { display: flex; align-items: center; gap: 8px; }
 
   /* ---- Primitivele de control ----
      Controlul se alege dupa FORMA alegerii, nu dupa ce e mai rapid de randat.
@@ -1011,41 +1173,40 @@
      buton radio — inclusiv acolo unde alegerea era vadit „una dintre acestea". */
   .admin-control { display: grid; gap: 6px; }
   .admin-control-eticheta {
-    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted-dim); padding: 0;
+    font-size: 11px; font-weight: 700; color: var(--pa-muted-2); padding: 0;
   }
   .admin-control-select {
-    background: var(--e3-surface); color: var(--e3-text);
-    border: 1px solid var(--e3-border); padding: 8px 10px;
+    background: var(--pa-surface); color: var(--pa-text);
+    border: 1px solid var(--pa-line); padding: 8px 10px;
     font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600;
   }
   .admin-control-select:focus-visible {
-    outline: 2px solid var(--e3-accent); outline-offset: 2px;
+    outline: 2px solid var(--pa-accent-text); outline-offset: 2px;
   }
-  .admin-control-select[aria-invalid='true'] { border-color: var(--e3-danger); }
+  .admin-control-select[aria-invalid='true'] { border-color: var(--pa-danger); }
   /* Descrierea si problema se VAD. O eroare semnalata doar prin culoare nu
      exista pentru cine n-o vede. */
-  .admin-control-descriere { font-size: 12px; line-height: 1.45; color: var(--e3-muted-dim); }
-  .admin-control-problema { font-size: 12px; line-height: 1.45; color: var(--e3-danger); }
+  .admin-control-descriere { font-size: 12px; line-height: 1.45; color: var(--pa-muted-2); }
+  .admin-control-problema { font-size: 12px; line-height: 1.45; color: var(--pa-danger); }
 
   /* Grupul radio: o alegere dintre putine variante exclusive. */
   .admin-radio { border: none; margin: 0; padding: 0; }
   .admin-radio-optiune {
     display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
-    padding: 8px 10px; border: 1px solid var(--e3-border);
-    background: var(--e3-surface); margin-top: 6px;
+    padding: 8px 10px; border: 1px solid var(--pa-line);
+    background: var(--pa-surface); margin-top: 6px;
   }
-  .admin-radio-optiune:hover { border-color: var(--e3-accent); }
+  .admin-radio-optiune:hover { border-color: var(--pa-accent-text); }
   .admin-radio-optiune:has(input:focus-visible) {
-    outline: 2px solid var(--e3-accent); outline-offset: 2px;
+    outline: 2px solid var(--pa-accent-text); outline-offset: 2px;
   }
-  .admin-radio-optiune:has(input:checked) { border-color: var(--e3-accent); }
+  .admin-radio-optiune:has(input:checked) { border-color: var(--pa-accent-text); }
   .admin-radio-text { display: grid; gap: 2px; }
   .admin-radio-nume {
     font-family: Archivo, sans-serif; font-size: 13px; font-weight: 700;
-    color: var(--e3-text);
+    color: var(--pa-text);
   }
-  .admin-radio-descriere { font-size: 12px; color: var(--e3-muted-dim); }
+  .admin-radio-descriere { font-size: 12px; color: var(--pa-muted-2); }
 
   /* Lista ordonabila: pozitia se alege, nu se ciocaneste rand cu rand.
      Erau doua butoane pe FIECARE rand, unul mereu dezactivat la capete, iar
@@ -1053,26 +1214,26 @@
   .admin-ordonabila { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
   .admin-ordonabila-rand {
     display: flex; align-items: center; gap: 12px;
-    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
     padding: 10px 14px;
   }
   .admin-ordonabila-nr {
-    font-family: Anton, sans-serif; font-size: 14px; color: var(--e3-muted-dim);
+    font-family: var(--pa-font); font-weight: 700; font-size: 14px; color: var(--pa-muted-2);
     font-variant-numeric: tabular-nums;
   }
   .admin-ordonabila-continut { flex: 1; min-width: 0; }
   .admin-ordonabila-pozitie { display: flex; align-items: center; gap: 6px; }
   .admin-ordonabila-eticheta {
-    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
-    color: var(--e3-muted-dim);
+    font-size: 11px;
+    color: var(--pa-muted-2);
   }
   .admin-ordonabila-pozitie select {
-    background: var(--e3-bg); color: var(--e3-text);
-    border: 1px solid var(--e3-border); padding: 4px 6px;
+    background: var(--pa-input); color: var(--pa-text);
+    border: 1px solid var(--pa-line); padding: 4px 6px;
     font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600;
   }
   .admin-ordonabila-pozitie select:focus-visible {
-    outline: 2px solid var(--e3-accent); outline-offset: 2px;
+    outline: 2px solid var(--pa-accent-text); outline-offset: 2px;
   }
 
   /* ---- Invelisul de editare ----
@@ -1088,33 +1249,31 @@
   .admin-camp { display: grid; gap: 6px; }
   .admin-camp-eticheta {
     display: flex; align-items: baseline; gap: 8px;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted-dim);
+    font-size: 11px; font-weight: 700; color: var(--pa-muted-2);
   }
   .admin-camp-obligatoriu {
     font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
-    text-transform: none; color: var(--e3-muted-strong);
-    border: 1px solid var(--e3-border); padding: 1px 6px;
+    text-transform: none; color: var(--pa-text-2);
+    border: 1px solid var(--pa-line); padding: 1px 6px;
   }
-  .admin-camp-ajutor { font-size: 12px; line-height: 1.45; color: var(--e3-muted-dim); }
-  .admin-camp-problema { font-size: 12px; line-height: 1.45; color: var(--e3-danger); }
+  .admin-camp-ajutor { font-size: 12px; line-height: 1.45; color: var(--pa-muted-2); }
+  .admin-camp-problema { font-size: 12px; line-height: 1.45; color: var(--pa-danger); }
 
   /* ---- Previzualizarea vie, in editor ----
      Un clip nepublicat nu apare pe banda publica, deci un buton spre pagina
      n-ar avea ce arata. Acelasi iframe pe care-l foloseste pagina. */
   .admin-previz { display: grid; gap: 8px; margin-top: 16px; }
   .admin-previz-eticheta {
-    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted-dim);
+    font-size: 11px; font-weight: 700; color: var(--pa-muted-2);
   }
   .admin-previz-card {
     display: grid; gap: 8px; max-width: 280px;
-    border: 1px solid var(--e3-border); background: var(--e3-surface); padding: 10px;
+    border: 1px solid var(--pa-line); background: var(--pa-surface); padding: 10px;
   }
   .admin-previz-card iframe {
-    width: 100%; aspect-ratio: 9 / 16; border: 0; display: block; background: var(--e3-bg);
+    width: 100%; aspect-ratio: 9 / 16; border: 0; display: block; background: var(--pa-input);
   }
-  .admin-previz-legenda { font-size: 13px; color: var(--e3-text); }
+  .admin-previz-legenda { font-size: 13px; color: var(--pa-text); }
   /* Cardul de pe /antrenament, randat in editor. Fara animatia de intrare:
      aici se re-randeaza la fiecare tasta. Latimea urmeaza coloana editorului,
      nu cei 680px ai paginii, ca pe telefon sa nu impinga ecranul in lateral. */
@@ -1122,24 +1281,13 @@
 
   /* Alerta de livrare, in antet: un email care n-a ajuns trebuie sa te
      gaseasca pe orice ecran, nu doar daca te intorci acasa. */
-  .admin-alerta-livrare {
-    display: flex; align-items: center; gap: 4px; cursor: pointer;
-    background: none; border: 1px solid var(--e3-danger); padding: 5px 10px;
-    color: var(--e3-danger); font-family: Archivo, sans-serif;
-    font-size: 12px; font-weight: 700;
-  }
-  .admin-alerta-livrare:hover { background: var(--e3-surface); }
-  .admin-alerta-livrare:active { transform: translateY(1px); }
-  .admin-alerta-livrare:focus-visible {
-    outline: 2px solid var(--e3-accent); outline-offset: 2px;
-  }
 
   /* Saritura peste antet. Antetul are acum faza, numaratoarea, alerta,
      comutatorul de ecrane si iesirea din cont — cinci opriri de tabulare
      inaintea ecranului, pe fiecare ecran. */
   .admin-sari {
     position: absolute; left: -9999px;
-    background: var(--e3-accent); color: var(--e3-bg);
+    background: var(--pa-accent); color: var(--pa-accent-ink);
     padding: 10px 16px; font-family: Archivo, sans-serif;
     font-size: 13px; font-weight: 700; text-decoration: none;
   }
@@ -1150,74 +1298,23 @@
   /* ---- Calea de intoarcere ----
      Apare doar cand ai unde sa te intorci. Pe ecranul de pornire ar fi un
      buton care nu duce nicaieri. */
-  .admin-cale { display: flex; align-items: center; gap: 10px; }
-  .admin-cale-inapoi {
-    background: none; border: none; cursor: pointer; padding: 4px 0;
-    color: var(--e3-muted-strong); font-family: Archivo, sans-serif;
-    font-size: 13px; font-weight: 600;
-  }
-  .admin-cale-inapoi:hover { color: var(--e3-accent); }
-  .admin-cale-inapoi:active { transform: translateY(1px); }
-  .admin-cale-inapoi:focus-visible {
-    outline: 2px solid var(--e3-accent); outline-offset: 2px;
-  }
-  .admin-cale-separator { color: var(--e3-muted-dim); }
-  .admin-cale-aici {
-    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 700;
-    color: var(--e3-text);
-  }
 
   /* ---- Registrul de ecrane, pe ecranul de pornire ----
      A fost o bara cu doua niveluri. Nivelul al doilea cumpara spatiu cat timp
      bara statea deasupra fiecarui ecran; de cand registrul are ecranul lui,
      ascunderea a sapte ecrane dupa un grup inchis cumpara doar un clic in
      plus si intrebarea "in care dintre ele sta?". */
-  .admin-registru { display: grid; gap: 28px; }
-  .admin-registru-grup { display: grid; gap: 12px; }
-  .admin-registru-titlu {
-    display: flex; align-items: baseline; gap: 12px; margin: 0;
-    font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--e3-text);
-  }
-  .admin-registru-intrebare {
-    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 500;
-    letter-spacing: 0; text-transform: none; color: var(--e3-muted-dim);
-  }
-  .admin-registru-lista {
-    list-style: none; margin: 0; padding: 0;
-    display: grid; gap: 10px;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  }
   /* Tinta e tot cardul, nu numele din el: un buton de marimea unui rand de
      text e greu de nimerit pe telefon si imposibil de nimerit grabit. */
-  .admin-registru-ecran {
-    display: grid; gap: 4px; width: 100%; height: 100%; text-align: left;
-    cursor: pointer; padding: 14px 16px;
-    background: var(--e3-surface); border: 1px solid var(--e3-border);
-    transition: border-color 0.2s ease, background 0.2s ease;
-  }
-  .admin-registru-ecran:hover { border-color: var(--e3-accent); }
   /* Apasarea trebuie sa se simta. Fara ea, cardul raspunde la trecerea
      cursorului dar nu si la clic — exact cind ai nevoie de confirmare. */
-  .admin-registru-ecran:active { transform: translateY(1px); }
-  .admin-registru-ecran:focus-visible {
-    outline: 2px solid var(--e3-accent); outline-offset: 2px;
-  }
-  .admin-registru-nume {
-    font-family: Archivo, sans-serif; font-size: 14px; font-weight: 700;
-    color: var(--e3-text);
-  }
   /* Descrierea e raspunsul la "ce e aici?". Statea in `title`, deci se citea
      numai la hover, numai cu mouse, si niciodata de un cititor de ecran. */
-  .admin-registru-descriere {
-    font-size: 12px; line-height: 1.45; color: var(--e3-muted-dim);
-    text-wrap: pretty;
-  }
 
   /* Badge de alerta (ex. emailuri nelivrate). */
   .admin-tab-alert {
     display: inline-block; margin-left: 8px; padding: 1px 7px;
-    background: var(--e3-danger); color: var(--e3-bg);
+    background: var(--pa-danger-solid); color: var(--pa-accent-ink);
     font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
     vertical-align: middle; font-variant-numeric: tabular-nums;
   }
@@ -1225,7 +1322,7 @@
      dintre "uita-te aici" si "atatea sunt". */
   .admin-tab-contor {
     display: inline-block; margin-left: 8px; padding: 1px 7px;
-    background: var(--e3-border); color: var(--e3-muted-strong);
+    background: var(--pa-line); color: var(--pa-text-2);
     font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
     vertical-align: middle; font-variant-numeric: tabular-nums;
     transition: background 0.2s ease, color 0.2s ease;
@@ -1236,36 +1333,35 @@
      manca un sfert de ecran. O lista are inaltime fixa, oricate editii ar fi. */
   .admin-editions {
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
     padding: 12px 18px;
   }
   .admin-editions-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--e3-muted-dim); flex: none;
+    font-size: 11px; font-weight: 700; color: var(--pa-muted-2); flex: none;
   }
   .admin-editions-control {
     display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
     flex-wrap: wrap;
   }
   .admin-editions-select {
-    background: var(--e3-bg); color: var(--e3-text);
-    border: 1px solid var(--e3-border); padding: 9px 12px;
+    background: var(--pa-input); color: var(--pa-text);
+    border: 1px solid var(--pa-line); padding: 9px 12px;
     font-family: Archivo, sans-serif; font-size: 14px; font-weight: 600;
     min-width: 260px; max-width: 100%; cursor: pointer;
     transition: border-color 0.2s ease;
   }
   /* Optiunile nu mostenesc culorile controlului: pe Windows in dark mode ar
      iesi text inchis pe fundal inchis. */
-  .admin-editions-select option { background: var(--e3-bg); color: var(--e3-text); }
-  .admin-editions-select:hover:not(:disabled) { border-color: var(--e3-accent-dim); }
+  .admin-editions-select option { background: var(--pa-input); color: var(--pa-text); }
+  .admin-editions-select:hover:not(:disabled) { border-color: var(--pa-line-strong); }
   .admin-editions-select:disabled { opacity: 0.55; cursor: not-allowed; }
   /* Starea editiei alese, vizibila cu lista inchisa: de ea depinde daca
      butoanele de scriere sint active. */
   .admin-edition-stare {
-    font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-    color: var(--e3-muted-dim); padding: 4px 9px; border: 1px solid var(--e3-border);
+    font-size: 11px; font-weight: 700;
+    color: var(--pa-muted-2); padding: 4px 9px; border: 1px solid var(--pa-line);
   }
-  .admin-edition-stare.curenta { color: var(--e3-accent); border-color: var(--e3-accent-dim); }
+  .admin-edition-stare.curenta { color: var(--pa-accent-text); border-color: var(--pa-line-strong); }
   .admin-edition-new { flex: none; padding: 9px 14px; font-size: 13px; }
   .admin-edition-new:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -1282,27 +1378,26 @@
      grupurile inchise, tot documentul incape intr-un ecran. */
   .admin-config-grup {
     margin: 0; padding: 0;
-    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
   }
-  .admin-config-grup.invalid { border-color: var(--e3-danger); }
+  .admin-config-grup.invalid { border-color: var(--pa-danger); }
   .admin-config-grup-cap {
     display: flex; align-items: baseline; gap: 12px; width: 100%;
     background: transparent; border: none; cursor: pointer; text-align: left;
     padding: 14px 20px; transition: background 0.2s ease;
   }
-  .admin-config-grup-cap:hover { background: var(--e3-surface-hover); }
+  .admin-config-grup-cap:hover { background: var(--pa-surface-2); }
   .admin-config-grup-sageata {
-    color: var(--e3-muted-dim); font-size: 12px; flex: none; width: 10px;
+    color: var(--pa-muted-2); font-size: 12px; flex: none; width: 10px;
   }
   .admin-config-grup-titlu {
-    font-family: Anton, sans-serif; font-weight: 400; font-size: 17px;
-    letter-spacing: 1.5px; text-transform: uppercase; color: var(--e3-accent);
+    font-family: var(--pa-font); font-weight: 700; font-size: 17px; color: var(--pa-accent-text);
     flex: none;
   }
   /* Rezumatul tine locul campurilor cand grupul e inchis. Fara el, plierea ar
      ascunde informatia in loc s-o comprime. */
   .admin-config-grup-rezumat {
-    font-size: 13px; color: var(--e3-muted); min-width: 0;
+    font-size: 13px; color: var(--pa-muted); min-width: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .admin-config-grup-corp { padding: 0 20px 22px; }
@@ -1326,16 +1421,16 @@
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px 18px; flex-wrap: wrap;
     margin-top: 18px; padding: 12px 18px;
-    background: rgba(18,20,16,0.94); backdrop-filter: blur(8px);
-    border: 1px solid var(--e3-border);
-    box-shadow: 0 -10px 28px rgba(10,14,8,0.5);
+    background: color-mix(in srgb, var(--pa-bg) 92%, transparent); backdrop-filter: blur(8px);
+    border: 1px solid var(--pa-line);
+    box-shadow: 0 -10px 28px rgba(40, 44, 20, 0.14);
   }
   .admin-bara-stare {
     display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-    font-size: 13px; color: var(--e3-muted); min-width: 0;
+    font-size: 13px; color: var(--pa-muted); min-width: 0;
   }
-  .admin-bara-detaliu { color: var(--e3-muted-dim); }
-  .admin-bara-problema { color: var(--e3-danger); font-weight: 700; }
+  .admin-bara-detaliu { color: var(--pa-muted-2); }
+  .admin-bara-problema { color: var(--pa-danger); font-weight: 700; }
   /* Numărul de câmpuri stricate duce LA primul dintre ele. Arată ca text,
      se poartă ca un buton — și are focus vizibil, ca orice altceva. */
   .admin-bara-problema--link {
@@ -1343,12 +1438,12 @@
     background: none; border: 0; cursor: pointer;
     text-decoration: underline; text-underline-offset: 3px;
   }
-  .admin-bara-problema--link:hover { color: var(--e3-text); }
+  .admin-bara-problema--link:hover { color: var(--pa-text); }
   /* „Nesalvat" nu e o eroare — e diferența dintre ce vezi și ce e pe server.
      Chihlimbar, ca celelalte semnale de atenție din formular. */
   .admin-bara-nesalvat {
-    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
-    padding: 2px 7px; border: 1px solid var(--e3-warn); color: var(--e3-warn);
+    font-size: 11px;
+    padding: 2px 7px; border: 1px solid var(--pa-warn); color: var(--pa-warn);
   }
   .admin-bara-butoane { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -1363,12 +1458,11 @@
 
   .admin-config-camp { display: grid; gap: 6px; align-content: start; }
   .admin-config-eticheta {
-    font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted);
+    font-size: 12px; font-weight: 700; color: var(--pa-muted);
   }
   .admin-config-camp input,
   .admin-config-camp select {
-    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    background: var(--pa-input); border: 1px solid var(--pa-line); color: var(--pa-text);
     /* Înălțime fixă: `datetime-local` și `time` au înălțimi intrinseci diferite
        de `text`, deci fără ea rândul de câmpuri iese în trepte. */
     height: 42px; padding: 0 12px; font-size: 14px; font-family: inherit; min-width: 0;
@@ -1380,40 +1474,40 @@
   .admin-config-camp input[type="time"] { color-scheme: dark; }
   .admin-config-camp input:focus,
   .admin-config-camp select:focus {
-    outline: none; border-color: var(--e3-accent);
-    box-shadow: 0 0 0 3px rgba(201,242,75,0.16);
+    outline: none; border-color: var(--pa-accent-text);
+    box-shadow: 0 0 0 3px var(--pa-focus-soft);
   }
   /* Ecoul („sâmbătă, 22 august · peste 3 luni") și explicația. Ecoul e lime
      fiindcă e o confirmare a acțiunii tocmai făcute; explicația e text de
      fundal și rămâne gri. */
   .admin-config-ecou {
-    font-size: 13px; color: var(--e3-accent); line-height: 1.4;
+    font-size: 13px; color: var(--pa-accent-text); line-height: 1.4;
     font-variant-numeric: tabular-nums;
   }
-  .admin-config-ecou a { color: var(--e3-accent); text-decoration: underline; }
+  .admin-config-ecou a { color: var(--pa-accent-text); text-decoration: underline; }
   .admin-config-ajutor {
-    font-size: 12.5px; color: var(--e3-muted); line-height: 1.45; text-wrap: pretty;
+    font-size: 12.5px; color: var(--pa-muted); line-height: 1.45; text-wrap: pretty;
   }
-  .admin-config-eroare { font-size: 13px; color: var(--e3-danger); line-height: 1.4; }
-  .admin-config-camp.invalid .admin-config-eticheta { color: var(--e3-danger); }
+  .admin-config-eroare { font-size: 13px; color: var(--pa-danger); line-height: 1.4; }
+  .admin-config-camp.invalid .admin-config-eticheta { color: var(--pa-danger); }
   .admin-config-camp.invalid input,
-  .admin-config-camp.invalid select { border-color: var(--e3-danger); }
+  .admin-config-camp.invalid select { border-color: var(--pa-danger); }
   .admin-config-camp.invalid input:focus,
-  .admin-config-camp.invalid select:focus { box-shadow: 0 0 0 3px rgba(242,109,109,0.16); }
-  .admin-config-hint { font-size: 13px; color: var(--e3-muted); margin: 0 0 8px; }
+  .admin-config-camp.invalid select:focus { box-shadow: 0 0 0 3px var(--pa-danger-soft); }
+  .admin-config-hint { font-size: 13px; color: var(--pa-muted); margin: 0 0 8px; }
   .admin-config-hint code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
-    background: var(--e3-surface-hover); border: 1px solid var(--e3-border);
-    padding: 1px 5px; color: var(--e3-text);
+    background: var(--pa-surface-2); border: 1px solid var(--pa-line);
+    padding: 1px 5px; color: var(--pa-text);
   }
 
   /* Bifă inline (ex. „Activ" pe un rând de reminder): eticheta e ținta de click,
      deci întreg rândul e apăsabil, nu doar pătratul de 13px. */
   .admin-config-optiune {
     display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
-    font-size: 13.5px; color: var(--e3-text); cursor: pointer; user-select: none;
+    font-size: 13.5px; color: var(--pa-text); cursor: pointer; user-select: none;
   }
-  .admin-config-optiune input { width: auto; margin: 0; accent-color: var(--e3-accent); }
+  .admin-config-optiune input { width: auto; margin: 0; accent-color: var(--pa-accent-text); }
 
   /* ---- Atenție pe câmp ----
      Nici eroare (nu blochează nimic), nici ecou (nu confirmă nimic): valoarea
@@ -1421,7 +1515,7 @@
      roșul de lângă un câmp înseamnă „reparat înainte de a publica", iar aici
      publicarea trece. */
   .admin-config-atentie {
-    font-size: 13px; color: var(--e3-warn); line-height: 1.4;
+    font-size: 13px; color: var(--pa-warn); line-height: 1.4;
     display: flex; gap: 7px;
   }
   .admin-config-atentie::before { content: "▲"; font-size: 9px; line-height: 1.7; flex: none; }
@@ -1430,7 +1524,7 @@
      oprească deasupra ei, nu sub. */
   .admin-config-camp { scroll-margin-bottom: 140px; scroll-margin-top: 80px; }
   .admin-config-camp.atentie select,
-  .admin-config-camp.atentie input { border-color: #4A3F22; }
+  .admin-config-camp.atentie input { border-color: var(--pa-graph-warn); }
 
   /* ---- Chip-uri de presetare ----
      Valorile pe care le alegi de fiecare dată, dintr-un click. Nu înlocuiesc
@@ -1439,12 +1533,12 @@
   .admin-chip {
     font: inherit; font-size: 12px; line-height: 1.2;
     padding: 6px 11px; cursor: pointer;
-    background: transparent; color: var(--e3-muted-strong);
-    border: 1px solid var(--e3-border);
+    background: transparent; color: var(--pa-text-2);
+    border: 1px solid var(--pa-line);
     transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
   }
   .admin-chip:hover:not(:disabled) {
-    border-color: var(--e3-accent); color: var(--e3-accent); background: var(--e3-surface-hover);
+    border-color: var(--pa-accent-text); color: var(--pa-accent-text); background: var(--pa-surface-2);
   }
   .admin-chip:active:not(:disabled) { transform: translateY(1px); }
   /* Dezactivat = „asta e deja valoarea". Nu-l ascundem: dispariția unui buton
@@ -1462,11 +1556,11 @@
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px 18px; flex-wrap: wrap;
     padding: 12px 16px; font-size: 13px; line-height: 1.5;
-    color: var(--e3-text); background: var(--e3-surface-tint);
-    border-left: 3px solid var(--e3-accent);
+    color: var(--pa-text); background: var(--pa-accent-soft);
+    border-left: 3px solid var(--pa-accent-text);
     animation: row-in 0.25s ease both;
   }
-  .admin-config-mutare strong { color: var(--e3-accent); }
+  .admin-config-mutare strong { color: var(--pa-accent-text); }
   .admin-config-mutare-butoane { display: flex; gap: 8px; flex-wrap: wrap; flex: none; }
   .admin-config-mutare .admin-btn-accent,
   .admin-config-mutare .admin-btn-ghost { padding: 8px 14px; font-size: 12px; }
@@ -1486,7 +1580,7 @@
      sugera că desfășurarea începe înainte de anunț și continuă la nesfârșit. */
   .admin-cronologie::before {
     content: ""; position: absolute; left: 4px; top: 14px; bottom: 14px;
-    width: 1px; background: var(--e3-border);
+    width: 1px; background: var(--pa-line);
   }
   .admin-cronologie-reper {
     display: grid; align-items: baseline;
@@ -1495,35 +1589,34 @@
   }
   .admin-cronologie-punct {
     grid-column: 1; width: 9px; height: 9px; border-radius: 50%;
-    background: var(--e3-bg); border: 1px solid var(--e3-muted-dim);
+    background: var(--pa-input); border: 1px solid var(--pa-muted-2);
     align-self: center; position: relative; z-index: 1;
   }
-  .admin-cronologie-nume { font-size: 13px; color: var(--e3-muted-strong); }
-  .admin-cronologie-cand { font-size: 13px; color: var(--e3-text); }
-  .admin-cronologie-fata { font-size: 12px; color: var(--e3-muted-dim); }
+  .admin-cronologie-nume { font-size: 13px; color: var(--pa-text-2); }
+  .admin-cronologie-cand { font-size: 13px; color: var(--pa-text); }
+  .admin-cronologie-fata { font-size: 12px; color: var(--pa-muted-2); }
 
   /* Startul e reperul față de care se măsoară tot restul — și singurul pe care
      îl caută ochiul când deschide grupul. */
   .admin-cronologie-reper.start .admin-cronologie-punct {
-    background: var(--e3-accent); border-color: var(--e3-accent);
-    box-shadow: 0 0 0 3px rgba(201,242,75,0.15);
+    background: var(--pa-accent); border-color: var(--pa-accent-text);
+    box-shadow: 0 0 0 3px var(--pa-focus-soft);
   }
   .admin-cronologie-reper.start .admin-cronologie-nume {
-    color: var(--e3-accent); font-weight: 700;
-    letter-spacing: 0.4px; text-transform: uppercase; font-size: 12px;
+    color: var(--pa-accent-text); font-weight: 700; font-size: 12px;
   }
-  .admin-cronologie-reper.start .admin-cronologie-cand { color: var(--e3-text-bright); font-weight: 600; }
+  .admin-cronologie-reper.start .admin-cronologie-cand { color: var(--pa-text); font-weight: 600; }
 
   /* Trecut ≠ greșit: o ediție în desfășurare are repere consumate, și e normal.
      Estompate, nu ascunse — dispariția lor ar rupe ordinea pe care o arătăm. */
   .admin-cronologie-reper.trecut .admin-cronologie-nume,
-  .admin-cronologie-reper.trecut .admin-cronologie-cand { color: var(--e3-muted-dim); }
+  .admin-cronologie-reper.trecut .admin-cronologie-cand { color: var(--pa-muted-2); }
   .admin-cronologie-reper.trecut .admin-cronologie-punct { border-style: dashed; }
 
   .admin-cronologie-reper.problema .admin-cronologie-punct {
-    background: var(--e3-warn); border-color: var(--e3-warn); box-shadow: none;
+    background: var(--pa-graph-warn); border-color: var(--pa-warn); box-shadow: none;
   }
-  .admin-cronologie-reper.problema .admin-cronologie-fata { color: var(--e3-warn); }
+  .admin-cronologie-reper.problema .admin-cronologie-fata { color: var(--pa-warn); }
 
   @media (max-width: 720px) {
     /* Patru coloane pe un telefon înseamnă patru cuvinte rupte pe rând. Numele
@@ -1538,20 +1631,19 @@
   }
   .admin-config-form h3,
   .admin-table-section > h3 {
-    font-family: Anton, sans-serif; font-weight: 400; font-size: 20px;
-    letter-spacing: 1px; text-transform: uppercase; margin: 18px 0 4px;
+    font-family: var(--pa-font); font-weight: 700; font-size: 20px; margin: 18px 0 4px;
   }
   .admin-layout-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
   .admin-layout-list li {
     display: flex; align-items: center; gap: 12px;
-    background: var(--e3-bg); border: 1px solid var(--e3-border); padding: 10px 14px;
+    background: var(--pa-input); border: 1px solid var(--pa-line); padding: 10px 14px;
   }
   .admin-layout-list li.ascunsa { opacity: 0.55; }
   .admin-layout-nr {
-    font-family: Anton, sans-serif; font-size: 15px; color: var(--e3-accent);
+    font-family: var(--pa-font); font-weight: 700; font-size: 15px; color: var(--pa-accent-text);
     font-variant-numeric: tabular-nums; min-width: 26px;
   }
-  .admin-layout-list li.ascunsa .admin-layout-nr { color: var(--e3-muted-dim); }
+  .admin-layout-list li.ascunsa .admin-layout-nr { color: var(--pa-muted-2); }
   .admin-layout-nume { flex: 1; font-size: 14px; }
 
   /* Numele săptămânii e un BUTON, nu text: apăsat, deschide săptămâna în
@@ -1560,24 +1652,24 @@
      `.admin-layout-list button` de mai jos îl îngustează, de asta vine după. */
   .admin-layout-nume.admin-btn-link {
     flex: 1; text-align: left; padding: 6px 0;
-    background: none; border: 0; color: var(--e3-text);
+    background: none; border: 0; color: var(--pa-text);
     font: inherit; font-size: 14px; cursor: pointer;
   }
-  .admin-layout-nume.admin-btn-link:hover { color: var(--e3-accent); }
+  .admin-layout-nume.admin-btn-link:hover { color: var(--pa-accent-text); }
   .admin-layout-nume.admin-btn-link[aria-current='true'] {
-    color: var(--e3-accent); font-weight: 600;
+    color: var(--pa-accent-text); font-weight: 600;
   }
   .admin-layout-nume.admin-btn-link:focus-visible {
-    outline: 2px solid var(--e3-accent); outline-offset: 2px;
+    outline: 2px solid var(--pa-accent-text); outline-offset: 2px;
   }
 
   /* Clipurile din bandă. Trei câmpuri per rând, deci nu încap pe o linie ca
      secțiunile: fiecare clip e un bloc, cu acțiunile în coloana din dreapta. */
   .admin-reels-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
   .admin-reels-list li {
-    background: var(--e3-bg); border: 1px solid var(--e3-border); padding: 12px 14px;
+    background: var(--pa-input); border: 1px solid var(--pa-line); padding: 12px 14px;
   }
-  .admin-reels-list li.invalid { border-color: var(--e3-danger); }
+  .admin-reels-list li.invalid { border-color: var(--pa-danger); }
   .admin-reels-rand { display: flex; align-items: flex-start; gap: 12px; }
   .admin-reels-campuri { flex: 1; display: grid; gap: 4px; min-width: 0; }
   .admin-reels-campuri input { width: 100%; }
@@ -1606,8 +1698,6 @@
 
     /* Registrul trece pe o coloana: doua carduri de 260px nu incap pe 390px,
        iar unul rupt pe jumatate se citeste mai greu decat unul lat. */
-    .admin-registru-lista { grid-template-columns: 1fr; }
-    .admin-registru { gap: 20px; }
 
     /* Lista de editii ocupa toata latimea; 260px fixi ar iesi din ecran. */
     .admin-editions { padding: 12px 14px; gap: 10px; }
@@ -1623,53 +1713,51 @@
 
     /* Antetul: chip-ul de faza ramane, countdown-ul la secunda dispare - pe
        telefon nu incap amandoua, iar faza e cea care conteaza. */
-    .admin-topbar { padding: 10px 14px; }
-    .admin-topbar-meta { gap: 10px; }
     .admin-cd { display: none; }
   }
 
   /* ---- Bannere de context (arhivă, validare, avertismente) ---- */
   .admin-banner {
-    border: 1px solid var(--e3-border); border-left: 3px solid var(--e3-accent);
-    background: var(--e3-surface); padding: 14px 18px;
-    font-size: 14px; line-height: 1.6; color: var(--e3-muted);
+    border: 1px solid var(--pa-line); border-left: 3px solid var(--pa-accent-text);
+    background: var(--pa-surface); padding: 14px 18px;
+    font-size: 14px; line-height: 1.6; color: var(--pa-muted);
   }
-  .admin-banner strong { color: var(--e3-text); }
+  .admin-banner strong { color: var(--pa-text); }
   .admin-banner code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
-    background: var(--e3-bg); border: 1px solid var(--e3-hairline); padding: 1px 5px;
-    color: var(--e3-accent);
+    background: var(--pa-input); border: 1px solid var(--pa-line-soft); padding: 1px 5px;
+    color: var(--pa-accent-text);
   }
-  .admin-banner.warn { border-left-color: var(--e3-danger); }
-  .admin-banner.warn strong { color: var(--e3-danger); }
+  .admin-banner.warn { border-left-color: var(--pa-danger); }
+  .admin-banner.warn strong { color: var(--pa-danger); }
   .admin-confirm-note {
-    font-size: 13px !important; border-top: 1px solid var(--e3-hairline); padding-top: 12px;
+    font-size: 13px !important; border-top: 1px solid var(--pa-line-soft); padding-top: 12px;
   }
   .admin-confirm-note code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
-    background: var(--e3-bg); padding: 1px 4px; color: var(--e3-accent);
+    background: var(--pa-input); padding: 1px 4px; color: var(--pa-accent-text);
   }
 
   /* ---- Status de livrare email ---- */
   .admin-mail-badge {
     display: inline-block; background: transparent; cursor: pointer;
-    border: 1px solid var(--e3-border); color: var(--e3-muted-dim);
+    border: 1px solid var(--pa-line); color: var(--pa-muted-2);
     font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
     letter-spacing: 0.5px; padding: 5px 9px; white-space: nowrap;
     transition: border-color 0.2s ease, color 0.2s ease;
   }
-  .admin-mail-badge.trimis { border-color: #3A4A22; color: var(--e3-accent); }
-  .admin-mail-badge.esuat { border-color: #3A2A2A; color: var(--e3-danger); }
+  .admin-mail-badge.trimis { border-color: var(--pa-line-strong); color: var(--pa-accent-text); }
+  .admin-mail-badge.esuat { border-color: var(--pa-danger-soft); color: var(--pa-danger); }
   /* Ceva e trimis, ceva încă lipsește — nici verde, nici roșu. */
-  .admin-mail-badge.partial { border-color: #4A3F22; color: var(--e3-warn, #f2b84b); }
+  .admin-mail-badge.partial { border-color: var(--pa-graph-warn); color: var(--pa-warn); }
   .admin-mail-badge.niciunul { cursor: default; }
-  button.admin-mail-badge:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
-  button.admin-mail-badge.niciunul:hover { border-color: var(--e3-border); color: var(--e3-muted-dim); }
+  button.admin-mail-badge:hover { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
+  button.admin-mail-badge.niciunul:hover { border-color: var(--pa-line); color: var(--pa-muted-2); }
 
   /* ---- Fișa de acoperire (tab „Livrare") ---- */
   .admin-acoperire { margin-bottom: 28px; }
   .admin-acoperire .admin-hint {
-    font-size: 12px; color: var(--e3-muted-dim); margin: 4px 0 0; max-width: 68ch;
+    font-size: 12px; color: var(--pa-muted-2); margin: 4px 0 0; max-width: 68ch;
   }
   .admin-acoperire-table .admin-row {
     display: grid; grid-template-columns: minmax(0, 2fr) repeat(auto-fit, minmax(90px, 1fr));
@@ -1678,9 +1766,9 @@
   .admin-celula {
     text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
   }
-  .admin-celula.trimis { color: var(--e3-accent); }
-  .admin-celula.esuat { color: var(--e3-danger); }
-  .admin-celula.lipsa { color: var(--e3-muted-dim); }
+  .admin-celula.trimis { color: var(--pa-accent-text); }
+  .admin-celula.esuat { color: var(--pa-danger); }
+  .admin-celula.lipsa { color: var(--pa-muted-2); }
 
   /* ---- Tab Emailuri ---- */
   .admin-email {
@@ -1690,37 +1778,35 @@
   @media (max-width: 860px) {
     .admin-email { grid-template-columns: 1fr; }
   }
-  .admin-email-recipients { border: 1px solid var(--e3-border); background: var(--e3-surface); }
+  .admin-email-recipients { border: 1px solid var(--pa-line); background: var(--pa-surface); }
   .admin-email-recipients-head {
-    padding: 16px 20px; border-bottom: 1px solid var(--e3-border);
+    padding: 16px 20px; border-bottom: 1px solid var(--pa-line);
     display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
   }
   .admin-email-recipients-head h2 {
-    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
-    font-size: 18px; letter-spacing: 1px; text-transform: uppercase;
+    margin: 0; font-family: var(--pa-font); font-weight: 700;
+    font-size: 18px;
   }
   .admin-email-count {
-    font-size: 12px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--e3-accent);
+    font-size: 12px; font-weight: 700; color: var(--pa-accent-text);
   }
   .admin-email-recipient {
     display: flex; align-items: center; gap: 12px;
-    padding: 10px 20px; border-bottom: 1px solid var(--e3-hairline); cursor: pointer;
+    padding: 10px 20px; border-bottom: 1px solid var(--pa-line-soft); cursor: pointer;
     transition: background 0.15s ease;
   }
-  .admin-email-recipient:hover { background: var(--e3-surface-hover); }
+  .admin-email-recipient:hover { background: var(--pa-surface-2); }
   .admin-email-recipient.all { padding: 12px 20px; }
   .admin-email-recipient input[type="checkbox"] {
-    accent-color: var(--e3-accent); width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;
+    accent-color: var(--pa-accent-text); width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;
   }
   .admin-email-all-label {
-    font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-accent);
+    font-size: 12px; font-weight: 700; color: var(--pa-accent-text);
   }
   .admin-email-recipient-info { display: grid; gap: 2px; min-width: 0; }
-  .admin-email-recipient-info .name { font-size: 14px; font-weight: 600; color: var(--e3-text); }
+  .admin-email-recipient-info .name { font-size: 14px; font-weight: 600; color: var(--pa-text); }
   .admin-email-recipient-info .email {
-    font-size: 12px; color: var(--e3-muted);
+    font-size: 12px; color: var(--pa-muted);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .admin-email-recipient-list { max-height: 440px; overflow-y: auto; }
@@ -1729,137 +1815,187 @@
   .admin-email-recipient.dezabonat input[type="checkbox"] { cursor: not-allowed; }
   .admin-email-unsub-tag {
     display: inline-block; margin-left: 8px; padding: 1px 6px;
-    border: 1px solid #3A2A2A; color: var(--e3-danger);
-    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    border: 1px solid var(--pa-danger-soft); color: var(--pa-danger);
+    font-size: 10px; font-weight: 700;
     vertical-align: middle;
   }
-  .admin-email-unsub-note { font-weight: 400; color: var(--e3-danger); }
+  .admin-email-unsub-note { font-weight: 400; color: var(--pa-danger); }
 
   .admin-email-compose-col { display: grid; gap: 20px; min-width: 0; }
   .admin-email-compose {
-    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
     padding: 20px 24px; display: grid; gap: 16px;
   }
   .admin-email-field { display: grid; gap: 8px; }
   .admin-email-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--e3-muted);
+    font-size: 11px; font-weight: 700; color: var(--pa-muted);
   }
   .admin-email-audience { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
   .admin-email-templates { display: flex; gap: 8px; flex-wrap: wrap; }
   .admin-email-template {
-    background: transparent; border: 1px solid var(--e3-border); color: var(--e3-muted); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 700;
-    letter-spacing: 1px; text-transform: uppercase; padding: 8px 14px;
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-muted); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 700; padding: 8px 14px;
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  .admin-email-template:hover { border-color: var(--e3-accent); }
-  .admin-email-template.active { background: var(--e3-accent); border-color: var(--e3-accent); color: var(--e3-bg); }
+  .admin-email-template:hover { border-color: var(--pa-accent-text); }
+  .admin-email-template.active { background: var(--pa-accent); border-color: var(--pa-accent-text); color: var(--pa-accent-ink); }
   .admin-email-field input[type="text"] {
-    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    background: var(--pa-input); border: 1px solid var(--pa-line); color: var(--pa-text);
     font-family: Archivo, sans-serif; font-size: 14px; padding: 11px 14px;
     outline: none; width: 100%; box-sizing: border-box;
     transition: border-color 0.2s ease;
   }
-  .admin-email-field input[type="text"]:focus { border-color: var(--e3-accent); }
+  .admin-email-field input[type="text"]:focus { border-color: var(--pa-accent-text); }
   .admin-email-body-head {
     display: flex; align-items: baseline; justify-content: space-between;
     gap: 12px; flex-wrap: wrap;
   }
   .admin-email-vars { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .admin-email-vars > span { font-size: 11px; color: var(--e3-muted-dim); }
+  .admin-email-vars > span { font-size: 11px; color: var(--pa-muted-2); }
   .admin-email-vars button {
-    background: var(--e3-bg); border: 1px dashed var(--e3-accent-dim); color: var(--e3-accent); cursor: pointer;
+    background: var(--pa-input); border: 1px dashed var(--pa-line-strong); color: var(--pa-accent-text); cursor: pointer;
     font-family: 'Courier New', monospace; font-size: 12px; padding: 4px 8px;
     transition: background 0.2s ease, border-color 0.2s ease;
   }
-  .admin-email-vars button:hover { background: #1E2418; border-color: var(--e3-accent); }
+  .admin-email-vars button:hover { background: var(--pa-accent-soft); border-color: var(--pa-accent-text); }
   .admin-email-field textarea {
-    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    background: var(--pa-input); border: 1px solid var(--pa-line); color: var(--pa-text);
     font-family: Archivo, sans-serif; font-size: 14px; line-height: 1.6;
     padding: 12px 14px; outline: none; width: 100%; box-sizing: border-box;
     resize: vertical; transition: border-color 0.2s ease;
   }
-  .admin-email-field textarea:focus { border-color: var(--e3-accent); }
+  .admin-email-field textarea:focus { border-color: var(--pa-accent-text); }
 
-  .admin-email-preview { border: 1px solid var(--e3-border); background: #161A12; }
+  .admin-email-preview { border: 1px solid var(--pa-line); background: var(--pa-surface-2); }
   .admin-email-preview-head {
-    padding: 14px 20px; border-bottom: 1px solid var(--e3-border);
+    padding: 14px 20px; border-bottom: 1px solid var(--pa-line);
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px; flex-wrap: wrap;
   }
   .admin-email-pager { display: flex; align-items: center; gap: 8px; }
   .admin-email-pager button {
-    background: transparent; border: 1px solid var(--e3-border); color: var(--e3-accent); cursor: pointer;
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-accent-text); cursor: pointer;
     font-size: 14px; line-height: 1; padding: 5px 10px;
     transition: border-color 0.2s ease;
   }
-  .admin-email-pager button:hover { border-color: var(--e3-accent); }
-  .admin-email-pager span { font-size: 12px; color: var(--e3-muted); font-variant-numeric: tabular-nums; }
+  .admin-email-pager button:hover { border-color: var(--pa-accent-text); }
+  .admin-email-pager span { font-size: 12px; color: var(--pa-muted); font-variant-numeric: tabular-nums; }
   .admin-email-preview-body { padding: 18px 24px; display: grid; gap: 12px; }
   .admin-email-preview-meta { display: grid; gap: 4px; }
-  .admin-email-preview-meta .to { font-size: 12px; color: var(--e3-muted-dim); overflow-wrap: anywhere; }
-  .admin-email-preview-meta .subject { font-size: 15px; font-weight: 700; color: var(--e3-text); }
+  .admin-email-preview-meta .to { font-size: 12px; color: var(--pa-muted-2); overflow-wrap: anywhere; }
+  .admin-email-preview-meta .subject { font-size: 15px; font-weight: 700; color: var(--pa-text); }
   .admin-email-preview-text {
-    font-size: 14px; line-height: 1.6; color: var(--e3-muted-strong); white-space: pre-wrap;
-    border-top: 1px solid var(--e3-hairline); padding-top: 12px;
+    font-size: 14px; line-height: 1.6; color: var(--pa-text-2); white-space: pre-wrap;
+    border-top: 1px solid var(--pa-line-soft); padding-top: 12px;
   }
-  .admin-email-preview-empty { padding: 24px; font-size: 14px; color: var(--e3-muted); }
+  .admin-email-preview-empty { padding: 24px; font-size: 14px; color: var(--pa-muted); }
   .admin-email-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .admin-email-actions .admin-btn-accent { font-size: 15px; padding: 13px 24px; }
-  .admin-email-note { font-size: 12px; color: var(--e3-muted-dim); }
+  .admin-email-note { font-size: 12px; color: var(--pa-muted-2); }
 
   /* ---- Confirmare ștergere ---- */
-  .admin-confirm-overlay {
-    position: fixed; inset: 0; z-index: 60;
-    /* Derularea din dialog nu se scurge în pagina de dedesubt. */
-    overscroll-behavior: contain;
-    background: rgba(18,20,16,0.7); backdrop-filter: blur(3px);
-    display: flex; align-items: center; justify-content: center; padding: 24px;
+  /* ---- Dialogul central (prezentarea „dialog" a suprapunerii, U2) ----
+     Neutru implicit: confirmarea unei ciorne nu cere ezitarea roșului.
+     Roșul stă pe butonul care distruge ceva, nu pe tot dialogul. */
+  .admin-dialog {
+    position: fixed; z-index: 61; left: 50%; top: 50%;
+    width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto;
+    transform: translate(-50%, -50%);
+    background: var(--pa-pop); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+    box-shadow: var(--pa-shadow); padding: 22px; display: grid; gap: 14px;
+    animation: admin-dialog-in var(--pa-dur) var(--pa-ease) both;
   }
-  .admin-confirm {
-    background: var(--e3-surface); border: 1px solid #5A3030;
-    padding: 28px; max-width: 420px; width: 100%;
-    display: grid; gap: 14px; animation: fade-up 0.25s ease-out;
-    box-shadow: 0 20px 48px rgba(0,0,0,0.55);
-  }
-  .admin-confirm h3 {
-    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
-    font-size: 22px; letter-spacing: 1px; text-transform: uppercase; color: var(--e3-danger);
-  }
-  .admin-confirm p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--e3-muted); overflow-wrap: anywhere; }
-  .admin-confirm p strong { color: var(--e3-text); }
-  .admin-confirm-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .admin-dialog .admin-supr-antet { margin: 0; }
+  .admin-dialog .admin-supr-titlu { font-size: 19px; }
+  .admin-confirm p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--pa-muted); overflow-wrap: anywhere; }
+  .admin-confirm p strong { color: var(--pa-text); }
+  .admin-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .admin-confirm-delete {
-    background: var(--e3-danger); color: var(--e3-bg); border: none; cursor: pointer;
-    font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 1px;
-    text-transform: uppercase; padding: 12px 22px;
-    transition: background 0.2s ease, transform 0.15s ease;
+    min-height: 44px; padding: 0 18px; border: 1px solid var(--pa-danger-solid); cursor: pointer;
+    background: var(--pa-danger-solid); color: #fff;
+    font-family: var(--pa-font); font-weight: 600; font-size: 15px;
   }
-  .admin-confirm-delete:hover { background: #FF8A8A; transform: translateY(-2px); }
-  .admin-confirm-delete:active { transform: translateY(0) scale(0.96); }
+  .admin-confirm-delete:hover:not(:disabled) { background: var(--pa-danger); border-color: var(--pa-danger); }
   .admin-confirm-cancel {
-    background: transparent; border: 1px solid var(--e3-border); color: var(--e3-muted); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600;
-    letter-spacing: 1.5px; text-transform: uppercase; padding: 12px 22px;
-    transition: border-color 0.2s ease, color 0.2s ease;
+    min-height: 44px; padding: 0 18px; cursor: pointer;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); color: var(--pa-text);
+    font-family: var(--pa-font); font-size: 15px; font-weight: 600;
   }
-  .admin-confirm-cancel:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
+  .admin-confirm-cancel:hover:not(:disabled) { border-color: var(--pa-line-strong); background: var(--pa-surface-2); }
+  /* Varianta neutră: acțiunea principală e lime, nu roșie — creează, salvează. */
+  .admin-confirm--neutru .admin-confirm-delete {
+    background: var(--pa-accent); border-color: var(--pa-accent); color: var(--pa-accent-ink);
+  }
+  .admin-confirm--neutru .admin-confirm-delete:hover:not(:disabled) { background: var(--pa-accent-hover); border-color: var(--pa-accent-hover); }
+  @keyframes admin-dialog-in { from { opacity: 0; transform: translate(-50%, -46%); } }
 
-  /* Același dialog, dar pentru o acțiune care nu distruge nimic: crearea unei
-     ciorne. Roșul de ștergere ar cere o ezitare pe care nimic n-o justifică. */
-  .admin-confirm--neutru { border-color: var(--e3-border); max-width: 520px; }
-  .admin-confirm--neutru h3 { color: var(--e3-text); }
+  /* ---- Suprapuneri: popover, foaie de jos, panou (U2, KTD5) ---- */
+  .admin-supr-fundal {
+    position: fixed; inset: 0; z-index: 60; background: var(--pa-scrim);
+    overscroll-behavior: contain; animation: admin-fade-in var(--pa-dur) ease both;
+  }
+  .admin-supr-fundal--clar { background: transparent; animation: none; }
+  .admin-confirm-overlay { backdrop-filter: blur(2px); }
+  .admin-supr { outline: none; }
+  .admin-supr-antet { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .admin-supr-titlu { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.25; color: var(--pa-text); }
+  .admin-popover {
+    position: fixed; z-index: 61; top: 0; left: 0;
+    min-width: 260px; max-width: min(400px, calc(100vw - 24px));
+    max-height: min(520px, calc(100dvh - 32px)); overflow: auto; padding: 6px;
+    background: var(--pa-pop); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+    box-shadow: var(--pa-shadow); animation: admin-pop-in var(--pa-dur-fast) ease-out both;
+  }
+  .admin-foaie {
+    position: fixed; z-index: 61; left: 0; right: 0; bottom: 0;
+    max-height: 88dvh; overflow: auto; padding: 6px 16px calc(18px + env(safe-area-inset-bottom));
+    background: var(--pa-pop); border-radius: var(--pa-r-sheet) var(--pa-r-sheet) 0 0;
+    box-shadow: var(--pa-shadow); animation: admin-sheet-in var(--pa-dur-slow) var(--pa-ease) both;
+  }
+  .admin-foaie-maner { width: 40px; height: 4px; border-radius: 2px; background: var(--pa-line-strong); margin: 6px auto 10px; }
+  .admin-panou {
+    position: fixed; z-index: 61; top: 0; right: 0; bottom: 0;
+    width: min(440px, 100vw); overflow: auto; padding: 18px 24px 32px;
+    background: var(--pa-pop); border-left: 1px solid var(--pa-line);
+    box-shadow: var(--pa-shadow); animation: admin-panel-in var(--pa-dur-slow) var(--pa-ease) both;
+  }
+  @keyframes admin-fade-in { from { opacity: 0; } }
+  @keyframes admin-pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+  @keyframes admin-sheet-in { from { transform: translateY(100%); } }
+  @keyframes admin-panel-in { from { transform: translateX(100%); } }
+
+  /* Butonul doar cu iconiță: 44 px de țintă, numele în aria-label. */
+  .admin-buton-icon {
+    width: 44px; height: 44px; flex: none; display: inline-grid; place-items: center;
+    padding: 0; border: 0; background: transparent; color: var(--pa-muted); cursor: pointer;
+  }
+  .admin-buton-icon:hover { background: var(--pa-surface-2); color: var(--pa-text); }
+  .admin-buton-icon[aria-expanded="true"] { background: var(--pa-surface-3); color: var(--pa-text); }
+  .admin-icon { display: block; flex: none; }
+
+  /* ---- Meniul „⋯" ---- */
+  .admin-meniu { min-width: 240px; display: flex; flex-direction: column; }
+  .admin-foaie.admin-meniu { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .admin-meniu-item {
+    display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px;
+    border: 0; background: transparent; text-align: left; cursor: pointer;
+    font-family: var(--pa-font); font-size: 15px; font-weight: 500; color: var(--pa-text);
+  }
+  .admin-meniu-item .admin-icon { color: var(--pa-muted); }
+  .admin-meniu-item:hover:not(:disabled), .admin-meniu-item:focus-visible { background: var(--pa-surface-2); }
+  .admin-meniu-item:disabled { color: var(--pa-muted-2); cursor: not-allowed; }
+  .admin-meniu-item--distructiv, .admin-meniu-item--distructiv .admin-icon { color: var(--pa-danger); }
+  .admin-meniu-sep { border: 0; border-top: 1px solid var(--pa-line); margin: 4px 0; }
 
   /* ---- Ce moștenește ciorna nouă ---- */
-  .admin-mostenire { margin: 0; display: grid; gap: 1px; background: var(--e3-border); border: 1px solid var(--e3-border); }
+  .admin-mostenire { margin: 0; display: grid; gap: 1px; background: var(--pa-line); border: 1px solid var(--pa-line); }
   .admin-mostenire > div {
     display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
-    padding: 8px 12px; background: var(--e3-surface);
+    padding: 8px 12px; background: var(--pa-surface);
   }
-  .admin-mostenire dt { font-size: 12px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--e3-muted-dim); }
-  .admin-mostenire dd { margin: 0; font-size: 14px; color: var(--e3-text); text-align: right; overflow-wrap: anywhere; }
-  .admin-mostenire > div.recalculat dd { color: var(--e3-accent); }
+  .admin-mostenire dt { font-size: 12px; color: var(--pa-muted-2); }
+  .admin-mostenire dd { margin: 0; font-size: 14px; color: var(--pa-text); text-align: right; overflow-wrap: anywhere; }
+  .admin-mostenire > div.recalculat dd { color: var(--pa-accent-text); }
   /* Diferențele de la publicare: „de la → la", pe un singur rând.
      Valoarea veche e stinsă, cea nouă e accentul — ochiul caută ce URMEAZĂ să
      fie pe site, nu ce a fost. */
@@ -1867,35 +2003,38 @@
     display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
     justify-content: flex-end;
   }
-  .admin-diferenta-inainte { color: var(--e3-muted-dim); text-decoration: line-through; }
-  .admin-diferenta-sageata { color: var(--e3-muted-dim); }
-  .admin-diferenta-acum { color: var(--e3-accent); }
+  .admin-diferenta-inainte { color: var(--pa-muted-2); text-decoration: line-through; }
+  .admin-diferenta-sageata { color: var(--pa-muted-2); }
+  .admin-diferenta-acum { color: var(--pa-accent-text); }
 
   .admin-mostenire-marca {
     display: inline-block; margin-left: 8px; padding: 1px 6px;
-    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
-    border: 1px solid var(--e3-accent); color: var(--e3-accent);
+    font-size: 10px;
+    border: 1px solid var(--pa-accent-text); color: var(--pa-accent-text);
   }
 
-  /* ---- Toast (bottom-center, cu undo) ---- */
+  /* ---- Toast (jos, centrat, cu „Anulează") ----
+     Bară închisă pe un admin luminos: singurul lucru care plutește peste tot și
+     trebuie văzut cu coada ochiului. Acțiunea e lime pe cerneală. */
+  .admin-toast-zona {
+    position: fixed; left: 0; right: 0; bottom: 24px; z-index: 70;
+    display: flex; justify-content: center; padding: 0 12px; pointer-events: none;
+  }
   .admin-toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    z-index: 50; display: flex; align-items: center; gap: 14px;
-    background: var(--e3-surface); border: 1px solid var(--e3-accent-dim); padding: 14px 20px;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.5); animation: admin-toast-in 0.3s ease-out;
-    max-width: min(90vw, 480px);
+    pointer-events: auto; display: flex; align-items: center; gap: 12px;
+    min-height: 52px; max-width: min(520px, 100%); padding: 6px 6px 6px 16px;
+    background: var(--pa-ink); color: var(--pa-ink-text); border-radius: var(--pa-r-lg);
+    box-shadow: var(--pa-shadow); animation: admin-toast-in var(--pa-dur-slow) var(--pa-ease-arc) both;
   }
-  .admin-toast .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--e3-accent); flex-shrink: 0; }
-  .admin-toast.error { border-color: #5A3030; }
-  .admin-toast.error .dot { background: var(--e3-danger); }
-  .admin-toast span { font-size: 14px; font-weight: 600; color: var(--e3-text); }
-  .admin-toast button {
-    background: transparent; border: 1px solid var(--e3-accent-dim); color: var(--e3-accent); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 700;
-    letter-spacing: 1px; text-transform: uppercase; padding: 6px 12px;
-    transition: background 0.2s ease, color 0.2s ease;
+  .admin-toast-punct { width: 8px; height: 8px; border-radius: 50%; background: var(--pa-accent); flex: none; }
+  .admin-toast.error .admin-toast-punct { background: #ff8f80; }
+  .admin-toast-text { font-size: 14.5px; font-weight: 600; }
+  .admin-toast-actiune {
+    min-height: 40px; padding: 0 14px; border: 0; background: transparent; cursor: pointer;
+    color: var(--pa-accent); font-family: var(--pa-font); font-size: 14.5px; font-weight: 700;
   }
-  .admin-toast button:hover { background: var(--e3-accent); color: var(--e3-bg); }
+  .admin-toast-actiune:hover { background: rgba(201, 242, 75, 0.12); }
+  .admin-toast-actiune:focus-visible { outline-color: var(--pa-accent); }
 
   /* ---- Reduced motion ---- */
   @media (prefers-reduced-motion: reduce) {
@@ -1915,142 +2054,123 @@
   .admin-launch .show-editions .admin-row {
     grid-template-columns: 44px 1.2fr 1.2fr 1fr 1.6fr 0.8fr 48px 44px;
   }
-  .admin-conf { color: var(--e3-muted-dim); text-align: center; }
-  .admin-conf.da { color: var(--e3-accent); font-weight: 700; }
+  .admin-conf { color: var(--pa-muted-2); text-align: center; }
+  .admin-conf.da { color: var(--pa-accent-text); font-weight: 700; }
   .admin-btn-ghost {
-    background: transparent; border: 1px solid var(--e3-border); color: var(--e3-muted); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600;
-    letter-spacing: 1.5px; text-transform: uppercase; padding: 11px 16px;
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-muted); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600; padding: 11px 16px;
     transition: border-color 0.2s ease, color 0.2s ease;
   }
-  .admin-btn-ghost:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
+  .admin-btn-ghost:hover { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
 
   /* ---- Admin: filtre pe sursă + editor de șabloane ---- */
   .admin-sursa-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
   .admin-sursa-tab {
-    background: transparent; border: 1px solid var(--e3-border); color: var(--e3-muted); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600;
-    letter-spacing: 1.5px; text-transform: uppercase; padding: 9px 16px;
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-muted); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600; padding: 9px 16px;
     transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
   }
-  .admin-sursa-tab:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
-  .admin-sursa-tab.activ { background: var(--e3-accent); border-color: var(--e3-accent); color: var(--e3-bg); }
+  .admin-sursa-tab:hover { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
+  .admin-sursa-tab.activ { background: var(--pa-accent); border-color: var(--pa-accent-text); color: var(--pa-accent-ink); }
 
   .admin-tpl {
-    background: var(--e3-surface); border: 1px solid var(--e3-border); padding: 24px;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); padding: 24px;
     display: grid; gap: 16px; margin-bottom: 20px;
   }
   .admin-tpl-head {
     display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px;
   }
   .admin-tpl-head h3 {
-    margin: 0; font-family: Anton, sans-serif; font-weight: 400; font-size: 20px;
-    letter-spacing: 0.5px; text-transform: uppercase; color: var(--e3-text);
+    margin: 0; font-family: var(--pa-font); font-weight: 700; font-size: 20px; color: var(--pa-text);
   }
-  .admin-tpl-meta { font-size: 12px; color: var(--e3-muted-dim); }
-  .admin-tpl-desc { margin: 0; font-size: 13px; line-height: 1.6; color: var(--e3-muted); }
+  .admin-tpl-meta { font-size: 12px; color: var(--pa-muted-2); }
+  .admin-tpl-desc { margin: 0; font-size: 13px; line-height: 1.6; color: var(--pa-muted); }
   .admin-tpl-field { display: grid; gap: 7px; }
   .admin-tpl-field > span {
-    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted);
+    font-size: 11px; font-weight: 700; color: var(--pa-muted);
   }
   .admin-tpl-field input, .admin-tpl-field textarea {
-    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    background: var(--pa-input); border: 1px solid var(--pa-line); color: var(--pa-text);
     font-family: Archivo, sans-serif; font-size: 14px; line-height: 1.6;
     padding: 12px 14px; outline: none; width: 100%; box-sizing: border-box;
     transition: border-color 0.2s ease; resize: vertical;
   }
-  .admin-tpl-field input:focus, .admin-tpl-field textarea:focus { border-color: var(--e3-accent); }
+  .admin-tpl-field input:focus, .admin-tpl-field textarea:focus { border-color: var(--pa-accent-text); }
   /* ---- Dialogul de prezență (prezent / număr / timp final) ---- */
   .admin-prezenta { display: grid; gap: 14px; text-align: left; }
-  .admin-prezenta-grup {
-    display: grid; gap: 8px; margin: 0; padding: 12px 14px;
-    border: 1px solid var(--e3-border);
-  }
-  .admin-prezenta-grup legend {
-    padding: 0 6px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted);
-  }
-  .admin-prezenta-optiune {
-    display: flex; align-items: center; gap: 9px;
-    font-size: 14px; color: var(--e3-text); cursor: pointer;
-  }
-  .admin-prezenta-optiune input { accent-color: var(--e3-accent); cursor: pointer; }
   .admin-prezenta .admin-config-hint { margin: -6px 0 0; }
 
   /* Un reminder fără {link_renunt}: pleacă, dar fără butonul care schimbă ceva. */
   .admin-tpl-avertisment {
     margin: 0; padding: 10px 13px; font-size: 13px; line-height: 1.6;
-    border-left: 3px solid var(--e3-danger); color: var(--e3-danger);
-    background: rgba(242,109,109,0.06);
+    border-left: 3px solid var(--pa-danger); color: var(--pa-danger);
+    background: var(--pa-danger-soft);
   }
   .admin-tpl-avertisment code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
   }
   .admin-tpl-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
   .admin-tpl-dirty {
-    flex: 1; font-size: 12px; font-weight: 600; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--e3-accent);
+    flex: 1; font-size: 12px; font-weight: 600; color: var(--pa-accent-text);
   }
   .admin-tpl-actions button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
   .admin-tpl-msg {
     margin: 0 0 16px; padding: 11px 14px; font-size: 13px;
-    border: 1px solid var(--e3-accent); color: var(--e3-accent); background: rgba(201,242,75,0.06);
+    border: 1px solid var(--pa-accent-text); color: var(--pa-accent-text); background: var(--pa-accent-soft);
   }
-  .admin-tpl-msg.err { border-color: var(--e3-danger-strong); color: var(--e3-danger-strong); background: rgba(229,72,77,0.06); }
+  .admin-tpl-msg.err { border-color: var(--pa-danger-solid); color: var(--pa-danger-solid); background: var(--pa-danger-soft); }
 
   /* ---- Previzualizarea HTML a unui șablon ---- */
-  .admin-tpl-preview { margin-top: 16px; border: 1px solid var(--e3-border); }
+  .admin-tpl-preview { margin-top: 16px; border: 1px solid var(--pa-line); }
   .admin-tpl-preview-bar {
     display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-    gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--e3-border);
+    gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--pa-line);
   }
   .admin-tpl-preview-bar label { display: flex; align-items: center; gap: 8px; }
   .admin-tpl-preview-bar span {
-    font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--e3-muted-dim);
+    font-size: 11px; color: var(--pa-muted-2);
   }
   .admin-tpl-preview-meta {
-    margin: 0; padding: 10px 14px; font-size: 13px; color: var(--e3-muted); overflow-wrap: anywhere;
+    margin: 0; padding: 10px 14px; font-size: 13px; color: var(--pa-muted); overflow-wrap: anywhere;
   }
-  .admin-tpl-preview-meta strong { color: var(--e3-text); }
+  .admin-tpl-preview-meta strong { color: var(--pa-text); }
   /* Fundalul e cel al emailului, nu al backoffice-ului: previzualizarea trebuie
      să arate ce vede destinatarul, inclusiv unde se termină cadrul mesajului. */
   .admin-tpl-preview-frame {
-    display: block; width: 100%; height: 620px; border: 0; border-top: 1px solid var(--e3-border);
-    background: #0d0f0b;
+    display: block; width: 100%; height: 620px; border: 0; border-top: 1px solid var(--pa-line);
+    background: var(--pa-surface-3);
   }
 
   /* ---- Linia de timp a ediției (primul bloc din backoffice) ---- */
   .admin-linie {
-    border: 1px solid var(--e3-border); border-left: 3px solid var(--e3-accent);
-    background: var(--e3-surface); display: grid; gap: 0;
+    border: 1px solid var(--pa-line); border-left: 3px solid var(--pa-accent-text);
+    background: var(--pa-surface); display: grid; gap: 0;
     animation: stat-pop 0.45s ease-out both;
   }
   .admin-linie-antet {
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 8px 16px; padding: 16px 24px;
-    border-bottom: 1px solid var(--e3-border);
+    border-bottom: 1px solid var(--pa-line);
   }
   .admin-linie-eticheta {
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--e3-muted);
+    font-size: 11px; font-weight: 700; color: var(--pa-muted);
   }
   .admin-linie-faza {
     display: inline-flex; align-items: center; gap: 8px;
-    font-size: 15px; font-weight: 600; color: var(--e3-text);
+    font-size: 15px; font-weight: 600; color: var(--pa-text);
   }
   /* Lime cât timp pagina e „vie", stins în rest; pulsează doar în ziua cursei,
      singurul moment în care starea se schimbă sub ochii tăi. */
   .admin-linie-punct-faza {
     width: 9px; height: 9px; border-radius: 50%; flex: none;
-    background: var(--e3-muted-dim);
+    background: var(--pa-muted-2);
   }
-  .faza-landing .admin-linie-punct-faza { background: var(--e3-accent); }
+  .faza-landing .admin-linie-punct-faza { background: var(--pa-accent); }
   .faza-cine-vine .admin-linie-punct-faza {
-    background: var(--e3-accent); animation: dot-blink 1.4s ease-in-out infinite;
+    background: var(--pa-accent); animation: dot-blink 1.4s ease-in-out infinite;
   }
 
-  .admin-linie-gol { margin: 0; padding: 20px 24px; font-size: 14px; color: var(--e3-muted-strong); }
+  .admin-linie-gol { margin: 0; padding: 20px 24px; font-size: 14px; color: var(--pa-text-2); }
 
   .admin-linie-noduri { list-style: none; margin: 0; padding: 12px 24px 16px; display: grid; }
   .admin-linie-nod {
@@ -2064,60 +2184,59 @@
   /* Firul care leagă nodurile. Nu pe ultimul — linia nu continuă după el. */
   .admin-linie-nod::before {
     content: ""; position: absolute; left: 6px; top: 18px; bottom: -2px;
-    width: 1px; background: var(--e3-border);
+    width: 1px; background: var(--pa-line);
   }
   .admin-linie-nod:last-child::before { display: none; }
   .admin-linie-punct {
     width: 11px; height: 11px; border-radius: 50%; flex: none;
-    border: 1px solid var(--e3-muted-dim); background: var(--e3-surface);
+    border: 1px solid var(--pa-muted-2); background: var(--pa-surface);
     grid-row: 1; align-self: center;
   }
-  .admin-linie-nod.trecut .admin-linie-punct { background: var(--e3-muted-dim); }
+  .admin-linie-nod.trecut .admin-linie-punct { background: var(--pa-muted-2); }
   .admin-linie-nod.urmatorul .admin-linie-punct {
-    border-color: var(--e3-accent); border-width: 2px;
+    border-color: var(--pa-accent-text); border-width: 2px;
   }
-  .admin-linie-nod.problema .admin-linie-punct { border-color: var(--e3-danger-strong); }
+  .admin-linie-nod.problema .admin-linie-punct { border-color: var(--pa-danger-solid); }
 
   .admin-linie-nume {
-    grid-column: 2; font-size: 15px; font-weight: 600; color: var(--e3-text);
+    grid-column: 2; font-size: 15px; font-weight: 600; color: var(--pa-text);
   }
-  .admin-linie-nod.trecut .admin-linie-nume { color: var(--e3-muted-strong); font-weight: 500; }
+  .admin-linie-nod.trecut .admin-linie-nume { color: var(--pa-text-2); font-weight: 500; }
   .admin-linie-stare {
     grid-column: 3; grid-row: 1; justify-self: end;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
-    text-transform: uppercase; color: var(--e3-muted);
+    font-size: 11px; font-weight: 700; color: var(--pa-muted);
   }
-  .admin-linie-nod.urmatorul .admin-linie-stare { color: var(--e3-accent); }
+  .admin-linie-nod.urmatorul .admin-linie-stare { color: var(--pa-accent-text); }
   .admin-linie-cand {
-    grid-column: 2; font-size: 13px; color: var(--e3-accent);
+    grid-column: 2; font-size: 13px; color: var(--pa-accent-text);
     font-variant-numeric: tabular-nums;
   }
-  .admin-linie-nod.trecut .admin-linie-cand { color: var(--e3-muted); }
+  .admin-linie-nod.trecut .admin-linie-cand { color: var(--pa-muted); }
   .admin-linie-semnal {
     grid-column: 2; font-size: 13px; line-height: 1.45;
-    color: var(--e3-danger-strong); text-wrap: pretty;
+    color: var(--pa-danger-solid); text-wrap: pretty;
   }
   .admin-linie-actiune { grid-column: 3; justify-self: end; margin-top: 4px; }
 
   .admin-linie-atentie {
     display: flex; flex-wrap: wrap; gap: 8px;
-    padding: 14px 24px; border-top: 1px solid var(--e3-border);
-    background: var(--e3-bg);
+    padding: 14px 24px; border-top: 1px solid var(--pa-line);
+    background: var(--pa-input);
   }
-  .admin-linie-ok { font-size: 13px; color: var(--e3-muted); }
+  .admin-linie-ok { font-size: 13px; color: var(--pa-muted); }
   .admin-linie-atentie-semnal {
     font-family: inherit; font-size: 13px; line-height: 1.4;
-    background: transparent; color: var(--e3-muted-strong);
-    border: 1px solid var(--e3-border); padding: 7px 12px; cursor: pointer;
+    background: transparent; color: var(--pa-text-2);
+    border: 1px solid var(--pa-line); padding: 7px 12px; cursor: pointer;
     transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
   }
   .admin-linie-atentie-semnal:hover {
-    border-color: var(--e3-accent); color: var(--e3-accent);
-    background: var(--e3-surface);
+    border-color: var(--pa-accent-text); color: var(--pa-accent-text);
+    background: var(--pa-surface);
   }
   .admin-linie-atentie-semnal.static { cursor: default; }
   .admin-linie-atentie-semnal.urgent {
-    color: var(--e3-danger-strong); border-color: var(--e3-danger-strong);
+    color: var(--pa-danger-solid); border-color: var(--pa-danger-solid);
   }
 
   @media (max-width: 560px) {
@@ -2130,31 +2249,11 @@
 
   /* ---- „În fiecare săptămână" (sub linia de timp) ---- */
   .admin-saptamanal {
-    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
     display: grid; gap: 0;
   }
-  .admin-saptamanal-cap { padding: 12px 24px 0; }
   .admin-saptamanal-eticheta {
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--e3-muted);
-  }
-  .admin-saptamanal-rand {
-    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
-    padding: 10px 24px 16px;
-  }
-  .admin-saptamanal-stare {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: 13px; font-weight: 600; color: var(--e3-muted-strong);
-  }
-  .admin-saptamanal-stare.pornit { color: var(--e3-accent); }
-  .admin-saptamanal-punct {
-    width: 9px; height: 9px; border-radius: 50%; flex: none;
-    background: var(--e3-muted-dim);
-  }
-  .admin-saptamanal-stare.pornit .admin-saptamanal-punct { background: var(--e3-accent); }
-  .admin-saptamanal-titlu {
-    flex: 1 1 auto; min-width: 0; font-size: 14px; color: var(--e3-text);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 11px; font-weight: 700; color: var(--pa-muted);
   }
 
 
@@ -2163,139 +2262,135 @@
      cu o singură excepție deliberată: cifrele de pe „Prezențe" sînt mari, în
      Anton, fiindcă se citesc de pe telefon, în parc, la 6 dimineața. */
   .admin-sala { display: grid; gap: 20px; min-width: 0; }
-  .admin-sala-card { margin-top: 0; }
 
   .admin-sala-urmator {
-    border: 1px solid var(--e3-border); background: var(--e3-surface);
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
     padding: 20px 24px; display: grid; gap: 10px; min-width: 0;
   }
   .admin-sala-zi {
-    margin: 0; font-family: Anton, sans-serif; font-size: 34px; line-height: 1.05;
-    letter-spacing: 0.5px; text-transform: uppercase; color: var(--e3-text-bright);
+    margin: 0; font-family: var(--pa-font); font-weight: 700; font-size: 34px; line-height: 1.05; color: var(--pa-text);
   }
-  .admin-sala-cand { margin: 0; font-size: 14px; color: var(--e3-muted-strong); line-height: 1.45; }
+  .admin-sala-cand { margin: 0; font-size: 14px; color: var(--pa-text-2); line-height: 1.45; }
 
   .admin-sala-cifre {
     margin: 6px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
-    background: var(--e3-border); border: 1px solid var(--e3-border);
+    background: var(--pa-line); border: 1px solid var(--pa-line);
   }
   .admin-sala-cifre--patru { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .admin-sala-cifra { background: var(--e3-bg-deep); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+  .admin-sala-cifra { background: var(--pa-surface-3); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
   .admin-sala-cifra dt {
-    order: 2; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--e3-muted);
+    order: 2; font-size: 11px; font-weight: 700; color: var(--pa-muted);
   }
   .admin-sala-cifra dd {
-    order: 1; margin: 0; font-family: Anton, sans-serif; font-size: 44px; line-height: 1; color: var(--e3-text);
+    order: 1; margin: 0; font-family: Anton, sans-serif; font-size: 44px; line-height: 1; color: var(--pa-text);
   }
-  .admin-sala-cifra--vin dd { color: var(--e3-accent); }
-  .admin-sala-sub { order: 3; font-size: 12px; color: var(--e3-muted); }
+  .admin-sala-cifra--vin dd { color: var(--pa-accent-text); }
+  .admin-sala-sub { order: 3; font-size: 12px; color: var(--pa-muted); }
 
   .admin-sala-coloane { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .admin-sala-coloane--doua { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-sala-coloana { min-width: 0; }
   .admin-sala-coloana-titlu {
-    margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted-strong);
+    margin: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--pa-text-2);
   }
 
   .admin-sala-lista { list-style: none; margin: 0; padding: 0; display: grid; }
   .admin-sala-rand {
     display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
-    padding: 9px 0; border-bottom: 1px solid var(--e3-hairline); min-width: 0;
+    padding: 9px 0; border-bottom: 1px solid var(--pa-line-soft); min-width: 0;
   }
   .admin-sala-rand:last-child { border-bottom: 0; }
-  .admin-sala-nume { flex: 1 1 140px; min-width: 0; font-size: 14px; color: var(--e3-text); overflow-wrap: anywhere; }
-  .admin-sala-detaliu { font-size: 12px; color: var(--e3-muted); overflow-wrap: anywhere; }
+  .admin-sala-nume { flex: 1 1 140px; min-width: 0; font-size: 14px; color: var(--pa-text); overflow-wrap: anywhere; }
+  .admin-sala-detaliu { font-size: 12px; color: var(--pa-muted); overflow-wrap: anywhere; }
   .admin-sala-actiuni { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .admin-sala-membru .admin-sala-detaliu { flex: 1 1 220px; }
-  .admin-sala-motiv { flex-basis: 100%; font-size: 12px; color: var(--e3-warn); }
+  .admin-sala-motiv { flex-basis: 100%; font-size: 12px; color: var(--pa-warn); }
   .admin-sala-eticheta-mica {
-    margin-left: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--e3-bg); background: var(--e3-muted-strong);
+    margin-left: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700; color: var(--pa-accent-ink); background: var(--pa-text-2);
   }
 
   .admin-sala-marcaj { display: inline-flex; gap: 4px; }
   .admin-sala-buton, .admin-sala-filtru {
-    background: transparent; border: 1px solid var(--e3-border); color: var(--e3-muted-strong); cursor: pointer;
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-text-2); cursor: pointer;
     font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600; padding: 7px 11px; min-height: 34px;
     transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
   }
-  .admin-sala-buton:hover:not(:disabled), .admin-sala-filtru:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
-  .admin-sala-buton.activ, .admin-sala-filtru.activ { background: var(--e3-accent); border-color: var(--e3-accent); color: var(--e3-bg); }
+  .admin-sala-buton:hover:not(:disabled), .admin-sala-filtru:hover { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
+  .admin-sala-buton.activ, .admin-sala-filtru.activ { background: var(--pa-accent); border-color: var(--pa-accent-text); color: var(--pa-accent-ink); }
   .admin-sala-buton:disabled:not(.activ) { opacity: 0.45; cursor: default; }
 
   .admin-sala-filtre { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
   .admin-sala-cauta { flex: 1 1 220px; min-width: 0; }
   .admin-sala-anulare { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
 
-  .admin-sala-trecut { border-bottom: 1px solid var(--e3-hairline); padding: 8px 0; }
+  .admin-sala-trecut { border-bottom: 1px solid var(--pa-line-soft); padding: 8px 0; }
   .admin-sala-trecut summary { display: flex; gap: 12px; align-items: baseline; cursor: pointer; list-style: none; }
   .admin-sala-trecut summary::-webkit-details-marker { display: none; }
   .admin-sala-trecut[open] .admin-sala-coloane { margin-top: 12px; }
 
-  .admin-sala-comanda { font-size: 12px; color: var(--e3-muted); }
-  .admin-sala-comanda--done { color: var(--e3-accent); }
-  .admin-sala-comanda--failed { color: var(--e3-danger); }
-  .admin-sala-comanda--pending { color: var(--e3-warn); }
+  .admin-sala-comanda { font-size: 12px; color: var(--pa-muted); }
+  .admin-sala-comanda--done { color: var(--pa-accent-text); }
+  .admin-sala-comanda--failed { color: var(--pa-danger); }
+  .admin-sala-comanda--pending { color: var(--pa-warn); }
 
-  .admin-sala-necunoscuti { border-color: var(--e3-warn); }
+  .admin-sala-necunoscuti { border-color: var(--pa-warn); }
   .admin-sala-cont select { max-width: 220px; }
   .admin-sala-formular { display: grid; gap: 8px; }
-  .admin-sala-bifa { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--e3-text); }
+  .admin-sala-bifa { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--pa-text); }
 
   /* Analiza */
   .admin-sala-bare {
     display: flex; align-items: flex-end; gap: 3px; height: 150px;
-    padding: 8px 0; border-bottom: 1px solid var(--e3-border); overflow-x: auto;
+    padding: 8px 0; border-bottom: 1px solid var(--pa-line); overflow-x: auto;
   }
   .admin-sala-bara {
     flex: 1 1 10px; max-width: 56px; height: 100%; padding: 0; border: 0; background: transparent;
     display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; opacity: 0.7;
   }
-  .admin-sala-bara.activ, .admin-sala-bara:hover { opacity: 1; outline: 1px solid var(--e3-muted-dim); }
-  .admin-sala-bara-vin { display: block; background: var(--e3-accent); }
-  .admin-sala-bara-nu { display: block; background: var(--e3-warn); }
-  .admin-sala-bara-tacere { display: block; background: var(--e3-muted-dim); }
+  .admin-sala-bara.activ, .admin-sala-bara:hover { opacity: 1; outline: 1px solid var(--pa-muted-2); }
+  .admin-sala-bara-vin { display: block; background: var(--pa-accent); }
+  .admin-sala-bara-nu { display: block; background: var(--pa-graph-warn); }
+  .admin-sala-bara-tacere { display: block; background: var(--pa-muted-2); }
   .admin-sala-curba { width: 100%; height: 56px; margin-top: 8px; }
-  .admin-sala-curba polyline { fill: none; stroke: var(--e3-accent); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
-  .admin-sala-mix { display: flex; height: 14px; border: 1px solid var(--e3-border); }
-  .admin-sala-progres { flex: 0 0 96px; height: 6px; background: var(--e3-hairline); }
-  .admin-sala-progres span { display: block; height: 100%; background: var(--e3-accent); }
-  .admin-sala-stare--activ { color: var(--e3-accent); }
-  .admin-sala-stare--inactiv { color: var(--e3-warn); }
-  .admin-sala-stare--niciodata { color: var(--e3-muted); }
+  .admin-sala-curba polyline { fill: none; stroke: var(--pa-accent-text); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+  .admin-sala-mix { display: flex; height: 14px; border: 1px solid var(--pa-line); }
+  .admin-sala-progres { flex: 0 0 96px; height: 6px; background: var(--pa-line-soft); }
+  .admin-sala-progres span { display: block; height: 100%; background: var(--pa-accent); }
+  .admin-sala-stare--activ { color: var(--pa-accent-text); }
+  .admin-sala-stare--inactiv { color: var(--pa-warn); }
+  .admin-sala-stare--niciodata { color: var(--pa-muted); }
   .admin-sala-istoric { flex-basis: 100%; display: grid; gap: 8px; padding: 4px 0 6px; }
   .admin-sala-puncte { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
-  .admin-sala-punct { width: 12px; height: 12px; background: var(--e3-muted-dim); }
-  .admin-sala-punct--yes { background: var(--e3-accent); }
-  .admin-sala-punct--no { background: var(--e3-warn); }
+  .admin-sala-punct { width: 12px; height: 12px; background: var(--pa-muted-2); }
+  .admin-sala-punct--yes { background: var(--pa-accent); }
+  .admin-sala-punct--no { background: var(--pa-graph-warn); }
 
   /* Botul */
   .admin-sala-stare-bot {
-    border: 1px solid var(--e3-border); background: var(--e3-surface); padding: 18px 24px;
+    border: 1px solid var(--pa-line); background: var(--pa-surface); padding: 18px 24px;
     display: grid; gap: 8px; justify-items: start;
   }
-  .admin-sala-stare-bot--normal { border-left: 4px solid var(--e3-accent); }
-  .admin-sala-stare-bot--oprit { border-left: 4px solid var(--e3-muted-dim); }
-  .admin-sala-stare-bot--nu-raspunde { border-left: 4px solid var(--e3-danger); }
+  .admin-sala-stare-bot--normal { border-left: 4px solid var(--pa-accent-text); }
+  .admin-sala-stare-bot--oprit { border-left: 4px solid var(--pa-muted-2); }
+  .admin-sala-stare-bot--nu-raspunde { border-left: 4px solid var(--pa-danger); }
   .admin-sala-stare-bot .admin-sala-zi { font-size: 26px; }
 
   .admin-sala-text-sondaj { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
   .admin-sala-telegram { margin: 0; display: grid; gap: 6px; max-width: 360px; }
   .admin-sala-telegram-mesaj {
-    background: var(--e3-surface-tint); border: 1px solid var(--e3-border); padding: 10px 12px;
-    font-size: 14px; line-height: 1.4; color: var(--e3-text);
+    background: var(--pa-accent-soft); border: 1px solid var(--pa-line); padding: 10px 12px;
+    font-size: 14px; line-height: 1.4; color: var(--pa-text);
   }
   .admin-sala-telegram-mesaj p { margin: 0; }
   .admin-sala-telegram-butoane { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .admin-sala-telegram-butoane span {
     text-align: center; padding: 8px; font-size: 13px; font-weight: 600;
-    background: var(--e3-surface); border: 1px solid var(--e3-border); overflow-wrap: anywhere;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); overflow-wrap: anywhere;
   }
-  .admin-sala-probleme { margin: 0; padding: 10px 14px 10px 30px; border: 1px solid var(--e3-danger); color: var(--e3-danger); font-size: 13px; }
-  .admin-sala-nesalvat { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--e3-warn); }
+  .admin-sala-probleme { margin: 0; padding: 10px 14px 10px 30px; border: 1px solid var(--pa-danger); color: var(--pa-danger); font-size: 13px; }
+  .admin-sala-nesalvat { font-size: 12px; font-weight: 700; color: var(--pa-warn); }
   .admin-sala-comenzi { justify-content: flex-start; }
-  .admin-sala-citat { white-space: pre-wrap; border-left: 3px solid var(--e3-border); padding-left: 12px; color: var(--e3-text); }
+  .admin-sala-citat { white-space: pre-wrap; border-left: 3px solid var(--pa-line); padding-left: 12px; color: var(--pa-text); }
 
   @media (max-width: 720px) {
     /* Pe telefon, cele trei liste stau una sub alta, iar cifrele rămân pe un
@@ -2318,7 +2413,7 @@
      aspect ca restul formularelor din admin. */
   .admin-sala input[type="search"], .admin-sala input[type="date"], .admin-sala select,
   .admin-sala textarea, .admin-sala-formular input, .admin-sala-formular select {
-    background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+    background: var(--pa-input); border: 1px solid var(--pa-line); color: var(--pa-text);
     min-height: 42px; padding: 0 12px; font-size: 14px; font-family: inherit; min-width: 0;
     box-sizing: border-box; color-scheme: dark;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -2326,5 +2421,177 @@
   .admin-sala textarea { width: 100%; padding: 10px 12px; resize: vertical; line-height: 1.45; }
   .admin-sala input:focus, .admin-sala select:focus, .admin-sala textarea:focus,
   .admin-sala-formular input:focus, .admin-sala-formular select:focus {
-    outline: none; border-color: var(--e3-accent); box-shadow: 0 0 0 3px rgba(201,242,75,0.18);
+    outline: none; border-color: var(--pa-accent-text); box-shadow: 0 0 0 3px var(--pa-focus-soft);
+  }
+
+  /* ==== Acum (U8) ==== */
+  .admin-vh {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .admin-acum { display: grid; gap: 16px; }
+  .admin-acum-sub {
+    margin: -10px 0 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
+    font-size: 14px; font-weight: 500; color: var(--pa-muted);
+  }
+  .admin-viu { display: inline-flex; align-items: center; gap: 6px; color: var(--pa-ok-text); font-weight: 600; }
+  .admin-viu-punct {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--pa-graph);
+    animation: admin-puls 2s infinite;
+  }
+  @keyframes admin-puls {
+    0% { box-shadow: 0 0 0 0 rgba(77, 100, 16, 0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(77, 100, 16, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(77, 100, 16, 0); }
+  }
+  .admin-acum-titlu { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--pa-text); }
+  .admin-numar--titlu { margin-left: 0; }
+  .admin-acum-viu { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--pa-ok-text); }
+
+  /* Săptămâna, desktop: șapte coloane. */
+  .admin-sapt {
+    display: grid; gap: 10px; padding: 14px;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+  }
+  .admin-sapt-cap { display: flex; align-items: baseline; gap: 10px; }
+  .admin-sapt-interval { font-size: 13.5px; color: var(--pa-muted); }
+  .admin-sapt-grila {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; min-height: 190px;
+  }
+  .admin-sapt-zi { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: var(--pa-r); background: var(--pa-surface-2); }
+  .admin-sapt-zi--azi { background: var(--pa-accent-soft); box-shadow: inset 0 0 0 1px rgba(77, 100, 16, 0.35); }
+  .admin-sapt-data { margin: 0; display: flex; align-items: baseline; gap: 6px; padding: 2px 4px 6px; font-size: 12.5px; font-weight: 600; color: var(--pa-muted); }
+  .admin-sapt-data b { font-size: 18px; color: var(--pa-text); }
+  .admin-sapt-azi { color: var(--pa-ok-text); }
+  .admin-sapt-ev {
+    display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px; text-align: left;
+    border: 1px solid var(--pa-line); border-radius: var(--pa-r); background: var(--pa-surface);
+    font-family: var(--pa-font); font-size: 12.5px; color: var(--pa-text);
+    animation: admin-intra var(--pa-dur) var(--pa-ease) both;
+  }
+  .admin-sapt-ev b { font-size: 13px; font-weight: 700; }
+  .admin-sapt-ev span { color: var(--pa-muted); }
+  button.admin-sapt-ev { cursor: pointer; transition: border-color var(--pa-dur-fast) ease, transform var(--pa-dur-fast) ease; }
+  button.admin-sapt-ev:hover { border-color: var(--pa-line-strong); transform: translateY(-1px); }
+  .admin-sapt-ev--antrenament { border-left: 3px solid var(--pa-graph); }
+  .admin-sapt-ev--cursa { border-left: 3px solid var(--pa-graph-warn); }
+  .admin-sapt-ev--termen { border-left: 3px solid var(--pa-danger); }
+  .admin-sapt-ev--anuntul { border-left: 3px solid var(--pa-graph-2); }
+  .admin-sapt-ev--trecut { opacity: 0.7; }
+  .admin-sapt-ev--sondaj { background: transparent; border-style: dashed; }
+  @keyframes admin-intra { from { opacity: 0; transform: translateY(4px); } }
+
+  .admin-acum-coloane {
+    display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px; align-items: start;
+  }
+  .admin-acum-bloc { display: grid; gap: 8px; }
+  .admin-acum-card {
+    display: grid; gap: 10px; padding: 14px;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+  }
+  .admin-acum-card-text { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--pa-muted); }
+  .admin-acum-card-loc { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--pa-muted); }
+  .admin-acum-editie { display: flex; align-items: center; gap: 14px; }
+  .admin-acum-editie > div { display: grid; gap: 2px; }
+
+  /* „De rezolvat": inbox, fiecare rând cu acțiunea lui. */
+  .admin-inbox { list-style: none; margin: 0; padding: 0; background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg); overflow: hidden; }
+  .admin-inbox-rand { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--pa-line); animation: admin-intra var(--pa-dur) var(--pa-ease) both; }
+  .admin-inbox-rand:first-child { border-top: 0; }
+  .admin-inbox-icon { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: var(--pa-r); background: var(--pa-surface-2); color: var(--pa-muted); }
+  .admin-inbox-icon--urgent { background: var(--pa-danger-soft); color: var(--pa-danger); }
+  .admin-inbox-text { flex: 1; min-width: 0; }
+  .admin-inbox-titlu { margin: 0; font-size: 15px; font-weight: 600; color: var(--pa-text); }
+  .admin-inbox-detaliu { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--pa-muted); }
+  .admin-inbox-gol {
+    margin: 0; padding: 14px; font-size: 14px; color: var(--pa-muted);
+    background: var(--pa-surface); border: 1px dashed var(--pa-line-strong); border-radius: var(--pa-r-lg);
+  }
+
+  /* Butonul obișnuit și legătura cu săgeată. */
+  .admin-buton {
+    flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; padding: 0 16px; cursor: pointer; white-space: nowrap;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); color: var(--pa-text);
+    font-family: var(--pa-font); font-size: 15px; font-weight: 600;
+  }
+  .admin-buton:hover:not(:disabled) { border-color: var(--pa-line-strong); background: var(--pa-surface-2); }
+  .admin-buton:disabled { opacity: 0.55; cursor: not-allowed; }
+  .admin-link {
+    justify-self: start; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0;
+    border: 0; background: none; cursor: pointer;
+    font-family: var(--pa-font); font-size: 14.5px; font-weight: 600; color: var(--pa-accent-text);
+  }
+  .admin-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* Cardul antrenamentului: bara răspunsurilor și cele trei cifre. */
+  .admin-raport { display: flex; gap: 2px; height: 8px; border-radius: 2px; overflow: hidden; }
+  .admin-raport span { display: block; min-width: 3px; transition: flex-grow var(--pa-dur-slow) var(--pa-ease); }
+  .admin-raport-vin { background: var(--pa-graph); }
+  .admin-raport-nu { background: var(--pa-graph-2); }
+  .admin-raport-fara { background: var(--pa-graph-warn); }
+  .admin-cifre-antr { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .admin-cifra-buton {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 0; min-height: 56px; padding: 4px 6px;
+    border: 0; background: none; cursor: pointer; text-align: left;
+    font-family: var(--pa-font); font-size: 12.5px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-cifra-buton:hover { background: var(--pa-surface-2); }
+  .admin-cifra { display: inline-block; font-family: var(--pa-font-display); font-weight: 400; font-size: 30px; line-height: 1.05; color: var(--pa-text); }
+  .admin-cifra--atentie { color: var(--pa-warn); }
+  .admin-salt { animation: admin-salt var(--pa-dur-slow) var(--pa-ease-arc); }
+  @keyframes admin-salt { 40% { transform: scale(1.12); } }
+
+  /* Inelul ocupării. */
+  .admin-inel { display: block; flex: none; }
+  .admin-inel-fond { fill: none; stroke: var(--pa-surface-3); }
+  .admin-inel-plin { fill: none; stroke: var(--pa-graph); transition: stroke-dashoffset 700ms var(--pa-ease); }
+  .admin-inel-text { font-family: var(--pa-font-display); font-size: 19px; fill: var(--pa-text); }
+
+  /* Skeleton: încărcarea nu arată niciodată zero (R35). */
+  .admin-schelet {
+    border-radius: var(--pa-r);
+    background: linear-gradient(90deg, var(--pa-surface-2) 0%, var(--pa-surface-3) 50%, var(--pa-surface-2) 100%);
+    background-size: 200% 100%; animation: admin-schelet 1.1s linear infinite;
+  }
+  .admin-schelet--rand { height: 16px; width: 60%; }
+  .admin-schelet--bloc { height: 64px; }
+  .admin-schelet--inel { width: 64px; height: 64px; border-radius: 50%; flex: none; }
+  @keyframes admin-schelet { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+  /* Telefon: banda săptămânii și agenda. */
+  .admin-banda { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .admin-banda-zi { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 6px; border-radius: var(--pa-r-lg); }
+  .admin-banda-zi--azi { background: var(--pa-ink); color: var(--pa-ink-text); }
+  .admin-banda-scurt { font-size: 12px; font-weight: 600; color: var(--pa-muted); }
+  .admin-banda-zi--azi .admin-banda-scurt { color: var(--pa-surface-3); }
+  .admin-banda-numar { font-size: 17px; font-weight: 700; }
+  .admin-banda-puncte { display: flex; gap: 3px; height: 6px; }
+  .admin-punct { width: 6px; height: 6px; border-radius: 50%; background: var(--pa-graph-2); }
+  .admin-punct--antrenament { background: var(--pa-graph); }
+  .admin-punct--cursa { background: var(--pa-graph-warn); }
+  .admin-punct--termen { background: var(--pa-danger); }
+  .admin-punct--sondaj { background: var(--pa-line-control); }
+  .admin-banda-zi--azi .admin-punct { background: var(--pa-accent); }
+  .admin-agenda { list-style: none; margin: 0; padding: 0; background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg); overflow: hidden; }
+  .admin-agenda-rand { border-top: 1px solid var(--pa-line); }
+  .admin-agenda-rand:first-child { border-top: 0; }
+  .admin-agenda-rand--trecut { opacity: 0.62; }
+  .admin-agenda-buton {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px;
+    border: 0; background: none; text-align: left; font-family: var(--pa-font); color: var(--pa-text);
+  }
+  button.admin-agenda-buton { cursor: pointer; }
+  button.admin-agenda-buton:hover { background: var(--pa-surface-2); }
+  button.admin-agenda-buton > .admin-icon { color: var(--pa-muted); }
+  .admin-agenda-cand { width: 52px; flex: none; font-size: 13px; color: var(--pa-muted); }
+  .admin-agenda-cand b { color: var(--pa-text); font-size: 14px; }
+  .admin-agenda-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .admin-agenda-titlu { font-size: 15px; font-weight: 600; }
+  .admin-agenda-detaliu { font-size: 13.5px; color: var(--pa-muted); }
+  @media (max-width: 1100px) {
+    .admin-acum-coloane { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .admin-acum-coloane > .admin-acum-bloc { grid-column: 1 / -1; }
   }

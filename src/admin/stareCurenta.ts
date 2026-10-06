@@ -26,6 +26,8 @@ export type FazaSite = 'coming-soon' | 'landing' | 'cine-vine' | 'dupa-cursa';
  * n-avea contor, n-avea adresă și nu putea fi ținta unui semnal de atenție.
  */
 export type EcranAdmin =
+  // Aterizarea (U8): săptămâna, ce e de rezolvat, antrenamentul și ediția.
+  | 'acum'
   | 'desfasurare'
   | 'participanti'
   | 'email'

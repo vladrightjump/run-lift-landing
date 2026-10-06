@@ -38,8 +38,9 @@ import { EcranMembri } from './sala/EcranMembri';
 import { EcranAnaliza } from './sala/EcranAnaliza';
 import { EcranBot } from './sala/EcranBot';
 import { AdminClipuriTab } from './AdminClipuriTab';
-import { AdminCadru } from './AdminCadru';
-import { EcranPornire } from './EcranPornire';
+import { EcranAcum } from './EcranAcum';
+import { CadruCuSemnale } from './CadruCuSemnale';
+import { FurnizorSala } from './sala/useSala';
 import { useEcranCurent } from './useEcranCurent';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
@@ -59,38 +60,21 @@ import { AdminCifre } from './AdminCifre';
 import { AdminRandAdaugare } from './AdminRandAdaugare';
 import { DialogPrezenta } from './DialogPrezenta';
 import { fazaSite, type EcranAdmin } from './stareCurenta';
+import { ECRAN_IMPLICIT, estePeEditie } from './adminNavigatie';
+import { LiniaDeTimp } from './LiniaDeTimp';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../content/eventConfig';
 import { ziSiLuna } from '../lib/formatare';
 import { FurnizorSesiuneAdmin } from './adminSession';
+import { Toast, useToast } from './controale/Toast';
 import { rezumaAcoperire, motivUndoEsuat } from './dashboardRezumate';
+import { Dialog } from './eventTab/Dialog';
 
 type Props = {
   token: string;
   onLogout: () => void;
 };
 
-type AdminToast = {
-  kind: 'error' | 'success';
-  msg: string;
-  undo?: () => void;
-};
-
-/**
- * Ecranele care filtrează pe ediție — singurele care arată selectorul.
- *
- * Banda de clipuri, programul săptămânal și Coming Soon nu aparțin niciunei
- * ediții: pe ele selectorul n-ar filtra nimic, iar un control care nu face
- * nimic pe ecranul unde stă e exact blocul permanent pentru care s-a desfăcut
- * pagina.
- */
-const ECRANE_PE_EDITIE: ReadonlySet<EcranAdmin> = new Set<EcranAdmin>([
-  'participanti',
-  'lansare',
-  'email',
-  'livrare',
-  'eveniment',
-]);
 
 
 export const AdminDashboard = ({ token, onLogout }: Props) => {
@@ -108,7 +92,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ nume: '', telefon: '', email: '' });
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<AdminToast | null>(null);
+  const { toast, arata: showToast, inchide: inchideToast } = useToast();
   const [confirmRow, setConfirmRow] = useState<AdminRegistration | null>(null);
   const [prezentaRow, setPrezentaRow] = useState<AdminRegistration | null>(null);
   // Ecranul curent, garda de ieșire și fragmentul din adresă trăiesc împreună
@@ -116,7 +100,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // acțiunile liniei de timp, semnalele de atenție), iar o gardă pusă pe unul
   // singur ar fi o gardă cu trei sferturi de gaură.
   const { ecran: tab, schimba: schimbaTab, inregistreazaGardaIesire } =
-    useEcranCurent('desfasurare');
+    useEcranCurent(ECRAN_IMPLICIT);
   // Semnalele pentru panoul „Acum". Ciorna și amprenta de build trăiesc în
   // tabul „Eveniment"; aici le citim doar ca să putem spune, din prima pagină,
   // că a rămas ceva nepublicat.
@@ -125,7 +109,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // de ediție nouă pe ecran. Se stinge imediat ce tabul a onorat-o.
   const [deschideDialogEditie, setDeschideDialogEditie] = useState(false);
   const [metaInUrma, setMetaInUrma] = useState(false);
-  const toastTimerRef = useRef<number | null>(null);
   // Ediția și capacitatea vin din configul PUBLICAT, nu din bundle: după ce
   // publicarea nu mai cere deploy, un backoffice deschis dintr-un build vechi ar
   // filtra ediția greșită — și nu mai există banner care să explice de ce.
@@ -145,7 +128,11 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // ascunderea butoanelor de aici e comoditate, refuzul real vine din RPC-urile
   // de scriere (`edition_archived` — vezi supabase/sql/supabase-migration-editii-si-email-log.sql).
   const editieCurenta = editions?.find((e) => e.este_curenta)?.editie ?? null;
-  const arhiva = editie !== null && editieCurenta !== null && editie !== editieCurenta;
+  // Selecția arhivei aparține numai ecranelor de ediție. Acum și celelalte
+  // zone citesc ediția publicată, folosind același ciclu de încărcare.
+  const editieDate = estePeEditie(tab) ? editie : (editions === null ? null : CURRENT_EDITION);
+  const [semnaleEditieCurenta, setSemnaleEditieCurenta] = useState({ nelivrate: 0, asteptare: 0 });
+  const arhiva = editieDate !== null && editieCurenta !== null && editieDate !== editieCurenta;
 
   // Sesiune expirată — orice RPC o semnalează; ieșim la login.
   const handleAuthError = useCallback(
@@ -159,12 +146,6 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     [onLogout]
   );
 
-  const showToast = useCallback((next: AdminToast) => {
-    if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-    setToast(next);
-    toastTimerRef.current = window.setTimeout(() => setToast(null), next.undo ? 6000 : 3200);
-  }, []);
-
   // refresh() e stabil; ref-ul evită să-l recreăm la fiecare schimbare de listă.
   const rowsRef = useRef<AdminRegistration[] | null>(null);
   rowsRef.current = rows;
@@ -174,7 +155,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   // automate NOI, nu pe cele preexistente la primul load.
   const seenEventsRef = useRef<Set<string> | null>(null);
 
-  // Inventarul edițiilor — o dată la montare și după ce deschidem una nouă.
+  // Inventarul edițiilor — la montare, după ce deschidem una nouă și când se
+  // schimbă ediția publicată.
   const refreshEditions = useCallback(() => {
     listEditions(token)
       .then((data) => {
@@ -185,7 +167,9 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       .catch(handleAuthError);
   }, [token, handleAuthError]);
 
-  useEffect(refreshEditions, [refreshEditions]);
+  // Publicarea mută `current_event_edition` pe numărul publicat; inventarul
+  // trebuie să-l urmeze, altfel Acum ar deschide ediția publicată drept arhivă.
+  useEffect(refreshEditions, [refreshEditions, CURRENT_EDITION]);
 
   /**
    * Semnalele pentru panoul „Acum" care nu vin din ciclul de participanți:
@@ -222,9 +206,16 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
   const fetchAll = useCallback(
     (signal: AbortSignal) => {
     // Fără ediție știută n-avem ce cere — așteptăm inventarul.
-    if (editie === null) return;
-    listRegistrations(token, editie, signal)
+    if (editieDate === null) return;
+    // Semnalele ediției curente (Acum și numărul din șină), oricare ar fi
+    // ediția deschisă.
+    const semnalAsteptare = (data: AdminWaitlistEntry[]) =>
+      setSemnaleEditieCurenta((prev) => ({ ...prev, asteptare: data.length }));
+    const semnalNelivrate = (data: AdminEmailLogEntry[]) =>
+      setSemnaleEditieCurenta((prev) => ({ ...prev, nelivrate: emailuriNelivrate(data).length }));
+    listRegistrations(token, editieDate, signal)
       .then((data) => {
+        if (signal.aborted) return;
         setRows(data);
         setLoadError(false);
       })
@@ -233,20 +224,50 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         // Păstrăm ultima listă cunoscută; eroarea contează doar la primul load.
         setLoadError((prev) => prev || rowsRef.current === null);
       });
-    listWaitlist(token, editie, signal)
-      .then(setWaitlist)
+    listWaitlist(token, editieDate, signal)
+      .then((data) => {
+        if (signal.aborted) return;
+        setWaitlist(data);
+        if (editieDate === CURRENT_EDITION) semnalAsteptare(data);
+      })
       .catch((err) => {
         if (signal.aborted) return;
         handleAuthError(err);
       });
     // Corpul emailurilor doar când e chiar folosit (tab-ul „Livrare"); în rest
     // avem nevoie doar de status, pentru badge + coloana din tabelul de participanți.
-    listEmailLog(token, editie, tab === 'livrare', signal)
-      .then(setEmailLog)
+    listEmailLog(token, editieDate, tab === 'livrare', signal)
+      .then((data) => {
+        if (signal.aborted) return;
+        setEmailLog(data);
+        if (editieDate === CURRENT_EDITION) semnalNelivrate(data);
+      })
       .catch((err) => {
         if (signal.aborted) return;
         handleAuthError(err);
       });
+    // Cu altă ediție deschisă (de regulă o arhivă), ediția curentă se cere
+    // separat: altfel numărul de pe zona Acum ar rămâne înghețat pe toată vizita.
+    if (editieDate !== CURRENT_EDITION) {
+      listWaitlist(token, CURRENT_EDITION, signal)
+        .then((data) => {
+          if (signal.aborted) return;
+          semnalAsteptare(data);
+        })
+        .catch((err) => {
+          if (signal.aborted) return;
+          handleAuthError(err);
+        });
+      listEmailLog(token, CURRENT_EDITION, false, signal)
+        .then((data) => {
+          if (signal.aborted) return;
+          semnalNelivrate(data);
+        })
+        .catch((err) => {
+          if (signal.aborted) return;
+          handleAuthError(err);
+        });
+    }
     listAdminEvents(token, 200, signal)
       .then((data) => {
         // Primul load: marcăm tot ca „văzut" fără toast. Apoi anunțăm doar noutățile.
@@ -271,37 +292,34 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         handleAuthError(err);
       });
     },
-    [token, editie, tab, handleAuthError, showToast]
+    [token, editieDate, CURRENT_EDITION, tab, handleAuthError, showToast]
   );
 
   const refresh = useAdminPolling(fetchAll);
 
   // Schimbarea ediției înseamnă alt set de date — golim ca să nu se vadă o clipă
   // lista ediției anterioare sub numărul nou.
-  const editiePrecedentaRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (editiePrecedentaRef.current !== null && editiePrecedentaRef.current !== editie) {
-      setRows(null);
-      setWaitlist(null);
-      setEmailLog(null);
-      setQuery('');
-      setAddOpen(false);
-      setEditId(null);
-      // Altfel dialogul de confirmare rămâne deschis peste ediția nouă și
-      // „Da, șterge" ar lovi un rând care nu mai e în lista vizibilă.
-      setConfirmRow(null);
-    }
-    editiePrecedentaRef.current = editie;
-  }, [editie]);
+  const [editieDatePrecedenta, setEditieDatePrecedenta] = useState(editieDate);
+  if (editieDatePrecedenta !== editieDate) {
+    // Ajustarea înaintea randării copiilor evită afișarea pentru un cadru a
+    // cifrelor vechi sub titlul ediției noi (inclusiv la Back/Forward).
+    setEditieDatePrecedenta(editieDate);
+    setRows(null);
+    setWaitlist(null);
+    setEmailLog(null);
+    setQuery('');
+    setAddOpen(false);
+    setEditId(null);
+    // Altfel dialogul de confirmare rămâne deschis peste ediția nouă și
+    // „Da, șterge" ar lovi un rând care nu mai e în lista vizibilă.
+    setConfirmRow(null);
+    setPrezentaRow(null);
+  }
 
-  // Poll-ul stă în `useAdminPolling`; aici rămâne doar cronometrul toast-ului,
-  // care nu ține de ciclul de date.
-  useEffect(
-    () => () => {
-      if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-    },
-    []
-  );
+  const deschideDinAcum = (ecran: EcranAdmin) => {
+    if (estePeEditie(ecran)) setEditie(CURRENT_EDITION);
+    schimbaTab(ecran);
+  };
 
   const all = rows ?? [];
   const q = query.trim().toLowerCase();
@@ -335,6 +353,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
    * citește organizatorul în clipa în care intră.
    */
   const contorEcran: Record<EcranAdmin, number | null> = {
+    acum: null,
     desfasurare: null,
     participanti: rows === null ? null : all.length,
     email: null,
@@ -647,34 +666,49 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     URL.revokeObjectURL(a.href);
   };
 
+  /** Semnalele ediției deschise, pentru linia de timp. */
+  const semnale = {
+    nelivrate,
+    asteptare: waitAll.length,
+    ciornaNepublicata,
+    metaInUrma,
+    arhiva,
+  };
+  /**
+   * Semnalele pentru Acum și pentru numărul de pe zona Acum (R6, R9): mereu ale
+   * ediției curente, chiar când în Evenimente e deschisă o arhivă.
+   */
+  const semnaleAcum = { ...semnale, ...semnaleEditieCurenta, arhiva: false };
+
   return (
     <FurnizorSesiuneAdmin token={token} onAuthError={handleAuthError} showToast={showToast}>
-      <AdminCadru
+      <FurnizorSala>
+      <CadruCuSemnale
+        semnale={semnaleAcum}
         ecran={tab}
         onEcran={schimbaTab}
         faza={fazaAcum}
         countdown={
           cd.done ? null : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`
         }
-        nelivrate={nelivrate}
+        contorEcran={contorEcran}
         onLogout={onLogout}
+        selectorEditie={
+          /* Selectorul de ediție apare DOAR pe ecranele care filtrează pe
+             ediție (R4). Pe antrenamente sau pe site n-ar filtra nimic, iar un
+             control care nu face nimic pe ecranul pe care stă minte. */
+          estePeEditie(tab) ? (
+            <AdminEditionTabs
+              editions={editions}
+              selected={editie}
+              onSelect={setEditie}
+              onCreate={handleCreateEdition}
+              creating={creatingEdition}
+            />
+          ) : undefined
+        }
       >
-        {/* Selectorul de ediție apare DOAR pe ecranele care filtrează pe
-            ediție. Pe „Clipuri" sau „Antrenamente" nu filtra nimic: banda și
-            programul săptămânal nu aparțin niciunei ediții, iar un control care
-            nu face nimic pe ecranul pe care stă e exact genul de bloc permanent
-            pentru care s-a desfăcut pagina. */}
-        {ECRANE_PE_EDITIE.has(tab) && (
-          <AdminEditionTabs
-            editions={editions}
-            selected={editie}
-            onSelect={setEditie}
-            onCreate={handleCreateEdition}
-            creating={creatingEdition}
-          />
-        )}
-
-        {arhiva && ECRANE_PE_EDITIE.has(tab) && (
+        {arhiva && estePeEditie(tab) && (
           <div className="admin-banner" role="status">
             <strong>Ediția {editie} e încheiată.</strong> O vezi ca arhivă: datele rămân
             întregi, dar nu se mai poate adăuga, edita sau șterge nimic. Exportul CSV
@@ -682,20 +716,24 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
           </div>
         )}
 
+        {tab === 'acum' && (
+          <EcranAcum
+            semnale={semnaleAcum}
+            faza={fazaAcum}
+            config={config}
+            inscrisi={rows === null ? null : all.length}
+            asteptare={waitlist === null ? null : waitAll.length}
+            onEcran={deschideDinAcum}
+            onEditieNoua={porneșteEditiaUrmatoare}
+          />
+        )}
+
         {tab === 'desfasurare' && (
-          <EcranPornire
-            semnale={{
-              nelivrate,
-              asteptare: waitAll.length,
-              ciornaNepublicata,
-              metaInUrma,
-              arhiva,
-            }}
-            onEcran={schimbaTab}
+          <LiniaDeTimp
+            semnale={semnale}
+            onTab={schimbaTab}
             onEditieNoua={porneșteEditiaUrmatoare}
             arhiva={arhiva}
-            contorEcran={contorEcran}
-            nelivrate={nelivrate}
           />
         )}
 
@@ -919,7 +957,8 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
         <AdminActivitate events={events} />
         </>
         )}
-      </AdminCadru>
+      </CadruCuSemnale>
+      </FurnizorSala>
 
       {prezentaRow && (
         <DialogPrezenta
@@ -931,55 +970,30 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
       )}
 
       {confirmRow && (
-        <div
-          className="admin-confirm-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setConfirmRow(null);
-          }}
-        >
-          <div className="admin-confirm" role="alertdialog" aria-modal="true">
-            <h3>Ștergi înscrierea?</h3>
-            <p>
-              <strong>{confirmRow.nume}</strong> ({confirmRow.email}) va fi șters din listă.
-              Poți anula imediat după, din notificarea de jos.
-            </p>
-            <div className="admin-confirm-actions">
-              <button
-                type="button"
-                className="admin-confirm-delete"
-                onClick={() => {
-                  handleDelete(confirmRow);
-                  setConfirmRow(null);
-                }}
-              >
-                Da, șterge
-              </button>
-              <button type="button" className="admin-confirm-cancel" onClick={() => setConfirmRow(null)}>
-                Anulează
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className={`admin-toast${toast.kind === 'error' ? ' error' : ''}`} role="status">
-          <span className="dot" />
-          <span>{toast.msg}</span>
-          {toast.undo && (
+        <Dialog titlu="Ștergi înscrierea?" rol="alertdialog" onInchide={() => setConfirmRow(null)}>
+          <p>
+            <strong>{confirmRow.nume}</strong> ({confirmRow.email}) va fi șters din listă.
+            Poți anula imediat după, din notificarea de jos.
+          </p>
+          <div className="admin-confirm-actions">
             <button
               type="button"
+              className="admin-confirm-delete"
               onClick={() => {
-                toast.undo?.();
-                if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-                setToast(null);
+                handleDelete(confirmRow);
+                setConfirmRow(null);
               }}
             >
+              Da, șterge
+            </button>
+            <button type="button" className="admin-confirm-cancel" onClick={() => setConfirmRow(null)}>
               Anulează
             </button>
-          )}
-        </div>
+          </div>
+        </Dialog>
       )}
+
+      <Toast toast={toast} onInchide={inchideToast} />
     </FurnizorSesiuneAdmin>
   );
 };
