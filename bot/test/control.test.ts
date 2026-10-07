@@ -45,6 +45,7 @@ function harness(sessions: SessionRow[] = [row("2026-10-08")]) {
     } as People,
   };
   const writes: string[] = [];
+  const audits: { action: string; status: string; payload: Record<string, string> }[] = [];
   const out: Sent[] = [];
   const answers: string[] = [];
   let nextId = 500;
@@ -58,7 +59,10 @@ function harness(sessions: SessionRow[] = [row("2026-10-08")]) {
     postPoll: async (d) => (writes.push(`postPoll:${d}`), null),
     redrawPoll: async (d) => (writes.push(`redraw:${d}`), null),
     send: async () => (writes.push("send"), null),
-    audit: async (a) => void writes.push(`audit:${a.action}:${a.status}`),
+    audit: async (a) => {
+      writes.push(`audit:${a.action}:${a.status}`);
+      audits.push(a);
+    },
   };
   const deps: ControlDeps = {
     ports,
@@ -75,7 +79,7 @@ function harness(sessions: SessionRow[] = [row("2026-10-08")]) {
     handleControlCallback({ id: "cb", fromId: from, fromName: "Vlad", chatId: from, chatType: "private", messageId: 500, data }, deps);
   const say = (text: string, from = VLAD) =>
     handleOrganizerText({ chatId: from, chatType: "private", fromId: from, fromName: "Vlad", text }, deps);
-  return { state, deps, out, writes, answers, last, tap, say };
+  return { state, deps, ports, out, writes, audits, answers, last, tap, say };
 }
 
 const button = (h: ReturnType<typeof harness>, prefix: string) => {
@@ -141,6 +145,8 @@ test("Covers F1. Anulează, a typed reason, Confirmă → cancelled and announce
   await h.tap(button(h, "c:ok:"));
   assert.deepEqual(h.writes, ['write:{"status":"cancelled"}', "redraw:2026-10-08", "send", "audit:cancel_session:done"]);
   assert.match(h.last().text, /Gata/);
+  assert.match(h.last().text, /anulat/);
+  assert.deepEqual(h.audits[0].payload, { sursa: "telegram", organizator: "Vlad", data: "2026-10-08", motiv: "ploaie" });
 });
 
 test("Confirmă with an expired draft → 'a expirat' and a fresh card, nothing executed", async () => {
@@ -181,8 +187,10 @@ test("Mută → Altă oră → '7:45' → preview with 07:45; text without an ho
   const h = harness();
   await h.tap("c:muta:2026-10-08");
   await h.tap(button(h, "c:t:") && h.last().buttons.find((b) => b.endsWith(":alt"))!);
+  const before = h.out.length;
   await h.say("pe la șapte");
-  assert.match(h.last().text, /07:45/); // the example
+  assert.equal(h.out.length, before + 1);
+  assert.match(h.last().text, /Nu înțeleg ora/);
   await h.say("7:45");
   await h.tap(h.last().buttons.find((b) => b.endsWith(":same"))!);
   assert.match(h.last().text, /06:30 → 07:45/);
@@ -215,4 +223,33 @@ test("a shortcut the parser can't read → its error with examples", async () =>
 test("plain text with no draft waiting is not handled (the member flow decides)", async () => {
   const h = harness();
   assert.equal(await h.say("salut"), false);
+});
+
+test("the confirmation says what was done: a reminder", async () => {
+  const h = harness();
+  await h.say("/reaminteste");
+  await h.tap(button(h, "c:ok:"));
+  assert.match(h.last().text, /Gata/);
+  assert.match(h.last().text, /Reminderul a plecat/);
+  assert.ok(!h.last().text.includes("?"));
+});
+
+test("Telegram refuses the notice → the organizer sees the reason, the audit is 'failed' (R26)", async () => {
+  const h = harness();
+  h.ports.send = async () => "Bad Request: chat not found";
+  await h.say("/anuleaza ploaie");
+  await h.tap(button(h, "c:ok:"));
+  assert.match(h.last().text, /doar o parte/);
+  assert.match(h.last().text, /chat not found/);
+  assert.equal(h.audits[0].status, "failed");
+});
+
+test("Confirm on a draft whose re-check refuses keeps nothing consumed until the action runs", async () => {
+  const h = harness();
+  await h.say("/sondaj");
+  const ok = button(h, "c:ok:");
+  h.state.snapshot.sessions = [row("2026-10-08", { status: "cancelled" })];
+  await h.tap(ok); // refused: the training was cancelled meanwhile
+  assert.ok(!h.writes.some((w) => w.startsWith("postPoll")));
+  assert.match(h.last().text, /anulat/);
 });

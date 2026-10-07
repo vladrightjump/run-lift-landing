@@ -55,10 +55,6 @@ async function voteFailureAlert(detail: string) {
   await alertAdmins(`⚠️ Problemă la înregistrarea voturilor: ${detail}. Telegram reîncearcă automat.`);
 }
 
-// Process a single Telegram update. Returns false ONLY on a transient failure
-// (e.g. DB write failed) — the server then answers non-2xx and Telegram
-// REDELIVERS the update, so no vote is ever silently dropped. The attendance
-// upsert is idempotent, which makes redelivery safe.
 // The organizers' private chat, wired to the real database and Telegram.
 function controlDeps(): ControlDeps {
   return defaultDeps(
@@ -82,7 +78,12 @@ function controlDeps(): ControlDeps {
         }
       },
       async answer(id, text) {
-        await answerCallbackQuery(id, text);
+        // Best effort: a lost spinner answer must not abort the action.
+        try {
+          await answerCallbackQuery(id, text);
+        } catch (err) {
+          console.error("[control] answerCallbackQuery failed:", err);
+        }
       },
     },
     organizerIds(),
@@ -99,23 +100,45 @@ export async function registerOrganizerMenu(chatId: number): Promise<void> {
   }
 }
 
+// The organizers' private chat is never retried by Telegram: a failure there
+// is logged and told to the organizer, who simply taps or writes again.
+// Redelivering a Confirm would only answer "E deja făcut" (KTD5).
+async function organizerSafely(chatId: number, work: () => Promise<void>): Promise<void> {
+  try {
+    await work();
+  } catch (err) {
+    console.error("[control] handler error:", err);
+    try {
+      await sendMessage(chatId, `⚠️ Nu s-a putut face acum (${String(err).slice(0, 200)}). Încearcă din nou.`);
+    } catch (sendErr) {
+      console.error("[control] could not report the error:", sendErr);
+    }
+  }
+}
+
+// Process a single Telegram update. Returns false ONLY on a transient failure
+// (e.g. DB write failed) — the server then answers non-2xx and Telegram
+// REDELIVERS the update, so no vote is ever silently dropped. The attendance
+// upsert is idempotent, which makes redelivery safe.
 export async function handleUpdate(update: TgUpdate): Promise<boolean> {
   try {
     const cb = update.callback_query;
     if (cb?.data?.startsWith("c:")) {
-      // The organizers' control buttons. Never retried: a repeated tap is the
-      // retry, and Confirm is guarded against running twice (KTD5).
-      await handleControlCallback(
-        {
-          id: cb.id,
-          fromId: cb.from.id,
-          fromName: cb.from.first_name ?? cb.from.username ?? String(cb.from.id),
-          chatId: cb.message?.chat.id ?? cb.from.id,
-          chatType: cb.message?.chat.type ?? "private",
-          messageId: cb.message?.message_id ?? null,
-          data: cb.data,
-        },
-        controlDeps(),
+      // The organizers' control buttons (see organizerSafely).
+      const data = cb.data;
+      await organizerSafely(cb.message?.chat.id ?? cb.from.id, () =>
+        handleControlCallback(
+          {
+            id: cb.id,
+            fromId: cb.from.id,
+            fromName: cb.from.first_name ?? cb.from.username ?? String(cb.from.id),
+            chatId: cb.message?.chat.id ?? cb.from.id,
+            chatType: cb.message?.chat.type ?? "private",
+            messageId: cb.message?.message_id ?? null,
+            data,
+          },
+          controlDeps(),
+        ),
       );
       return true;
     }
@@ -404,20 +427,25 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
   const text = (msg.text ?? "").trim();
 
   // An organizer's command, or the answer to the bot's question (U4).
-  if (
-    text &&
-    (await handleOrganizerText(
-      {
-        chatId: msg.chat.id,
-        chatType: msg.chat.type,
-        fromId: msg.from.id,
-        fromName: msg.from.first_name ?? msg.from.username ?? String(msg.from.id),
-        text,
-      },
-      controlDeps(),
-    ))
-  ) {
-    return;
+  if (text) {
+    const from = msg.from;
+    let handled = false;
+    await organizerSafely(msg.chat.id, async () => {
+      handled = await handleOrganizerText(
+        {
+          chatId: msg.chat.id,
+          chatType: msg.chat.type,
+          fromId: from.id,
+          fromName: from.first_name ?? from.username ?? String(from.id),
+          text,
+        },
+        controlDeps(),
+      );
+    });
+    // A failure on an organizer's command is reported above, not retried.
+    if (handled || (organizerIds().includes(from.id) && text.startsWith("/") && !text.startsWith("/start"))) {
+      return;
+    }
   }
 
   const supabase = createAdminClient();

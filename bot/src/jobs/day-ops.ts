@@ -52,17 +52,25 @@ const STEP_NAMES: Record<Effect["kind"], string> = {
   send: "anunțul",
 };
 
+const messageOf = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+// One step; a thrown error (Telegram unreachable, bad JSON, a failed read)
+// counts as that step's failure, like a returned one.
+async function runEffect(e: Effect, ports: Ports): Promise<string | null> {
+  try {
+    if (e.kind === "write") return await ports.write(e);
+    if (e.kind === "postPoll") return await ports.postPoll(e.date);
+    if (e.kind === "redrawPoll") return await ports.redrawPoll(e.date);
+    return await ports.send(e.html);
+  } catch (err) {
+    return messageOf(err);
+  }
+}
+
 async function runEffects(effects: Effect[], ports: Ports): Promise<string[]> {
   const failures: string[] = [];
   for (const e of effects) {
-    const err =
-      e.kind === "write"
-        ? await ports.write(e)
-        : e.kind === "postPoll"
-          ? await ports.postPoll(e.date)
-          : e.kind === "redrawPoll"
-            ? await ports.redrawPoll(e.date)
-            : await ports.send(e.html);
+    const err = await runEffect(e, ports);
     if (!err) continue;
     failures.push(`${STEP_NAMES[e.kind]}: ${err}`);
     if (e.kind === "write") break; // nothing after it makes sense without the row
@@ -104,8 +112,14 @@ export async function runQueuedNotice(
   if (!date) return { ok: false, result: "fără dată în payload" };
   const reason = typeof row.payload?.motiv === "string" ? row.payload.motiv : null;
   const kind = row.action === "cancel_session" ? "cancel" : "reactivate";
-  const { snapshot, people } = await ports.state(date);
-  const q = queuedNotice(kind, snapshot, people, date, reason);
+  let state: Awaited<ReturnType<Ports["state"]>>;
+  try {
+    state = await ports.state(date);
+  } catch (err) {
+    // Not "depășită": the row is marked failed and the admins are told.
+    return { ok: false, result: `citirea stării a eșuat: ${messageOf(err)}` };
+  }
+  const q = queuedNotice(kind, state.snapshot, state.people, date, reason);
   const failures = await runEffects(q.effects, ports);
   return failures.length ? { ok: false, result: failures.join("; ") } : { ok: true, result: q.result };
 }
@@ -125,10 +139,11 @@ interface AttRow {
 
 // A session's votes, with each voter's name and Telegram account.
 async function attendanceOf(supabase: Supabase, sessionId: string): Promise<AttRow[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("attendance")
     .select("member_id, response, member:members(full_name, telegram_user_id)")
     .eq("session_id", sessionId);
+  if (error) throw new Error(error.message);
   return (data ?? []) as unknown as AttRow[];
 }
 
@@ -159,12 +174,15 @@ export async function loadState(
 ): Promise<{ snapshot: Snapshot; people: People }> {
   const cfg = await getBotConfig();
   const today = todayInTz();
-  const { data: rows } = await supabase
+  // A failed read throws: an empty snapshot would look like "no poll in the
+  // group" and quietly skip a notice.
+  const { data: rows, error } = await supabase
     .from("training_sessions")
     .select(SESSION_COLUMNS)
     .gte("session_date", today)
     .order("session_date", { ascending: true })
     .limit(40);
+  if (error) throw new Error(error.message);
   const snapshot: Snapshot = {
     today,
     now: localWeekdayAndTime().hhmm,
@@ -178,7 +196,7 @@ export async function loadState(
   const people: People = { yes: [], no: [], silent: [] };
   if (!target) return { snapshot, people };
 
-  const [att, { data: active }] = await Promise.all([
+  const [att, { data: active, error: activeErr }] = await Promise.all([
     target.row ? attendanceOf(supabase, target.row.id) : Promise.resolve([] as AttRow[]),
     supabase
       .from("members")
@@ -187,6 +205,7 @@ export async function loadState(
       .not("telegram_user_id", "is", null)
       .order("full_name"),
   ]);
+  if (activeErr) throw new Error(activeErr.message);
   const answered = new Set<string>();
   for (const a of att) {
     answered.add(a.member_id);

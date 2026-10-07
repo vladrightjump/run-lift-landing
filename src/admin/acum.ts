@@ -317,8 +317,10 @@ export const deRezolvat = (
     }
     for (const c of sala.comenzi) {
       if (c.status !== 'failed' || aziLaChisinau(new Date(c.created_at)) !== azi) continue;
-      // Numai comenzile fără payload se pot relua din acest rezumat.
-      const reluabila = c.action === 'send_poll' || c.action === 'send_summary' || c.action === 'send_reminder';
+      // Numai comenzile fără payload se pot relua din acest rezumat. Una dată din
+      // Telegram era pentru o zi anume; reluarea de aici ar trimite pentru mâine.
+      const reluabila =
+        c.sursa !== 'telegram' && (c.action === 'send_poll' || c.action === 'send_summary' || c.action === 'send_reminder');
       // Reluarea creează un rând nou, iar eșecul rămâne în jurnal: îl stingem
       // când o încercare ulterioară de azi, cu aceeași țintă, s-a terminat (dacă
       // a eșuat și ea, rămâne doar ea). Un mesaj în grup nu se poate potrivi —

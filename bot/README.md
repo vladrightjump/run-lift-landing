@@ -130,9 +130,14 @@ fiecare anulare din admin ar pune în coadă o comandă pe care botul vechi o ra
    printr-un tunel HTTPS temporar cu webhook-ul botului de test pe el. Doar pe o dată din 2027:
    cardul, Extra, Mută, Anulează, Reactivează, Renunță. Rândul de test din `training_sessions` se
    șterge apoi, cu acordul lui Vlad.
-3. Migrarea prin MCP `apply_migration`, `get_advisors`, instantaneele regenerate, migrarea scoasă din
-   `MIGRARI_NEAPLICATE` (`tests/unit/sql/db.ts`) și mutată în tabelul din `MIGRATIONS.md`.
-4. Merge, deploy pe Railway după CI verde, `/health`, `getWebhookInfo`.
+3. Merge, deploy pe Railway după CI verde, `/health`, `getWebhookInfo`. Adminul nou ajunge pe
+   Vercel odată cu merge-ul.
+4. **Imediat după**, migrarea prin MCP `apply_migration`, `get_advisors`, instantaneele regenerate,
+   migrarea scoasă din `MIGRARI_NEAPLICATE` (`tests/unit/sql/db.ts`) și mutată în tabelul din
+   `MIGRATIONS.md` (un PR mic). Între 3 și 4 nu anula nimic din `/admin`: o anulare cu motiv e
+   refuzată (funcția live n-are încă `p_motiv`), iar jurnalul acțiunilor din Telegram nu se scrie
+   (constrângerea veche; botul doar loghează). În ordinea inversă, botul vechi ar marca eșuat
+   fiecare anunț de anulare pus în coadă.
 5. Id-ul lui Roma în `TELEGRAM_ADMIN_CHAT_IDS`; Roma apasă `/start`.
 6. În producție, fără să atingi grupul: cardul, `/maine`, o previzualizare cu „Renunță", un cont
    care nu e organizator e ignorat; a doua zi, rezumatul are butoane.

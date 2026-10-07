@@ -49,13 +49,17 @@ app.listen(PORT, () => {
 });
 
 // ── Scheduled jobs — DB-driven (config editable from the gym-app admin UI) ────
-// A single tick fires every minute (in GYM_TZ). Each tick reads the live
-// bot_config row and, if the master switch is on and the current local
-// weekday+time matches the configured poll/summary schedule, runs the job.
-// Schedule changes therefore take effect within a minute, no redeploy needed.
+// A single tick fires every minute (in GYM_TZ). It always drains the command
+// queue; then, if the master switch is on, it reads the live bot_config row and
+// today's training and runs whatever is due. Schedule changes therefore take
+// effect within a minute, no redeploy needed. BOT_SCHEDULER=off skips the tick
+// entirely (local rehearsal).
 //
 //   send-poll        — posts tomorrow's attendance poll (idempotent)
-//   morning-summary  — DMs admins today's roster
+//   morning-summary  — DMs the organizers today's roster, with action buttons;
+//                      also on a day with an extra training (summaryDue)
+//   auto-reminder    — 2h before today's training, by its own start time
+//                      (reminderDue), at most once per training
 const firedThisMinute = new Set<string>();
 let lastMinute = "";
 // Trainings already auto-reminded while this process runs (KTD12).

@@ -548,6 +548,44 @@ describe('anunțul anulării din admin (sala_06, R13)', () => {
     expect(await coada()).toEqual([]);
   });
 
+  it('o anulare urmată de reactivare înainte ca botul să golească coada nu anunță nimic', async () => {
+    await cuSondaj('2026-10-08');
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true);
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', false);
+    expect(await coada()).toEqual([]);
+  });
+
+  it('o reactivare urmată de anulare, la fel; un anunț pentru altă zi rămâne', async () => {
+    await cuSondaj('2026-10-08', 'cancelled');
+    await cuSondaj('2026-10-13', 'cancelled');
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-13', false);
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', false);
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true);
+    expect((await coada()).map((c) => [c.action, c.payload?.data])).toEqual([['reactivate_session', '2026-10-13']]);
+  });
+
+  it('un anunț deja procesat nu se mai anulează: a doua schimbare se anunță', async () => {
+    await cuSondaj('2026-10-08');
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true);
+    await db.query(`update public.bot_actions set status = 'done'`);
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', false);
+    expect((await coada()).map((c) => [c.action, c.status])).toEqual([
+      ['cancel_session', 'done'],
+      ['reactivate_session', 'pending'],
+    ]);
+  });
+
+  it('motivul trimis pe nume (p_motiv), ca din adminul nou, ajunge în anunț', async () => {
+    await cuSondaj('2026-10-08');
+    await caRol(db, 'anon', () =>
+      db.query(
+        `select runlift.admin_sala_seteaza_antrenament(p_token => $1, p_data => $2, p_anulat => true, p_motiv => 'ploaie')`,
+        [ADMIN_TOKEN, '2026-10-08']
+      )
+    );
+    expect((await coada())[0].payload).toEqual(expect.objectContaining({ motiv: 'ploaie' }));
+  });
+
   it('un motiv gol sau doar spații nu intră în payload', async () => {
     await cuSondaj('2026-10-08');
     await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true, ' \t ');

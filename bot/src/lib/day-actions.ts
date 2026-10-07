@@ -52,7 +52,8 @@ export interface Audit {
 
 export type Decision =
   | { ok: false; message: string; suggest: "reactivate" | "move" | null; date: string | null }
-  | { ok: true; date: string; preview: string; effects: Effect[]; audit: Audit };
+  // `preview` is asked before Confirm; `done` is told after the action ran.
+  | { ok: true; date: string; preview: string; done: string; effects: Effect[]; audit: Audit };
 
 const refuse = (
   message: string,
@@ -163,6 +164,7 @@ function cancel(t: Target, reason: string | null, people: People): Decision {
       .filter(Boolean)
       .join("\n"),
     effects,
+    done: `Antrenamentul de ${when(t)} e anulat.${t.pollSent ? " Grupul a fost anunțat." : ""}`,
     audit: { action: "cancel_session", date: t.date, detail: reason ? { motiv: reason } : {} },
   };
 }
@@ -181,6 +183,7 @@ function reactivate(t: Target, people: People): Decision {
     date: t.date,
     preview: [`Reactivezi antrenamentul de ${when(t)}?`, groupNote(t, people, "sondajul își recapătă butoanele")].join("\n"),
     effects,
+    done: `Antrenamentul de ${when(t)} e din nou programat.${t.pollSent ? " Grupul a fost anunțat." : ""}`,
     audit: { action: "reactivate_session", date: t.date, detail: {} },
   };
 }
@@ -231,6 +234,7 @@ function move(
       groupNote(t, people, "sondajul arată noile date"),
     ].join("\n"),
     effects,
+    done: `Antrenamentul de ${dayLabel(t.date)} e mutat.${t.pollSent ? " Grupul a fost anunțat." : ""}`,
     audit: {
       action: "move_session",
       date: t.date,
@@ -267,6 +271,7 @@ function extra(
       { kind: "write", date, fields, insert: { ...fields } },
       { kind: "postPoll", date },
     ],
+    done: `Antrenamentul extra de ${dayLabel(date)}, ${t} e adăugat, iar sondajul a plecat.`,
     audit: { action: "add_session", date, detail: { ora: t, loc } },
   };
 }
@@ -282,6 +287,7 @@ function poll(t: Target): Decision {
       ? `Sondajul pentru ${when(t)} e deja în grup. Trimiți unul nou? Cel vechi rămâne.`
       : `Trimiți sondajul pentru ${when(t)}?`,
     effects: [{ kind: "postPoll", date: t.date }],
+    done: `Sondajul pentru ${when(t)} a plecat.`,
     audit: { action: "send_poll", date: t.date, detail: {} },
   };
 }
@@ -303,6 +309,7 @@ function remind(t: Target, people: People): Decision {
         html: `👋 Reamintire — încă n-au răspuns la sondaj (${people.silent.length}): ${names}. Apăsați ✅/❌ pe sondajul de mai sus!`,
       },
     ],
+    done: `Reminderul a plecat (${people.silent.length} numiți).`,
     audit: { action: "send_reminder", date: t.date, detail: {} },
   };
 }

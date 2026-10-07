@@ -1,3 +1,5 @@
+import { hhmm as hhmmOf, trainingDays } from "./sessions.js";
+
 // Pure scheduling predicate, kept separate so it can be unit-tested without a
 // timer or DB. Returns true when a job configured for `days` at `time` is due
 // at the given local `weekday`/`hhmm`.
@@ -33,7 +35,7 @@ export function reminderDue(
   reminded: ReadonlySet<string>,
 ): boolean {
   if (!today || today.status !== "scheduled" || reminded.has(today.id)) return false;
-  return hhmm === minusMinutes(today.startsAt.slice(0, 5), 120);
+  return hhmm === minusMinutes(hhmmOf(today.startsAt), 120);
 }
 
 // The morning summary goes on its configured days and, at its usual time, on a
@@ -47,7 +49,7 @@ export function summaryDue(
 ): boolean {
   if (isDue(cfg.summaryDays, cfg.summaryTime, weekday, hhmm)) return true;
   if (cfg.summaryDays.length === 0 || hhmm !== cfg.summaryTime) return false;
-  const scheduleDay = cfg.pollDays.map((d) => (d + 1) % 7).includes(weekday);
+  const scheduleDay = trainingDays(cfg.pollDays).includes(weekday);
   return today?.status === "scheduled" && !scheduleDay;
 }
 

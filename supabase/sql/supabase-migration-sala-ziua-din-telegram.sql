@@ -2,10 +2,11 @@
 -- `docs/plans/2026-10-06-2353-feat-ziua-de-antrenament-din-telegram-plan.md`,
 -- U1, KTD4, KTD14), peste `sala_05_scoateri`.
 --
--- Se aplică prin MCP `apply_migration` ca `sala_06_ziua_din_telegram`, ODATĂ cu
--- botul care înțelege acțiunile noi. Aplicată înaintea lui, fiecare anulare din
--- admin ar pune în coadă un `cancel_session` pe care botul vechi îl marchează
--- „unsupported" și îl raportează adminilor ca eșec.
+-- Se aplică prin MCP `apply_migration` ca `sala_06_ziua_din_telegram`, imediat
+-- după ce botul care înțelege acțiunile noi e live (`bot/README.md`, „Lansarea").
+-- Aplicată înaintea lui, fiecare anulare din admin ar pune în coadă un
+-- `cancel_session` pe care botul vechi îl marchează „unsupported" și îl raportează
+-- adminilor ca eșec.
 --
 -- Se poate rula de mai multe ori (`if exists`, `create or replace`): testele SQL
 -- o încarcă peste instantaneele de dinainte de ea, până la regenerarea lor.
@@ -17,7 +18,8 @@
 --   2. `admin_sala_seteaza_antrenament` primește un motiv opțional și, când
 --      starea se schimbă pe un antrenament al cărui sondaj e deja în grup, pune în
 --      coadă anunțul (`cancel_session` / `reactivate_session`). Fără sondaj în
---      grup n-are ce anunța (R11), deci nu pune nimic. Semnătura veche (trei
+--      grup n-are ce anunța (R11), deci nu pune nimic. O anulare și o reactivare
+--      a aceleiași zile, ambele încă în așteptare, se anulează reciproc. Semnătura veche (trei
 --      parametri) se șterge, ca PostgREST să nu aleagă între două variante; un
 --      apel pe nume cu cei trei parametri vechi ajunge la cea nouă.
 --   3. `admin_sala_date` întoarce pentru fiecare comandă și `sursa`,
@@ -91,19 +93,28 @@ begin
   -- Anunțul îl dă botul, la următorul tic (KTD4). Numai când sondajul e în grup:
   -- altfel nimeni n-a votat și n-are pe cine pomeni.
   if v_schimbat and v_sondaj is not null then
-    insert into public.bot_actions (action, payload)
-    values (
-      case when p_anulat then 'cancel_session' else 'reactivate_session' end,
-      jsonb_strip_nulls(jsonb_build_object(
-        'data', p_data,
-        'motiv', v_motiv,
-        'sursa', 'admin',
-        'organizator', (
-          select u.username from admin_sessions s join admin_users u on u.id = s.user_id
-           where s.token = p_token
-        )
-      ))
-    );
+    -- O anulare urmată de reactivare (sau invers) înainte ca botul să golească
+    -- coada se anulează reciproc: grupul n-a aflat încă de prima, deci nu află
+    -- de niciuna.
+    delete from public.bot_actions
+     where status = 'pending'
+       and action = case when p_anulat then 'reactivate_session' else 'cancel_session' end
+       and payload ->> 'data' = p_data::text;
+    if not found then
+      insert into public.bot_actions (action, payload)
+      values (
+        case when p_anulat then 'cancel_session' else 'reactivate_session' end,
+        jsonb_strip_nulls(jsonb_build_object(
+          'data', p_data,
+          'motiv', v_motiv,
+          'sursa', 'admin',
+          'organizator', (
+            select u.username from admin_sessions s join admin_users u on u.id = s.user_id
+             where s.token = p_token
+          )
+        ))
+      );
+    end if;
   end if;
 
   perform sala_jurnal(p_token, case when p_anulat then 'sala_anulare' else 'sala_reactivare' end,

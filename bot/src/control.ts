@@ -152,7 +152,7 @@ async function preview(ctx: Ctx, action: DayAction, prefix = ""): Promise<void> 
 }
 
 async function confirm(ctx: Ctx, token: string, answer: (t?: string) => Promise<void>): Promise<void> {
-  const l = ctx.deps.drafts.consume(token);
+  const l = ctx.deps.drafts.get(token);
   if (!l.found) {
     if (l.why === "used") {
       await answer("E deja făcut.");
@@ -173,9 +173,15 @@ async function confirm(ctx: Ctx, token: string, answer: (t?: string) => Promise<
     await preview(ctx, action, "Între timp s-a schimbat ceva. ");
     return;
   }
+  // The token is used up only now, right before acting: a second tap that got
+  // this far meanwhile stops here, and a failure above leaves Confirm usable.
+  if (!ctx.deps.drafts.consume(token).found) {
+    await show(ctx, "E deja făcut.", [[btn("Cardul", `c:card:${d.date}`)]]);
+    return;
+  }
   const r = await execute(d, ctx.deps.ports, { source: "telegram", organizer: ctx.organizer });
   const text = r.ok
-    ? `✅ Gata.\n${d.preview.split("\n")[0].replace(/\?$/, "")}: făcut.`
+    ? `✅ Gata. ${d.done}`
     : `⚠️ S-a făcut doar o parte.\n${r.failures.join("\n")}`;
   await show(ctx, text, [[btn("Cardul", `c:card:${d.date}`)]]);
 }

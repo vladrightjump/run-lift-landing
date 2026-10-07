@@ -145,3 +145,46 @@ test("queued row without a date → failed, nothing sent", async () => {
   assert.deepEqual(calls, []);
   assert.equal(r.ok, false);
 });
+
+// ── Thrown errors (Telegram unreachable, bad JSON) count as failed steps ────
+test("a port that throws after the write → the row stays, audit 'failed' with the reason, the action reports it", async () => {
+  const s = snap([row("2026-10-08")]);
+  const { ports, audits, calls } = fakePorts({ snapshot: s, people: nine });
+  ports.send = async () => {
+    throw new Error("fetch failed");
+  };
+  const r = await execute(okDecision(decide({ kind: "cancel", date: null, reason: null }, s, nine)), ports, {
+    source: "telegram",
+    organizer: "Vlad",
+  });
+  assert.equal(r.ok, false);
+  assert.match(r.failures.join(";"), /anunțul: fetch failed/);
+  assert.equal(calls[0], 'write:{"status":"cancelled"}');
+  assert.equal(audits[0].status, "failed");
+  assert.equal(audits[0].payload.organizator, "Vlad");
+});
+
+test("a write that throws stops the rest and is reported", async () => {
+  const s = snap([row("2026-10-08")]);
+  const { ports, calls } = fakePorts({ snapshot: s, people: nine });
+  ports.write = async () => {
+    throw new Error("db down");
+  };
+  const r = await execute(okDecision(decide({ kind: "cancel", date: null, reason: null }, s, nine)), ports, {
+    source: "telegram",
+    organizer: "Vlad",
+  });
+  assert.equal(r.ok, false);
+  assert.deepEqual(calls, []);
+});
+
+test("queued notice: a state read that throws → failed with the reason, nothing sent", async () => {
+  const { ports, calls } = fakePorts({ snapshot: snap([]), people: nine });
+  ports.state = async () => {
+    throw new Error("connection reset");
+  };
+  const r = await runQueuedNotice({ action: "cancel_session", payload: { data: "2026-10-08" } }, ports);
+  assert.equal(r.ok, false);
+  assert.match(r.result, /connection reset/);
+  assert.deepEqual(calls, []);
+});

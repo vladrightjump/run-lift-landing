@@ -372,10 +372,11 @@ YouTube n-ar trece constrângerea de cale.
 anulării sau al reactivării când sondajul e deja în grup; semnătura veche, cu trei parametri, se
 șterge. `admin_sala_date` spune pentru fiecare comandă sursa, organizatorul și data.
 
-**Precondiție de producție:** se aplică ODATĂ cu botul care înțelege acțiunile noi, deci după
-U9 din `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md`. Aplicată
-înaintea lui, fiecare anulare din admin ar pune în coadă un `cancel_session` pe care botul vechi
-îl marchează eșuat și îl raportează adminilor.
+**Precondiție de producție:** se aplică imediat după ce botul care înțelege acțiunile noi e live
+(după U9 din `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md` și după
+merge-ul ramurii). Aplicată înaintea lui, fiecare anulare din admin ar pune în coadă un
+`cancel_session` pe care botul vechi îl marchează eșuat și îl raportează adminilor. Pașii și
+fereastra dintre deploy și migrare: `bot/README.md`, „Lansarea".
 
 Până la aplicare, `tests/unit/sql/db.ts` o încarcă peste instantanee (`MIGRARI_NEAPLICATE`).
 După `apply_migration`: regenerează `supabase/schema/runlift.sql` și `supabase/schema/sala.sql`,

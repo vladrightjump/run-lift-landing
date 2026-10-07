@@ -230,6 +230,12 @@ describe('„De rezolvat" (R9)', () => {
     expect(x.actiune).toEqual({ eticheta: 'Vezi', ecran: 'grup-bot' });
   });
 
+  it('un sondaj eșuat dat din Telegram nu se reia de aici: era pentru altă zi', () => {
+    const esec = { id: 't2', action: 'send_poll' as const, member_id: null, status: 'failed' as const, result: 'sondajul: chat not found', created_at: '2026-10-07T17:13:00Z', processed_at: '2026-10-07T17:13:00Z', sursa: 'telegram', organizator: 'Vlad', data: '2026-10-10' };
+    const [x] = deRezolvat({ ...semnale, nelivrate: 0, asteptare: 0 }, 'landing', sala({ comenzi: [esec] }), ACUM);
+    expect(x.actiune).toEqual({ eticheta: 'Vezi', ecran: 'grup-bot' });
+  });
+
   it('o comandă eșuată ieri nu mai stă la „De rezolvat"', () => {
     const veche = sala({
       comenzi: [

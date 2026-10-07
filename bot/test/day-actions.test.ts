@@ -195,3 +195,26 @@ test("queued admin reactivation, still scheduled, poll in the group → redraw +
   const q = queuedNotice("reactivate", snap([withPoll()]), nine, "2026-10-08", null);
   assert.deepEqual(q.effects.map((e) => e.kind), ["redrawPoll", "send"]);
 });
+
+// ── Organizer-typed text is escaped in the group HTML ───────────────────────
+test("a reason, a place and a silent member's name with '<' and '&' are escaped", () => {
+  const c = ok(decide({ kind: "cancel", date: null, reason: "ploaie <mare> & vânt" }, snap([withPoll()]), nine));
+  assert.match((c.effects[2] as { html: string }).html, /ploaie &lt;mare&gt; &amp; vânt/);
+  const m = ok(decide({ kind: "move", date: null, time: null, location: "Parc <Nord>" }, snap([withPoll()]), nine));
+  assert.match((m.effects[2] as { html: string }).html, /Parc &lt;Nord&gt;/);
+  const r = ok(decide({ kind: "remind", date: null }, snap([withPoll()]), { ...nine, silent: ["Ana <A>"] }));
+  assert.match((r.effects[0] as { html: string }).html, /Ana &lt;A&gt;/);
+});
+
+test("every confirmed action has its own 'done' text", () => {
+  const texts = [
+    decide({ kind: "cancel", date: null, reason: null }, snap([withPoll()]), nine),
+    decide({ kind: "move", date: null, time: "07:30", location: null }, snap([withPoll()]), nine),
+    decide({ kind: "extra", date: "2026-10-10", time: "08:00", location: null }, snap(), nobody),
+    decide({ kind: "poll", date: null }, snap([withPoll()]), nine),
+    decide({ kind: "remind", date: null }, snap([withPoll()]), nine),
+    decide({ kind: "reactivate", date: null }, snap([withPoll("2026-10-08", { status: "cancelled" })]), nine),
+  ].map((d) => ok(d).done);
+  assert.ok(texts.every((t) => t.length > 0 && !t.includes("?")));
+  assert.equal(new Set(texts).size, texts.length);
+});
