@@ -88,6 +88,9 @@ trece prin `railway config plan` (doar citește și arată diferențele) și apo
 `railway config apply`. „Config as Code" (`railway.json`) nu mai e folosit: Railway nu-l mai
 citește după 1 decembrie 2026, iar un serviciu nu poate fi condus de ambele.
 
+**Mutarea (U9) e făcută pe 7 octombrie 2026**, cu botul oprit din admin (nicio sarcină programată
+nu pleca), prin `railway config apply`. Pașii, pentru o refacere:
+
 **Mutarea (U9), într-o fereastră fără sondaj (vineri–duminică):**
 
 ```bash
