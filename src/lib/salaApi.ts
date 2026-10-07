@@ -72,7 +72,18 @@ type SalaNecunoscut = {
   created_at: string;
 };
 
-type ActiuneBot = 'kick_member' | 'send_poll' | 'send_summary' | 'send_reminder' | 'send_message';
+type ActiuneBot =
+  | 'kick_member'
+  | 'send_poll'
+  | 'send_summary'
+  | 'send_reminder'
+  | 'send_message'
+  // Ziua de antrenament: jurnalul botului pentru ce face din Telegram, plus
+  // anunțul anulării/reactivării cerut de admin (`sala_06`).
+  | 'cancel_session'
+  | 'reactivate_session'
+  | 'move_session'
+  | 'add_session';
 
 export type SalaComanda = {
   id: string;
@@ -83,6 +94,12 @@ export type SalaComanda = {
   result: string | null;
   created_at: string;
   processed_at: string | null;
+  /** De unde a venit comanda: `telegram` (organizatorul, din chatul cu botul) sau `admin`. */
+  sursa?: string | null;
+  /** Prenumele din Telegram sau numele adminului. Rândurile vechi n-au. */
+  organizator?: string | null;
+  /** Ziua antrenamentului, `YYYY-MM-DD`, la acțiunile pe un antrenament. */
+  data?: string | null;
 };
 
 /** Tot ce le trebuie ecranelor grupului, dintr-o cerere. */
@@ -140,9 +157,17 @@ export const seteazaPrezenta = (
     p_raspuns: raspuns,
   });
 
-/** Anulează (sau reactivează) antrenamentul dintr-o zi. */
-export const seteazaAntrenament = (token: string, data: string, anulat: boolean): Promise<void> =>
-  rpc<void>('admin_sala_seteaza_antrenament', { p_token: token, p_data: data, p_anulat: anulat });
+/**
+ * Anulează (sau reactivează) antrenamentul dintr-o zi. Dacă sondajul lui e deja în
+ * grup, botul anunță grupul în cel mult un minut; `motiv` apare în anunț (R13).
+ */
+export const seteazaAntrenament = (token: string, data: string, anulat: boolean, motiv?: string): Promise<void> =>
+  rpc<void>('admin_sala_seteaza_antrenament', {
+    p_token: token,
+    p_data: data,
+    p_anulat: anulat,
+    ...(motiv ? { p_motiv: motiv } : {}),
+  });
 
 export const salveazaConfigBot = (token: string, config: SalaConfig): Promise<void> =>
   rpc<void>('admin_sala_salveaza_config', { p_token: token, p_config: config });
@@ -214,6 +239,7 @@ export const REFUZURI_SALA = [
   'cont_inexistent',
   'acelasi_membru',
   'antrenament_anulat',
+  'motiv_prea_lung',
 ] as const;
 
 export type RefuzSala = (typeof REFUZURI_SALA)[number];
@@ -248,5 +274,6 @@ export const MESAJE_REFUZ: Record<RefuzSala, string> = {
   telegram_deja_legat: 'Contul de Telegram e deja legat de alt membru.',
   cont_inexistent: 'Contul a fost deja legat sau nu mai există.',
   acelasi_membru: 'Alege doi membri diferiți.',
+  motiv_prea_lung: 'Motivul are voie la 200 de caractere.',
   antrenament_anulat: 'Antrenamentul de mâine e anulat, deci botul n-are pentru ce să trimită sondaj sau reminder.',
 };

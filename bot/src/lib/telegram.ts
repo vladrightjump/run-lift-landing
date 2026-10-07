@@ -114,3 +114,12 @@ export async function answerCallbackQuery(
     ...(text ? { text } : {}),
   });
 }
+
+// The command menu ("/" in the chat). With a chat scope it shows only in that
+// chat — the organizers' private chats (KTD13); members keep the default menu.
+export async function setMyCommands(
+  commands: { command: string; description: string }[],
+  scope?: Record<string, unknown>,
+): Promise<TelegramResponse> {
+  return call("setMyCommands", { commands, ...(scope ? { scope } : {}) });
+}

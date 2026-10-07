@@ -222,6 +222,20 @@ describe('„De rezolvat" (R9)', () => {
     expect(lista([{ ...esec, id: 'k2', member_id: 'm2', status: 'done', created_at: '2026-10-07T17:20:00Z' }, esec]).map((c) => c.cheie)).toEqual(['comanda-k1']);
   });
 
+  it('o acțiune a zilei de antrenament eșuată azi duce la jurnalul botului, cu motivul', () => {
+    const esec = { id: 't1', action: 'cancel_session' as const, member_id: null, status: 'failed' as const, result: 'anunțul: chat not found', created_at: '2026-10-07T17:13:00Z', processed_at: '2026-10-07T17:13:00Z', sursa: 'telegram', organizator: 'Vlad', data: '2026-10-08' };
+    const [x] = deRezolvat({ ...semnale, nelivrate: 0, asteptare: 0 }, 'landing', sala({ comenzi: [esec] }), ACUM);
+    expect(x.titlu).toMatch(/^Anunțul anulării de azi/);
+    expect(x.detaliu).toBe('anunțul: chat not found');
+    expect(x.actiune).toEqual({ eticheta: 'Vezi', ecran: 'grup-bot' });
+  });
+
+  it('un sondaj eșuat dat din Telegram nu se reia de aici: era pentru altă zi', () => {
+    const esec = { id: 't2', action: 'send_poll' as const, member_id: null, status: 'failed' as const, result: 'sondajul: chat not found', created_at: '2026-10-07T17:13:00Z', processed_at: '2026-10-07T17:13:00Z', sursa: 'telegram', organizator: 'Vlad', data: '2026-10-10' };
+    const [x] = deRezolvat({ ...semnale, nelivrate: 0, asteptare: 0 }, 'landing', sala({ comenzi: [esec] }), ACUM);
+    expect(x.actiune).toEqual({ eticheta: 'Vezi', ecran: 'grup-bot' });
+  });
+
   it('o comandă eșuată ieri nu mai stă la „De rezolvat"', () => {
     const veche = sala({
       comenzi: [

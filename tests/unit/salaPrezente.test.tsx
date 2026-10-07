@@ -110,6 +110,45 @@ describe('Prezențe', () => {
     await waitFor(() => expect(api.seteazaAntrenament).toHaveBeenCalledWith('tok', '2026-10-08', true));
   });
 
+  it('Covers R13. cu sondajul plecat, confirmarea spune că botul anunță grupul și pe câți pomenește', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByRole('heading', { name: 'Joi, 8 oct' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Anulează antrenamentul' })[0]);
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/anunță grupul/);
+    expect(dialog.textContent).toMatch(/pe cei 1 care au spus „Vin”/);
+  });
+
+  it('motivul scris în dialog ajunge la server; unul gol nu se trimite', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByRole('heading', { name: 'Joi, 8 oct' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Anulează antrenamentul' })[0]);
+    let dialog = screen.getByRole('alertdialog');
+    fireEvent.change(within(dialog).getByLabelText(/Motiv/), { target: { value: '  ploaie ' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Anulează antrenamentul' }));
+    await waitFor(() => expect(api.seteazaAntrenament).toHaveBeenCalledWith('tok', '2026-10-08', true, 'ploaie'));
+
+    api.seteazaAntrenament.mockClear();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Anulează antrenamentul' })[0]);
+    dialog = screen.getByRole('alertdialog');
+    fireEvent.change(within(dialog).getByLabelText(/Motiv/), { target: { value: '   ' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Anulează antrenamentul' }));
+    await waitFor(() => expect(api.seteazaAntrenament).toHaveBeenCalledWith('tok', '2026-10-08', true));
+  });
+
+  it('fără sondaj plecat, confirmarea spune că în grup nu pleacă nimic și nu cere motiv', async () => {
+    const urmator = { ...dateSala().antrenamente[0], poll_sent: false };
+    api.incarcaSala.mockResolvedValue(dateSala({ antrenamente: [urmator, ...dateSala().antrenamente.slice(1)], raspunsuri: [] }));
+    randeaza();
+    await screen.findByRole('heading', { name: 'Joi, 8 oct' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Anulează antrenamentul' })[0]);
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/În grup nu pleacă nimic/);
+    expect(within(dialog).queryByLabelText(/Motiv/)).toBeNull();
+  });
+
   it('fără antrenament următor: spune când pleacă sondajul', async () => {
     api.incarcaSala.mockResolvedValue(dateSala({ antrenamente: [], raspunsuri: [] }));
     randeaza();
@@ -162,6 +201,44 @@ describe('Prezențe — zilele anulate și istoricul', () => {
     const rand = (await screen.findByText('Marți, 13 oct')).closest('li') as HTMLElement;
     fireEvent.click(within(rand).getByRole('button', { name: 'Reactivează' }));
     await waitFor(() => expect(api.seteazaAntrenament).toHaveBeenCalledWith('tok', '2026-10-13', false));
+  });
+
+  it('Covers R13. reactivarea unei zile cu sondaj plecat cere confirmare și spune că botul anunță grupul', async () => {
+    api.incarcaSala.mockResolvedValue(
+      dateSala({
+        antrenamente: [
+          ...dateSala().antrenamente,
+          { id: 'x', session_date: '2026-10-13', starts_at: '06:30', location: 'Parc', status: 'cancelled', poll_sent: true },
+        ],
+      })
+    );
+    randeaza();
+    const rand = (await screen.findByText('Marți, 13 oct')).closest('li') as HTMLElement;
+    fireEvent.click(within(rand).getByRole('button', { name: 'Reactivează' }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/anunță grupul/);
+    expect(api.seteazaAntrenament).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reactivează' }));
+    await waitFor(() => expect(api.seteazaAntrenament).toHaveBeenCalledWith('tok', '2026-10-13', false));
+  });
+
+  it('formularul trece prin aceeași confirmare când ziua aleasă are sondajul plecat', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByRole('heading', { name: 'Joi, 8 oct' });
+    fireEvent.change(screen.getByLabelText('Anulează o zi'), { target: { value: '2026-10-08' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Anulează ziua' }));
+    expect(screen.getByRole('alertdialog').textContent).toMatch(/anunță grupul/);
+    expect(api.seteazaAntrenament).not.toHaveBeenCalled();
+  });
+
+  it('Covers R25. un antrenament mutat își arată ora și locul', async () => {
+    const mutat = { ...dateSala().antrenamente[0], starts_at: '07:30', location: 'Valea Morilor' };
+    api.incarcaSala.mockResolvedValue(dateSala({ antrenamente: [mutat, ...dateSala().antrenamente.slice(1)] }));
+    randeaza();
+    const sectiune = (await screen.findByRole('heading', { name: 'Joi, 8 oct' })).closest('section') as HTMLElement;
+    expect(sectiune.textContent).toContain('07:30');
+    expect(sectiune.textContent).toContain('Valea Morilor');
   });
 
   it('formularul anulează o zi aleasă și se golește după succes', async () => {

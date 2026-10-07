@@ -364,6 +364,24 @@ cu forma veche și grant-urile lor; `create table if not exists` nu atinge tabel
 regenerează instantaneul. **Inversul e valid doar cât timp tabelul e gol** — un rând cu identificator
 YouTube n-ar trece constrângerea de cale.
 
+### `supabase/sql/supabase-migration-sala-ziua-din-telegram.sql` — NEAPLICAT
+
+`sala_06_ziua_din_telegram`, din `docs/plans/2026-10-06-2353-feat-ziua-de-antrenament-din-telegram-plan.md`
+(U1). Coada botului primește `cancel_session`, `reactivate_session`, `move_session` și
+`add_session`. `admin_sala_seteaza_antrenament` ia un motiv opțional și pune în coadă anunțul
+anulării sau al reactivării când sondajul e deja în grup; semnătura veche, cu trei parametri, se
+șterge. `admin_sala_date` spune pentru fiecare comandă sursa, organizatorul și data.
+
+**Precondiție de producție:** se aplică imediat după ce botul care înțelege acțiunile noi e live
+(după U9 din `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md` și după
+merge-ul ramurii). Aplicată înaintea lui, fiecare anulare din admin ar pune în coadă un
+`cancel_session` pe care botul vechi îl marchează eșuat și îl raportează adminilor. Pașii și
+fereastra dintre deploy și migrare: `bot/README.md`, „Lansarea".
+
+Până la aplicare, `tests/unit/sql/db.ts` o încarcă peste instantanee (`MIGRARI_NEAPLICATE`).
+După `apply_migration`: regenerează `supabase/schema/runlift.sql` și `supabase/schema/sala.sql`,
+scoate-o din listă și mută-o în tabelul de mai sus.
+
 ### `supabase/sql/supabase-migration-anunt-istoric.sql` — NEAPLICAT
 
 Anunțul de ediție nouă către toți participanții de până acum. Trei piese: `unsubscribe()` se

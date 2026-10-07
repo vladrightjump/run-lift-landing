@@ -3,9 +3,18 @@ import {
   answerCallbackQuery,
   editMessageText,
   sendMessage,
-  type InlineKeyboard,
+  setMyCommands,
 } from "./lib/telegram.js";
-import { buildPollText, pollHeader } from "./lib/poll-text.js";
+import { realPorts, renderSessionPoll } from "./jobs/day-ops.js";
+import {
+  ORGANIZER_COMMANDS,
+  defaultDeps,
+  handleControlCallback,
+  handleOrganizerText,
+  type ControlDeps,
+} from "./control.js";
+import { organizerIds } from "./lib/organizers.js";
+import type { SessionRow } from "./lib/sessions.js";
 
 // ── Telegram update payload (only the fields we use) ──────────────────────────
 interface TgUser {
@@ -46,12 +55,93 @@ async function voteFailureAlert(detail: string) {
   await alertAdmins(`⚠️ Problemă la înregistrarea voturilor: ${detail}. Telegram reîncearcă automat.`);
 }
 
+// The organizers' private chat, wired to the real database and Telegram.
+function controlDeps(): ControlDeps {
+  return defaultDeps(
+    realPorts(),
+    {
+      async send(chatId, text, kb) {
+        const r = await sendMessage(
+          chatId,
+          text,
+          kb?.length ? { reply_markup: { inline_keyboard: kb } } : undefined,
+        );
+        return r.ok && r.result ? r.result.message_id : null;
+      },
+      async edit(chatId, messageId, text, kb) {
+        const r = await editMessageText(chatId, messageId, text, {
+          reply_markup: { inline_keyboard: kb ?? [] },
+        });
+        if (!r.ok && r.description !== "Bad Request: message is not modified") {
+          // An old card can't be edited (deleted, too old): send a new one.
+          await sendMessage(chatId, text, kb?.length ? { reply_markup: { inline_keyboard: kb } } : undefined);
+        }
+      },
+      async answer(id, text) {
+        // Best effort: a lost spinner answer must not abort the action.
+        try {
+          await answerCallbackQuery(id, text);
+        } catch (err) {
+          console.error("[control] answerCallbackQuery failed:", err);
+        }
+      },
+    },
+    organizerIds(),
+  );
+}
+
+// Shows the command menu in one organizer's private chat (KTD13). Best effort.
+export async function registerOrganizerMenu(chatId: number): Promise<void> {
+  try {
+    const r = await setMyCommands(ORGANIZER_COMMANDS, { type: "chat", chat_id: chatId });
+    if (!r.ok) console.error(`[menu] setMyCommands for ${chatId} failed:`, r.description);
+  } catch (err) {
+    console.error("[menu]", err);
+  }
+}
+
+// The organizers' private chat is never retried by Telegram: a failure there
+// is logged and told to the organizer, who simply taps or writes again.
+// Redelivering a Confirm would only answer "E deja făcut" (KTD5).
+async function organizerSafely(chatId: number, work: () => Promise<void>): Promise<void> {
+  try {
+    await work();
+  } catch (err) {
+    console.error("[control] handler error:", err);
+    try {
+      await sendMessage(chatId, `⚠️ Nu s-a putut face acum (${String(err).slice(0, 200)}). Încearcă din nou.`);
+    } catch (sendErr) {
+      console.error("[control] could not report the error:", sendErr);
+    }
+  }
+}
+
 // Process a single Telegram update. Returns false ONLY on a transient failure
 // (e.g. DB write failed) — the server then answers non-2xx and Telegram
 // REDELIVERS the update, so no vote is ever silently dropped. The attendance
 // upsert is idempotent, which makes redelivery safe.
 export async function handleUpdate(update: TgUpdate): Promise<boolean> {
   try {
+    const cb = update.callback_query;
+    if (cb?.data?.startsWith("c:")) {
+      // The organizers' control buttons (see organizerSafely).
+      const data = cb.data;
+      await organizerSafely(cb.message?.chat.id ?? cb.from.id, () =>
+        handleControlCallback(
+          {
+            id: cb.id,
+            fromId: cb.from.id,
+            fromName: cb.from.first_name ?? cb.from.username ?? String(cb.from.id),
+            chatId: cb.message?.chat.id ?? cb.from.id,
+            chatType: cb.message?.chat.type ?? "private",
+            messageId: cb.message?.message_id ?? null,
+            data,
+          },
+          controlDeps(),
+        ),
+      );
+      return true;
+    }
     if (update.callback_query) {
       return await handleCallbackQuery(update.callback_query);
     } else if (update.message) {
@@ -80,6 +170,19 @@ async function handleCallbackQuery(
 
   const supabase = createAdminClient();
   const from = cb.from;
+
+  // A cancelled training takes no votes, not even from an older copy of its
+  // poll that still has buttons (R14).
+  const { data: sess, error: sessErr } = await supabase
+    .from("training_sessions")
+    .select("status")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (sessErr) throw new Error(sessErr.message); // transient — Telegram retries
+  if (!voteAccepted(sess?.status ?? null)) {
+    await answerCallbackQuery(cb.id, "Antrenamentul e anulat.");
+    return true;
+  }
 
   let member = await resolveMember(supabase, from);
 
@@ -199,12 +302,15 @@ async function handleCallbackQuery(
   return true;
 }
 
-interface AttNameRow {
-  response: "yes" | "no";
-  member: { full_name: string } | null;
+// Whether a vote on a session with this status is recorded. A missing session
+// (deleted, or a garbage id) is left to the attendance insert, as before.
+export function voteAccepted(status: string | null): boolean {
+  return status !== "cancelled";
 }
 
-// Rebuilds the poll text from current attendance and edits the message.
+// Redraws the poll message that was tapped, from the session's current state:
+// its time and place, the wording it went out with, and the live tally.
+// Editing a message does NOT notify group members, so this is silent.
 async function refreshPollMessage(
   supabase: ReturnType<typeof createAdminClient>,
   chatId: number,
@@ -212,43 +318,13 @@ async function refreshPollMessage(
   sessionId: string,
 ) {
   try {
-    const [sessionRes, attRes] = await Promise.all([
-      supabase
-        .from("training_sessions")
-        .select("session_date, starts_at, location")
-        .eq("id", sessionId)
-        .maybeSingle(),
-      supabase
-        .from("attendance")
-        .select("response, member:members(full_name)")
-        .eq("session_id", sessionId),
-    ]);
-
-    const att = (attRes.data ?? []) as unknown as AttNameRow[];
-    const session = sessionRes.data as {
-      session_date: string;
-      starts_at: string;
-      location: string;
-    } | null;
-
-    const nameOf = (a: AttNameRow) => a.member?.full_name ?? "necunoscut";
-    const yes = att.filter((a) => a.response === "yes").map(nameOf);
-    const no = att.filter((a) => a.response === "no").map(nameOf);
-
-    const header = pollHeader(
-      session?.session_date ?? "",
-      session?.starts_at ?? "06:30",
-      session?.location ?? "",
-    );
-    const text = buildPollText(header, yes, no);
-
-    const keyboard: InlineKeyboard = [
-      [
-        { text: "✅ Vin!", callback_data: `att:yes:${sessionId}` },
-        { text: "❌ Nu pot", callback_data: `att:no:${sessionId}` },
-      ],
-    ];
-
+    const { data } = await supabase
+      .from("training_sessions")
+      .select("id, session_date, starts_at, location, status, poll_message_id, poll_wording")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (!data) return;
+    const { text, keyboard } = await renderSessionPoll(supabase, data as SessionRow);
     const res = await editMessageText(chatId, messageId, text, {
       parse_mode: "HTML",
       reply_markup: { inline_keyboard: keyboard },
@@ -350,6 +426,28 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
   if (!msg.from) return;
   const text = (msg.text ?? "").trim();
 
+  // An organizer's command, or the answer to the bot's question (U4).
+  if (text) {
+    const from = msg.from;
+    let handled = false;
+    await organizerSafely(msg.chat.id, async () => {
+      handled = await handleOrganizerText(
+        {
+          chatId: msg.chat.id,
+          chatType: msg.chat.type,
+          fromId: from.id,
+          fromName: from.first_name ?? from.username ?? String(from.id),
+          text,
+        },
+        controlDeps(),
+      );
+    });
+    // A failure on an organizer's command is reported above, not retried.
+    if (handled || (organizerIds().includes(from.id) && text.startsWith("/") && !text.startsWith("/start"))) {
+      return;
+    }
+  }
+
   const supabase = createAdminClient();
   const { data: existing } = await supabase
     .from("members")
@@ -360,6 +458,11 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
 
   // ── /start ──────────────────────────────────────────────────────────────
   if (text === "/start" || text.startsWith("/start")) {
+    // An organizer who opens the chat after the bot started gets the menu now.
+    if (organizerIds().includes(msg.from.id)) {
+      await registerOrganizerMenu(msg.chat.id);
+      await sendMessage(msg.chat.id, "Ca organizator: /antrenament deschide cardul, /ajutor arată comenzile.");
+    }
     if (member) {
       // Already registered — just (re)enable DMs and greet.
       await supabase

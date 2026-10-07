@@ -29,6 +29,17 @@ const SCHEMA_SQL = readFileSync(
  */
 const SALA_SQL = readFileSync(resolve(__dirname, '../../../supabase/schema/sala.sql'), 'utf8');
 
+/**
+ * Migrări scrise, dar încă neaplicate live, deci absente din instantanee. Se
+ * încarcă peste ele, ca testele să ruleze schema de după migrare. Fiecare migrare
+ * de aici se poate rula de mai multe ori. După `apply_migration` și regenerarea
+ * instantaneelor, scoate-o din listă: instantaneul o conține deja.
+ */
+const MIGRARI_NEAPLICATE = [
+  // `sala_06_ziua_din_telegram`: se aplică odată cu botul care o înțelege.
+  'supabase/sql/supabase-migration-sala-ziua-din-telegram.sql',
+].map((f) => readFileSync(resolve(__dirname, '../../..', f), 'utf8'));
+
 const INFRASTRUCTURA = `
   create role anon nologin;
   create role authenticated nologin;
@@ -99,6 +110,7 @@ export const porneste = async (): Promise<BazaTest> => {
   await db.exec(INFRASTRUCTURA);
   await db.exec(SCHEMA_SQL);
   await db.exec(SALA_SQL);
+  for (const migrare of MIGRARI_NEAPLICATE) await db.exec(migrare);
   return db;
 };
 

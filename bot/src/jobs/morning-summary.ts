@@ -2,6 +2,8 @@ import { createAdminClient } from "../lib/supabase.js";
 import { sendMessage } from "../lib/telegram.js";
 import { todayInTz } from "../lib/tz.js";
 import { fmtDate } from "../lib/format.js";
+import { organizerIds } from "../lib/organizers.js";
+import { summaryKeyboard } from "../control.js";
 
 interface AttendanceRow {
   member_id: string;
@@ -13,10 +15,7 @@ interface AttendanceRow {
 // DMs each admin a summary of today's session: who's coming (🆓 = first
 // training), who declined, and which active members haven't answered.
 export async function morningSummary(): Promise<{ ok: boolean; detail?: string }> {
-  const adminIds = (process.env.TELEGRAM_ADMIN_CHAT_IDS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const adminIds = organizerIds();
   if (adminIds.length === 0) {
     console.error("[morning-summary] Missing TELEGRAM_ADMIN_CHAT_IDS");
     return { ok: false, detail: "config" };
@@ -27,7 +26,7 @@ export async function morningSummary(): Promise<{ ok: boolean; detail?: string }
 
   const { data: session } = await supabase
     .from("training_sessions")
-    .select("id, session_date, starts_at, location")
+    .select("id, session_date, starts_at, location, status")
     .eq("session_date", today)
     .maybeSingle();
 
@@ -87,8 +86,14 @@ export async function morningSummary(): Promise<{ ok: boolean; detail?: string }
     message = lines.join("\n");
   }
 
+  // The day's actions under the summary (R6): a rain cancel is one tap here.
+  const kb = summaryKeyboard(
+    session ? { session_date: session.session_date as string, status: session.status as string } : null,
+  );
   const results = await Promise.all(
-    adminIds.map((chatId) => sendMessage(chatId, message)),
+    adminIds.map((chatId) =>
+      sendMessage(chatId, message, kb.length ? { reply_markup: { inline_keyboard: kb } } : undefined),
+    ),
   );
   const failed = results.filter((r) => !r.ok).length;
   if (failed) console.error(`[morning-summary] ${failed} DM(s) failed`);

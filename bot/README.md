@@ -35,9 +35,39 @@ din admin → „Botul de Telegram" — și:
 - trimite lunea la 09:00 lista celor inactivi și verifică webhook-ul la 09:05;
 - golește coada de comenzi (`public.bot_actions`) venite din admin.
 
+Reminderul automat și rezumatul urmează antrenamentul zilei (ora lui, chiar mutat; și un extra),
+nu orarul global. Coada primește și `cancel_session` / `reactivate_session` puse de admin: botul
+anunță grupul dacă sondajul zilei e în grup și ziua e încă în starea aceea.
+
 Webhook-ul (`POST /telegram/webhook`, verificat cu secretul) înregistrează voturile — un cont
-necunoscut care votează devine membru pe loc, cu numele din Telegram —, pune în
-`telegram_unmatched` pe cine intră în grup fără să fie legat de un membru și răspunde la `/start`.
+necunoscut care votează devine membru pe loc, cu numele din Telegram; un vot pe un antrenament
+anulat e refuzat —, pune în `telegram_unmatched` pe cine intră în grup fără să fie legat de un
+membru și răspunde la `/start`.
+
+## Ce face, la cererea organizatorilor
+
+În conversația privată cu botul, organizatorii (conturile din `TELEGRAM_ADMIN_CHAT_IDS`) conduc ziua
+de antrenament: cardul (`/antrenament`), cine vine, anularea, reactivarea, mutarea, antrenamentul
+extra, sondajul și reminderul. Fiecare schimbare arată o previzualizare și pleacă după „Confirmă";
+rezultatul ajunge în grup, iar acțiunea rămâne în `bot_actions` cu organizatorul. Ghidul de folosire:
+`GHID-GRUPUL-DIN-PARC.md`, „Din Telegram". Planul: `docs/plans/2026-10-06-2353-feat-ziua-de-antrenament-din-telegram-plan.md`.
+
+```
+chat privat ──▶ webhook ──▶ control.ts (card, întrebări, ciornă) ──▶ day-actions.ts (decizia, pură)
+                                                                          │
+/admin ──RPC──▶ bot_actions (pending) ──tic──▶ process-commands ──┐       ▼
+                                                                  └──▶ day-ops.ts (executorul)
+                                                                          ├─▶ training_sessions
+                                                                          ├─▶ grupul: sondaj, anunț
+                                                                          └─▶ bot_actions (jurnal)
+```
+
+**O singură replică.** Previzualizările neconfirmate (ciornele) stau în memoria procesului, 15
+minute. Un deploy le pierde (organizatorul apasă din nou); o a doua replică le-ar împărți între
+procese și ar cere ciorne în bază.
+
+**Meniul de comenzi** se înregistrează la pornire pentru fiecare organizator și la `/start`-ul lui.
+Un organizator nou: id-ul lui intră în `TELEGRAM_ADMIN_CHAT_IDS` pe Railway, apoi apasă `/start`.
 
 ## Deploy (Railway)
 
@@ -91,6 +121,30 @@ rădăcina goală (din panou). Domeniul, variabilele și webhook-ul sînt ale se
 **Token nou:** după schimbarea `TELEGRAM_BOT_TOKEN`, webhook-ul se reînregistrează o dată
 (`npm run set-webhook`, cu `.env` completat), apoi se verifică cu `getWebhookInfo`.
 
+## Lansarea zilei de antrenament din Telegram (după U9)
+
+Codul e în `main`, dar pleacă împreună cu migrarea `sala_06_ziua_din_telegram`
+(`supabase/sql/supabase-migration-sala-ziua-din-telegram.sql`). Aplicată înaintea botului nou,
+fiecare anulare din admin ar pune în coadă o comandă pe care botul vechi o raportează ca eșuată.
+
+1. U9 făcut: serviciul construiește din acest repo, iar un ciclu de sondaj a trecut pe el.
+2. Repetiția, înaintea merge-ului: botul pornit local cu un token de test, un grup de test și
+   `BOT_SCHEDULER=off` (fără planificator și fără coadă: altfel ar goli coada producției), expus
+   printr-un tunel HTTPS temporar cu webhook-ul botului de test pe el. Doar pe o dată din 2027:
+   cardul, Extra, Mută, Anulează, Reactivează, Renunță. Rândul de test din `training_sessions` se
+   șterge apoi, cu acordul lui Vlad.
+3. Merge, deploy pe Railway după CI verde, `/health`, `getWebhookInfo`. Adminul nou ajunge pe
+   Vercel odată cu merge-ul.
+4. **Imediat după**, migrarea prin MCP `apply_migration`, `get_advisors`, instantaneele regenerate,
+   migrarea scoasă din `MIGRARI_NEAPLICATE` (`tests/unit/sql/db.ts`) și mutată în tabelul din
+   `MIGRATIONS.md` (un PR mic). Între 3 și 4 nu anula nimic din `/admin`: o anulare cu motiv e
+   refuzată (funcția live n-are încă `p_motiv`), iar jurnalul acțiunilor din Telegram nu se scrie
+   (constrângerea veche; botul doar loghează). În ordinea inversă, botul vechi ar marca eșuat
+   fiecare anunț de anulare pus în coadă.
+5. Id-ul lui Roma în `TELEGRAM_ADMIN_CHAT_IDS`; Roma apasă `/start`.
+6. În producție, fără să atingi grupul: cardul, `/maine`, o previzualizare cu „Renunță", un cont
+   care nu e organizator e ignorat; a doua zi, rezumatul are butoane.
+
 ## Local
 
 Cu Node 24, din `.nvmrc` (`fnm use` / `nvm use` la rădăcina repo-ului). Pe Node 20, testul
@@ -103,3 +157,5 @@ npm test          # node:test
 npm run build     # tsc -> dist/
 npm run dev       # tsx watch: webhook pe :3000 + planificatorul
 ```
+
+Pe baza reală, pornește-l doar cu `BOT_SCHEDULER=off` (vezi „Lansarea", pasul 2).

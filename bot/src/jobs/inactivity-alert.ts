@@ -2,6 +2,7 @@ import { createAdminClient } from "../lib/supabase.js";
 import { sendMessage } from "../lib/telegram.js";
 import { todayInTz } from "../lib/tz.js";
 import { fmtDate } from "../lib/format.js";
+import { organizerIds } from "../lib/organizers.js";
 
 interface StatRow {
   full_name: string;
@@ -22,10 +23,7 @@ function daysBetween(fromIso: string, toIso: string): number {
 // 2+ weeks, plus those who never have. Meant to run weekly. No-ops if everyone
 // is active (no spam) or if config is missing.
 export async function inactivityAlert(): Promise<{ ok: boolean; detail?: string }> {
-  const adminIds = (process.env.TELEGRAM_ADMIN_CHAT_IDS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const adminIds = organizerIds();
   if (adminIds.length === 0) return { ok: false, detail: "config" };
 
   const supabase = createAdminClient();

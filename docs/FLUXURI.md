@@ -6,7 +6,8 @@ ce trebuie să atingi ca să-l schimbi.
 
 > Diagramele sunt Mermaid — se randează direct pe GitHub și în preview-ul Markdown din VS Code.
 > Documentul descrie codul de la commit-ul pe care a fost scris (19 sept 2026); secțiunile 3.1 și
-> 4.11, despre grupul din parc, sînt din 3 oct 2026. Când schimbi un flux, actualizează secțiunea
+> 4.11, despre grupul din parc, sînt din 3 oct 2026 (4.11 actualizată pe 7 oct 2026, cu ziua de
+> antrenament din Telegram). Când schimbi un flux, actualizează secțiunea
 > lui și tabelul „Unde schimbi ce" de la final.
 
 **Cuprins**
@@ -729,7 +730,7 @@ rând `sala_*` cu numele adminului (`sala_jurnal`). `admin_list_events` nu le î
 | Funcția | Ce face | Urma |
 |---|---|---|
 | `admin_sala_set_prezenta` | `yes` / `no` / `clear` pe un antrenament; jurnalul primește sursa `manual` | `sala_prezenta` |
-| `admin_sala_seteaza_antrenament` | anulează (creează rândul, cu ora și locul din setări) sau reactivează o zi | `sala_anulare` / `sala_reactivare` |
+| `admin_sala_seteaza_antrenament` | anulează (creează rândul, cu ora și locul din setări) sau reactivează o zi; cu sondajul în grup și starea schimbată, pune în coadă `cancel_session` / `reactivate_session` (motivul opțional, adminul), ca botul să anunțe grupul (`sala_06`) | `sala_anulare` / `sala_reactivare` |
 | `admin_sala_salveaza_config` | orarul, locul, reminderul, textul sondajului; **nu** atinge `enabled` pe un rând existent | `sala_config` |
 | `admin_sala_porneste_bot` | comutatorul pornit/oprit (creează rândul de setări dacă lipsește) | `sala_pornire` |
 | `admin_sala_comanda` | pune în `bot_actions` o comandă „acum": `send_poll`, `send_summary`, `send_reminder`, `send_message` | `sala_comanda` |
@@ -780,8 +781,34 @@ așteptare de peste 3 minute înseamnă că botul nu rulează. Cu coada goală, 
 „nicio comandă blocată" și ora ultimei comenzi executate.
 
 **Textul sondajului (KTD6).** Coloanele `bot_config.poll_title` / `poll_yes_label` / `poll_no_label`
-și `training_sessions.poll_wording` există din `sala_02`; previzualizarea din admin
-(`sondaj.ts`) produce textul botului caracter cu caracter. Botul le citește abia din U10.
+și `training_sessions.poll_wording` există din `sala_02`. Botul pune textul cu care a plecat
+sondajul în `poll_wording` (`{title, yes, no}`) și redesenează din el. Previzualizarea din admin
+(`sondaj.ts`) produce textul botului caracter cu caracter; `tests/unit/salaSondajParitate.test.ts`
+compară cele două implementări. Titlul din setări e pentru sondajul din ziua dinainte; un sondaj
+postat în aceeași zi spune „Antrenament azi", unul postat mai devreme „Antrenament".
+
+**Ziua de antrenament din Telegram** (`docs/plans/2026-10-06-2353-feat-ziua-de-antrenament-din-telegram-plan.md`).
+Organizatorii (`TELEGRAM_ADMIN_CHAT_IDS`) dau comenzi în privat; anularea din admin ajunge la
+același executor, prin coadă:
+
+```mermaid
+flowchart TB
+  O["Organizator, chat privat"] -->|"comandă sau buton c:"| C["bot/src/control.ts<br/>card, întrebări, ciornă în memorie"]
+  C -->|"Confirmă"| D["bot/src/lib/day-actions.ts<br/>decizia, pură"]
+  D --> E["bot/src/jobs/day-ops.ts<br/>executorul"]
+  A["Adminul"] -->|"admin_sala_seteaza_antrenament"| Q[("bot_actions<br/>cancel_session / reactivate_session")]
+  Q -->|"tic, cel mult un minut"| E
+  E --> T[("training_sessions")]
+  E --> G["grupul: sondaj redesenat, anunț cu pomeniri"]
+  E -->|"rând done / failed, cu organizatorul"| Q
+```
+
+Executorul scrie întâi rândul, apoi sondajul, apoi anunțul; un eșec de Telegram nu întoarce
+rândul, ci ajunge la organizator și în jurnal (`failed`). Acțiunile din Telegram nu trec prin
+coadă: se execută pe loc și lasă în `bot_actions` un rând `cancel_session`, `reactivate_session`,
+`move_session`, `add_session`, `send_poll` sau `send_reminder`, cu `payload.sursa = "telegram"`.
+Un antrenament mutat își păstrează voturile; votul pe unul anulat e refuzat. Reminderul automat și
+rezumatul urmează antrenamentul zilei (`reminderDue`, `summaryDue` în `bot/src/lib/schedule.ts`).
 
 **Unde stă codul.**
 
@@ -793,6 +820,7 @@ așteptare de peste 3 minute înseamnă că botul nu rulează. Cu coada goală, 
 | Funcțiile SQL | `supabase/sql/supabase-migration-sala-*.sql`; instantaneele `supabase/schema/runlift.sql` + `sala.sql` |
 | Teste | `tests/unit/sala*.test.ts(x)`, `tests/unit/sql/sala.test.ts` (PGlite, pe instantaneu), `tests/sala.spec.ts` (e2e) |
 | Botul | `bot/` (cod), `.railway/railway.ts` (serviciul Railway), job-ul `bot` din `ci-deploy.yml` |
+| Ziua de antrenament din Telegram | `bot/src/control.ts`, `bot/src/lib/{sessions,command-parse,day-actions,drafts,organizers}.ts`, `bot/src/jobs/day-ops.ts`; teste în `bot/test/` |
 
 ---
 
@@ -844,6 +872,8 @@ Fiecare încercare lasă un rând în `email_log` (`log_emails`), vizibil în 4.
 | O acțiune nouă în admin | RPC `admin_*` nou (SQL, cu `admin_check_token`) + wrapper în `src/lib/adminApi.ts` | da + migrare |
 | Un mod nou de formular public | `TABLE` + `validate*` în `submit-form` (altfel slăbești validarea) + `postForm` în `src/lib/supabase.ts` | da + Edge |
 | Orarul, locul, reminderul sau textul sondajului din grup | `/admin` → Botul de Telegram | nu |
+| Anularea, mutarea sau un antrenament extra, pentru o singură zi | chatul privat cu botul (`/antrenament`); anularea și din `/admin` → Prezențe | nu |
+| O comandă nouă a organizatorilor în Telegram | `bot/src/lib/command-parse.ts` (scurtătura), `bot/src/lib/day-actions.ts` (decizia), `bot/src/control.ts` (cardul) | bot |
 | O acțiune nouă pe grupul din parc | funcție `runlift.admin_sala_*` (migrare, cu `admin_check_token` + `sala_jurnal`) + wrapper în `src/lib/salaApi.ts` + codul de refuz în `REFUZURI_SALA` (testul pică dacă uiți) | da + migrare |
 | Comportamentul botului în Telegram | `bot/src/` → merge în `main`; Railway îl ia după CI verde | da (Railway) |
 | Setările serviciului Railway (sursă, cale urmărită, `/health`) | `.railway/railway.ts` → `railway config plan` / `apply` | CLI Railway |

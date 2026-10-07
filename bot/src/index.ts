@@ -1,16 +1,17 @@
 import "dotenv/config";
 import express from "express";
 import cron from "node-cron";
-import { handleUpdate, type TgUpdate } from "./webhook.js";
+import { handleUpdate, registerOrganizerMenu, type TgUpdate } from "./webhook.js";
+import { organizerIds } from "./lib/organizers.js";
 import { sendPoll } from "./jobs/send-poll.js";
 import { morningSummary } from "./jobs/morning-summary.js";
 import { processCommands } from "./jobs/process-commands.js";
 import { inactivityAlert } from "./jobs/inactivity-alert.js";
 import { GYM_TZ, localWeekdayAndTime } from "./lib/tz.js";
 import { getBotConfig } from "./lib/config.js";
-import { isDue, minusMinutes } from "./lib/schedule.js";
+import { isDue, reminderDue, schedulerEnabled, summaryDue } from "./lib/schedule.js";
 import { alertAdmins } from "./lib/notify.js";
-import { autoReminder } from "./jobs/auto-reminder.js";
+import { autoReminder, todaysSession } from "./jobs/auto-reminder.js";
 import { getWebhookInfo } from "./lib/telegram.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -40,20 +41,31 @@ app.post("/telegram/webhook", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[server] webhook listening on :${PORT}`);
+  // The organizers' command menu (KTD13). Without a bot token (CI) there is
+  // nothing to register.
+  if (process.env.TELEGRAM_BOT_TOKEN) {
+    for (const id of organizerIds()) void registerOrganizerMenu(id);
+  }
 });
 
 // ── Scheduled jobs — DB-driven (config editable from the gym-app admin UI) ────
-// A single tick fires every minute (in GYM_TZ). Each tick reads the live
-// bot_config row and, if the master switch is on and the current local
-// weekday+time matches the configured poll/summary schedule, runs the job.
-// Schedule changes therefore take effect within a minute, no redeploy needed.
+// A single tick fires every minute (in GYM_TZ). It always drains the command
+// queue; then, if the master switch is on, it reads the live bot_config row and
+// today's training and runs whatever is due. Schedule changes therefore take
+// effect within a minute, no redeploy needed. BOT_SCHEDULER=off skips the tick
+// entirely (local rehearsal).
 //
 //   send-poll        — posts tomorrow's attendance poll (idempotent)
-//   morning-summary  — DMs admins today's roster
+//   morning-summary  — DMs the organizers today's roster, with action buttons;
+//                      also on a day with an extra training (summaryDue)
+//   auto-reminder    — 2h before today's training, by its own start time
+//                      (reminderDue), at most once per training
 const firedThisMinute = new Set<string>();
 let lastMinute = "";
+// Trainings already auto-reminded while this process runs (KTD12).
+const remindedSessions = new Set<string>();
 
-cron.schedule(
+if (schedulerEnabled()) cron.schedule(
   "* * * * *",
   async () => {
     try {
@@ -85,10 +97,14 @@ cron.schedule(
           });
       }
 
-      if (
-        isDue(cfg.summaryDays, cfg.summaryTime, weekday, hhmm) &&
-        !firedThisMinute.has("summary")
-      ) {
+      // Today's training: a moved or extra one drives the reminder and the
+      // summary, not the global schedule (R22, R23).
+      const today = await todaysSession().catch((err) => {
+        console.error("[cron/today]", err);
+        return null;
+      });
+
+      if (summaryDue(cfg, weekday, hhmm, today) && !firedThisMinute.has("summary")) {
         firedThisMinute.add("summary");
         void morningSummary()
           .then((r) => {
@@ -113,14 +129,15 @@ cron.schedule(
         );
       }
 
-      // Auto-reminder ~2h before training on the training day, if confirmations
-      // are still below the configured threshold.
+      // Auto-reminder 2h before today's training, if confirmations are still
+      // below the configured threshold.
       if (
         cfg.autoReminderEnabled &&
-        hhmm === minusMinutes(cfg.trainingTime, 120) &&
+        reminderDue(today, hhmm, remindedSessions) &&
         !firedThisMinute.has("autorem")
       ) {
         firedThisMinute.add("autorem");
+        remindedSessions.add(today!.id);
         void autoReminder(cfg.reminderThreshold).catch((err) =>
           console.error("[cron/auto-reminder]", err),
         );
@@ -169,4 +186,8 @@ cron.schedule(
   { timezone: GYM_TZ },
 );
 
-console.log(`[cron] DB-driven scheduler running (tz=${GYM_TZ}, tick=1m)`);
+console.log(
+  schedulerEnabled()
+    ? `[cron] DB-driven scheduler running (tz=${GYM_TZ}, tick=1m)`
+    : "[cron] off (BOT_SCHEDULER=off): webhook only, no ticks, no queue",
+);

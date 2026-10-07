@@ -1,13 +1,26 @@
 import { createAdminClient } from "../lib/supabase.js";
-import { sendMessage, type InlineKeyboard } from "../lib/telegram.js";
-import { tomorrowInTz } from "../lib/tz.js";
-import { buildPollText, pollHeader } from "../lib/poll-text.js";
+import { sendMessage } from "../lib/telegram.js";
+import { todayInTz, tomorrowInTz } from "../lib/tz.js";
+import {
+  buildPollText,
+  effectiveWording,
+  pollHeader,
+  pollKeyboard,
+  pollTitleFor,
+} from "../lib/poll-text.js";
 import { getBotConfig } from "../lib/config.js";
+import { hhmm } from "../lib/sessions.js";
 
-// Creates (idempotently) tomorrow's training session and posts the attendance
-// poll into the Telegram group. Skips if tomorrow's session is cancelled or the
-// poll was already sent. Training time / location come from bot_config.
-export async function sendPoll(): Promise<{ ok: boolean; detail?: string }> {
+// Creates (idempotently) a training session and posts its attendance poll into
+// the Telegram group — tomorrow's by default, or `date` (an extra, or a poll
+// asked for from the organizer card). Skips a cancelled session, and one whose
+// poll already went out unless `force` (then a new poll goes out and the old
+// one stays). Time and place come from the session's row when it has one (it
+// may have been moved; KTD10), otherwise from bot_config. The title depends on
+// the day it goes out (KTD9); the text it went out with is copied onto the row.
+export async function sendPoll(
+  opts: { date?: string; force?: boolean } = {},
+): Promise<{ ok: boolean; detail?: string }> {
   const groupChatId = process.env.TELEGRAM_GROUP_CHAT_ID;
   if (!groupChatId) {
     console.error("[send-poll] Missing TELEGRAM_GROUP_CHAT_ID");
@@ -16,11 +29,11 @@ export async function sendPoll(): Promise<{ ok: boolean; detail?: string }> {
 
   const supabase = createAdminClient();
   const cfg = await getBotConfig();
-  const sessionDate = tomorrowInTz();
+  const sessionDate = opts.date ?? tomorrowInTz();
 
   const { data: existing, error: selErr } = await supabase
     .from("training_sessions")
-    .select("id, poll_message_id, status")
+    .select("id, poll_message_id, status, starts_at, location")
     .eq("session_date", sessionDate)
     .maybeSingle();
   if (selErr) {
@@ -32,7 +45,7 @@ export async function sendPoll(): Promise<{ ok: boolean; detail?: string }> {
     console.log(`[send-poll] ${sessionDate} is cancelled — skipping.`);
     return { ok: true, detail: "cancelled" };
   }
-  if (existing?.poll_message_id) {
+  if (existing?.poll_message_id && !opts.force) {
     return { ok: true, detail: "already-sent" };
   }
 
@@ -55,19 +68,21 @@ export async function sendPoll(): Promise<{ ok: boolean; detail?: string }> {
     sessionId = inserted.id as string;
   }
 
-  const keyboard: InlineKeyboard = [
-    [
-      { text: "✅ Vin!", callback_data: `att:yes:${sessionId}` },
-      { text: "❌ Nu pot", callback_data: `att:no:${sessionId}` },
-    ],
-  ];
+  const configured = effectiveWording({
+    title: cfg.pollTitle,
+    yes: cfg.pollYesLabel,
+    no: cfg.pollNoLabel,
+  });
+  const wording = {
+    ...configured,
+    title: pollTitleFor(sessionDate, todayInTz(), configured.title),
+  };
+  const keyboard = pollKeyboard(sessionId, wording);
+  const time = existing?.starts_at ? hhmm(String(existing.starts_at)) : cfg.trainingTime;
+  const location = existing?.location ?? cfg.location;
 
   // Initial message with a friendly call-to-action; edited live as people vote.
-  const text = buildPollText(
-    pollHeader(sessionDate, cfg.trainingTime, cfg.location),
-    [],
-    [],
-  );
+  const text = buildPollText(pollHeader(sessionDate, time, location, wording.title), [], []);
 
   const sent = await sendMessage(groupChatId, text, {
     parse_mode: "HTML",
@@ -81,7 +96,9 @@ export async function sendPoll(): Promise<{ ok: boolean; detail?: string }> {
 
   const { error: updErr } = await supabase
     .from("training_sessions")
-    .update({ poll_message_id: sent.result.message_id })
+    // The copy makes every redraw use the text this poll went out with, even
+    // if the settings change while it is in the group.
+    .update({ poll_message_id: sent.result.message_id, poll_wording: wording })
     .eq("id", sessionId);
   if (updErr) {
     console.error("[send-poll] poll_message_id update error:", updErr);

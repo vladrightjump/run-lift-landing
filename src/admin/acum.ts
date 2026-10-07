@@ -259,6 +259,10 @@ const NUME_COMANDA: Record<SalaComanda['action'], string> = {
   send_reminder: 'Reminderul',
   send_message: 'Mesajul în grup',
   kick_member: 'Scoaterea din grup',
+  cancel_session: 'Anunțul anulării',
+  reactivate_session: 'Anunțul reactivării',
+  move_session: 'Mutarea',
+  add_session: 'Antrenamentul extra',
 };
 
 const oraLaChisinau = (iso: string): string =>
@@ -313,8 +317,10 @@ export const deRezolvat = (
     }
     for (const c of sala.comenzi) {
       if (c.status !== 'failed' || aziLaChisinau(new Date(c.created_at)) !== azi) continue;
-      // Numai comenzile fără payload se pot relua din acest rezumat.
-      const reluabila = c.action === 'send_poll' || c.action === 'send_summary' || c.action === 'send_reminder';
+      // Numai comenzile fără payload se pot relua din acest rezumat. Una dată din
+      // Telegram era pentru o zi anume; reluarea de aici ar trimite pentru mâine.
+      const reluabila =
+        c.sursa !== 'telegram' && (c.action === 'send_poll' || c.action === 'send_summary' || c.action === 'send_reminder');
       // Reluarea creează un rând nou, iar eșecul rămâne în jurnal: îl stingem
       // când o încercare ulterioară de azi, cu aceeași țintă, s-a terminat (dacă
       // a eșuat și ea, rămâne doar ea). Un mesaj în grup nu se poate potrivi —
@@ -335,7 +341,10 @@ export const deRezolvat = (
           ? { eticheta: inAsteptare ? 'Se reia…' : 'Reîncearcă', reia: c.action as ComandaAcum, inAsteptare }
           : c.action === 'send_message'
             ? { eticheta: 'Deschide mesajele', ecran: 'grup-bot' }
-            : { eticheta: 'Vezi', ecran: 'grup-membri' },
+            : c.action === 'kick_member'
+              ? { eticheta: 'Vezi', ecran: 'grup-membri' }
+              // Ziua de antrenament: motivul stă în „Ultimele comenzi".
+              : { eticheta: 'Vezi', ecran: 'grup-bot' },
       });
     }
   }
