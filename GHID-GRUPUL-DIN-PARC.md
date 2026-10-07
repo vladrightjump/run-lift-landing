@@ -8,10 +8,12 @@ intră cu contul lui și vede tot, inclusiv ecranele edițiilor.
 > gym-app (parkgym.fit) și pe care le scrie botul. Nimic nu s-a copiat sau mutat, deci o prezență
 > marcată în gym-app apare și aici, și invers.
 >
-> **Starea de azi (3 octombrie 2026).** Ecranele sînt gata. Botul rulează încă din repo-ul vechi,
-> până la mutarea pe Railway (pasul U9 din plan). Textul editabil al sondajului intră în sondaje
-> abia după actualizarea botului (U10). gym-app rămâne pornit o săptămână ca rezervă, apoi se
-> oprește (U11). Planul întreg: `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md`.
+> **Starea de azi (7 octombrie 2026).** Ecranele sînt gata. Botul rulează încă din repo-ul vechi,
+> până la mutarea pe Railway (pasul U9 din plan). Textul editabil al sondajului și conducerea zilei
+> de antrenament din Telegram (secțiunea „Din Telegram") pleacă împreună, după mutare. gym-app
+> rămâne pornit o săptămână ca rezervă, apoi se oprește (U11). Planurile:
+> `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md` și
+> `docs/plans/2026-10-06-2353-feat-ziua-de-antrenament-din-telegram-plan.md`.
 
 ---
 
@@ -55,10 +57,18 @@ că a venit**). Apoi trece la „vin", cu aceleași corecturi ca ceilalți.
 **Anularea unei zile.**
 
 - **Anulează antrenamentul**, sub antrenamentul următor, cere confirmare. Dacă sondajul a plecat
-  deja, anularea **nu anunță pe nimeni** — trimite un mesaj din „Botul de Telegram".
+  deja, botul îl marchează „ANULAT", îi scoate butoanele și **anunță grupul** în cel mult un minut,
+  pomenindu-i pe cei care au spus „Vin". Confirmarea spune pe câți pomenește și are un câmp
+  opțional **Motiv** (de exemplu „ploaie"), care apare în anunț. Fără sondaj în grup, nu pleacă
+  nimic.
 - **Anulează o zi** anulează din timp o zi pentru care sondajul n-a plecat încă: botul nu va
-  trimite sondaj pentru ea. Rândul nou ia ora și locul din setările botului.
-- **Zile anulate** le arată pe toate cele viitoare, fiecare cu **Reactivează**.
+  trimite sondaj pentru ea. Rândul nou ia ora și locul din setările botului. Dacă alegi o zi al cărei
+  sondaj e deja în grup, trece prin aceeași confirmare ca mai sus.
+- **Zile anulate** le arată pe toate cele viitoare, fiecare cu **Reactivează**. Când sondajul zilei
+  plecase, reactivarea cere confirmare: sondajul își recapătă butoanele și voturile, iar botul
+  anunță grupul.
+
+Același lucru se face și din Telegram, cu aceleași reguli (vezi „Din Telegram").
 
 **Antrenamentele trecute** stau dedesubt, cel mai nou primul, câte șase („Arată mai multe" aduce
 restul). Fiecare se deschide cu aceleași liste și aceleași corecturi.
@@ -130,7 +140,7 @@ Tot ce arăta „Analiză" din gym-app:
 | **Botul e oprit** | Comutatorul e pe oprit | Sondajele programate nu pleacă; comenzile „acum" merg în continuare |
 
 Starea se citește din coada de comenzi, fără un semnal din bot. Cu coada goală, „pornit" înseamnă
-„nimic blocat", nu „sigur rulează". Semnalul de viață vine odată cu actualizarea botului (U10).
+„nimic blocat", nu „sigur rulează".
 
 ### Oprește / Pornește botul
 
@@ -142,13 +152,16 @@ schimba înapoi.
 - **Sondajul:** zilele și ora. Botul întreabă „vii mâine?", deci sondajul pleacă **în ziua de
   dinaintea** antrenamentului. Plus ora antrenamentului și locul, care apar în sondaj.
 - **Textul sondajului:** titlul (până la 80 de caractere) și cele două butoane (până la 32), cu
-  previzualizarea mesajului așa cum apare în Telegram. Gol = textul de azi.
-  **Atenție:** botul de acum trimite încă textul fix; cel de aici intră în sondaj abia după
-  actualizarea botului (U10). De atunci, o schimbare ajunge la sondajul următor, iar unul deja în
-  grup își păstrează textul.
+  previzualizarea mesajului așa cum apare în Telegram. Gol = textul de azi. O schimbare ajunge la
+  sondajul următor, iar unul deja în grup își păstrează textul. Titlul e pentru sondajul din ziua
+  dinainte; sondajul unui antrenament extra postat mai devreme spune „Antrenament — Sâmbătă, 10 oct",
+  iar unul postat în aceeași zi „Antrenament azi".
 - **Rezumatul de dimineață** (în privat, la admini): zilele și ora.
-- **Reminderul automat** pleacă în grup cu două ore înainte de antrenament, doar dacă au confirmat
-  mai puțini decât **pragul**.
+- **Reminderul automat** pleacă în grup cu două ore înainte de ora antrenamentului din ziua aceea
+  (și a unuia mutat sau extra), doar dacă au confirmat mai puțini decât **pragul**, și o singură
+  dată pe antrenament.
+- Rezumatul pleacă și în ziua unui antrenament **extra**, la ora lui obișnuită, chiar dacă ziua nu e
+  printre zilele rezumatului. Cu zilele rezumatului goale, nu pleacă deloc.
 
 **Salvează setările** le aplică; botul le citește la fiecare minut, deci intră în vigoare în cel mult
 un minut. **Renunță la modificări** revine la cele salvate. Cu modificări nesalvate, ieșirea din
@@ -176,8 +189,65 @@ o mențiune care îl anunță. Limita Telegram (4096 de caractere, cu tot cu men
 
 ### Ultimele comenzi
 
-Ultimele 30 de comenzi din admin, cu ora (Chișinău) și starea: în așteptare, făcută sau eșuată, cu
-motivul eșecului.
+Ultimele 30 de comenzi, cu ora (Chișinău) și starea: în așteptare, făcută sau eșuată, cu motivul
+eșecului. Cele despre un antrenament spun și ziua („Antrenament mutat — Joi, 8 oct"), iar cele date
+din Telegram spun cine („din Telegram, Vlad").
+
+---
+
+## Din Telegram
+
+Organizatorii conduc ziua de antrenament din **conversația privată cu botul**, fără `/admin`. În grup
+nu se scrie nicio comandă; acolo apar doar rezultatele.
+
+**Cine poate.** Doar conturile de Telegram din lista organizatorilor (variabila
+`TELEGRAM_ADMIN_CHAT_IDS` a serviciului de pe Railway, aceeași care primește rezumatul de
+dimineață). Oricine altcineva care scrie comenzile e ignorat. Un organizator nou intră în listă,
+apoi apasă `/start` în chatul cu botul ca să-i apară meniul de comenzi.
+
+**Cardul.** `/antrenament` arată antrenamentul următor (ziua, ora, locul, dacă e anulat, câți vin,
+câți nu, câți n-au răspuns), cu butoanele **Cine vine**, **Anulează** (sau **Reactivează**),
+**Mută**, **Extra**, **Sondaj** și **Reamintește**. Butoanele întreabă ce lipsește (motivul, ora,
+locul, ziua) și arată la sfârșit ce se va întâmpla.
+
+**Scurtăturile** fac același lucru, mai repede; ce scrii după comandă sare peste întrebări:
+
+| Scrii | Face |
+|---|---|
+| `/maine` · `/maine joi` | Cine vine, cine nu, cine n-a răspuns |
+| `/anuleaza ploaie` · `/anuleaza joi ploaie` | Anulează, cu motivul în anunț |
+| `/reactiveaza` · `/reactiveaza joi` | Reactivează un antrenament anulat |
+| `/muta 07:30` · `/muta joi 07:30 Parcul Valea Morilor` | Mută ora, locul sau amândouă |
+| `/extra sâmbătă 08:00` · `/extra 15.10 07:00 Parcul X` | Adaugă un antrenament și trimite imediat sondajul |
+| `/sondaj` · `/reaminteste` | Ca butoanele „Acum" din admin, pentru antrenamentul următor |
+| `/ajutor` | Lista comenzilor |
+
+Zilele se scriu `azi`, `mâine`, numele zilei (cu sau fără diacritice) sau `15.10` / `15 oct`; ora
+`7:30` sau `07.30`.
+
+**Previzualizarea și „Confirmă".** Orice schimbare îți arată întâi ce se întâmplă și pe cine
+pomenește, și pleacă abia după **Confirmă**; **Renunță** nu schimbă nimic. O previzualizare
+neconfirmată expiră după 15 minute (și la un deploy al botului): apasă din nou. Dacă între timp
+celălalt organizator a schimbat ceva, primești previzualizarea nouă în loc de acțiune.
+
+**Ce vede grupul.**
+
+- **Anulare** după sondaj: sondajul devine „ANULAT", fără butoane, iar anunțul îi pomenește pe cei
+  care au spus „Vin". Voturile pe un antrenament anulat nu mai sînt primite, nici dintr-o copie
+  mai veche a sondajului. Înainte de sondaj: nimic, iar sondajul nu mai pleacă.
+- **Reactivare** după sondaj: sondajul își recapătă butoanele și voturile, iar anunțul îi pomenește
+  pe cei care votaseră „Vin".
+- **Mutare**: voturile rămân, sondajul arată noua oră și noul loc, iar anunțul îi pomenește pe cei
+  care au spus „Vin" („dacă nu mai puteți, apăsați ❌"). Înainte de sondaj: nimic; sondajul pleacă
+  la ora lui, cu datele noi.
+- **Extra**: sondajul pleacă imediat. Nu se poate pune un extra într-o zi care are deja antrenament;
+  botul îți propune Mută sau Reactivează.
+
+**Rezumatul de la 06:00** are butoanele **Cine vine**, **Anulează** și **Mută** pentru antrenamentul
+zilei (sau **Reactivează**, dacă e anulat): o anulare pe ploaie e o apăsare.
+
+Dacă Telegram refuză o postare, botul îți spune în privat ce n-a mers. Antrenamentul rămâne cum l-ai
+schimbat, iar comanda apare „eșuată" în „Ultimele comenzi" și pe ecranul **Acum**.
 
 ---
 
@@ -196,8 +266,9 @@ motivul eșecului.
 
 ## Ce nu face (încă)
 
-- **Textul editabil al sondajului** ajunge în sondaje abia după actualizarea botului (U10).
-- **Semnalul de viață al botului** (că rulează, nu doar că nimic nu e blocat): tot U10.
+- **Semnalul de viață al botului** (că rulează, nu doar că nimic nu e blocat): încă nu există.
+- **Mutarea și antrenamentul extra din `/admin`**: doar din Telegram; `/admin` le arată în „Prezențe".
+- **Două antrenamente în aceeași zi**: nu se poate.
 - **Plățile** nu au ecran și nici export. Rândurile vechi rămân neatinse în bază.
 - **Ștergerea definitivă a unui membru** nu există, intenționat (vezi mai sus).
 - **Membrii grupului și participanții la edițiile Run + Lift** sînt liste separate.
