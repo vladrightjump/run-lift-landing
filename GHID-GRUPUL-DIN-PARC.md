@@ -8,10 +8,10 @@ intră cu contul lui și vede tot, inclusiv ecranele edițiilor.
 > gym-app (parkgym.fit) și pe care le scrie botul. Nimic nu s-a copiat sau mutat, deci o prezență
 > marcată în gym-app apare și aici, și invers.
 >
-> **Starea de azi (7 octombrie 2026).** Ecranele sînt gata. Botul rulează încă din repo-ul vechi,
-> până la mutarea pe Railway (pasul U9 din plan). Textul editabil al sondajului și conducerea zilei
-> de antrenament din Telegram (secțiunea „Din Telegram") pleacă împreună, după mutare. gym-app
-> rămâne pornit o săptămână ca rezervă, apoi se oprește (U11). Planurile:
+> **Starea de azi (7 octombrie 2026).** Ecranele sînt gata. Botul rulează din acest repo pe
+> Railway (U9, făcut pe 7 octombrie), cu textul editabil al sondajului și conducerea zilei de
+> antrenament din Telegram (secțiunea „Din Telegram"). gym-app rămâne pornit o săptămână ca
+> rezervă, apoi se oprește (U11). Planurile:
 > `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md` și
 > `docs/plans/2026-10-06-2353-feat-ziua-de-antrenament-din-telegram-plan.md`.
 
