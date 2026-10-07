@@ -48,3 +48,19 @@ export async function autoReminder(
   console.log(`[auto-reminder] sent (yes=${yes}, missing=${missing.length})`);
   return { ok: true, detail: `sent (${yes}/${threshold})` };
 }
+
+// Today's training, for the scheduler's reminder and summary checks (KTD12).
+export async function todaysSession(): Promise<{
+  id: string;
+  startsAt: string;
+  status: string;
+} | null> {
+  const { data } = await createAdminClient()
+    .from("training_sessions")
+    .select("id, starts_at, status")
+    .eq("session_date", todayInTz())
+    .maybeSingle();
+  return data
+    ? { id: data.id as string, startsAt: String(data.starts_at), status: String(data.status) }
+    : null;
+}

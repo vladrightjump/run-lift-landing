@@ -9,9 +9,9 @@ import { processCommands } from "./jobs/process-commands.js";
 import { inactivityAlert } from "./jobs/inactivity-alert.js";
 import { GYM_TZ, localWeekdayAndTime } from "./lib/tz.js";
 import { getBotConfig } from "./lib/config.js";
-import { isDue, minusMinutes } from "./lib/schedule.js";
+import { isDue, reminderDue, schedulerEnabled, summaryDue } from "./lib/schedule.js";
 import { alertAdmins } from "./lib/notify.js";
-import { autoReminder } from "./jobs/auto-reminder.js";
+import { autoReminder, todaysSession } from "./jobs/auto-reminder.js";
 import { getWebhookInfo } from "./lib/telegram.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -58,8 +58,10 @@ app.listen(PORT, () => {
 //   morning-summary  — DMs admins today's roster
 const firedThisMinute = new Set<string>();
 let lastMinute = "";
+// Trainings already auto-reminded while this process runs (KTD12).
+const remindedSessions = new Set<string>();
 
-cron.schedule(
+if (schedulerEnabled()) cron.schedule(
   "* * * * *",
   async () => {
     try {
@@ -91,10 +93,14 @@ cron.schedule(
           });
       }
 
-      if (
-        isDue(cfg.summaryDays, cfg.summaryTime, weekday, hhmm) &&
-        !firedThisMinute.has("summary")
-      ) {
+      // Today's training: a moved or extra one drives the reminder and the
+      // summary, not the global schedule (R22, R23).
+      const today = await todaysSession().catch((err) => {
+        console.error("[cron/today]", err);
+        return null;
+      });
+
+      if (summaryDue(cfg, weekday, hhmm, today) && !firedThisMinute.has("summary")) {
         firedThisMinute.add("summary");
         void morningSummary()
           .then((r) => {
@@ -119,14 +125,15 @@ cron.schedule(
         );
       }
 
-      // Auto-reminder ~2h before training on the training day, if confirmations
-      // are still below the configured threshold.
+      // Auto-reminder 2h before today's training, if confirmations are still
+      // below the configured threshold.
       if (
         cfg.autoReminderEnabled &&
-        hhmm === minusMinutes(cfg.trainingTime, 120) &&
+        reminderDue(today, hhmm, remindedSessions) &&
         !firedThisMinute.has("autorem")
       ) {
         firedThisMinute.add("autorem");
+        remindedSessions.add(today!.id);
         void autoReminder(cfg.reminderThreshold).catch((err) =>
           console.error("[cron/auto-reminder]", err),
         );
@@ -175,4 +182,8 @@ cron.schedule(
   { timezone: GYM_TZ },
 );
 
-console.log(`[cron] DB-driven scheduler running (tz=${GYM_TZ}, tick=1m)`);
+console.log(
+  schedulerEnabled()
+    ? `[cron] DB-driven scheduler running (tz=${GYM_TZ}, tick=1m)`
+    : "[cron] off (BOT_SCHEDULER=off): webhook only, no ticks, no queue",
+);

@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { isDue } from "../src/lib/schedule.js";
+import { isDue, reminderDue, schedulerEnabled, summaryDue } from "../src/lib/schedule.js";
+import { summaryKeyboard } from "../src/control.js";
 import { normalizeTime, normalizeDays, textOrNull } from "../src/lib/config.js";
 import { fmtDate } from "../src/lib/format.js";
 import { cleanName, isValidName, voteAccepted } from "../src/webhook.js";
@@ -81,4 +82,57 @@ test("voteAccepted: a cancelled training takes no votes; scheduled ones do", () 
   assert.equal(voteAccepted("cancelled"), false);
   assert.equal(voteAccepted("scheduled"), true);
   assert.equal(voteAccepted(null), true); // unknown session: the insert decides, as before
+});
+
+// ── Automations follow the day's training (R22, R23, KTD12, KTD15) ──────────
+
+const session = (startsAt: string, status = "scheduled") => ({ id: "s1", startsAt, status });
+
+test("reminderDue: a training at 07:30 → due at 05:30 and only then", () => {
+  assert.equal(reminderDue(session("07:30:00"), "05:30", new Set()), true);
+  assert.equal(reminderDue(session("07:30:00"), "04:30", new Set()), false);
+  assert.equal(reminderDue(session("07:30:00"), "05:31", new Set()), false);
+});
+
+test("reminderDue: cancelled or missing training → never", () => {
+  assert.equal(reminderDue(session("06:30", "cancelled"), "04:30", new Set()), false);
+  assert.equal(reminderDue(null, "04:30", new Set()), false);
+});
+
+test("reminderDue: a training already reminded is not reminded again, even after a move", () => {
+  const reminded = new Set(["s1"]);
+  assert.equal(reminderDue(session("07:30"), "05:30", reminded), false);
+});
+
+const cfg = { summaryDays: [2, 4], summaryTime: "06:00", pollDays: [1, 3] };
+
+test("Covers AE6. summaryDue: an extra Saturday with summaries Tue/Thu → due Saturday 06:00", () => {
+  assert.equal(summaryDue(cfg, 6, "06:00", { status: "scheduled" }), true);
+  assert.equal(summaryDue(cfg, 6, "06:01", { status: "scheduled" }), false);
+});
+
+test("summaryDue: Saturday without a training → not due; empty summary days → never", () => {
+  assert.equal(summaryDue(cfg, 6, "06:00", null), false);
+  assert.equal(summaryDue(cfg, 6, "06:00", { status: "cancelled" }), false);
+  assert.equal(summaryDue({ ...cfg, summaryDays: [] }, 6, "06:00", { status: "scheduled" }), false);
+});
+
+test("summaryDue: an ordinary Tuesday → due, as today", () => {
+  assert.equal(summaryDue(cfg, 2, "06:00", null), true);
+});
+
+test("summaryKeyboard: the day's actions; Reactivează on a cancelled one; nothing without a training", () => {
+  const flat = (k: ReturnType<typeof summaryKeyboard>) => k.flat().map((b) => b.text);
+  assert.deepEqual(flat(summaryKeyboard({ session_date: "2026-10-08", status: "scheduled" })), [
+    "Cine vine",
+    "Anulează",
+    "Mută",
+  ]);
+  assert.deepEqual(flat(summaryKeyboard({ session_date: "2026-10-08", status: "cancelled" })), ["Reactivează"]);
+  assert.deepEqual(summaryKeyboard(null), []);
+});
+
+test("schedulerEnabled: BOT_SCHEDULER=off turns off the ticks (local rehearsal)", () => {
+  assert.equal(schedulerEnabled({ BOT_SCHEDULER: "off" }), false);
+  assert.equal(schedulerEnabled({}), true);
 });

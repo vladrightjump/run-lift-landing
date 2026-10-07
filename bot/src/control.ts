@@ -416,6 +416,16 @@ export async function handleControlCallback(cb: CallbackIn, deps: ControlDeps): 
   }
 }
 
+// The buttons on the morning summary (R6): the day's actions, without typing.
+export function summaryKeyboard(
+  session: { session_date: string; status: string } | null,
+): Keyboard {
+  if (!session) return [];
+  const d = session.session_date;
+  if (session.status === "cancelled") return [[btn("Reactivează", `c:react:${d}`)]];
+  return [[btn("Cine vine", `c:cine:${d}`), btn("Anulează", `c:anul:${d}`), btn("Mută", `c:muta:${d}`)]];
+}
+
 // The organizers' command menu (KTD13).
 export const ORGANIZER_COMMANDS = [
   { command: "antrenament", description: "Cardul antrenamentului următor" },
