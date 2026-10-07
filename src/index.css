@@ -720,7 +720,7 @@
   /* ---- Butoanele, baza (R8–R11) ----
      Cinci roluri, o singură scară. Fiecare rol, mai jos, își dă doar culorile.
      Link-ul (`.admin-btn-link`) e text în rând, fără înălțime minimă. */
-  .admin-app :where(.admin-btn-accent, .admin-btn-outline, .admin-btn-ghost, .admin-btn-delete, .admin-btn-promote) {
+  .admin-app :where(.admin-btn-accent, .admin-btn-outline, .admin-btn-ghost, .admin-btn-delete, .admin-btn-promote, .admin-table-actions > button:not([class])) {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     box-sizing: border-box; min-height: var(--pa-control-h); padding: 0 16px;
     border: 1px solid transparent; border-radius: var(--pa-r); cursor: pointer;
@@ -729,25 +729,16 @@
     transition: background-color var(--pa-dur-fast) var(--pa-ease), border-color var(--pa-dur-fast) var(--pa-ease), color var(--pa-dur-fast) var(--pa-ease), translate var(--pa-dur-fast) var(--pa-ease);
   }
   /* Acțiunile de pe un rând de tabel: compacte, dar tot ținte tactile. */
-  .admin-app :where(.admin-btn-delete, .admin-btn-promote) {
+  .admin-app :where(.admin-btn-delete, .admin-btn-promote, .admin-table-actions > button:not([class])) {
     min-height: var(--pa-control-h-sm); padding: 0 12px; font-size: 13px;
   }
   /* Butoanele fără rol de pe un rând (Editează / Ascunde / Scoate la clipuri)
      se randau ca butoane native ale browserului. Primesc rolul terțiar compact. */
-  .admin-app .admin-table-actions > button:not([class]) {
-    display: inline-flex; align-items: center; justify-content: center;
-    box-sizing: border-box; min-height: var(--pa-control-h-sm); padding: 0 12px;
-    background: transparent; border: 1px solid var(--pa-line); border-radius: var(--pa-r);
-    color: var(--pa-text-2); cursor: pointer;
-    font-family: var(--pa-font); font-size: 13px; font-weight: 600; white-space: nowrap;
-  }
+  .admin-app .admin-table-actions > button:not([class]) { background: transparent; border-color: var(--pa-line); color: var(--pa-text-2); }
   .admin-app .admin-table-actions > button:not([class]):hover:not(:disabled) { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
-  .admin-app .admin-table-actions > button:not([class]):disabled {
-    background: var(--pa-surface-3); color: var(--pa-muted-2); border-color: var(--pa-line); cursor: not-allowed;
-  }
   /* O singură stare dezactivat, pentru toate rolurile. `:is`, nu `:where`:
      trebuie să câștige peste culorile fiecărui rol, oriunde stau ele. */
-  .admin-app :is(.admin-btn-accent, .admin-btn-outline, .admin-btn-ghost, .admin-btn-delete, .admin-btn-promote, .btn-submit):disabled {
+  .admin-app :is(.admin-btn-accent, .admin-btn-outline, .admin-btn-ghost, .admin-btn-delete, .admin-btn-promote, .btn-submit, .admin-table-actions > button:not([class])):disabled {
     background: var(--pa-surface-3); color: var(--pa-muted-2); border-color: var(--pa-line);
     cursor: not-allowed; box-shadow: none; transform: none;
   }

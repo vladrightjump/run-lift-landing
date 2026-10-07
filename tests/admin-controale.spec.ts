@@ -123,10 +123,11 @@ const citesteCampurile = (page: Page) =>
   }) as Promise<Camp[]>;
 
 const jeton = (page: Page, nume: string) =>
-  page.evaluate((nume) => {
+  page.evaluate((jetonCerut) => {
     const proba = document.createElement('i');
-    proba.style.color = `var(${nume})`;
-    document.querySelector('.admin-app, .admin-pagina')?.appendChild(proba);
+    proba.style.color = `var(${jetonCerut})`;
+    // Jetoanele stau pe rădăcina adminului; fără ea, proba ar citi culoarea implicită.
+    (document.querySelector('.admin-app, .admin-pagina') ?? document.body).appendChild(proba);
     const valoare = getComputedStyle(proba).color;
     proba.remove();
     return valoare;
