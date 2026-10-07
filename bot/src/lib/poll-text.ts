@@ -16,11 +16,68 @@ export function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// The editable part of the poll: the title phrase and the two button labels.
+// Day, date, time and location stay automatic. Must match the admin preview
+// (`src/admin/sala/sondaj.ts`) character for character.
+export interface PollWording {
+  title: string;
+  yes: string;
+  no: string;
+}
+
+// Today's text. An empty setting means exactly this.
+export const DEFAULT_WORDING: PollWording = {
+  title: "Antrenament mâine",
+  yes: "✅ Vin!",
+  no: "❌ Nu pot",
+};
+
+// Settings → the text that goes out: blank or whitespace-only falls back.
+export function effectiveWording(saved: {
+  title: string | null;
+  yes: string | null;
+  no: string | null;
+}): PollWording {
+  return {
+    title: saved.title?.trim() || DEFAULT_WORDING.title,
+    yes: saved.yes?.trim() || DEFAULT_WORDING.yes,
+    no: saved.no?.trim() || DEFAULT_WORDING.no,
+  };
+}
+
+// The copy kept on a session (`training_sessions.poll_wording`). Polls posted
+// before the copy existed have none, and get today's text.
+export function wordingFromCopy(copy: unknown): PollWording {
+  const c = (copy && typeof copy === "object" ? copy : {}) as Record<string, unknown>;
+  const pick = (v: unknown, fallback: string) =>
+    typeof v === "string" && v.trim() ? v : fallback;
+  return {
+    title: pick(c.title, DEFAULT_WORDING.title),
+    yes: pick(c.yes, DEFAULT_WORDING.yes),
+    no: pick(c.no, DEFAULT_WORDING.no),
+  };
+}
+
+// The vote buttons. The callback data never changes, so votes on any poll —
+// old or new wording — are read the same way.
+export function pollKeyboard(
+  sessionId: string,
+  wording: PollWording,
+): { text: string; callback_data: string }[][] {
+  return [
+    [
+      { text: wording.yes, callback_data: `att:yes:${sessionId}` },
+      { text: wording.no, callback_data: `att:no:${sessionId}` },
+    ],
+  ];
+}
+
 // "🏃 <b>Antrenament mâine — Miercuri, 22 iul</b>\n🕕 06:30 · 📍 Parcul …"
 export function pollHeader(
   dateIso: string,
   startTime: string,
   location: string,
+  title: string = DEFAULT_WORDING.title,
 ): string {
   const t = (startTime || "06:30").slice(0, 5);
   let when = "";
@@ -30,7 +87,7 @@ export function pollHeader(
     when = ` — ${RO_DOW[dt.getUTCDay()]}, ${d} ${RO_MON[m - 1]}`;
   }
   const loc = location ? ` · 📍 ${esc(location)}` : "";
-  return `🏃 <b>Antrenament mâine${when}</b>\n🕕 ${t}${loc}`;
+  return `🏃 <b>${esc(title)}${when}</b>\n🕕 ${t}${loc}`;
 }
 
 export function buildPollText(

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { isDue } from "../src/lib/schedule.js";
-import { normalizeTime, normalizeDays } from "../src/lib/config.js";
+import { normalizeTime, normalizeDays, textOrNull } from "../src/lib/config.js";
 import { fmtDate } from "../src/lib/format.js";
 import { cleanName, isValidName } from "../src/webhook.js";
 
@@ -46,6 +46,13 @@ test("normalizeDays: keeps valid 0..6, drops the rest, falls back", () => {
   assert.deepEqual(normalizeDays(["1", "3"], []), [1, 3]);
   assert.deepEqual(normalizeDays([7, 1, -2, 6], []), [1, 6]);
   assert.deepEqual(normalizeDays("nope", [2, 4]), [2, 4]);
+});
+
+test("textOrNull: a saved poll text stays, empty or non-text means today's text", () => {
+  assert.equal(textOrNull("Alergăm!"), "Alergăm!");
+  assert.equal(textOrNull("   "), null);
+  assert.equal(textOrNull(null), null);
+  assert.equal(textOrNull(42), null);
 });
 
 // ── Romanian date formatting ─────────────────────────────────────────────────

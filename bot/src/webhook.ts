@@ -3,9 +3,13 @@ import {
   answerCallbackQuery,
   editMessageText,
   sendMessage,
-  type InlineKeyboard,
 } from "./lib/telegram.js";
-import { buildPollText, pollHeader } from "./lib/poll-text.js";
+import {
+  buildPollText,
+  pollHeader,
+  pollKeyboard,
+  wordingFromCopy,
+} from "./lib/poll-text.js";
 
 // ── Telegram update payload (only the fields we use) ──────────────────────────
 interface TgUser {
@@ -204,7 +208,9 @@ interface AttNameRow {
   member: { full_name: string } | null;
 }
 
-// Rebuilds the poll text from current attendance and edits the message.
+// Rebuilds the poll text from current attendance and edits the message. The
+// title and buttons come from the copy the poll went out with, not from the
+// current settings.
 async function refreshPollMessage(
   supabase: ReturnType<typeof createAdminClient>,
   chatId: number,
@@ -215,7 +221,7 @@ async function refreshPollMessage(
     const [sessionRes, attRes] = await Promise.all([
       supabase
         .from("training_sessions")
-        .select("session_date, starts_at, location")
+        .select("session_date, starts_at, location, poll_wording")
         .eq("id", sessionId)
         .maybeSingle(),
       supabase
@@ -229,7 +235,9 @@ async function refreshPollMessage(
       session_date: string;
       starts_at: string;
       location: string;
+      poll_wording: unknown;
     } | null;
+    const wording = wordingFromCopy(session?.poll_wording);
 
     const nameOf = (a: AttNameRow) => a.member?.full_name ?? "necunoscut";
     const yes = att.filter((a) => a.response === "yes").map(nameOf);
@@ -239,15 +247,10 @@ async function refreshPollMessage(
       session?.session_date ?? "",
       session?.starts_at ?? "06:30",
       session?.location ?? "",
+      wording.title,
     );
     const text = buildPollText(header, yes, no);
-
-    const keyboard: InlineKeyboard = [
-      [
-        { text: "✅ Vin!", callback_data: `att:yes:${sessionId}` },
-        { text: "❌ Nu pot", callback_data: `att:no:${sessionId}` },
-      ],
-    ];
+    const keyboard = pollKeyboard(sessionId, wording);
 
     const res = await editMessageText(chatId, messageId, text, {
       parse_mode: "HTML",

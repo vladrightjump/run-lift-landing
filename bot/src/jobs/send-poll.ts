@@ -1,12 +1,18 @@
 import { createAdminClient } from "../lib/supabase.js";
-import { sendMessage, type InlineKeyboard } from "../lib/telegram.js";
+import { sendMessage } from "../lib/telegram.js";
 import { tomorrowInTz } from "../lib/tz.js";
-import { buildPollText, pollHeader } from "../lib/poll-text.js";
+import {
+  buildPollText,
+  effectiveWording,
+  pollHeader,
+  pollKeyboard,
+} from "../lib/poll-text.js";
 import { getBotConfig } from "../lib/config.js";
 
 // Creates (idempotently) tomorrow's training session and posts the attendance
 // poll into the Telegram group. Skips if tomorrow's session is cancelled or the
-// poll was already sent. Training time / location come from bot_config.
+// poll was already sent. Training time / location come from bot_config, and so
+// does the editable text; the text it went out with is copied onto the session.
 export async function sendPoll(): Promise<{ ok: boolean; detail?: string }> {
   const groupChatId = process.env.TELEGRAM_GROUP_CHAT_ID;
   if (!groupChatId) {
@@ -55,16 +61,16 @@ export async function sendPoll(): Promise<{ ok: boolean; detail?: string }> {
     sessionId = inserted.id as string;
   }
 
-  const keyboard: InlineKeyboard = [
-    [
-      { text: "✅ Vin!", callback_data: `att:yes:${sessionId}` },
-      { text: "❌ Nu pot", callback_data: `att:no:${sessionId}` },
-    ],
-  ];
+  const wording = effectiveWording({
+    title: cfg.pollTitle,
+    yes: cfg.pollYesLabel,
+    no: cfg.pollNoLabel,
+  });
+  const keyboard = pollKeyboard(sessionId, wording);
 
   // Initial message with a friendly call-to-action; edited live as people vote.
   const text = buildPollText(
-    pollHeader(sessionDate, cfg.trainingTime, cfg.location),
+    pollHeader(sessionDate, cfg.trainingTime, cfg.location, wording.title),
     [],
     [],
   );
@@ -81,7 +87,9 @@ export async function sendPoll(): Promise<{ ok: boolean; detail?: string }> {
 
   const { error: updErr } = await supabase
     .from("training_sessions")
-    .update({ poll_message_id: sent.result.message_id })
+    // The copy makes every redraw use the text this poll went out with, even
+    // if the settings change while it is in the group.
+    .update({ poll_message_id: sent.result.message_id, poll_wording: wording })
     .eq("id", sessionId);
   if (updErr) {
     console.error("[send-poll] poll_message_id update error:", updErr);

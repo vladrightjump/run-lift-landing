@@ -13,6 +13,10 @@ export interface BotConfig {
   location: string; // shown in the poll
   autoReminderEnabled: boolean; // auto group nudge 2h before training
   reminderThreshold: number; // skip the nudge if confirmations >= this
+  // Editable poll text; null = today's text (see poll-text.ts DEFAULT_WORDING).
+  pollTitle: string | null;
+  pollYesLabel: string | null;
+  pollNoLabel: string | null;
 }
 
 // Mirrors the original hard-coded schedule; used if the row/DB is unavailable.
@@ -26,6 +30,9 @@ export const DEFAULT_CONFIG: BotConfig = {
   location: "Parcul Dumitru Râșcanu",
   autoReminderEnabled: true,
   reminderThreshold: 6,
+  pollTitle: null,
+  pollYesLabel: null,
+  pollNoLabel: null,
 };
 
 export function normalizeTime(t: unknown): string | null {
@@ -43,13 +50,17 @@ export function normalizeDays(v: unknown, fallback: number[]): number[] {
   return days;
 }
 
+export function textOrNull(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v : null;
+}
+
 export async function getBotConfig(): Promise<BotConfig> {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("bot_config")
       .select(
-        "enabled, poll_days, poll_time, summary_days, summary_time, training_time, location, auto_reminder_enabled, reminder_threshold",
+        "enabled, poll_days, poll_time, summary_days, summary_time, training_time, location, auto_reminder_enabled, reminder_threshold, poll_title, poll_yes_label, poll_no_label",
       )
       .eq("id", 1)
       .maybeSingle();
@@ -70,6 +81,9 @@ export async function getBotConfig(): Promise<BotConfig> {
         Number.isInteger(data.reminder_threshold) && data.reminder_threshold >= 0
           ? data.reminder_threshold
           : DEFAULT_CONFIG.reminderThreshold,
+      pollTitle: textOrNull(data.poll_title),
+      pollYesLabel: textOrNull(data.poll_yes_label),
+      pollNoLabel: textOrNull(data.poll_no_label),
     };
   } catch (err) {
     console.error("[config] read failed, using defaults:", err);
