@@ -500,6 +500,119 @@ describe('admin_sala_seteaza_antrenament', () => {
   });
 });
 
+describe('anunțul anulării din admin (sala_06, R13)', () => {
+  const coada = async () =>
+    (
+      await db.query<{ action: string; status: string; payload: Record<string, unknown> | null }>(
+        `select action, status, payload from public.bot_actions order by created_at`
+      )
+    ).rows;
+
+  /** Un antrenament al cărui sondaj e deja în grup. */
+  const cuSondaj = async (data: string, status = 'scheduled') => {
+    await db.query(
+      `insert into public.training_sessions (session_date, status, poll_message_id) values ($1, $2, 4242)`,
+      [data, status]
+    );
+  };
+
+  it('anularea unui antrenament cu sondaj în grup pune anunțul în coadă, cu data, motivul și adminul', async () => {
+    await cuSondaj('2026-10-08');
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true, '  ploaie  ');
+    expect(await coada()).toEqual([
+      {
+        action: 'cancel_session',
+        status: 'pending',
+        payload: { data: '2026-10-08', motiv: 'ploaie', sursa: 'admin', organizator: 'operator' },
+      },
+    ]);
+  });
+
+  it('reactivarea unui antrenament anulat cu sondaj în grup pune anunțul de reactivare', async () => {
+    await cuSondaj('2026-10-08', 'cancelled');
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', false);
+    expect((await coada()).map((c) => [c.action, c.payload?.data])).toEqual([['reactivate_session', '2026-10-08']]);
+  });
+
+  it('fără sondaj în grup nu pune nimic în coadă (R11)', async () => {
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true);
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', false);
+    expect(await coada()).toEqual([]);
+  });
+
+  it('o anulare sau reactivare care nu schimbă starea nu mai anunță o dată', async () => {
+    await cuSondaj('2026-10-08', 'cancelled');
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true);
+    await cuSondaj('2026-10-09');
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-09', false);
+    expect(await coada()).toEqual([]);
+  });
+
+  it('un motiv gol sau doar spații nu intră în payload', async () => {
+    await cuSondaj('2026-10-08');
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true, ' \t ');
+    expect((await coada())[0].payload).toEqual({ data: '2026-10-08', sursa: 'admin', organizator: 'operator' });
+  });
+
+  it('un motiv peste 200 de caractere e refuzat, fără nicio scriere', async () => {
+    await cuSondaj('2026-10-08');
+    await expect(
+      cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true, 'x'.repeat(201))
+    ).rejects.toThrow('motiv_prea_lung');
+    expect(await coada()).toEqual([]);
+    const r = await db.query(`select status from public.training_sessions`);
+    expect(r.rows).toEqual([{ status: 'scheduled' }]);
+  });
+
+  it('cu un token greșit nu scrie nimic', async () => {
+    await cuSondaj('2026-10-08');
+    await expect(cheama('admin_sala_seteaza_antrenament', TOKEN_GRESIT, '2026-10-08', true)).rejects.toThrow(
+      'invalid_token'
+    );
+    expect(await coada()).toEqual([]);
+  });
+
+  it('motivul ajunge și în urma adminului', async () => {
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true, 'ploaie');
+    expect((await evenimente())[0].detaliu).toEqual(
+      expect.objectContaining({ data: '2026-10-08', motiv: 'ploaie', admin: 'operator' })
+    );
+  });
+
+  it('apelul pe nume cu cei trei parametri vechi încă merge (adminul deployat)', async () => {
+    await caRol(db, 'anon', () =>
+      db.query(`select runlift.admin_sala_seteaza_antrenament(p_token => $1, p_data => $2, p_anulat => true)`, [
+        ADMIN_TOKEN,
+        '2026-10-08',
+      ])
+    );
+    const r = await db.query(`select status from public.training_sessions`);
+    expect(r.rows).toEqual([{ status: 'cancelled' }]);
+  });
+
+  it('coada acceptă acțiunile noi și refuză una necunoscută', async () => {
+    for (const a of ['cancel_session', 'reactivate_session', 'move_session', 'add_session']) {
+      await db.query(`insert into public.bot_actions (action, status) values ($1, 'done')`, [a]);
+    }
+    await expect(
+      db.query(`insert into public.bot_actions (action, status) values ('altceva', 'done')`)
+    ).rejects.toThrow(/bot_actions_action_check/);
+  });
+
+  it('„Ultimele comenzi" spun sursa, organizatorul și data; rândurile vechi le au nule', async () => {
+    await db.query(
+      `insert into public.bot_actions (action, status, payload, created_at) values
+         ('move_session', 'done', '{"sursa":"telegram","organizator":"Vlad","data":"2026-10-08"}', now()),
+         ('send_poll', 'done', null, now() - interval '1 minute')`
+    );
+    const d = await cheama<{ comenzi: Record<string, unknown>[] }>('admin_sala_date', ADMIN_TOKEN);
+    expect(d.comenzi.map((c) => [c.action, c.sursa, c.organizator, c.data])).toEqual([
+      ['move_session', 'telegram', 'Vlad', '2026-10-08'],
+      ['send_poll', null, null, null],
+    ]);
+  });
+});
+
 describe('admin_sala_salveaza_config', () => {
   it('scrie setările valide și ține textul gol ca null', async () => {
     await cheama('admin_sala_salveaza_config', ADMIN_TOKEN, JSON.stringify(configValid()));
