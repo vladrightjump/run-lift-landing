@@ -259,6 +259,10 @@ const NUME_COMANDA: Record<SalaComanda['action'], string> = {
   send_reminder: 'Reminderul',
   send_message: 'Mesajul în grup',
   kick_member: 'Scoaterea din grup',
+  cancel_session: 'Anunțul anulării',
+  reactivate_session: 'Anunțul reactivării',
+  move_session: 'Mutarea',
+  add_session: 'Antrenamentul extra',
 };
 
 const oraLaChisinau = (iso: string): string =>
@@ -335,7 +339,10 @@ export const deRezolvat = (
           ? { eticheta: inAsteptare ? 'Se reia…' : 'Reîncearcă', reia: c.action as ComandaAcum, inAsteptare }
           : c.action === 'send_message'
             ? { eticheta: 'Deschide mesajele', ecran: 'grup-bot' }
-            : { eticheta: 'Vezi', ecran: 'grup-membri' },
+            : c.action === 'kick_member'
+              ? { eticheta: 'Vezi', ecran: 'grup-membri' }
+              // Ziua de antrenament: motivul stă în „Ultimele comenzi".
+              : { eticheta: 'Vezi', ecran: 'grup-bot' },
       });
     }
   }

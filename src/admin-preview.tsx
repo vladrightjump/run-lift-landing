@@ -243,7 +243,9 @@ const sala = {
     { id: 'c1', action: 'kick_member', member_id: 'm-13', status: 'done', result: 'kicked', created_at: cuZileInUrma(4), processed_at: cuZileInUrma(4) },
     { id: 'c2', action: 'send_poll', member_id: null, status: 'done', result: null, created_at: cuZileInUrma(2), processed_at: cuZileInUrma(2) },
     { id: 'c3', action: 'send_message', member_id: null, status: 'failed', result: 'Bad Request: can\'t parse entities', created_at: cuZileInUrma(1), processed_at: cuZileInUrma(1) },
-  ],
+    { id: 'c4', action: 'move_session', member_id: null, status: 'done', result: 'ok', created_at: cuOreInUrma(5), processed_at: cuOreInUrma(5), sursa: 'telegram', organizator: 'Vlad', data: zi(1) },
+    { id: 'c5', action: 'cancel_session', member_id: null, status: 'done', result: 'anunțat', created_at: cuOreInUrma(2), processed_at: cuOreInUrma(2), sursa: 'admin', organizator: 'roma', data: zi(8) },
+  ].sort((a, b) => b.created_at.localeCompare(a.created_at)),
   scoateri: [
     { id: 'c1', action: 'kick_member', member_id: 'm-13', status: 'done', result: 'kicked', created_at: cuZileInUrma(4), processed_at: cuZileInUrma(4) },
   ],

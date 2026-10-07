@@ -92,6 +92,10 @@ export const ETICHETE_COMENZI: Record<SalaComanda['action'], string> = {
   send_reminder: 'Reminder trimis acum',
   send_message: 'Mesaj în grup',
   kick_member: 'Scoatere din grup',
+  cancel_session: 'Antrenament anulat',
+  reactivate_session: 'Antrenament reactivat',
+  move_session: 'Antrenament mutat',
+  add_session: 'Antrenament extra',
 };
 
 export const ETICHETE_STARE_COMANDA: Record<SalaComanda['status'], string> = {

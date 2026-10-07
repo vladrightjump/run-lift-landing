@@ -176,9 +176,9 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
         <fieldset className="admin-config-grup">
           <legend>Textul sondajului</legend>
           <p className="admin-config-hint">
-            Gol înseamnă textul de acum. Botul de azi trimite încă textul fix: cel de aici intră în
-            sondaj abia după actualizarea botului, anunțată separat. De atunci, o schimbare ajunge
-            la sondajul următor, iar unul deja în grup își păstrează textul.
+            Gol înseamnă textul de acum. O schimbare ajunge la sondajul următor, iar unul deja în
+            grup își păstrează textul. Titlul e pentru sondajul din ziua dinainte; un antrenament
+            extra anunțat mai devreme sau în aceeași zi primește „Antrenament” sau „Antrenament azi”.
           </p>
           <div className="admin-sala-text-sondaj">
             <div>
@@ -309,9 +309,13 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
           <ul className="admin-sala-lista">
             {date.comenzi.map((c) => (
               <li key={c.id} className="admin-sala-rand">
-                <span className="admin-sala-nume">{ETICHETE_COMENZI[c.action]}</span>
+                <span className="admin-sala-nume">
+                  {ETICHETE_COMENZI[c.action]}
+                  {c.data ? ` — ${dataLunga(c.data)}` : ''}
+                </span>
                 <span className="admin-sala-detaliu">
                   {ziLunaOra(c.created_at)}
+                  {c.organizator ? ` · ${c.sursa === 'telegram' ? 'din Telegram, ' : ''}${c.organizator}` : ''}
                 </span>
                 <StareComanda comanda={c}>
                   {ETICHETE_STARE_COMANDA[c.status]}

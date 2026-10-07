@@ -402,10 +402,32 @@ describe('starea botului', () => {
     expect(stare.textContent).not.toContain('Botul merge');
   });
 
-  it('textul sondajului spune că intră în sondaj abia după actualizarea botului', async () => {
+  it('textul sondajului spune când intră în vigoare: de la sondajul următor', async () => {
     api.incarcaSala.mockResolvedValue(dateSala());
     randeaza();
     const grup = (await screen.findByText('Textul sondajului')).closest('fieldset') as HTMLElement;
-    expect(grup.textContent).toContain('abia după actualizarea botului');
+    expect(grup.textContent).toContain('sondajul următor');
+    expect(grup.textContent).not.toContain('abia după actualizarea botului');
+  });
+
+  it('Covers R24. o comandă din Telegram spune ce, pentru ce zi și cine', async () => {
+    api.incarcaSala.mockResolvedValue(
+      dateSala({
+        comenzi: [
+          comandaSala({ id: 'c9', action: 'move_session', sursa: 'telegram', organizator: 'Vlad', data: '2026-10-08' }),
+          comandaSala({ id: 'c8', action: 'cancel_session', sursa: 'admin', organizator: 'roma', data: '2026-10-13' }),
+          comandaSala({ id: 'c7', action: 'send_poll' }),
+        ],
+      })
+    );
+    randeaza();
+    const jurnal = (await screen.findByRole('heading', { name: 'Ultimele comenzi' })).parentElement as HTMLElement;
+    const randuri = within(jurnal).getAllByRole('listitem').map((r) => r.textContent ?? '');
+    expect(randuri[0]).toMatch(/Antrenament mutat — Joi, 8 oct/);
+    expect(randuri[0]).toMatch(/din Telegram, Vlad/);
+    expect(randuri[1]).toMatch(/Antrenament anulat — Marți, 13 oct/);
+    expect(randuri[1]).toMatch(/roma/);
+    expect(randuri[1]).not.toMatch(/din Telegram/);
+    expect(randuri[2]).toMatch(/^Sondaj trimis acum/);
   });
 });

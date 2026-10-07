@@ -40,6 +40,8 @@ export const EcranPrezente = () => {
   const [filtru, setFiltru] = useState<FiltruUrmatorul>(() => citesteFiltruUrmatorul() ?? 'toti');
   useEffect(uitaFiltruUrmatorul, []);
   const [deAnulat, setDeAnulat] = useState<SalaAntrenament | null>(null);
+  const [deReactivat, setDeReactivat] = useState<SalaAntrenament | null>(null);
+  const [motiv, setMotiv] = useState('');
   const [ziDeAnulat, setZiDeAnulat] = useState('');
   const [trecuteVizibile, setTrecuteVizibile] = useState(6);
 
@@ -58,6 +60,14 @@ export const EcranPrezente = () => {
       r === 'clear' ? `Răspunsul lui ${m.full_name} a fost șters.` : `${m.full_name}: ${r === 'yes' ? 'vine' : 'nu vine'}.`
     );
 
+  // Când sondajul e deja în grup, botul anunță grupul și îi pomenește pe cei care
+  // au spus „Vin” (R13), deci anularea și reactivarea trec printr-o confirmare
+  // care spune asta. Fără sondaj în grup, nu pleacă nimic: un clic e destul.
+  const vinLa = (a: SalaAntrenament) => cineVine(date, a.id).vin.length;
+  const cuSondaj = (zi: string) => date.antrenamente.find((a) => a.session_date === zi && a.poll_sent) ?? null;
+  const reactiveaza = (zi: string) =>
+    void fa((t) => seteazaAntrenament(t, zi, false), `${dataLunga(zi)} e din nou programat.`);
+
   const anulate = date.antrenamente
     .filter((a) => a.status === 'cancelled' && a.session_date >= date.azi)
     .sort((a, b) => a.session_date.localeCompare(b.session_date));
@@ -75,7 +85,10 @@ export const EcranPrezente = () => {
           onFiltru={setFiltru}
           ocupat={ocupat}
           onMarcheaza={marcheaza}
-          onAnuleaza={() => setDeAnulat(urm)}
+          onAnuleaza={() => {
+            setMotiv('');
+            setDeAnulat(urm);
+          }}
         />
       ) : (
         <FaraAntrenament date={date} />
@@ -96,12 +109,7 @@ export const EcranPrezente = () => {
                   type="button"
                   className="admin-btn-ghost"
                   disabled={ocupat}
-                  onClick={() =>
-                    void fa(
-                      (t) => seteazaAntrenament(t, a.session_date, false),
-                      `${dataLunga(a.session_date)} e din nou programat.`
-                    )
-                  }
+                  onClick={() => (a.poll_sent ? setDeReactivat(a) : reactiveaza(a.session_date))}
                 >
                   Reactivează
                 </button>
@@ -114,6 +122,12 @@ export const EcranPrezente = () => {
           onSubmit={(e) => {
             e.preventDefault();
             if (!ziDeAnulat) return;
+            const anuntat = cuSondaj(ziDeAnulat);
+            if (anuntat && anuntat.status !== 'cancelled') {
+              setMotiv('');
+              setDeAnulat(anuntat);
+              return;
+            }
             // O altă zi aleasă cât se salvează rămâne în câmp.
             const zi = ziDeAnulat;
             void fa((t) => seteazaAntrenament(t, zi, true), `${dataLunga(zi)} e anulat.`).then(
@@ -167,10 +181,24 @@ export const EcranPrezente = () => {
         >
           <p>
             {deAnulat.poll_sent
-              ? 'Sondajul a plecat deja, iar anularea nu anunță pe nimeni. Dacă vrei ca grupul să afle, trimite un mesaj din „Botul de Telegram".'
-              : 'Botul nu va mai trimite sondajul pentru ziua asta.'}{' '}
+              ? `Sondajul a plecat deja: botul îl marchează „ANULAT”, îi scoate butoanele și anunță grupul în cel mult un minut, pomenindu-i pe cei ${vinLa(deAnulat)} care au spus „Vin”.`
+              : 'Botul nu va mai trimite sondajul pentru ziua asta. În grup nu pleacă nimic.'}{' '}
             Se poate reactiva oricând.
           </p>
+          {deAnulat.poll_sent && (
+            <>
+              <label className="admin-config-eticheta" htmlFor="sala-motiv-anulare">
+                Motiv (opțional, apare în anunț)
+              </label>
+              <input
+                id="sala-motiv-anulare"
+                type="text"
+                maxLength={200}
+                value={motiv}
+                onChange={(e) => setMotiv(e.target.value)}
+              />
+            </>
+          )}
           <div className="admin-table-actions">
             <button type="button" className="admin-btn-ghost" onClick={() => setDeAnulat(null)}>
               Nu anula
@@ -181,11 +209,45 @@ export const EcranPrezente = () => {
               disabled={ocupat}
               onClick={() => {
                 const zi = deAnulat.session_date;
+                const scris = motiv.trim();
+                const anunt = deAnulat.poll_sent ? ' Botul anunță grupul în cel mult un minut.' : '';
                 setDeAnulat(null);
-                void fa((t) => seteazaAntrenament(t, zi, true), `${dataLunga(zi)} e anulat.`);
+                void fa(
+                  (t) => (scris ? seteazaAntrenament(t, zi, true, scris) : seteazaAntrenament(t, zi, true)),
+                  `${dataLunga(zi)} e anulat.${anunt}`
+                ).then((ok) => ok && setZiDeAnulat((z) => (z === zi ? '' : z)));
               }}
             >
               Anulează antrenamentul
+            </button>
+          </div>
+        </Dialog>
+      )}
+
+      {deReactivat && (
+        <Dialog
+          titlu={`Reactivezi antrenamentul de ${dataLunga(deReactivat.session_date)}?`}
+          rol="alertdialog"
+          onInchide={() => setDeReactivat(null)}
+        >
+          <p>
+            {`Sondajul își recapătă butoanele și voturile, iar botul anunță grupul în cel mult un minut, pomenindu-i pe cei ${vinLa(deReactivat)} care au spus „Vin”.`}
+          </p>
+          <div className="admin-table-actions">
+            <button type="button" className="admin-btn-ghost" onClick={() => setDeReactivat(null)}>
+              Nu reactiva
+            </button>
+            <button
+              type="button"
+              className="admin-btn-accent"
+              disabled={ocupat}
+              onClick={() => {
+                const zi = deReactivat.session_date;
+                setDeReactivat(null);
+                reactiveaza(zi);
+              }}
+            >
+              Reactivează
             </button>
           </div>
         </Dialog>
