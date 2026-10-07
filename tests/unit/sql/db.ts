@@ -35,10 +35,9 @@ const SALA_SQL = readFileSync(resolve(__dirname, '../../../supabase/schema/sala.
  * de aici se poate rula de mai multe ori. După `apply_migration` și regenerarea
  * instantaneelor, scoate-o din listă: instantaneul o conține deja.
  */
-const MIGRARI_NEAPLICATE = [
-  // `sala_06_ziua_din_telegram`: se aplică odată cu botul care o înțelege.
-  'supabase/sql/supabase-migration-sala-ziua-din-telegram.sql',
-].map((f) => readFileSync(resolve(__dirname, '../../..', f), 'utf8'));
+const MIGRARI_NEAPLICATE = ([] as string[]).map((f) =>
+  readFileSync(resolve(__dirname, '../../..', f), 'utf8'),
+);
 
 const INFRASTRUCTURA = `
   create role anon nologin;

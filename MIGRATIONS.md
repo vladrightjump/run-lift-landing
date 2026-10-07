@@ -3,7 +3,7 @@
 Catalog al migrărilor care ating Run + Lift, cu granița clară față de aplicația vecină
 (gym-app + botul de Telegram) care împarte același proiect Supabase.
 
-Ultima actualizare: 3 octombrie 2026.
+Ultima actualizare: 7 octombrie 2026.
 
 ---
 
@@ -75,6 +75,7 @@ prefix `runlift_`:
 | 20261003173839 | `sala_03_corecturi` | runlift | Corecturile din review-ul ramurii, doar `create or replace` pe funcții existente (fără coloane, fără drepturi noi). `admin_list_events` nu mai întoarce rândurile `sala_*` — limita de 200 se aplica înaintea listei albe din client, deci prezențele marcate de mână împingeau renunțările afară din „Activitate recentă". `admin_sala_rezumat` spune `poll_sent` (cardul nu mai arată „0 vin" pentru un antrenament fără sondaj). `admin_sala_salveaza_config` nu mai scrie `enabled` peste un rând existent — îl schimbă doar comutatorul. `admin_sala_comanda` refuză sondajul/reminderul „acum" pentru un mâine anulat (`antrenament_anulat`) și nu mai pune a doua oară în coadă o comandă la fel care așteaptă. Anularea unei zile fără rând ia ora și locul din setările botului. `get_advisors`: nicio clasă nouă. Instantaneul `runlift.sql` regenerat (`sala.sql` neatins: tabelele din `public` nu se schimbă). Vezi `supabase/sql/supabase-migration-sala-corecturi.sql` |
 | 20261003175122 | `sala_04_mai_putine_date` | runlift | A doua rundă din review, tot doar `create or replace`. `admin_sala_date` nu mai trimite telefonul și emailul membrilor (niciun ecran nu le arată). `admin_sala_porneste_bot` creează rândul de setări dacă lipsește, în loc să raporteze o oprire care n-a schimbat nimic. `admin_sala_salveaza_config` taie orice spațiu alb din jurul textelor, nu doar spațiile. Instantaneul `runlift.sql` regenerat. `scripts/schema-snapshot-sala.sql` prinde de acum și triggerele tabelelor grupului (azi nu există niciunul, deci `sala.sql` nu se schimbă). Vezi `supabase/sql/supabase-migration-sala-mai-putine-date.sql` |
 | 20261004192325 | `sala_05_scoateri` | runlift | A treia rundă din review, doar `create or replace` pe `admin_sala_date`. Întoarce și `scoateri`: ultima comandă `kick_member` a fiecărui membru, oricât de veche. Până acum ecranele o căutau doar printre ultimele 30 de `comenzi`, deci după 30 de comenzi mai noi o scoatere eșuată dispărea din „Scoateri eșuate” și nu se mai putea reîncerca. Fără coloane și fără drepturi noi. Corpul din producție are același md5 ca instantaneul `runlift.sql` (actualizat). `get_advisors`: nicio clasă nouă. Vezi `supabase/sql/supabase-migration-sala-scoateri.sql` |
+| 20261007142209 | `sala_06_ziua_din_telegram` | runlift + public | **Ziua de antrenament condusă din Telegram** (planul `docs/plans/2026-10-06-2353-feat-ziua-de-antrenament-din-telegram-plan.md`, U1), aplicată pe 7 octombrie 2026 la două minute după ce botul nou (`b24b6b1`) a trecut de `/health` pe Railway — ordinea din `bot/README.md`, „Lansarea". Coada botului (`public.bot_actions`) primește `cancel_session`, `reactivate_session`, `move_session` și `add_session`. `admin_sala_seteaza_antrenament` ia un motiv opțional (≤ 200 de caractere) și, când starea se schimbă pe un antrenament cu sondajul deja în grup, pune în coadă anunțul anulării sau al reactivării; o anulare și o reactivare a aceleiași zile, ambele în așteptare, se anulează reciproc. Semnătura veche, cu trei parametri, e ștearsă; drepturile noii semnături sunt cele ale celorlalte `admin_sala_*`. `admin_sala_date` spune pentru fiecare comandă `sursa`, `organizator` și `data`. Coada era goală la aplicare (doar comenzi `done`). `get_advisors`: nicio clasă nouă. Instantaneele `runlift.sql` și `sala.sql` regenerate (diferența față de cele vechi e exact migrarea); scoasă din `MIGRARI_NEAPLICATE`. Vezi `supabase/sql/supabase-migration-sala-ziua-din-telegram.sql` |
 
 **Verificarea copiei de siguranță, înainte de U11.** Criteriul din plan („niciun tabel nu are mai puține
 rânduri decât în copie") pică și fără pierderi: adminul șterge legitim rânduri (prezență golită,
@@ -363,24 +364,6 @@ Apoi se rulează din nou `supabase-migration-training-reels.sql` (creează la lo
 cu forma veche și grant-urile lor; `create table if not exists` nu atinge tabelul existent) și se
 regenerează instantaneul. **Inversul e valid doar cât timp tabelul e gol** — un rând cu identificator
 YouTube n-ar trece constrângerea de cale.
-
-### `supabase/sql/supabase-migration-sala-ziua-din-telegram.sql` — NEAPLICAT
-
-`sala_06_ziua_din_telegram`, din `docs/plans/2026-10-06-2353-feat-ziua-de-antrenament-din-telegram-plan.md`
-(U1). Coada botului primește `cancel_session`, `reactivate_session`, `move_session` și
-`add_session`. `admin_sala_seteaza_antrenament` ia un motiv opțional și pune în coadă anunțul
-anulării sau al reactivării când sondajul e deja în grup; semnătura veche, cu trei parametri, se
-șterge. `admin_sala_date` spune pentru fiecare comandă sursa, organizatorul și data.
-
-**Precondiție de producție:** se aplică imediat după ce botul care înțelege acțiunile noi e live
-(după U9 din `docs/plans/2026-10-03-1107-feat-botul-si-prezentele-in-admin-plan.md` și după
-merge-ul ramurii). Aplicată înaintea lui, fiecare anulare din admin ar pune în coadă un
-`cancel_session` pe care botul vechi îl marchează eșuat și îl raportează adminilor. Pașii și
-fereastra dintre deploy și migrare: `bot/README.md`, „Lansarea".
-
-Până la aplicare, `tests/unit/sql/db.ts` o încarcă peste instantanee (`MIGRARI_NEAPLICATE`).
-După `apply_migration`: regenerează `supabase/schema/runlift.sql` și `supabase/schema/sala.sql`,
-scoate-o din listă și mută-o în tabelul de mai sus.
 
 ### `supabase/sql/supabase-migration-anunt-istoric.sql` — NEAPLICAT
 

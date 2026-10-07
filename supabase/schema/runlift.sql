@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 3 octombrie 2026 (după `sala_04_mai_putine_date`).
+-- Ultima regenerare: 7 octombrie 2026 (după `sala_06_ziua_din_telegram`).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -880,7 +880,9 @@ begin
     'comenzi', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', b.id, 'action', b.action, 'member_id', b.member_id, 'status', b.status,
-        'result', b.result, 'created_at', b.created_at, 'processed_at', b.processed_at
+        'result', b.result, 'created_at', b.created_at, 'processed_at', b.processed_at,
+        'sursa', b.payload ->> 'sursa', 'organizator', b.payload ->> 'organizator',
+        'data', b.payload ->> 'data'
       ) order by b.created_at desc)
       from (select * from public.bot_actions order by created_at desc limit 30) b
     ), '[]'::jsonb),
@@ -1237,15 +1239,25 @@ end;
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean)
+CREATE OR REPLACE FUNCTION runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean, p_motiv text DEFAULT NULL::text)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'runlift'
 AS $function$
+declare
+  v_alb constant text := E' \t\r\n';
+  v_motiv text := nullif(btrim(coalesce(p_motiv, ''), v_alb), '');
+  v_stare text;
+  v_sondaj bigint;
+  v_schimbat boolean;
 begin
   if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
   if p_data is null or p_anulat is null then raise exception 'data_invalida'; end if;
+  if char_length(v_motiv) > 200 then raise exception 'motiv_prea_lung'; end if;
+
+  select t.status, t.poll_message_id into v_stare, v_sondaj
+    from public.training_sessions t where t.session_date = p_data;
 
   if p_anulat then
     -- Ora și locul vin din setările botului, ca la rândul pe care îl creează
@@ -1257,13 +1269,42 @@ begin
       from (select 1) x
       left join public.bot_config c on c.id = 1
     on conflict (session_date) do update set status = 'cancelled';
+    v_schimbat := v_stare is distinct from 'cancelled';
   else
     update public.training_sessions set status = 'scheduled'
      where session_date = p_data and status = 'cancelled';
+    v_schimbat := v_stare = 'cancelled';
+  end if;
+
+  -- Anunțul îl dă botul, la următorul tic (KTD4). Numai când sondajul e în grup:
+  -- altfel nimeni n-a votat și n-are pe cine pomeni.
+  if v_schimbat and v_sondaj is not null then
+    -- O anulare urmată de reactivare (sau invers) înainte ca botul să golească
+    -- coada se anulează reciproc: grupul n-a aflat încă de prima, deci nu află
+    -- de niciuna.
+    delete from public.bot_actions
+     where status = 'pending'
+       and action = case when p_anulat then 'reactivate_session' else 'cancel_session' end
+       and payload ->> 'data' = p_data::text;
+    if not found then
+      insert into public.bot_actions (action, payload)
+      values (
+        case when p_anulat then 'cancel_session' else 'reactivate_session' end,
+        jsonb_strip_nulls(jsonb_build_object(
+          'data', p_data,
+          'motiv', v_motiv,
+          'sursa', 'admin',
+          'organizator', (
+            select u.username from admin_sessions s join admin_users u on u.id = s.user_id
+             where s.token = p_token
+          )
+        ))
+      );
+    end if;
   end if;
 
   perform sala_jurnal(p_token, case when p_anulat then 'sala_anulare' else 'sala_reactivare' end,
-    jsonb_build_object('data', p_data));
+    jsonb_strip_nulls(jsonb_build_object('data', p_data, 'motiv', v_motiv)));
 end;
 $function$
 ;
@@ -2876,10 +2917,10 @@ revoke all on function runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune u
 grant execute on function runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune uuid, p_membru uuid, p_raspuns text) to anon;
 grant execute on function runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune uuid, p_membru uuid, p_raspuns text) to authenticated;
 grant execute on function runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune uuid, p_membru uuid, p_raspuns text) to service_role;
-revoke all on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean) from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean) to anon;
-grant execute on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean) to authenticated;
-grant execute on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean) to service_role;
+revoke all on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean, p_motiv text) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean, p_motiv text) to anon;
+grant execute on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean, p_motiv text) to authenticated;
+grant execute on function runlift.admin_sala_seteaza_antrenament(p_token uuid, p_data date, p_anulat boolean, p_motiv text) to service_role;
 revoke all on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) to anon;
 grant execute on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) to authenticated;
