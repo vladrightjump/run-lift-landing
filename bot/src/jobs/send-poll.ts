@@ -9,6 +9,7 @@ import {
   pollTitleFor,
 } from "../lib/poll-text.js";
 import { getBotConfig } from "../lib/config.js";
+import { hhmm } from "../lib/sessions.js";
 
 // Creates (idempotently) a training session and posts its attendance poll into
 // the Telegram group — tomorrow's by default, or `date` (an extra, or a poll
@@ -77,7 +78,7 @@ export async function sendPoll(
     title: pollTitleFor(sessionDate, todayInTz(), configured.title),
   };
   const keyboard = pollKeyboard(sessionId, wording);
-  const time = existing?.starts_at ? String(existing.starts_at).slice(0, 5) : cfg.trainingTime;
+  const time = existing?.starts_at ? hhmm(String(existing.starts_at)) : cfg.trainingTime;
   const location = existing?.location ?? cfg.location;
 
   // Initial message with a friendly call-to-action; edited live as people vote.

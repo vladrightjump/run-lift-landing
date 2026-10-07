@@ -123,18 +123,24 @@ interface AttRow {
   member: { full_name: string; telegram_user_id: number | null } | null;
 }
 
+// A session's votes, with each voter's name and Telegram account.
+async function attendanceOf(supabase: Supabase, sessionId: string): Promise<AttRow[]> {
+  const { data } = await supabase
+    .from("attendance")
+    .select("member_id, response, member:members(full_name, telegram_user_id)")
+    .eq("session_id", sessionId);
+  return (data ?? []) as unknown as AttRow[];
+}
+
+const nameOf = (a: AttRow) => a.member?.full_name ?? "necunoscut";
+
 // The poll of a session, as it should look now (KTD9, KTD10): its own time and
 // place, the wording it went out with, its votes, and ANULAT when cancelled.
 export async function renderSessionPoll(
   supabase: Supabase,
   session: SessionRow,
 ): Promise<ReturnType<typeof renderPoll>> {
-  const { data } = await supabase
-    .from("attendance")
-    .select("member_id, response, member:members(full_name, telegram_user_id)")
-    .eq("session_id", session.id);
-  const att = (data ?? []) as unknown as AttRow[];
-  const nameOf = (a: AttRow) => a.member?.full_name ?? "necunoscut";
+  const att = await attendanceOf(supabase, session.id);
   return renderPoll({
     sessionId: session.id,
     date: session.session_date,
@@ -172,13 +178,8 @@ export async function loadState(
   const people: People = { yes: [], no: [], silent: [] };
   if (!target) return { snapshot, people };
 
-  const [{ data: att }, { data: active }] = await Promise.all([
-    target.row
-      ? supabase
-          .from("attendance")
-          .select("member_id, response, member:members(full_name, telegram_user_id)")
-          .eq("session_id", target.row.id)
-      : Promise.resolve({ data: [] }),
+  const [att, { data: active }] = await Promise.all([
+    target.row ? attendanceOf(supabase, target.row.id) : Promise.resolve([] as AttRow[]),
     supabase
       .from("members")
       .select("id, full_name, telegram_user_id")
@@ -187,9 +188,9 @@ export async function loadState(
       .order("full_name"),
   ]);
   const answered = new Set<string>();
-  for (const a of (att ?? []) as unknown as AttRow[]) {
+  for (const a of att) {
     answered.add(a.member_id);
-    const p = { name: a.member?.full_name ?? "necunoscut", telegramId: a.member?.telegram_user_id ?? null };
+    const p = { name: nameOf(a), telegramId: a.member?.telegram_user_id ?? null };
     (a.response === "yes" ? people.yes : people.no).push(p);
   }
   people.silent = ((active ?? []) as { id: string; full_name: string }[])

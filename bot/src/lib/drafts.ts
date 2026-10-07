@@ -22,7 +22,6 @@ export interface Draft {
   chatId: number;
   step: Step;
   action: PendingAction;
-  messageId: number | null; // the card message being edited, if any
   preview: string | null; // what the organizer saw before Confirm
   expiresAt: number;
 }
@@ -38,16 +37,10 @@ export class DraftStore {
   constructor(private readonly clock: () => number = Date.now) {}
 
   // One live draft per chat: a new one replaces the previous.
-  create(
-    chatId: number,
-    step: Step,
-    action: PendingAction,
-    messageId: number | null,
-    preview: string | null = null,
-  ): Draft {
+  create(chatId: number, step: Step, action: PendingAction, preview: string | null = null): Draft {
     for (const [t, d] of this.byToken) if (d.chatId === chatId) this.byToken.delete(t);
     const token = Math.random().toString(36).slice(2, 10);
-    const draft = { token, chatId, step, action, messageId, preview, expiresAt: this.clock() + DRAFT_TTL_MS };
+    const draft = { token, chatId, step, action, preview, expiresAt: this.clock() + DRAFT_TTL_MS };
     this.byToken.set(token, draft);
     return draft;
   }
@@ -69,8 +62,8 @@ export class DraftStore {
     return null;
   }
 
-  update(draft: Draft, step: Step, action: PendingAction, messageId = draft.messageId): Draft {
-    const next = { ...draft, step, action, messageId, expiresAt: this.clock() + DRAFT_TTL_MS };
+  update(draft: Draft, step: Step, action: PendingAction): Draft {
+    const next = { ...draft, step, action, expiresAt: this.clock() + DRAFT_TTL_MS };
     this.byToken.set(draft.token, next);
     return next;
   }

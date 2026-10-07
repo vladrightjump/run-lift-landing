@@ -145,7 +145,7 @@ async function preview(ctx: Ctx, action: DayAction, prefix = ""): Promise<void> 
     await show(ctx, prefix + d.message, kb);
     return;
   }
-  const draft = ctx.deps.drafts.create(ctx.chatId, "confirm", action, ctx.messageId, d.preview);
+  const draft = ctx.deps.drafts.create(ctx.chatId, "confirm", action, d.preview);
   await show(ctx, prefix + d.preview, [
     [btn("Confirmă", `c:ok:${draft.token}`), btn("Renunță", `c:no:${draft.token}`)],
   ]);
@@ -222,26 +222,27 @@ async function askPlace(ctx: Ctx, draft: Draft, s: Snapshot): Promise<void> {
 }
 
 async function startCancel(ctx: Ctx, date: string): Promise<void> {
-  const draft = ctx.deps.drafts.create(ctx.chatId, "reason", { kind: "cancel", date }, ctx.messageId);
+  const draft = ctx.deps.drafts.create(ctx.chatId, "reason", { kind: "cancel", date });
   await show(ctx, `Anulezi antrenamentul de ${dayLabel(date)}. Motivul? Scrie-l aici sau apasă „Fără motiv”.`, [
     [btn("Fără motiv", `c:r:${draft.token}:none`), btn("Renunță", `c:no:${draft.token}`)],
   ]);
 }
 
-async function startMove(ctx: Ctx, date: string): Promise<void> {
+// `date` null = the nearest training.
+async function startMove(ctx: Ctx, date: string | null): Promise<void> {
   const { snapshot } = await ctx.deps.ports.state(date);
-  const t = sessionOn(snapshot, date);
+  const t = targetSession(snapshot, date);
   if (!t || t.status === "cancelled") {
     await preview(ctx, { kind: "move", date, time: null, location: null });
     return;
   }
-  const draft = ctx.deps.drafts.create(ctx.chatId, "time", { kind: "move", date }, ctx.messageId);
+  const draft = ctx.deps.drafts.create(ctx.chatId, "time", { kind: "move", date: t.date });
   await askTime(ctx, draft, snapshot);
 }
 
 async function startExtra(ctx: Ctx): Promise<void> {
   const { snapshot } = await ctx.deps.ports.state(null);
-  const draft = ctx.deps.drafts.create(ctx.chatId, "day", { kind: "extra" }, ctx.messageId);
+  const draft = ctx.deps.drafts.create(ctx.chatId, "day", { kind: "extra" });
   const days = extraDays(snapshot);
   const rows: Keyboard = [];
   for (let i = 0; i < days.length; i += 3) {
@@ -300,11 +301,7 @@ async function runCommand(ctx: Ctx, p: Parsed): Promise<void> {
     case "reaminteste":
       return preview(ctx, { kind: "remind", date: p.date });
     case "muta":
-      if (!p.time && !p.text) {
-        const { snapshot } = await ctx.deps.ports.state(p.date);
-        const t = targetSession(snapshot, p.date);
-        if (t) return startMove(ctx, t.date);
-      }
+      if (!p.time && !p.text) return startMove(ctx, p.date);
       return preview(ctx, { kind: "move", date: p.date, time: p.time, location: p.text });
     case "extra":
       if (!p.date) return startExtra(ctx);
@@ -439,10 +436,11 @@ export const ORGANIZER_COMMANDS = [
   { command: "ajutor", description: "Comenzile, cu exemple" },
 ];
 
-// The default wiring: the organizers' list from the environment and one
-// in-memory draft store for the process.
+// One in-memory draft store for the process (KTD5).
+const SHARED_DRAFTS = new DraftStore();
+
+// The default wiring: the organizers' list from the environment and the
+// process's draft store.
 export function defaultDeps(ports: Ports, tg: ControlDeps["tg"], organizers: number[]): ControlDeps {
   return { ports, organizers, drafts: SHARED_DRAFTS, tg };
 }
-
-const SHARED_DRAFTS = new DraftStore();

@@ -1,3 +1,5 @@
+import { addDays } from "./sessions.js";
+
 // Builds the group poll message (Telegram HTML parse mode). The message is
 // edited in place on every vote (editMessageText does NOT notify members), so
 // it acts as a friendly live "who's coming" board. Only people who answered
@@ -124,9 +126,7 @@ export function pollTitleFor(
   configuredTitle: string,
 ): string {
   if (sessionDate === postDate) return "Antrenament azi";
-  const [y, m, d] = postDate.split("-").map(Number);
-  const dayAfter = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
-  return sessionDate === dayAfter ? configuredTitle : "Antrenament";
+  return sessionDate === addDays(postDate, 1) ? configuredTitle : "Antrenament";
 }
 
 export interface PollView {
