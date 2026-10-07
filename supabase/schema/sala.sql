@@ -9,7 +9,7 @@
 -- NU se aplică nicăieri: nu e o migrare. Ăsta e „ce e acum în producție",
 -- regenerat după fiecare migrare care atinge tabelele grupului — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 3 octombrie 2026 (după `sala_02_functii_admin`).
+-- Ultima regenerare: 7 octombrie 2026 (după `sala_06_ziua_din_telegram`).
 
 create table public.attendance (
   id uuid default gen_random_uuid() not null,
@@ -123,7 +123,7 @@ alter table public.attendance add constraint attendance_session_id_fkey FOREIGN 
 alter table public.attendance_log add constraint attendance_log_response_check CHECK ((response = ANY (ARRAY['yes'::text, 'no'::text, 'clear'::text])));
 alter table public.attendance_log add constraint attendance_log_session_id_fkey FOREIGN KEY (session_id) REFERENCES training_sessions(id) ON DELETE SET NULL;
 alter table public.attendance_log add constraint attendance_log_source_check CHECK ((source = ANY (ARRAY['telegram'::text, 'manual'::text])));
-alter table public.bot_actions add constraint bot_actions_action_check CHECK ((action = ANY (ARRAY['kick_member'::text, 'send_poll'::text, 'send_summary'::text, 'send_reminder'::text, 'send_message'::text])));
+alter table public.bot_actions add constraint bot_actions_action_check CHECK ((action = ANY (ARRAY['kick_member'::text, 'send_poll'::text, 'send_summary'::text, 'send_reminder'::text, 'send_message'::text, 'cancel_session'::text, 'reactivate_session'::text, 'move_session'::text, 'add_session'::text])));
 alter table public.bot_actions add constraint bot_actions_member_id_fkey FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL;
 alter table public.bot_actions add constraint bot_actions_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'done'::text, 'failed'::text])));
 alter table public.bot_config add constraint bot_config_singleton CHECK ((id = 1));

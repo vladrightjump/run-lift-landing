@@ -300,22 +300,17 @@ describe('grupul de antrenament (salaApi)', () => {
     expect(necunoscute).toEqual([]);
   });
 
-  it('motivul anulării pleacă drept p_motiv doar când e dat, cum îl declară migrarea sala_06', async () => {
+  it('motivul anulării pleacă drept p_motiv doar când e dat, cum îl declară funcția din producție', async () => {
     fetchMock.mockResolvedValue(new Response('null', { status: 200 }));
     await sala.seteazaAntrenament('tok', '2026-10-08', true, 'ploaie');
     await sala.seteazaAntrenament('tok', '2026-10-08', true);
     const corp = (i: number) => JSON.parse(String(fetchMock.mock.calls[i][1].body));
     expect(corp(0)).toEqual({ p_token: 'tok', p_data: '2026-10-08', p_anulat: true, p_motiv: 'ploaie' });
     expect(corp(1)).toEqual({ p_token: 'tok', p_data: '2026-10-08', p_anulat: true });
-    // Instantaneul producției o are încă pe cea veche, cu trei parametri, până la
-    // aplicarea migrării; semnătura nouă e în migrare.
-    const sql = readFileSync(
-      resolve(__dirname, '../../supabase/sql/supabase-migration-sala-ziua-din-telegram.sql'),
-      'utf8'
-    );
-    expect(sql).toMatch(
-      /function runlift\.admin_sala_seteaza_antrenament\(\s*p_token uuid, p_data date, p_anulat boolean, p_motiv text default null/
-    );
+    const schema = readFileSync(resolve(__dirname, '../../supabase/schema/runlift.sql'), 'utf8');
+    const { toti, obligatorii } = parametri(schema, 'admin_sala_seteaza_antrenament');
+    expect(toti).toContain('p_motiv');
+    expect(obligatorii).not.toContain('p_motiv');
   });
 
   it('mesajul liber poartă HTML-ul, iar celelalte comenzi trimit null', async () => {
