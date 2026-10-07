@@ -4,6 +4,10 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_WORDING,
   buildPollText,
+  dayLabel,
+  mentionList,
+  pollTitleFor,
+  renderPoll,
   effectiveWording,
   esc,
   pollHeader,
@@ -98,4 +102,81 @@ test("wordingFromCopy: a session copy wins; a missing or broken copy means today
   assert.deepEqual(wordingFromCopy(null), DEFAULT_WORDING);
   assert.deepEqual(wordingFromCopy({ title: 3 }), DEFAULT_WORDING);
   assert.deepEqual(wordingFromCopy({ title: "A" }), { ...DEFAULT_WORDING, title: "A" });
+});
+
+// ── Ziua de antrenament din Telegram (KTD9–KTD11) ───────────────────────────
+
+test("pollTitleFor: day before → configured title; same day → azi; otherwise plain", () => {
+  assert.equal(pollTitleFor("2026-10-08", "2026-10-07", "Alergăm mâine!"), "Alergăm mâine!");
+  assert.equal(pollTitleFor("2026-10-10", "2026-10-10", "Alergăm mâine!"), "Antrenament azi");
+  assert.equal(pollTitleFor("2026-10-10", "2026-10-07", "Alergăm mâine!"), "Antrenament");
+});
+
+test("Covers AE6. an extra Saturday posted Wednesday names the day, not 'mâine'", () => {
+  const { text } = renderPoll({
+    sessionId: "s",
+    date: "2026-10-10",
+    time: "08:00",
+    location: "Parc",
+    wording: { ...DEFAULT_WORDING, title: pollTitleFor("2026-10-10", "2026-10-07", DEFAULT_WORDING.title) },
+    yes: [],
+    no: [],
+    cancelled: false,
+  });
+  assert.ok(text.startsWith("🏃 <b>Antrenament — Sâmbătă, 10 oct</b>"));
+  assert.ok(!text.includes("mâine"));
+});
+
+test("renderPoll: active poll = today's text plus the vote buttons", () => {
+  const r = renderPoll({
+    sessionId: "s-1",
+    date: "2026-07-22",
+    time: "06:30",
+    location: "Parc",
+    wording: DEFAULT_WORDING,
+    yes: ["Ana"],
+    no: [],
+    cancelled: false,
+  });
+  assert.equal(r.text, buildPollText(pollHeader("2026-07-22", "06:30", "Parc"), ["Ana"], []));
+  assert.deepEqual(r.keyboard, pollKeyboard("s-1", DEFAULT_WORDING));
+});
+
+test("renderPoll: a cancelled poll says ANULAT, keeps the names, drops the call to action and the buttons", () => {
+  const r = renderPoll({
+    sessionId: "s-1",
+    date: "2026-07-22",
+    time: "06:30",
+    location: "Parc",
+    wording: DEFAULT_WORDING,
+    yes: [],
+    no: [],
+    cancelled: true,
+  });
+  assert.ok(r.text.startsWith("❌ <b>ANULAT</b>\n🏃 <b>Antrenament mâine"));
+  assert.ok(!r.text.includes("Apasă mai jos"));
+  assert.deepEqual(r.keyboard, []);
+  const withNames = renderPoll({ ...{ sessionId: "s", date: "", time: "06:30", location: "", wording: DEFAULT_WORDING }, yes: ["Ana"], no: ["Ion"], cancelled: true });
+  assert.ok(withNames.text.includes("• Ana") && withNames.text.includes("• Ion"));
+});
+
+test("dayLabel: lowercase weekday, day and short month", () => {
+  assert.equal(dayLabel("2026-10-08"), "joi, 8 oct");
+});
+
+test("mentionList: links for Telegram accounts, escaped plain names otherwise", () => {
+  assert.equal(
+    mentionList([
+      { name: "Ana <A>", telegramId: 11 },
+      { name: "Ion & Co", telegramId: null },
+    ]),
+    '<a href="tg://user?id=11">Ana &lt;A&gt;</a>, Ion &amp; Co',
+  );
+});
+
+test("mentionList: over the budget → cut, ending with 'și încă N'", () => {
+  const people = Array.from({ length: 50 }, (_, i) => ({ name: `Membru ${i}`, telegramId: 1000 + i }));
+  const out = mentionList(people, 300);
+  assert.ok(out.length <= 300);
+  assert.match(out, /și încă \d+$/);
 });

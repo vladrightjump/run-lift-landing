@@ -94,11 +94,12 @@ export function buildPollText(
   header: string,
   yes: string[],
   no: string[],
+  { cancelled = false }: { cancelled?: boolean } = {},
 ): string {
   const bullet = (names: string[]) => names.map((n) => `• ${esc(n)}`);
-  const lines = [header, ""];
+  const lines = cancelled ? ["❌ <b>ANULAT</b>", header, ""] : [header, ""];
   if (yes.length === 0 && no.length === 0) {
-    lines.push("Cine vine? Apasă mai jos 👇");
+    if (!cancelled) lines.push("Cine vine? Apasă mai jos 👇");
   } else {
     if (yes.length) {
       lines.push(`✅ <b>Vin (${yes.length})</b>`, ...bullet(yes));
@@ -109,4 +110,81 @@ export function buildPollText(
     }
   }
   return lines.join("\n");
+}
+
+// ── Ziua de antrenament din Telegram ────────────────────────────────────────
+
+// The poll's title depends on the day it goes out (KTD9). The day before, it
+// is the configured title ("Antrenament mâine" by default); the same day,
+// "Antrenament azi"; earlier than that, just "Antrenament" — the automatic
+// suffix ("— Sâmbătă, 10 oct") names the day.
+export function pollTitleFor(
+  sessionDate: string,
+  postDate: string,
+  configuredTitle: string,
+): string {
+  if (sessionDate === postDate) return "Antrenament azi";
+  const [y, m, d] = postDate.split("-").map(Number);
+  const dayAfter = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+  return sessionDate === dayAfter ? configuredTitle : "Antrenament";
+}
+
+export interface PollView {
+  sessionId: string;
+  date: string;
+  time: string;
+  location: string;
+  wording: PollWording;
+  yes: string[];
+  no: string[];
+  cancelled: boolean;
+}
+
+// The whole poll message: text plus buttons. A cancelled poll keeps its names
+// but loses its buttons (R10, KTD10).
+export function renderPoll(v: PollView): {
+  text: string;
+  keyboard: { text: string; callback_data: string }[][];
+} {
+  const header = pollHeader(v.date, v.time, v.location, v.wording.title);
+  return {
+    text: buildPollText(header, v.yes, v.no, { cancelled: v.cancelled }),
+    keyboard: v.cancelled ? [] : pollKeyboard(v.sessionId, v.wording),
+  };
+}
+
+// "2026-10-08" → "joi, 8 oct" (inside a sentence).
+export function dayLabel(dateIso: string): string {
+  const [y, m, d] = dateIso.split("-").map(Number);
+  const dow = RO_DOW[new Date(Date.UTC(y, m - 1, d)).getUTCDay()].toLowerCase();
+  return `${dow}, ${d} ${RO_MON[m - 1]}`;
+}
+
+export interface Person {
+  name: string;
+  telegramId: number | null;
+}
+
+// Mentions that notify (KTD11): a tg://user link for anyone with a Telegram
+// account, the escaped name otherwise. Past `budget` characters the list is
+// cut and ends with "și încă N", so the message stays under Telegram's limit.
+export function mentionList(people: Person[], budget = 3500): string {
+  const one = (p: Person) =>
+    p.telegramId != null
+      ? `<a href="tg://user?id=${p.telegramId}">${esc(p.name)}</a>`
+      : esc(p.name);
+  const tailRoom = 20; // ", și încă 999"
+  const parts: string[] = [];
+  let used = 0;
+  for (let i = 0; i < people.length; i += 1) {
+    const piece = one(people[i]);
+    const room = i < people.length - 1 ? tailRoom : 0;
+    if (used + piece.length + room > budget) {
+      const rest = `și încă ${people.length - i}`;
+      return parts.length ? `${parts.join(", ")}, ${rest}` : rest;
+    }
+    parts.push(piece);
+    used += piece.length + 2;
+  }
+  return parts.join(", ");
 }
