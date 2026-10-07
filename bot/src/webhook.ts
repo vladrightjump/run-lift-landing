@@ -3,8 +3,17 @@ import {
   answerCallbackQuery,
   editMessageText,
   sendMessage,
+  setMyCommands,
 } from "./lib/telegram.js";
-import { renderSessionPoll } from "./jobs/day-ops.js";
+import { realPorts, renderSessionPoll } from "./jobs/day-ops.js";
+import {
+  ORGANIZER_COMMANDS,
+  defaultDeps,
+  handleControlCallback,
+  handleOrganizerText,
+  type ControlDeps,
+} from "./control.js";
+import { organizerIds } from "./lib/organizers.js";
 import type { SessionRow } from "./lib/sessions.js";
 
 // ── Telegram update payload (only the fields we use) ──────────────────────────
@@ -50,8 +59,66 @@ async function voteFailureAlert(detail: string) {
 // (e.g. DB write failed) — the server then answers non-2xx and Telegram
 // REDELIVERS the update, so no vote is ever silently dropped. The attendance
 // upsert is idempotent, which makes redelivery safe.
+// The organizers' private chat, wired to the real database and Telegram.
+function controlDeps(): ControlDeps {
+  return defaultDeps(
+    realPorts(),
+    {
+      async send(chatId, text, kb) {
+        const r = await sendMessage(
+          chatId,
+          text,
+          kb?.length ? { reply_markup: { inline_keyboard: kb } } : undefined,
+        );
+        return r.ok && r.result ? r.result.message_id : null;
+      },
+      async edit(chatId, messageId, text, kb) {
+        const r = await editMessageText(chatId, messageId, text, {
+          reply_markup: { inline_keyboard: kb ?? [] },
+        });
+        if (!r.ok && r.description !== "Bad Request: message is not modified") {
+          // An old card can't be edited (deleted, too old): send a new one.
+          await sendMessage(chatId, text, kb?.length ? { reply_markup: { inline_keyboard: kb } } : undefined);
+        }
+      },
+      async answer(id, text) {
+        await answerCallbackQuery(id, text);
+      },
+    },
+    organizerIds(),
+  );
+}
+
+// Shows the command menu in one organizer's private chat (KTD13). Best effort.
+export async function registerOrganizerMenu(chatId: number): Promise<void> {
+  try {
+    const r = await setMyCommands(ORGANIZER_COMMANDS, { type: "chat", chat_id: chatId });
+    if (!r.ok) console.error(`[menu] setMyCommands for ${chatId} failed:`, r.description);
+  } catch (err) {
+    console.error("[menu]", err);
+  }
+}
+
 export async function handleUpdate(update: TgUpdate): Promise<boolean> {
   try {
+    const cb = update.callback_query;
+    if (cb?.data?.startsWith("c:")) {
+      // The organizers' control buttons. Never retried: a repeated tap is the
+      // retry, and Confirm is guarded against running twice (KTD5).
+      await handleControlCallback(
+        {
+          id: cb.id,
+          fromId: cb.from.id,
+          fromName: cb.from.first_name ?? cb.from.username ?? String(cb.from.id),
+          chatId: cb.message?.chat.id ?? cb.from.id,
+          chatType: cb.message?.chat.type ?? "private",
+          messageId: cb.message?.message_id ?? null,
+          data: cb.data,
+        },
+        controlDeps(),
+      );
+      return true;
+    }
     if (update.callback_query) {
       return await handleCallbackQuery(update.callback_query);
     } else if (update.message) {
@@ -336,6 +403,23 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
   if (!msg.from) return;
   const text = (msg.text ?? "").trim();
 
+  // An organizer's command, or the answer to the bot's question (U4).
+  if (
+    text &&
+    (await handleOrganizerText(
+      {
+        chatId: msg.chat.id,
+        chatType: msg.chat.type,
+        fromId: msg.from.id,
+        fromName: msg.from.first_name ?? msg.from.username ?? String(msg.from.id),
+        text,
+      },
+      controlDeps(),
+    ))
+  ) {
+    return;
+  }
+
   const supabase = createAdminClient();
   const { data: existing } = await supabase
     .from("members")
@@ -346,6 +430,11 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
 
   // ── /start ──────────────────────────────────────────────────────────────
   if (text === "/start" || text.startsWith("/start")) {
+    // An organizer who opens the chat after the bot started gets the menu now.
+    if (organizerIds().includes(msg.from.id)) {
+      await registerOrganizerMenu(msg.chat.id);
+      await sendMessage(msg.chat.id, "Ca organizator: /antrenament deschide cardul, /ajutor arată comenzile.");
+    }
     if (member) {
       // Already registered — just (re)enable DMs and greet.
       await supabase

@@ -1,7 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import cron from "node-cron";
-import { handleUpdate, type TgUpdate } from "./webhook.js";
+import { handleUpdate, registerOrganizerMenu, type TgUpdate } from "./webhook.js";
+import { organizerIds } from "./lib/organizers.js";
 import { sendPoll } from "./jobs/send-poll.js";
 import { morningSummary } from "./jobs/morning-summary.js";
 import { processCommands } from "./jobs/process-commands.js";
@@ -40,6 +41,11 @@ app.post("/telegram/webhook", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[server] webhook listening on :${PORT}`);
+  // The organizers' command menu (KTD13). Without a bot token (CI) there is
+  // nothing to register.
+  if (process.env.TELEGRAM_BOT_TOKEN) {
+    for (const id of organizerIds()) void registerOrganizerMenu(id);
+  }
 });
 
 // ── Scheduled jobs — DB-driven (config editable from the gym-app admin UI) ────
