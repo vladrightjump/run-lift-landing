@@ -780,7 +780,9 @@ describe('urma scrierilor', () => {
     const m = await membru('Ana', 555);
     const s = await antrenament('2026-10-06');
     await cheama('admin_sala_set_prezenta', ADMIN_TOKEN, s, m, 'yes');
-    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, '2026-10-08', true);
+    // Nu mâine: sondajul „acum" de mai jos e refuzat pentru un mâine anulat. Cu
+    // o dată fixă, testul pica exact în ziua dinaintea ei (7 octombrie 2026).
+    await cheama('admin_sala_seteaza_antrenament', ADMIN_TOKEN, await ziua(5), true);
     await cheama('admin_sala_salveaza_config', ADMIN_TOKEN, JSON.stringify(configValid()));
     await cheama('admin_sala_porneste_bot', ADMIN_TOKEN, true);
     await cheama('admin_sala_comanda', ADMIN_TOKEN, 'send_poll', null);
