@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { decide, type People } from "../src/lib/day-actions.js";
+import { decide, queuedNotice, type People } from "../src/lib/day-actions.js";
 import type { SessionRow, Snapshot } from "../src/lib/sessions.js";
 
 const row = (date: string, over: Partial<SessionRow> = {}): SessionRow => ({
@@ -168,4 +168,30 @@ test("reminder: names the silent members; refused before the poll or on a cancel
 
 test("no training on the asked day → refused", () => {
   refused(decide({ kind: "cancel", date: "2026-10-10", reason: null }, snap(), nobody));
+});
+
+// ── Anunțul anulării făcute din /admin (KTD4) ───────────────────────────────
+
+test("queued admin cancel, still cancelled, poll in the group → redraw + notice", () => {
+  const s = snap([withPoll("2026-10-08", { status: "cancelled" })]);
+  const q = queuedNotice("cancel", s, nine, "2026-10-08", "ploaie");
+  assert.deepEqual(q.effects.map((e) => e.kind), ["redrawPoll", "send"]);
+  assert.match((q.effects[1] as { html: string }).html, /ploaie/);
+});
+
+test("queued admin cancel, reactivated meanwhile → nothing, 'depășită'", () => {
+  const q = queuedNotice("cancel", snap([withPoll()]), nine, "2026-10-08", null);
+  assert.deepEqual(q.effects, []);
+  assert.match(q.result, /depășită/);
+});
+
+test("queued admin cancel without a poll in the group → nothing to announce", () => {
+  const q = queuedNotice("cancel", snap([row("2026-10-08", { status: "cancelled" })]), nobody, "2026-10-08", null);
+  assert.deepEqual(q.effects, []);
+  assert.match(q.result, /fără sondaj/);
+});
+
+test("queued admin reactivation, still scheduled, poll in the group → redraw + notice", () => {
+  const q = queuedNotice("reactivate", snap([withPoll()]), nine, "2026-10-08", null);
+  assert.deepEqual(q.effects.map((e) => e.kind), ["redrawPoll", "send"]);
 });

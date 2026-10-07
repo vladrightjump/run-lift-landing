@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { isDue } from "../src/lib/schedule.js";
 import { normalizeTime, normalizeDays, textOrNull } from "../src/lib/config.js";
 import { fmtDate } from "../src/lib/format.js";
-import { cleanName, isValidName } from "../src/webhook.js";
+import { cleanName, isValidName, voteAccepted } from "../src/webhook.js";
 
 // ── Schedule matching ────────────────────────────────────────────────────────
 test("isDue: fires only on a configured day at the exact time", () => {
@@ -74,4 +74,11 @@ test("isValidName: accepts real names, rejects commands and edge lengths", () =>
   assert.equal(isValidName("V"), false);
   assert.equal(isValidName("x".repeat(81)), false);
   assert.equal(isValidName("x".repeat(80)), true);
+});
+
+// ── Votes on a cancelled training (R14) ─────────────────────────────────────
+test("voteAccepted: a cancelled training takes no votes; scheduled ones do", () => {
+  assert.equal(voteAccepted("cancelled"), false);
+  assert.equal(voteAccepted("scheduled"), true);
+  assert.equal(voteAccepted(null), true); // unknown session: the insert decides, as before
 });

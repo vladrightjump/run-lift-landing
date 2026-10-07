@@ -4,17 +4,21 @@ import { tomorrowInTz } from "../lib/tz.js";
 import { alertAdmins } from "../lib/notify.js";
 import { sendPoll } from "./send-poll.js";
 import { morningSummary } from "./morning-summary.js";
+import { realPorts, runQueuedNotice } from "./day-ops.js";
 
 interface ActionRow {
   id: string;
   action: string;
   telegram_user_id: number | null;
-  payload: { html?: string } | null;
+  payload: ({ html?: string } & Record<string, unknown>) | null;
 }
 
 // Drains pending rows from bot_actions and executes them. Called every tick.
 //   kick_member — removes a user from the group (bot must be group admin)
 //   send_poll   — posts a fresh poll to the group immediately ("send now")
+//   cancel_session / reactivate_session — a day cancelled or reactivated in
+//                 /admin: the row is already written; announce it in the group
+//                 if its poll is out and the day is still in that state (KTD4)
 // Failures are recorded in the row AND DM'd to the admins.
 export async function processCommands(): Promise<void> {
   const groupChatId = process.env.TELEGRAM_GROUP_CHAT_ID;
@@ -88,14 +92,14 @@ export async function processCommands(): Promise<void> {
       ok = r.ok;
       result = r.ok ? "summary sent" : `failed: ${r.detail ?? "?"}`;
     } else if (cmd.action === "send_poll") {
-      // Force a fresh poll: clear tomorrow's poll_message_id so it re-posts.
-      await supabase
-        .from("training_sessions")
-        .update({ poll_message_id: null })
-        .eq("session_date", tomorrowInTz());
-      const r = await sendPoll();
+      // Force a fresh poll for tomorrow, even if one is already in the group.
+      const r = await sendPoll({ force: true });
       ok = r.ok;
       result = r.ok ? "poll sent" : `failed: ${r.detail ?? "?"}`;
+    } else if (cmd.action === "cancel_session" || cmd.action === "reactivate_session") {
+      const r = await runQueuedNotice(cmd, realPorts());
+      ok = r.ok;
+      result = r.result;
     } else {
       result = "unsupported or missing data";
     }

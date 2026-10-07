@@ -4,12 +4,8 @@ import {
   editMessageText,
   sendMessage,
 } from "./lib/telegram.js";
-import {
-  buildPollText,
-  pollHeader,
-  pollKeyboard,
-  wordingFromCopy,
-} from "./lib/poll-text.js";
+import { renderSessionPoll } from "./jobs/day-ops.js";
+import type { SessionRow } from "./lib/sessions.js";
 
 // ── Telegram update payload (only the fields we use) ──────────────────────────
 interface TgUser {
@@ -84,6 +80,19 @@ async function handleCallbackQuery(
 
   const supabase = createAdminClient();
   const from = cb.from;
+
+  // A cancelled training takes no votes, not even from an older copy of its
+  // poll that still has buttons (R14).
+  const { data: sess, error: sessErr } = await supabase
+    .from("training_sessions")
+    .select("status")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (sessErr) throw new Error(sessErr.message); // transient — Telegram retries
+  if (!voteAccepted(sess?.status ?? null)) {
+    await answerCallbackQuery(cb.id, "Antrenamentul e anulat.");
+    return true;
+  }
 
   let member = await resolveMember(supabase, from);
 
@@ -203,14 +212,15 @@ async function handleCallbackQuery(
   return true;
 }
 
-interface AttNameRow {
-  response: "yes" | "no";
-  member: { full_name: string } | null;
+// Whether a vote on a session with this status is recorded. A missing session
+// (deleted, or a garbage id) is left to the attendance insert, as before.
+export function voteAccepted(status: string | null): boolean {
+  return status !== "cancelled";
 }
 
-// Rebuilds the poll text from current attendance and edits the message. The
-// title and buttons come from the copy the poll went out with, not from the
-// current settings.
+// Redraws the poll message that was tapped, from the session's current state:
+// its time and place, the wording it went out with, and the live tally.
+// Editing a message does NOT notify group members, so this is silent.
 async function refreshPollMessage(
   supabase: ReturnType<typeof createAdminClient>,
   chatId: number,
@@ -218,40 +228,13 @@ async function refreshPollMessage(
   sessionId: string,
 ) {
   try {
-    const [sessionRes, attRes] = await Promise.all([
-      supabase
-        .from("training_sessions")
-        .select("session_date, starts_at, location, poll_wording")
-        .eq("id", sessionId)
-        .maybeSingle(),
-      supabase
-        .from("attendance")
-        .select("response, member:members(full_name)")
-        .eq("session_id", sessionId),
-    ]);
-
-    const att = (attRes.data ?? []) as unknown as AttNameRow[];
-    const session = sessionRes.data as {
-      session_date: string;
-      starts_at: string;
-      location: string;
-      poll_wording: unknown;
-    } | null;
-    const wording = wordingFromCopy(session?.poll_wording);
-
-    const nameOf = (a: AttNameRow) => a.member?.full_name ?? "necunoscut";
-    const yes = att.filter((a) => a.response === "yes").map(nameOf);
-    const no = att.filter((a) => a.response === "no").map(nameOf);
-
-    const header = pollHeader(
-      session?.session_date ?? "",
-      session?.starts_at ?? "06:30",
-      session?.location ?? "",
-      wording.title,
-    );
-    const text = buildPollText(header, yes, no);
-    const keyboard = pollKeyboard(sessionId, wording);
-
+    const { data } = await supabase
+      .from("training_sessions")
+      .select("id, session_date, starts_at, location, status, poll_message_id, poll_wording")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (!data) return;
+    const { text, keyboard } = await renderSessionPoll(supabase, data as SessionRow);
     const res = await editMessageText(chatId, messageId, text, {
       parse_mode: "HTML",
       reply_markup: { inline_keyboard: keyboard },

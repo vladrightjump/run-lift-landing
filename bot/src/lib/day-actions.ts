@@ -102,25 +102,56 @@ function writeFor(
   };
 }
 
+// What the group sees after a cancel or a reactivation: the poll redrawn and a
+// notice that pings the "Vin" voters. Nothing when the poll hasn't gone out.
+export function noticeEffects(
+  kind: "cancel" | "reactivate",
+  t: Target,
+  people: People,
+  reason: string | null,
+): Effect[] {
+  if (!t.pollSent) return [];
+  const html =
+    kind === "cancel"
+      ? `❌ <b>Anulat: antrenamentul de ${when(t)}</b>${reason ? `\nMotiv: ${esc(reason)}` : ""}` +
+        (people.yes.length
+          ? pingLine(people, "nu mai veniți. Ne vedem la următorul!")
+          : "\n\nNe vedem la următorul!")
+      : `✅ <b>Reactivat: antrenamentul de ${when(t)}</b>` +
+        (people.yes.length
+          ? pingLine(people, "antrenamentul are loc. Sondajul de mai sus e din nou deschis.")
+          : "\n\nSondajul de mai sus e din nou deschis.");
+  return [
+    { kind: "redrawPoll", date: t.date },
+    { kind: "send", html },
+  ];
+}
+
+// A cancel or reactivation done in /admin: the row is already written, so only
+// the group side is left, and only if the training is still in that state (an
+// admin cancel undone within the same minute announces nothing; KTD4).
+export function queuedNotice(
+  kind: "cancel" | "reactivate",
+  s: Snapshot,
+  people: People,
+  date: string,
+  reason: string | null,
+): { effects: Effect[]; result: string } {
+  const t = sessionOn(s, date);
+  const wanted: Status = kind === "cancel" ? "cancelled" : "scheduled";
+  if (!t || t.status !== wanted) return { effects: [], result: "depășită: starea s-a schimbat între timp" };
+  if (!t.pollSent) return { effects: [], result: "fără sondaj în grup, nimic de anunțat" };
+  return { effects: noticeEffects(kind, t, people, reason), result: "anunțat" };
+}
+
 function cancel(t: Target, reason: string | null, people: People): Decision {
   if (t.status === "cancelled") {
     return refuse(`Antrenamentul de ${when(t)} e deja anulat.`, "reactivate", t.date);
   }
-  const effects: Effect[] = [writeFor(t, { status: "cancelled" }, "cancelled")];
-  if (t.pollSent) {
-    const why = reason ? `\nMotiv: ${esc(reason)}` : "";
-    effects.push(
-      { kind: "redrawPoll", date: t.date },
-      {
-        kind: "send",
-        html:
-          `❌ <b>Anulat: antrenamentul de ${when(t)}</b>${why}` +
-          (people.yes.length
-            ? pingLine(people, "nu mai veniți. Ne vedem la următorul!")
-            : "\n\nNe vedem la următorul!"),
-      },
-    );
-  }
+  const effects: Effect[] = [
+    writeFor(t, { status: "cancelled" }, "cancelled"),
+    ...noticeEffects("cancel", t, people, reason),
+  ];
   return {
     ok: true,
     date: t.date,
@@ -140,20 +171,11 @@ function reactivate(t: Target, people: People): Decision {
   if (t.status !== "cancelled") {
     return refuse(`Antrenamentul de ${when(t)} nu e anulat.`);
   }
-  const effects: Effect[] = [writeFor(t, { status: "scheduled" }, "scheduled")];
-  if (t.pollSent) {
-    effects.push(
-      { kind: "redrawPoll", date: t.date },
-      {
-        kind: "send",
-        html:
-          `✅ <b>Reactivat: antrenamentul de ${when(t)}</b>` +
-          (people.yes.length
-            ? pingLine(people, "antrenamentul are loc. Sondajul de mai sus e din nou deschis.")
-            : "\n\nSondajul de mai sus e din nou deschis."),
-      },
-    );
-  }
+  // The notice is about the training as it will be: scheduled again.
+  const effects: Effect[] = [
+    writeFor(t, { status: "scheduled" }, "scheduled"),
+    ...noticeEffects("reactivate", t, people, null),
+  ];
   return {
     ok: true,
     date: t.date,
