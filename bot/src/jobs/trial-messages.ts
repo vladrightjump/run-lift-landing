@@ -4,7 +4,7 @@ import { sendTrialText, createTrialInvite, getChatMember, revokeInvite, type Inl
 import { bookingText, button, conditionsText, eligibleForInvite, mainKeyboard, trialConfig, verifyTrialPermissions,
   type TrialDb, type TrialConfig, type Booking, type Prospect } from '../lib/trial.js';
 
-interface TrialMessage { id: string; prospect_id: string; booking_id: string | null; booking_version: number | null; kind: string; recipient_telegram_id: number; status: string; attempts: number; payload: Record<string, unknown> }
+interface TrialMessage { id: string; prospect_id: string; booking_id: string | null; booking_version: number | null; kind: string; recipient_telegram_id: number; status: string; lease_until: string; attempts: number; payload: Record<string, unknown> }
 export function renderTrialMessage(m: Pick<TrialMessage, 'kind' | 'payload'>, p: Prospect, b: Booking | null, c: TrialConfig): {text:string; keyboard?:InlineKeyboard} {
   const name = p.full_name ?? 'Persoană nouă';
   const session = b ? bookingText(b) : '';
@@ -15,6 +15,7 @@ export function renderTrialMessage(m: Pick<TrialMessage, 'kind' | 'payload'>, p:
     case 'organizer_booking': return { text: `${trialCopy(c, 'organizer_booking')}\n${name}\n${session}` };
     case 'reminder': return { text: `${trialCopy(c, 'reminder')}\n${session}\n\n${conditionsText(b!.conditions_snapshot)}`, keyboard: cancel };
     case 'attendance_request': return { text: `${trialCopy(c, 'attendance_request')}\n${name}\n${session}`, keyboard: [[button('A venit', `t:present:${b!.id}:${b!.version}`), button('Nu a venit', `t:absent:${b!.id}:${b!.version}`)]] };
+    case 'self_cancelled': return { text: `${trialCopy(c, 'self_cancelled')}\n${session}`, keyboard: mainKeyboard };
     case 'cancelled': return { text: `${trialCopy(c, 'cancelled')}\n${session}`, keyboard: mainKeyboard };
     case 'organizer_cancelled': return { text: `${trialCopy(c, 'organizer_cancelled')}\n${name}\n${session}` };
     case 'continuation': return { text: `${trialCopy(c, 'continuation')}\n\n${c.continuation_conditions}`, keyboard: [[button('Da, vreau să continui', `t:yes:${b!.id}:${b!.version}`)], [button('Nu acum', `t:no:${b!.id}:${b!.version}`)]] };
@@ -31,7 +32,7 @@ export function messageStillRelevant(m: Pick<TrialMessage, 'booking_version' | '
   if (m.kind === 'continuation') return b.status === 'attended' && b.continuation === null;
   if (m.kind === 'rebook') return b.status === 'absent';
   if (m.kind === 'attendance_request') return ['scheduled', 'awaiting_attendance'].includes(b.status) && new Date(b.session_start).getTime() + b.duration_minutes * 60_000 <= now;
-  if (['cancelled', 'organizer_cancelled'].includes(m.kind)) return b.status === 'cancelled';
+  if (['cancelled', 'self_cancelled', 'organizer_cancelled'].includes(m.kind)) return b.status === 'cancelled';
   if (['booking_confirmed', 'reminder', 'session_changed'].includes(m.kind)) return b.status === 'scheduled' && new Date(b.session_start).getTime() > now;
   return true;
 }
@@ -74,7 +75,8 @@ async function deliver(db: TrialDb, m: TrialMessage) {
   if (leaseError) throw leaseError;
   const freshConfig = await trialConfig(db);
   if (lease.status !== 'processing') return;
-  if (!freshConfig?.enabled || (!p.dm_enabled && participant) || !messageStillRelevant(m, b)) return complete(db, m, 'cancelled', 'Stare schimbată înaintea trimiterii');
+  if (!freshConfig?.enabled) return 'paused';
+  if ((!p.dm_enabled && participant) || !messageStillRelevant(m, b)) return complete(db, m, 'cancelled', 'Stare schimbată înaintea trimiterii');
   let text: string;
   let keyboard: InlineKeyboard | undefined;
   if (m.kind === 'invite') text = `${trialCopy(freshConfig, 'invite')}\n${await invitation(db, p, b!)}`;
@@ -122,7 +124,13 @@ export async function processTrialMessages(): Promise<void> {
     const { data, error } = await db.rpc('trial_claim_messages', { p_limit: 10 });
     if (error) throw error;
     for (const m of (data ?? []) as TrialMessage[]) {
-      try { await deliver(db, m); }
+      try {
+        if (await deliver(db, m) === 'paused') {
+          const { error: releaseError } = await db.rpc('trial_release_messages', { p_claims: (data as TrialMessage[]).map(row => ({ id: row.id, lease_until: row.lease_until })) });
+          if (releaseError) throw releaseError;
+          break;
+        }
+      }
       catch (e) { await complete(db, m, 'failed', e instanceof Error ? e.message : 'Eroare la pregătirea mesajului'); }
     }
   } finally { running = false; }

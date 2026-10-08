@@ -11,7 +11,7 @@ process.env.TELEGRAM_BOT_TOKEN = 'fake-token';
 process.env.TELEGRAM_GROUP_CHAT_ID = '-100';
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
-const config: TrialConfig = { enabled:true, bot_username:'training_bot', welcome_text:'Bun venit', trial_price:'50 lei', trial_conditions:'Vino cu 10 minute înainte', bring_text:'Apă', continuation_conditions:'Condițiile continuării', duration_minutes:60, organizer_telegram_id:99, contact_text:'Contact organizator', permissions_verified_at:null };
+const config: TrialConfig = { enabled:true, bot_username:'training_bot', welcome_text:'Bun venit', trial_price:'50 lei', trial_conditions:'Vino cu 10 minute înainte', bring_text:'Apă', continuation_conditions:'Condițiile continuării', duration_minutes:60, organizer_telegram_id:99, contact_text:'Contact organizator', permissions_verified_at:new Date().toISOString() };
 const p: Prospect = { id:'p1', telegram_user_id:11, full_name:'Ana Maria', conversation_step:'choose_session', dm_enabled:true, stage:'scheduled' };
 const b: Booking = { id:'00000000-0000-0000-0000-000000000001', prospect_id:'p1', version:2, status:'attended', attendance_at:'2026-10-08T08:00:00Z', continuation:'yes', session_start:'2026-10-08T06:00:00Z', session_location:'Parc', duration_minutes:60, conditions_snapshot:{trial_price:'50 lei',trial_conditions:'Condiții',bring_text:'Apă'}, session_id:'s1' };
 function mock(handler: (url:URL, body:Record<string,unknown>, method:string) => unknown | Promise<unknown>) {
@@ -232,8 +232,10 @@ test('organizer answer is persisted as a draft, never queued until confirmation'
   await trialCallback(cb('t:reply:q1',99));
   assert.equal(await trialOrganizerText(99,'Proba costă 50 lei.'),true);
   assert.ok(!calls.some(x=>x.url.pathname.endsWith('/rpc/trial_reply')));
-  await trialCallback(cb('t:sendanswer:q1',99));
-  assert.deepEqual(calls.find(x=>x.url.pathname.endsWith('/rpc/trial_reply'))?.body,{p_question:'q1',p_response:'Proba costă 50 lei.',p_actor:99});
+  const previewId = String((draft as unknown as Record<string,unknown>).draft_id);
+  assert.equal(await trialOrganizerText(99,'Un alt mesaj'),false);
+  await trialCallback(cb(`t:sendanswer:${previewId}`,99));
+  assert.deepEqual(calls.find(x=>x.url.pathname.endsWith('/rpc/trial_confirm_reply'))?.body,{p_draft:previewId,p_send:true,p_actor:99});
   assert.ok(calls.some(x=>String(x.body.text).includes('Destinatar: Ana')));
 });
 
@@ -258,4 +260,91 @@ test('custom trial copy preserves booking conditions and action identities', () 
   assert.match(continuation.text, /Condițiile continuării/);
   assert.equal(continuation.keyboard?.[0][0].callback_data, `t:yes:${b.id}:2`);
   assert.match(renderTrialMessage({kind:'reminder',payload:{}},p,b,c).text, /Te așteptăm/);
+});
+
+test('outbox creates, persists, sends and reuses invitations; revokes on persistence failure', async () => {
+ const {processTrialMessages}=await import('../src/jobs/trial-messages.js');
+ for(const scenario of ['created','reuse','save-failure']) {
+  const calls:{path:string;body:Record<string,unknown>;method:string}[]=[];
+  const c={...config,bot_username:`trial_${scenario}`};
+  globalThis.fetch=async(input,init)=>{
+   const url=new URL(String(input)), path=url.pathname, method=init?.method??'GET',body=init?.body?JSON.parse(String(init.body)):{};
+   calls.push({path,body,method});let result:unknown=null,status=200;
+   if(path.endsWith('/trial_config')) result=method==='PATCH'?null:c;
+   else if(path.endsWith('/members')) result={id:'organizer'};
+   else if(path.endsWith('/getMe')) result={ok:true,result:{id:7,username:c.bot_username}};
+   else if(path.endsWith('/getChatMember')) result={ok:true,result:{status:body.user_id===7?'administrator':'left',can_invite_users:body.user_id===7,user:{id:body.user_id}}};
+   else if(path.endsWith('/rpc/trial_claim_messages')) result=[{id:'m1',prospect_id:p.id,booking_id:b.id,booking_version:2,kind:'invite',recipient_telegram_id:11,status:'processing',attempts:1,payload:{}}];
+   else if(path.endsWith('/trial_prospects')) result=p;
+   else if(path.endsWith('/trial_bookings')) result=b;
+   else if(path.endsWith('/trial_messages')) result={status:'processing'};
+   else if(path.endsWith('/telegram_group_memberships')) result={state:'left'};
+   else if(path.endsWith('/trial_invitations')) {
+    if(method==='POST'&&scenario==='save-failure'){status=400;result={code:'23503',message:'simulated failed persistence'};}
+    else if(method==='GET') result=scenario==='reuse'?{invite_link:'https://t.me/+existing'}:null;
+   }
+   else if(path.endsWith('/createChatInviteLink')) result={ok:true,result:{invite_link:'https://t.me/+new'}};
+   else if(path.endsWith('/sendMessage')||path.endsWith('/revokeChatInviteLink')) result=telegram;
+   return new Response(JSON.stringify(result),{status,headers:{'Content-Type':'application/json'}});
+  };
+  await processTrialMessages();
+  const created=calls.find(x=>x.path.endsWith('/createChatInviteLink'));
+  if(scenario==='reuse') {assert.equal(created,undefined);assert.ok(calls.some(x=>String(x.body.text).includes('https://t.me/+existing')));}
+  else {assert.equal(created?.body.creates_join_request,true);assert.ok(Number(created?.body.expire_date)>Date.now()/1000);const saved=calls.find(x=>x.path.endsWith('/trial_invitations')&&x.method==='POST');assert.equal(saved?.body.booking_version,2);assert.equal(saved?.body.telegram_user_id,11);}
+  if(scenario==='save-failure') {assert.ok(calls.some(x=>x.path.endsWith('/revokeChatInviteLink')&&x.body.invite_link==='https://t.me/+new'));assert.ok(!calls.some(x=>x.path.endsWith('/sendMessage')));}
+  else assert.ok(calls.some(x=>x.path.endsWith('/sendMessage')));
+  assert.equal(calls.find(x=>x.path.endsWith('/rpc/trial_complete_message'))?.body.p_status,scenario==='save-failure'?'failed':'sent');
+ }
+});
+test('pause after claim releases the batch without cancelling or sending', async () => {
+ const {processTrialMessages}=await import('../src/jobs/trial-messages.js');let claimed=false;
+ const lease='2099-01-01T00:00:00Z';
+ const calls=mock((url,_body,method)=>{
+  if(url.pathname.endsWith('/trial_config')) return method==='PATCH'?null:{...config,bot_username:'pause_bot',enabled:!claimed};
+  if(url.pathname.endsWith('/members')) return {id:'admin'};
+  if(url.pathname.endsWith('/getMe')) return {ok:true,result:{id:7,username:'pause_bot'}};
+  if(url.pathname.endsWith('/getChatMember')) return {ok:true,result:{status:'administrator',can_invite_users:true,user:{id:7}}};
+  if(url.pathname.endsWith('/rpc/trial_claim_messages')) {claimed=true;return ['m1','m2'].map(id=>({id,prospect_id:p.id,booking_id:b.id,booking_version:2,kind:'continuation',recipient_telegram_id:11,status:'processing',attempts:1,lease_until:lease,payload:{}}));}
+  if(url.pathname.endsWith('/trial_prospects')) return p;
+  if(url.pathname.endsWith('/trial_bookings')) return {...b,continuation:null};
+  if(url.pathname.endsWith('/trial_messages')) return {status:'processing'};
+  return null;
+ });
+ await processTrialMessages();
+ assert.ok(!calls.some(x=>x.url.pathname.endsWith('/sendMessage')||x.url.pathname.endsWith('/rpc/trial_complete_message')));
+ assert.deepEqual(calls.find(x=>x.url.pathname.endsWith('/rpc/trial_release_messages'))?.body.p_claims,[{id:'m1',lease_until:lease},{id:'m2',lease_until:lease}]);
+});
+test('unverified permission proof prevents creating a new prospect', async () => {
+ const calls=mock(url=>url.pathname.endsWith('/trial_config')?{...config,permissions_verified_at:null}:url.hostname==='api.telegram.org'?telegram:null);
+ await trialPrivateMessage({id:123},'/start trial_home');
+ assert.ok(!calls.some(x=>x.url.pathname.endsWith('/trial_prospects')&&x.method==='POST'));
+ assert.ok(calls.some(x=>String(x.body.text).includes('suspendate')));
+});
+test('participant cancellation acknowledges once without repeating editable cancellation copy', async () => {
+ const calls=mock(url=>url.pathname.endsWith('/trial_config')?{...config,message_texts:{cancelled:'Organizatorul a anulat sesiunea',self_cancelled:'Ai anulat proba'}}:url.pathname.endsWith('/trial_prospects')?p:telegram);
+ await trialCallback(cb(`t:cancel:${b.id}:2`));
+ assert.ok(calls.some(x=>String(x.body.text).includes('Cererea de anulare')));
+ assert.ok(!calls.some(x=>String(x.body.text).includes('Organizatorul a anulat')||String(x.body.text).includes('Ai anulat proba')));
+ assert.match(renderTrialMessage({kind:'self_cancelled',payload:{}},p,b,{...config,message_texts:{self_cancelled:'Ai anulat proba'}}).text,/Ai anulat proba/);
+});
+test('poll reselects the session created by a competing trial booking', async () => {
+ const {sendPoll}=await import('../src/jobs/send-poll.js');
+ for(const scenario of ['scheduled','cancelled','already-sent']) {
+  let selects=0;const sent:Record<string,unknown>[]=[];
+  globalThis.fetch=async(input,init)=>{
+   const url=new URL(String(input)),method=init?.method??'GET';const body=init?.body?JSON.parse(String(init.body)):{};
+   let result:unknown=null,status=200;
+   if(url.pathname.endsWith('/bot_config')) result={training_time:'06:30',location:'Old place'};
+   else if(url.pathname.endsWith('/training_sessions')) {
+    if(method==='GET') result=++selects===1?null:{id:'session-winner',starts_at:'09:00',location:'New place',status:scenario==='cancelled'?'cancelled':'scheduled',poll_message_id:scenario==='already-sent'?123:null};
+    if(method==='POST') {status=409;result={code:'23505',message:'duplicate date'};}
+   } else if(url.pathname.endsWith('/sendMessage')) {sent.push(body);result=telegram;}
+   return new Response(JSON.stringify(result),{status,headers:{'Content-Type':'application/json'}});
+  };
+  const result=await sendPoll({date:'2099-01-01'});
+  assert.equal(result.ok,true);
+  assert.equal(selects,2);
+  if(scenario==='scheduled') {assert.equal(sent.length,1);assert.match(String(sent[0].text),/09:00/);assert.match(String(sent[0].text),/New place/);}
+  else {assert.equal(sent.length,0);assert.equal(result.detail,scenario);}
+ }
 });

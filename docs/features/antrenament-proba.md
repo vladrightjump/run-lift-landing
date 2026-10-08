@@ -6,7 +6,7 @@ Persoana rămâne la **Antrenamente → Persoane noi**, separat de membri. Botul
 
 ## Activare
 
-1. Aplică migrarea `supabase/sql/supabase-migration-sala-probe.sql` înaintea activării funcției. Migrarea creează configurația dezactivată și nu modifică membrii existenți. Actualizează snapshot-urile și lista migrărilor neaplicate din testele SQL conform procesului repo, numai după aplicarea live.
+1. Aplică în ordine `supabase/sql/supabase-migration-sala-probe.sql`, `supabase/sql/supabase-migration-trial-messages.sql` și `supabase/sql/supabase-migration-trial-review-fixes.sql`, cu funcția dezactivată, înainte de livrarea și activarea botului actualizat. Migrarea creează configurația dezactivată și nu modifică membrii existenți. Actualizează snapshot-urile și lista migrărilor neaplicate din testele SQL conform procesului repo, numai după aplicarea live.
 2. Livrează botul și înregistrează webhook-ul actualizat, care include `chat_join_request` și păstrează `chat_member`. Botul trebuie să fie administrator în grupul configurat și să aibă dreptul de invitare. Nu este necesară deblocarea persoanelor excluse.
 3. În **Setări bot → Antrenamente de probă**, completează username-ul real al botului (fără URL), bun venit, costul real, condițiile, echipamentul necesar, condițiile continuării, durata și contactul. Selectează un organizator asociat în baza de date (`members.is_admin`) cu cont Telegram care a deschis conversația cu botul.
 4. Salvează cu activarea oprită. Workerul verifică periodic identitatea botului și dreptul de invitare, inclusiv când înscrierile sunt dezactivate. Workerul trebuie să ruleze cu schedulerul activ. Schimbarea username-ului sau organizatorului cere o nouă verificare.
@@ -31,3 +31,11 @@ Un singur grup și o singură probă deschisă per persoană. Nu există plată 
 În **Setări bot → Antrenamente de probă → Mesajele fluxului**, alege mesajul, modifică textul și salvează setările. Sunt disponibile confirmările, reminderul, notificările organizatorului, întrebarea de continuare, invitația și mesajele principale ale conversației. Bun venit, costul și condițiile rămân în câmpurile dedicate. Previzualizarea arată textul editabil și explică informațiile adăugate automat. Datele, condițiile acceptate, linkurile și butoanele sunt păstrate de bot. Mesajele de eroare și verificările de acces rămân gestionate de sistem.
 
 Modificările se folosesc la trimiterile viitoare, inclusiv mesajele încă în așteptare; mesajele deja trimise nu sunt editate în Telegram. „Restabilește mesajul implicit” elimină personalizarea după salvare. Aplică și `supabase/sql/supabase-migration-trial-messages.sql`, după migrarea inițială a probelor.
+
+## Protecții la administrare și livrare
+
+- Dezactivarea suspendă mesajele încă netrimise; reactivarea permite reluarea lor. Pierderea sau expirarea verificării drepturilor de invitare suspendă și înscrierile noi, până la o verificare reușită. Rezervările existente se păstrează.
+- Confirmarea prezenței verifică versiunea afișată. Dacă alt organizator a intervenit între timp, reîncarcă înainte să confirmi sau să corectezi rezultatul.
+- Fiecare întrebare are propria ciornă în admin. În Telegram, butoanele de confirmare aparțin exact previzualizării respective; cele înlocuite sau expirate nu pot trimite alt text.
+- Dacă salvarea reușește, dar reîncărcarea datelor eșuează, ciorna rămâne disponibilă și adminul afișează o avertizare.
+- Cele 22 de texte editabile includ separat anularea făcută de participant și anularea sesiunii de către organizator. Participantul primește imediat o confirmare scurtă a cererii, apoi mesajul personalizat o singură dată prin worker.

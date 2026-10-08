@@ -31,7 +31,7 @@ export async function sendPoll(
   const cfg = await getBotConfig();
   const sessionDate = opts.date ?? tomorrowInTz();
 
-  const { data: existing, error: selErr } = await supabase
+  let { data: existing, error: selErr } = await supabase
     .from("training_sessions")
     .select("id, poll_message_id, status, starts_at, location")
     .eq("session_date", sessionDate)
@@ -61,13 +61,21 @@ export async function sendPoll(
       })
       .select("id")
       .single();
-    if (insErr || !inserted) {
+    if (insErr?.code === '23505') {
+      const winner = await supabase.from('training_sessions').select('id, poll_message_id, status, starts_at, location').eq('session_date', sessionDate).single();
+      if (winner.error || !winner.data) return { ok: false, detail: 'select' };
+      existing = winner.data;
+      if (existing.status === 'cancelled') return { ok: true, detail: 'cancelled' };
+      if (existing.poll_message_id && !opts.force) return { ok: true, detail: 'already-sent' };
+      sessionId = existing.id;
+    } else if (insErr || !inserted) {
       console.error("[send-poll] insert error:", insErr);
       return { ok: false, detail: "insert" };
     }
-    sessionId = inserted.id as string;
+    else sessionId = inserted.id as string;
   }
 
+  if (!sessionId) return { ok: false, detail: 'select' };
   const configured = effectiveWording({
     title: cfg.pollTitle,
     yes: cfg.pollYesLabel,

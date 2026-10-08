@@ -13,7 +13,11 @@ export function useTrials() {
     lock.current = true; setBusy(true);
     try {
       await work(token);
-      await resource.reincarca();
+      const refreshed = await resource.reincarca();
+      if (!refreshed) {
+        showToast({ kind: 'error', msg: 'Acțiunea a fost salvată, dar datele nu au putut fi reîncărcate. Ciorna este păstrată; reîncarcă înainte de alte modificări.' });
+        return false;
+      }
       showToast({ kind: 'success', msg: success });
       return true;
     } catch (error) {

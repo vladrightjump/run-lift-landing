@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { trialCopy } from './trial-copy.js';
 import { createAdminClient } from './supabase.js';
 import { trialSessions, type SessionRow } from './sessions.js';
@@ -31,6 +32,7 @@ async function send(id: number, text: string, kb?: InlineKeyboard) {
   const r = await sendTrialText(id, text, kb);
   if (!r.ok) throw new Error(r.description ?? 'Mesajul nu a putut fi trimis');
 }
+function intakeReady(c: TrialConfig): boolean { return !!c.permissions_verified_at && Date.now() - Date.parse(c.permissions_verified_at) < 24 * 3600_000; }
 export function trialConditions(c: TrialConfig) {
   return { trial_price: c.trial_price, trial_conditions: c.trial_conditions, bring_text: c.bring_text };
 }
@@ -64,6 +66,7 @@ export async function eligibleTrialDates(db: TrialDb) {
 async function showDates(db: TrialDb, p: Prospect, c: TrialConfig) {
   const booking = await currentBooking(db, p.id);
   if (booking) return showProgress(p.telegram_user_id, booking, c);
+  if (!intakeReady(c)) return send(p.telegram_user_id, `Înscrierile sunt suspendate temporar. ${c.contact_text}`);
   if (!p.full_name) {
     await step(db, p, 'name');
     return send(p.telegram_user_id, trialCopy(c, 'name_prompt'));
@@ -105,6 +108,7 @@ export async function trialPrivateMessage(from: TrialUser, text: string, message
   let p = await prospect(db, from.id);
   const start = /^\/start(?:@\w+)?(?:\s|$)/i.test(text);
   if (!p) {
+    if (!intakeReady(c)) return send(from.id, `Înscrierile sunt suspendate temporar. ${c.contact_text}`);
     const source = /^\/start(?:@\w+)?\s+(trial_home|trial_share|trial_instagram)$/.exec(text)?.[1] ?? 'direct';
     const { error } = await db.from('trial_prospects').upsert({ telegram_user_id: from.id, telegram_username: from.username ?? null, source }, { onConflict: 'telegram_user_id', ignoreDuplicates: true });
     if (error) throw error;
@@ -180,7 +184,7 @@ export async function trialCallback(cb: { id: string; from: TrialUser; data: str
     const rpc = action === 'cancel' ? 'trial_cancel' : 'trial_continue';
     const { error } = await db.rpc(rpc, { p_telegram_id: cb.from.id, p_booking: id, p_version: Number(rawVersion), ...(action === 'cancel' ? {} : { p_continue: action === 'yes' }) });
     if (error) return send(cb.from.id, 'Acțiunea nu mai este disponibilă. Scrie /start pentru starea actuală.');
-    return send(cb.from.id, action === 'cancel' ? trialCopy(c, 'cancelled') : action === 'yes' ? trialCopy(c, 'continuation_yes') : trialCopy(c, 'continuation_no'), action === 'cancel' ? mainKeyboard : undefined);
+    return send(cb.from.id, action === 'cancel' ? 'Cererea de anulare este înregistrată. Confirmarea va sosi aici.' : action === 'yes' ? trialCopy(c, 'continuation_yes') : trialCopy(c, 'continuation_no'), action === 'cancel' ? mainKeyboard : undefined);
   }
   if (action === 'invite') {
     const b = await currentBooking(db, p.id);
@@ -195,26 +199,19 @@ export function eligibleForInvite(b: Pick<Booking, 'status' | 'attendance_at' | 
   return b.status === 'attended' && b.attendance_at !== null && b.continuation === 'yes';
 }
 
-async function organizerReplyCallback(db: TrialDb, actor: number, action: string, question: string) {
+async function organizerReplyCallback(db: TrialDb, actor: number, action: string, id: string) {
   if (!await organizer(db, actor)) return send(actor, 'Acțiune disponibilă numai organizatorilor.');
-  const { data: q, error } = await db.from('trial_questions').select('*, trial_prospects(full_name,telegram_user_id)').eq('id', question).maybeSingle();
+  if (action !== 'reply') {
+    const { error } = await db.rpc('trial_confirm_reply', { p_actor: actor, p_draft: id, p_send: action === 'sendanswer' });
+    if (error) return send(actor, 'Previzualizarea a expirat sau a fost înlocuită. Apasă din nou „Răspunde”.');
+    return send(actor, action === 'sendanswer' ? 'Răspunsul este în coada de trimitere. Starea livrării apare în admin.' : 'Răspunsul a fost abandonat.');
+  }
+  const { data: q, error } = await db.from('trial_questions').select('*, trial_prospects(full_name,telegram_user_id)').eq('id', id).maybeSingle();
   if (error) throw error;
   if (!q || q.status !== 'open') return send(actor, 'Întrebarea a fost deja preluată sau nu mai există.');
-  if (action === 'reply') {
-    const { error: draftError } = await db.from('trial_reply_drafts').upsert({ telegram_user_id: actor, question_id: question, body: null, expires_at: new Date(Date.now() + 15 * 60_000).toISOString() });
-    if (draftError) throw draftError;
-    return send(actor, `Răspuns pentru ${q.trial_prospects?.full_name ?? 'persoană nouă'}\nÎntrebare: ${String(q.body).slice(0, 500)}\n\nScrie răspunsul. Îți voi cere confirmarea înainte de trimitere.`);
-  }
-  const { data: draft, error: draftError } = await db.from('trial_reply_drafts').select('*').eq('telegram_user_id', actor).eq('question_id', question).maybeSingle();
+  const { error: draftError } = await db.from('trial_reply_drafts').upsert({ telegram_user_id: actor, question_id: id, draft_id: randomUUID(), body: null, expires_at: new Date(Date.now() + 15 * 60_000).toISOString() });
   if (draftError) throw draftError;
-  if (!draft || new Date(draft.expires_at).getTime() < Date.now()) return send(actor, 'Contextul răspunsului a expirat. Apasă din nou „Răspunde”.');
-  if (action === 'sendanswer' && draft.body) {
-    const { error: replyError } = await db.rpc('trial_reply', { p_question: question, p_response: draft.body, p_actor: actor });
-    if (replyError) throw replyError;
-  }
-  const { error: deleteError } = await db.from('trial_reply_drafts').delete().eq('telegram_user_id', actor);
-  if (deleteError) throw deleteError;
-  await send(actor, action === 'sendanswer' ? 'Răspunsul este în coada de trimitere. Starea livrării apare în admin.' : 'Răspunsul a fost abandonat.');
+  return send(actor, `Răspuns pentru ${q.trial_prospects?.full_name ?? 'persoană nouă'}\nÎntrebare: ${String(q.body).slice(0, 500)}\n\nScrie răspunsul. Îți voi cere confirmarea înainte de trimitere.`);
 }
 export async function trialOrganizerText(actor: number, text: string): Promise<boolean> {
   if (text.startsWith('/')) return false;
@@ -223,15 +220,16 @@ export async function trialOrganizerText(actor: number, text: string): Promise<b
   if (!c?.enabled) return false;
   const { data: draft, error } = await db.from('trial_reply_drafts').select('*').eq('telegram_user_id', actor).maybeSingle();
   if (error) throw error;
-  if (!draft || new Date(draft.expires_at).getTime() < Date.now() || !await organizer(db, actor)) return false;
+  if (!draft || draft.body !== null || new Date(draft.expires_at).getTime() < Date.now() || !await organizer(db, actor)) return false;
   if (!text.trim() || text.length > 3500) { await send(actor, 'Răspunsul trebuie să aibă între 1 și 3500 de caractere.'); return true; }
   const { data: q, error: questionError } = await db.from('trial_questions').select('body,trial_prospects(full_name)').eq('id', draft.question_id).single();
   if (questionError) throw questionError;
-  const { error: writeError } = await db.from('trial_reply_drafts').update({ body: text }).eq('telegram_user_id', actor);
+  const { data: preview, error: writeError } = await db.from('trial_reply_drafts').update({ body: text }).eq('telegram_user_id', actor).eq('draft_id', draft.draft_id).is('body', null).select('draft_id').maybeSingle();
   if (writeError) throw writeError;
+  if (!preview) { await send(actor, 'Contextul răspunsului s-a schimbat. Apasă din nou „Răspunde”.'); return true; }
   // Supabase infers relation arrays without generated DB types; normalize the response.
   const relation = q.trial_prospects as unknown as {full_name:string} | null;
-  await send(actor, `Destinatar: ${relation?.full_name ?? 'persoană nouă'}\nÎntrebare: ${String(q.body).slice(0, 500)}\n\nRăspuns:\n${text}`, [[button('Confirmă trimiterea', `t:sendanswer:${draft.question_id}`)], [button('Renunță', `t:discardanswer:${draft.question_id}`)]]);
+  await send(actor, `Destinatar: ${relation?.full_name ?? 'persoană nouă'}\nÎntrebare: ${String(q.body).slice(0, 500)}\n\nRăspuns:\n${text}`, [[button('Confirmă trimiterea', `t:sendanswer:${preview.draft_id}`)], [button('Renunță', `t:discardanswer:${preview.draft_id}`)]]);
   return true;
 }
 

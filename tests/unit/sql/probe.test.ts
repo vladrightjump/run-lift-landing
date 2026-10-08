@@ -6,7 +6,7 @@ beforeAll(async () => { db = await porneste(); }, 60_000);
 afterAll(async () => { await db.close(); });
 beforeEach(async () => {
  await reseteaza(db);
- await db.exec(`insert into public.trial_config(id,enabled,organizer_telegram_id) values(1,true,900);
+ await db.exec(`insert into public.trial_config(id,enabled,organizer_telegram_id,permissions_verified_at) values(1,true,900,now());
  insert into public.bot_config(id,poll_days) values(1,'{0,1,2,3,4,5,6}');
  insert into public.members(full_name,telegram_user_id,is_admin) values('Organizer',900,true);
  insert into public.trial_prospects(full_name,telegram_user_id) values('Maria',100);`);
@@ -49,7 +49,7 @@ describe('trial onboarding transactions', () => {
   await db.query(`select public.trial_attendance($1,1,true,900)`,[b.id]);
   await expect(db.query(`select public.trial_attendance($1,1,false,900)`,[b.id])).rejects.toThrow('trial_stale_booking');
   await db.query(`select public.trial_continue(100,$1,2,true)`,[b.id]);
-  await db.query(`select runlift.admin_trial_attendance($1,$2,false)`,[ADMIN_TOKEN,b.id]);
+  await db.query(`select runlift.admin_trial_attendance($1,$2,false,2,true)`,[ADMIN_TOKEN,b.id]);
   expect((await db.query(`select * from public.trial_messages where status='pending' and kind in ('invite','rebook')`)).rows).toHaveLength(0);
   await expect(db.query(`select public.trial_continue(100,$1,3,true)`,[b.id])).rejects.toThrow('trial_attendance_required');
  });
@@ -90,7 +90,7 @@ describe('trial onboarding transactions', () => {
   const b=await book(); await finish(b.id);
   await db.query(`select public.trial_attendance($1,1,false,900)`,[b.id]);
   await expect(db.query(`select public.trial_continue(100,$1,2,true)`,[b.id])).rejects.toThrow('trial_attendance_required');
-  await db.query(`select runlift.admin_trial_attendance($1,$2,true)`,[ADMIN_TOKEN,b.id]);
+  await db.query(`select runlift.admin_trial_attendance($1,$2,true,2,true)`,[ADMIN_TOKEN,b.id]);
   await db.query(`select public.trial_continue(100,$1,3,false)`,[b.id]);
   await expect(db.query(`select public.trial_continue(100,$1,3,true)`,[b.id])).rejects.toThrow('trial_continuation_already_recorded');
   expect((await db.query(`select * from public.trial_messages where kind='invite'`)).rows).toHaveLength(0);
@@ -123,7 +123,7 @@ describe('trial onboarding transactions', () => {
  });
  it('records stable administrator identity without exposing the session credential', async () => {
   const b=await book(); await finish(b.id);
-  await db.query(`select runlift.admin_trial_attendance($1,$2,true)`,[ADMIN_TOKEN,b.id]);
+  await db.query(`select runlift.admin_trial_attendance($1,$2,true,1,false)`,[ADMIN_TOKEN,b.id]);
   const actor=(await db.query<{attendance_actor:string}>(`select attendance_actor from public.trial_bookings where id=$1`,[b.id])).rows[0].attendance_actor;
   const user=(await db.query<{user_id:number}>(`select user_id from runlift.admin_sessions where token=$1`,[ADMIN_TOKEN])).rows[0].user_id;
   expect(actor).toBe(`admin:${user}`);
@@ -162,4 +162,70 @@ it('validează și păstrează mesajele personalizate numai pentru admini', asyn
  expect(publicConfig).not.toHaveProperty('message_texts');
  await save({});
  expect((await db.query<{message_texts: unknown}>('select message_texts from public.trial_config')).rows[0].message_texts).toEqual({});
+});
+
+it('rejects stale admin attendance and requires explicit correction intent', async () => {
+ const b = await book(); await finish(b.id);
+ await db.query('select public.trial_attendance($1,1,false,900)',[b.id]);
+ await expect(db.query('select runlift.admin_trial_attendance($1,$2,true,1,false)',[ADMIN_TOKEN,b.id])).rejects.toThrow('trial_stale_booking');
+ await expect(db.query('select runlift.admin_trial_attendance($1,$2,true,2,false)',[ADMIN_TOKEN,b.id])).rejects.toThrow('trial_stale_booking');
+ await expect(db.query('select runlift.admin_trial_attendance($1,$2,true)',[ADMIN_TOKEN,b.id])).rejects.toThrow('trial_refresh_required');
+ expect((await db.query<{status:string}>('select status from public.trial_bookings where id=$1',[b.id])).rows[0].status).toBe('absent');
+ await db.query('select runlift.admin_trial_attendance($1,$2,true,2,true)',[ADMIN_TOKEN,b.id]);
+ expect((await db.query("select * from public.trial_messages where kind='continuation'")).rows).toHaveLength(0);
+});
+it('binds send and discard to the immutable preview and consumes it atomically', async () => {
+ const q=(await db.query<{q:{id:string}}>("select public.trial_question(100,'Where?',1) q")).rows[0].q;
+ const old='10000000-0000-0000-0000-000000000001', next='10000000-0000-0000-0000-000000000002';
+ await db.query("insert into public.trial_reply_drafts(telegram_user_id,question_id,body,expires_at,draft_id) values(900,$1,'Answer B',now()+interval '15 minutes',$2)",[q.id,next]);
+ for(const send of [true,false]) await expect(db.query('select public.trial_confirm_reply(900,$1,$2)',[old,send])).rejects.toThrow('trial_stale_draft');
+ expect((await db.query('select * from public.trial_reply_drafts')).rows).toHaveLength(1);
+ await expect(db.query('select public.trial_confirm_reply(100,$1,true)',[next])).rejects.toThrow('trial_unauthorized_organizer');
+ await db.query('select public.trial_confirm_reply(900,$1,true)',[next]);
+ await expect(db.query('select public.trial_confirm_reply(900,$1,true)',[next])).rejects.toThrow('trial_stale_draft');
+ expect((await db.query<{response:string}>('select response from public.trial_questions')).rows[0].response).toBe('Answer B');
+ expect((await db.query("select * from public.trial_messages where kind='answer'")).rows).toHaveLength(1);
+ expect((await db.query('select * from public.trial_reply_drafts')).rows).toHaveLength(0);
+});
+it('does not falsely confirm an empty preview or an expired one', async () => {
+ const q=(await db.query<{q:{id:string}}>("select public.trial_question(100,'Where?',1) q")).rows[0].q;
+ const id='10000000-0000-0000-0000-000000000001';
+ await db.query("insert into public.trial_reply_drafts(telegram_user_id,question_id,body,expires_at,draft_id) values(900,$1,null,now()+interval '15 minutes',$2)",[q.id,id]);
+ await expect(db.query('select public.trial_confirm_reply(900,$1,true)',[id])).rejects.toThrow('trial_stale_draft');
+ await db.exec("update public.trial_reply_drafts set body='text',expires_at=now()-interval '1 minute'");
+ await expect(db.query('select public.trial_confirm_reply(900,$1,true)',[id])).rejects.toThrow('trial_stale_draft');
+});
+it('returns only owned unsent claims to pending and delivers after resume', async () => {
+ await book();
+ const claimed=(await db.query<{id:string;lease_until:string}>('select * from public.trial_claim_messages(10)')).rows;
+ expect(claimed.length).toBeGreaterThan(0);
+ await db.exec('update public.trial_config set enabled=false');
+ const claims=claimed.map(m=>({id:m.id,lease_until:m.lease_until}));
+ await db.query('select public.trial_release_messages($1::jsonb)',[JSON.stringify(claims.map(c=>({...c,lease_until:'2000-01-01T00:00Z'})))]);
+ expect((await db.query("select * from public.trial_messages where status='processing'")).rows).toHaveLength(claimed.length);
+ await db.query('select public.trial_release_messages($1::jsonb)',[JSON.stringify(claims)]);
+ expect((await db.query("select * from public.trial_messages where status='processing'")).rows).toHaveLength(0);
+ expect((await db.query('select * from public.trial_claim_messages(10)')).rows).toHaveLength(0);
+ await db.exec('update public.trial_config set enabled=true');
+ const resumed=(await db.query<{id:string;attempts:number}>('select * from public.trial_claim_messages(10)')).rows;
+ expect(resumed.map(m=>m.id).sort()).toEqual(claimed.map(m=>m.id).sort());
+ expect(resumed.every(m=>m.attempts===1)).toBe(true);
+});
+it('pauses public intake when permission proof is lost without deleting existing bookings', async () => {
+ const b=await book();
+ await db.exec('update public.trial_config set permissions_verified_at=null');
+ expect((await db.query<{c:{enabled:boolean}}>('select runlift.public_trial_config() c')).rows[0].c.enabled).toBe(false);
+ await expect(book()).rejects.toThrow('trial_permissions_unverified');
+ expect((await db.query('select * from public.trial_bookings where id=$1',[b.id])).rows).toHaveLength(1);
+ await db.exec('update public.trial_config set permissions_verified_at=now()');
+ expect((await book()).id).toBe(b.id);
+});
+it('uses distinct participant cancellation copy and restricts new helpers to service role', async () => {
+ const b=await book();await db.query('select public.trial_cancel(100,$1,1)',[b.id]);
+ expect((await db.query("select * from public.trial_messages where kind='self_cancelled'")).rows).toHaveLength(1);
+ expect((await db.query("select * from public.trial_messages where kind='cancelled'")).rows).toHaveLength(0);
+ for(const role of ['anon','authenticated']) {
+  await expect(caRol(db,role,()=>db.query("select public.trial_release_messages('[]')"))).rejects.toThrow('permission denied');
+  await expect(caRol(db,role,()=>db.query('select public.trial_confirm_reply(900,$1,true)',[b.id]))).rejects.toThrow('permission denied');
+ }
 });

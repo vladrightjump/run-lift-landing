@@ -45,7 +45,7 @@ describe('persoane noi', () => {
     fireEvent.click(screen.getByRole('button', { name: 'A venit' }));
     expect(api.trialAttendance).not.toHaveBeenCalled();
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Confirmă' }));
-    await waitFor(() => expect(api.trialAttendance).toHaveBeenCalledWith('token', 'b1', true));
+    await waitFor(() => expect(api.trialAttendance).toHaveBeenCalledWith('token', 'b1', true, 1, false));
     await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' })));
     expect(screen.getByRole('alertdialog')).toBeDefined();
   });
@@ -102,4 +102,30 @@ it('dezactivează editorul când migrarea mesajelor nu este aplicată', async ()
   const editor = await screen.findByLabelText('Textul mesajului de probă');
   expect(editor.closest('fieldset')?.disabled).toBe(true);
   expect(screen.getByText(/Editorul va fi disponibil/)).toBeDefined();
+});
+
+it('keeps independent answer drafts for multiple questions', async () => {
+ const data=fixture();data.questions.push({id:'q2',prospect_id:'p1',body:'Unde venim?',response:null,status:'open'});
+ api.loadTrials.mockResolvedValue(data);admin(<EcranProbe />);
+ fireEvent.click(await screen.findByRole('button',{name:/Ana Rusu/}));
+ const fields=screen.getAllByLabelText('Răspuns pentru Ana Rusu');
+ fireEvent.change(fields[0],{target:{value:'Apă și prosop'}});
+ fireEvent.change(fields[1],{target:{value:'La intrarea în parc'}});
+ expect((fields[0] as HTMLTextAreaElement).value).toBe('Apă și prosop');
+ fireEvent.click(screen.getAllByRole('button',{name:'Previzualizează răspunsul'})[1]);
+ fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button',{name:'Confirmă'}));
+ await waitFor(()=>expect(api.trialReply).toHaveBeenCalledWith('token','q2','La intrarea în parc'));
+ await waitFor(()=>expect(screen.queryByRole('alertdialog')).toBeNull());
+ expect((screen.getAllByLabelText('Răspuns pentru Ana Rusu')[0] as HTMLTextAreaElement).value).toBe('Apă și prosop');
+});
+it('retains the saved settings draft when post-save reload fails', async () => {
+ api.loadTrials.mockResolvedValueOnce(fixture()).mockRejectedValue(new Error('reload failed'));
+ admin(<TrialSettings />);
+ fireEvent.change(await screen.findByLabelText('Costul probei'),{target:{value:'150 MDL'}});
+ fireEvent.click(screen.getByRole('button',{name:'Salvează setările probei'}));
+ await waitFor(()=>expect(toast).toHaveBeenCalledWith(expect.objectContaining({kind:'error',msg:expect.stringContaining('Ciorna este păstrată')})));
+ expect((screen.getByLabelText('Costul probei') as HTMLInputElement).value).toBe('150 MDL');
+ fireEvent.change(screen.getByLabelText('Ce trebuie să aducă'),{target:{value:'Prosop'}});
+ fireEvent.click(screen.getByRole('button',{name:'Salvează setările probei'}));
+ await waitFor(()=>expect(api.saveTrialConfig).toHaveBeenLastCalledWith('token',expect.objectContaining({trial_price:'150 MDL',bring_text:'Prosop'})));
 });

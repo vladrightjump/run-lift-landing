@@ -9,7 +9,7 @@ const TRIAL_STAGE: Record<string, string> = {
   interested: 'Interesat', scheduled: 'Probă programată', awaiting_attendance: 'De confirmat',
   attended: 'A venit', absent: 'Nu a venit', invited: 'Invitat', in_group: 'În grup', closed: 'Închis', cancelled: 'Anulat',
 };
-const MESSAGE_KIND: Record<string, string> = { booking_confirmed: 'Confirmarea probei', organizer_booking: 'Rezervare nouă', reminder: 'Reminder', attendance_request: 'Confirmarea prezenței', cancelled: 'Anulare', organizer_cancelled: 'Anulare către organizator', continuation: 'Continuarea antrenamentelor', rebook: 'Reprogramare', invite: 'Invitație în grup', question: 'Întrebare', answer: 'Răspuns', session_changed: 'Program modificat' };
+const MESSAGE_KIND: Record<string, string> = { booking_confirmed: 'Confirmarea probei', organizer_booking: 'Rezervare nouă', reminder: 'Reminder', attendance_request: 'Confirmarea prezenței', cancelled: 'Anularea sesiunii', self_cancelled: 'Anularea rezervării', organizer_cancelled: 'Anulare către organizator', continuation: 'Continuarea antrenamentelor', rebook: 'Reprogramare', invite: 'Invitație în grup', question: 'Întrebare', answer: 'Răspuns', session_changed: 'Program modificat' };
 const MESSAGE_STATUS: Record<string, string> = { pending: 'În așteptare', processing: 'Se trimite', sent: 'Trimis', failed: 'Nelivrat', ambiguous: 'Livrare neconfirmată', cancelled: 'Anulat' };
 const nameOf = (p: TrialProspect) => p.full_name || p.telegram_username || String(p.telegram_user_id);
 
@@ -17,8 +17,8 @@ export function EcranProbe() {
   const { date, eroare, busy, act, reincarca } = useTrials();
   const [filter, setFilter] = useState('all');
   const [selected, select] = useState<string | null>(null);
-  const [reply, setReply] = useState('');
-  const [confirm, setConfirm] = useState<{ title: string; text: string; work: (token: string) => Promise<unknown> } | null>(null);
+  const [replies, setReplies] = useState<Record<string, string>>({});
+  const [confirm, setConfirm] = useState<{ title: string; text: string; work: (token: string) => Promise<unknown>; questionId?: string } | null>(null);
   if (!date) return <p role="status">{eroare ? 'Nu s-au putut încărca persoanele noi.' : 'Se încarcă…'} {eroare && <button className="admin-btn-ghost" onClick={() => void reincarca()}>Reîncearcă</button>}</p>;
   const people = date.prospects.filter(p => filter === 'all' || p.stage === filter);
   const person = date.prospects.find(p => p.id === selected);
@@ -30,7 +30,7 @@ export function EcranProbe() {
     <div className="admin-probe-layout">
       <div className="admin-probe-list">
         {people.length === 0 && <p>Nicio persoană în această categorie.</p>}
-        {people.map(p => <button className={`admin-probe-person${selected === p.id ? ' activ' : ''}`} key={p.id} onClick={() => { select(p.id); setReply(''); }} aria-pressed={selected === p.id}>
+        {people.map(p => <button className={`admin-probe-person${selected === p.id ? ' activ' : ''}`} key={p.id} onClick={() => { select(p.id); }} aria-pressed={selected === p.id}>
           <strong>{nameOf(p)}</strong><span>{TRIAL_STAGE[p.stage] ?? p.stage}</span>
           <small>{p.telegram_username ? `@${p.telegram_username}` : `Telegram ${p.telegram_user_id}`}{!p.dm_enabled && ' · Mesaje oprite'}</small>
         </button>)}
@@ -46,15 +46,15 @@ export function EcranProbe() {
               {[true, false].map(attended => <button className="admin-btn-ghost" key={String(attended)} disabled={busy || (attended ? b.status === 'attended' : b.status === 'absent')} onClick={() => setConfirm({
                 title: b.attendance_at ? 'Corectezi prezența?' : 'Confirmi prezența?',
                 text: `${nameOf(person)} · ${ziLunaOra(b.session_start)}: ${attended ? 'a venit' : 'nu a venit'}. ${b.attendance_at ? 'Corecția rămâne în istoric.' : attended ? 'Botul va întreba dacă dorește să continue.' : 'Botul va oferi reprogramarea.'}`,
-                work: token => trialAttendance(token, b.id, attended),
+                work: token => trialAttendance(token, b.id, attended, b.version, !!b.attendance_at),
               })}>{attended ? 'A venit' : 'Nu a venit'}</button>)}
             </div>}
           </article>)}
           <h4>Întrebări</h4>
           {date.questions.filter(q => q.prospect_id === person.id).map(q => <article className="admin-probe-item" key={q.id}><p>{q.body}</p>
             {q.response && <p><strong>Răspuns {q.status === 'queued' ? '(în așteptare)' : ''}:</strong> {q.response}</p>}
-            {q.status === 'open' && <><label className="admin-config-camp">Răspuns pentru {nameOf(person)}<textarea rows={3} maxLength={3000} value={reply} disabled={busy} onChange={e => setReply(e.target.value)} /></label>
-              <button className="admin-btn-accent" disabled={busy || !reply.trim()} onClick={() => setConfirm({ title: `Trimiți răspunsul către ${nameOf(person)}?`, text: reply.trim(), work: token => trialReply(token, q.id, reply.trim()) })}>Previzualizează răspunsul</button></>}
+            {q.status === 'open' && <><label className="admin-config-camp">Răspuns pentru {nameOf(person)}<textarea rows={3} maxLength={3000} value={replies[q.id] ?? ''} disabled={busy} onChange={e => setReplies(previous => ({ ...previous, [q.id]: e.target.value }))} /></label>
+              <button className="admin-btn-accent" disabled={busy || !replies[q.id]?.trim()} onClick={() => setConfirm({ title: `Trimiți răspunsul către ${nameOf(person)}?`, questionId: q.id, text: replies[q.id].trim(), work: token => trialReply(token, q.id, replies[q.id].trim()) })}>Previzualizează răspunsul</button></>}
           </article>)}
           <h4>Istoricul mesajelor</h4>
           {date.messages.filter(m => m.prospect_id === person.id).map(m => <article className="admin-probe-item" key={m.id}>
@@ -64,6 +64,6 @@ export function EcranProbe() {
         </>}
       </section>
     </div>
-    {confirm && <Dialog titlu={confirm.title} rol="alertdialog" onInchide={() => !busy && setConfirm(null)}><p className="admin-probe-preview">{confirm.text}</p><div className="admin-table-actions"><button className="admin-btn-ghost" disabled={busy} onClick={() => setConfirm(null)}>Renunță</button><button className="admin-btn-accent" disabled={busy} onClick={() => void act(confirm.work, 'Acțiunea a fost salvată.').then(ok => { if (ok) { setConfirm(null); setReply(''); } })}>Confirmă</button></div></Dialog>}
+    {confirm && <Dialog titlu={confirm.title} rol="alertdialog" onInchide={() => !busy && setConfirm(null)}><p className="admin-probe-preview">{confirm.text}</p><div className="admin-table-actions"><button className="admin-btn-ghost" disabled={busy} onClick={() => setConfirm(null)}>Renunță</button><button className="admin-btn-accent" disabled={busy} onClick={() => void act(confirm.work, 'Acțiunea a fost salvată.').then(ok => { if (ok) { setConfirm(null); if (confirm.questionId) setReplies(previous => { const next = { ...previous }; delete next[confirm.questionId!]; return next; }); } })}>Confirmă</button></div></Dialog>}
   </div>;
 }

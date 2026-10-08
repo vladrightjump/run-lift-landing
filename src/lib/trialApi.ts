@@ -29,7 +29,7 @@ export const loadTrials = async (token: string, signal?: AbortSignal): Promise<T
   return data;
 };
 export const saveTrialConfig = (token: string, config: TrialConfig) => rpc<void>('admin_trial_config', { p_token: token, p_config: config });
-export const trialAttendance = (token: string, booking: string, attended: boolean) => rpc<void>('admin_trial_attendance', { p_token: token, p_booking: booking, p_attended: attended });
+export const trialAttendance = (token: string, booking: string, attended: boolean, version: number, correction: boolean) => rpc<void>('admin_trial_attendance', { p_token: token, p_booking: booking, p_attended: attended, p_version: version, p_correction: correction });
 export const trialReply = (token: string, question: string, response: string) => rpc<void>('admin_trial_reply', { p_token: token, p_question: question, p_response: response });
 export const retryTrialMessage = (token: string, message: string) => rpc<void>('admin_trial_retry', { p_token: token, p_message: message });
 

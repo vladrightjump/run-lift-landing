@@ -1,5 +1,6 @@
 // Shared by the admin preview and bot. User content is plain text, never evaluated.
 export const TRIAL_COPY = {
+  "self_cancelled": { label: "Participantul anulează proba", text: "Ai anulat rezervarea pentru antrenamentul de probă. Poți alege altă zi.", context: "Programul și butonul de reprogramare se adaugă automat." },
   "booking_confirmed": {
     "label": "Confirmarea rezervării",
     "text": "Proba ta este confirmată!",

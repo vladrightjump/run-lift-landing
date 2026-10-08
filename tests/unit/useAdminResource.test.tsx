@@ -19,7 +19,7 @@ import { InvalidTokenError } from '../../src/lib/adminApi';
 const onAuthError = vi.fn(() => false);
 const showToast = vi.fn();
 
-type Prins = { date: unknown; eroare: boolean; reincarca: () => Promise<void> };
+type Prins = { date: unknown; eroare: boolean; reincarca: () => Promise<boolean> };
 const captura: { r: Prins | null } = { r: null };
 const res = (): Prins => {
   if (!captura.r) throw new Error('Sonda nu e randată.');
@@ -174,10 +174,12 @@ describe('useAdminResource — căile de eșec', () => {
     randeaza(incarca, null);
     await lasaSaSeAseze();
 
+    let rezultatAnulat: boolean | undefined;
+    let rezultatNou: boolean | undefined;
     // A doua cerere pleacă; a treia o anulează înainte să răspundă.
     await act(async () => {
-      void res().reincarca();
-      void res().reincarca();
+      void res().reincarca().then(value => { rezultatAnulat = value; });
+      void res().reincarca().then(value => { rezultatNou = value; });
       await vi.advanceTimersByTimeAsync(0);
     });
     await act(async () => {
@@ -186,6 +188,8 @@ describe('useAdminResource — căile de eșec', () => {
     });
 
     expect(res().date).toEqual(['proaspăt']);
+    expect(rezultatAnulat).toBe(false);
+    expect(rezultatNou).toBe(true);
   });
 
   it('`reincarca` se împlinește după ce datele noi sunt pe ecran', async () => {
