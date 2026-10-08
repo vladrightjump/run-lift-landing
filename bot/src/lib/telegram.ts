@@ -166,3 +166,9 @@ export async function sendTrialText(chatId: number | string, text: string, keybo
   }
   return { ...last, sentCount };
 }
+
+// General-purpose polls are independent of attendance buttons and records.
+export const getChat = (chatId: string) =>
+  call<{id:number;type:string;title?:string}>('getChat', {chat_id:chatId});
+export const sendGeneralPoll = (chatId: string, question: string, options: string[]) =>
+  call<SentMessage>('sendPoll', {chat_id:chatId, question, options:options.map(text=>({text})), type:'regular', is_anonymous:true, allows_multiple_answers:false});
