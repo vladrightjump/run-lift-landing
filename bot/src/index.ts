@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { syncMemberships } from "./lib/membership.js";
 import express from "express";
 import cron from "node-cron";
 import { handleUpdate, registerOrganizerMenu, type TgUpdate } from "./webhook.js";
@@ -72,6 +73,7 @@ if (schedulerEnabled()) cron.schedule(
       // Always drain the command queue (kick, etc.), even if scheduling is off.
       await processCommands().catch((err) => console.error("[commands]", err));
 
+      void syncMemberships().catch((err) => console.error("[membership]", err));
       const cfg = await getBotConfig();
       if (!cfg.enabled) return;
 

@@ -29,6 +29,7 @@ async function call<T>(
 ): Promise<TelegramResponse<T>> {
   const res = await fetch(`${API_BASE}/bot${botToken()}/${method}`, {
     method: "POST",
+    signal: AbortSignal.timeout(10_000),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
@@ -123,3 +124,11 @@ export async function setMyCommands(
 ): Promise<TelegramResponse> {
   return call("setMyCommands", { commands, ...(scope ? { scope } : {}) });
 }
+
+export interface TelegramMember {
+  status: 'creator' | 'administrator' | 'member' | 'restricted' | 'left' | 'kicked';
+  is_member?: boolean;
+  user: { id: number; is_bot?: boolean; username?: string; first_name?: string; last_name?: string };
+}
+export const getChatMember = (chatId: string | number, userId: number) =>
+  call<TelegramMember>('getChatMember', { chat_id: chatId, user_id: userId });

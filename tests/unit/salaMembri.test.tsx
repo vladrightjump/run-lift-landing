@@ -6,6 +6,7 @@ import { comandaSala, dateSala, membruSala } from './helpers/salaFixtures';
 
 const api = vi.hoisted(() => ({
   incarcaSala: vi.fn(),
+  verificaMembri: vi.fn(),
   scoateDinGrup: vi.fn(),
   leagaCont: vi.fn(),
   membruDinCont: vi.fn(),
@@ -56,6 +57,7 @@ describe('Membrii grupului', () => {
     api.incarcaSala.mockResolvedValue(dateSala());
     randeaza();
     await screen.findByText('Ion');
+    fireEvent.click(screen.getByRole('button', { name: /^Neverificați/ }));
     expect((within(randul('Fara')).getByRole('button', { name: /Scoate din grup/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -81,14 +83,14 @@ describe('Membrii grupului', () => {
   it('un membru ieșit cu scoaterea reușită nu apare la „Scoateri eșuate" și nu se mai scoate', async () => {
     api.incarcaSala.mockResolvedValue(
       dateSala({
-        membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'cancelled' })],
+        membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'cancelled', telegram_membership: 'left' })],
         scoateri: [comandaSala({ action: 'kick_member', member_id: 'ion', status: 'done' })],
       })
     );
     randeaza();
     await screen.findByText('Ana');
     expect(screen.queryByRole('heading', { name: /Scoateri eșuate/ })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Ieșiți' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Ieșiți din Telegram/ }));
     expect((within(randul('Ion')).getByRole('button', { name: /Scoate din grup: E deja ieșit/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -250,4 +252,22 @@ describe('Membrii grupului — editarea, conturile, unirea', () => {
     expect(sectiune.textContent).toContain('Au intrat în grup');
     expect(sectiune.textContent).not.toContain('nu se numără');
   });
+});
+
+ it('arată implicit numai apartenența confirmată, independent de starea la antrenamente', async () => {
+  api.incarcaSala.mockResolvedValue(dateSala({ membri: [
+    membruSala('prezent', { status: 'paused', telegram_membership: 'in_group' }),
+    membruSala('plecat', { status: 'active', telegram_membership: 'left' }),
+    membruSala('necunoscut', { telegram_membership: 'unknown' }),
+  ] }));
+  randeaza();
+  await screen.findByText('Prezent');
+  expect(screen.queryByText('Plecat')).toBeNull();
+  expect(screen.queryByText('Necunoscut')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /^Ieșiți din Telegram/ }));
+  expect(screen.getByText('Plecat')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: /^Neverificați/ }));
+  expect(screen.getByText('Necunoscut')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Verifică apartenența' }));
+  await waitFor(() => expect(api.verificaMembri).toHaveBeenCalledWith('tok'));
 });

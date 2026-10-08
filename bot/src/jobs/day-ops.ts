@@ -199,7 +199,7 @@ export async function loadState(
   const [att, { data: active, error: activeErr }] = await Promise.all([
     target.row ? attendanceOf(supabase, target.row.id) : Promise.resolve([] as AttRow[]),
     supabase
-      .from("members")
+      .from("telegram_training_members")
       .select("id, full_name, telegram_user_id")
       .eq("status", "active")
       .not("telegram_user_id", "is", null)

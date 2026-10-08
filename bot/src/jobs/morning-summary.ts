@@ -40,7 +40,7 @@ export async function morningSummary(): Promise<{ ok: boolean; detail?: string }
         .from("attendance")
         .select("member_id, response, is_first_training, member:members(full_name)")
         .eq("session_id", session.id),
-      supabase.from("members").select("id, full_name").eq("status", "active"),
+      supabase.from("telegram_training_members").select("id, full_name").eq("status", "active"),
     ]);
 
     const attendance = (attData ?? []) as unknown as AttendanceRow[];

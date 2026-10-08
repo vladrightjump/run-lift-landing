@@ -86,7 +86,8 @@ export const cineVine = (d: SalaDate, sesiune: string): CineVine => {
     (r.response === 'yes' ? vin : nuVin).push(m);
   }
   const nuAuRaspuns = d.membri.filter(
-    (m) => m.status === 'active' && m.telegram_user_id != null && !auRaspuns.has(m.id)
+    (m) => m.status === 'active' && m.telegram_user_id != null &&
+      m.telegram_membership !== 'left' && m.telegram_membership !== 'kicked' && !auRaspuns.has(m.id)
   );
   return { vin: vin.sort(dupaNume), nuVin: nuVin.sort(dupaNume), nuAuRaspuns: nuAuRaspuns.sort(dupaNume) };
 };

@@ -42,6 +42,10 @@ export type SalaMembru = {
   telegram_username: string | null;
   bot_dm_enabled: boolean;
   join_date: string;
+  /** Telegram membership is independent of training status. Missing before sala_07. */
+  telegram_membership?: 'unknown' | 'in_group' | 'left' | 'kicked';
+  telegram_checked_at?: string | null;
+  telegram_check_failed?: boolean;
 };
 
 export type SalaAntrenament = {
@@ -180,6 +184,9 @@ export type ComandaAcum = 'send_poll' | 'send_summary' | 'send_reminder' | 'send
 /** O comandă „acum" pentru bot. `html` doar pentru `send_message`. */
 export const trimiteComanda = (token: string, actiune: ComandaAcum, html?: string): Promise<string> =>
   rpc<string>('admin_sala_comanda', { p_token: token, p_actiune: actiune, p_html: html ?? null });
+
+export const verificaMembri = (token: string): Promise<void> =>
+  rpc<void>('admin_sala_verifica_membri', { p_token: token });
 
 export const scoateDinGrup = (token: string, membru: string): Promise<string> =>
   rpc<string>('admin_sala_scoate_din_grup', { p_token: token, p_membru: membru });

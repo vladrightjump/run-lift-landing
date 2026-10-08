@@ -1,5 +1,7 @@
+import { executeKick, kickPorts } from "../lib/kick-member.js";
+import { organizerIds } from "../lib/organizers.js";
 import { createAdminClient } from "../lib/supabase.js";
-import { banChatMember, sendMessage, unbanChatMember } from "../lib/telegram.js";
+import { sendMessage } from "../lib/telegram.js";
 import { tomorrowInTz } from "../lib/tz.js";
 import { alertAdmins } from "../lib/notify.js";
 import { sendPoll } from "./send-poll.js";
@@ -9,6 +11,7 @@ import { realPorts, runQueuedNotice } from "./day-ops.js";
 interface ActionRow {
   id: string;
   action: string;
+  member_id: string | null;
   telegram_user_id: number | null;
   payload: ({ html?: string } & Record<string, unknown>) | null;
 }
@@ -20,14 +23,20 @@ interface ActionRow {
 //                 /admin: the row is already written; announce it in the group
 //                 if its poll is out and the day is still in that state (KTD4)
 // Failures are recorded in the row AND DM'd to the admins.
+let running = false;
 export async function processCommands(): Promise<void> {
+  if (running) return;
+  running = true;
+  try { await drainCommands(); } finally { running = false; }
+}
+async function drainCommands(): Promise<void> {
   const groupChatId = process.env.TELEGRAM_GROUP_CHAT_ID;
   if (!groupChatId) return;
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("bot_actions")
-    .select("id, action, telegram_user_id, payload")
+    .select("id, action, member_id, telegram_user_id, payload")
     .eq("status", "pending")
     .order("created_at", { ascending: true })
     .limit(20);
@@ -38,14 +47,10 @@ export async function processCommands(): Promise<void> {
     let result = "";
 
     if (cmd.action === "kick_member" && cmd.telegram_user_id) {
-      const ban = await banChatMember(groupChatId, cmd.telegram_user_id);
-      if (ban.ok) {
-        await unbanChatMember(groupChatId, cmd.telegram_user_id); // kick, not permaban
+      try {
+        result = await executeKick(cmd, kickPorts(groupChatId));
         ok = true;
-        result = "kicked";
-      } else {
-        result = ban.description ?? "ban failed";
-      }
+      } catch (err) { result = err instanceof Error ? err.message : 'Scoaterea a eșuat.'; }
     } else if (cmd.action === "send_reminder") {
       // Gentle group nudge listing active members who haven't voted yet on
       // tomorrow's session.
@@ -59,7 +64,7 @@ export async function processCommands(): Promise<void> {
       } else {
         const [{ data: att }, { data: act }] = await Promise.all([
           supabase.from("attendance").select("member_id").eq("session_id", sess.id),
-          supabase.from("members").select("id, full_name").eq("status", "active"),
+          supabase.from("telegram_training_members").select("id, full_name").eq("status", "active"),
         ]);
         const voted = new Set((att ?? []).map((a) => a.member_id));
         const missing = (act ?? []).filter((m) => !voted.has(m.id));
@@ -104,7 +109,7 @@ export async function processCommands(): Promise<void> {
       result = "unsupported or missing data";
     }
 
-    await supabase
+    const { error: saveError } = await supabase
       .from("bot_actions")
       .update({
         status: ok ? "done" : "failed",
@@ -112,6 +117,11 @@ export async function processCommands(): Promise<void> {
         processed_at: new Date().toISOString(),
       })
       .eq("id", cmd.id);
+    if (saveError) throw saveError;
+    const actor = Number(cmd.payload?.organizator_id);
+    if (cmd.action === 'kick_member' && organizerIds().includes(actor)) {
+      await sendMessage(actor, `${ok ? '✅' : '⚠️'} Scoatere Telegram ID ${cmd.telegram_user_id}: ${result}`).catch(() => {});
+    }
 
     console.log(`[commands] ${cmd.action} #${cmd.id} → ${ok ? "done" : "failed"} (${result})`);
     if (!ok) {

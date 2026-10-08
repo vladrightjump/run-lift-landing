@@ -159,3 +159,10 @@ npm run dev       # tsx watch: webhook pe :3000 + planificatorul
 ```
 
 Pe baza reală, pornește-l doar cu `BOT_SCHEDULER=off` (vezi „Lansarea", pasul 2).
+
+## Apartenența la grup și scoaterea din chatul privat
+
+`/scoate Nume` caută contul și cere alegere + confirmare, numai organizatorilor.
+Observațiile `chat_member` și verificările periodice `getChatMember` alimentează filtrele
+„În grup / Ieșiți / Neverificați” din dashboard. Ghidul și ordinea obligatorie de activare
+(migrare, bot, UI, webhook): [`docs/features/telegram-membri-reali.md`](../docs/features/telegram-membri-reali.md).

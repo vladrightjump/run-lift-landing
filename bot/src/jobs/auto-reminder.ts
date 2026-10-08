@@ -26,7 +26,7 @@ export async function autoReminder(
       .from("attendance")
       .select("member_id, response")
       .eq("session_id", sess.id),
-    supabase.from("members").select("id, full_name").eq("status", "active"),
+    supabase.from("telegram_training_members").select("id, full_name").eq("status", "active"),
   ]);
   const rows = att ?? [];
   const yes = rows.filter((a) => a.response === "yes").length;

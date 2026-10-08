@@ -21,9 +21,9 @@ type PropsDialog = {
 const DialogScoatere = ({ membru, ocupat, onConfirma, onInchide }: PropsDialog) => (
   <Dialog titlu={`Îl scoți pe ${membru.full_name} din grup?`} rol="alertdialog" onInchide={onInchide}>
     <p>
-      Botul îl scoate din grupul de Telegram în cel mult un minut, iar membrul trece pe
-      „ieșit". Istoricul de prezențe rămâne. Dacă revine, îl poți adăuga înapoi în grup din
-      Telegram și îl treci pe „activ" de aici.
+      Botul verifică persoana și drepturile în Telegram, apoi o scoate din grup.
+      Rezultatul apare după executare. Istoricul și starea la antrenamente rămân.
+      Persoana va putea fi invitată din nou.
     </p>
     <div className="admin-table-actions">
       <button type="button" className="admin-btn-ghost" onClick={onInchide}>
@@ -59,7 +59,10 @@ export const ultimeleScoateri = (comenzi: SalaComanda[]): Map<string, SalaComand
 export const motivFaraScoatere = (m: SalaMembru, ultimaScoatere?: SalaComanda): string | null => {
   if (m.is_admin) return 'Adminii grupului nu se scot.';
   if (m.telegram_user_id == null) return 'N-are cont de Telegram legat.';
-  if (m.status === 'cancelled' && ultimaScoatere?.status !== 'failed') return 'E deja ieșit.';
+  if (ultimaScoatere?.status === 'pending') return 'Scoaterea este în coadă.';
+  if (m.telegram_membership === 'left' || m.telegram_membership === 'kicked') return 'E deja ieșit.';
+  // Compatibility with the old RPC until the membership migration is deployed.
+  if (m.telegram_membership === undefined && m.status === 'cancelled' && ultimaScoatere?.status !== 'failed') return 'E deja ieșit.';
   return null;
 };
 
@@ -74,7 +77,7 @@ type Props = {
 export const ScoateDinGrup = ({ membru: m, ultimaScoatere, ocupat, fa }: Props) => {
   const [deschis, setDeschis] = useState(false);
   const motiv = motivFaraScoatere(m, ultimaScoatere);
-  const reincercare = m.status === 'cancelled' && motiv === null;
+  const reincercare = ultimaScoatere?.status === 'failed' && motiv === null;
   return (
     <>
       <button
