@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 7 octombrie 2026 (după `sala_06_ziua_din_telegram`).
+-- Ultima regenerare: 8 octombrie 2026 (activarea infrastructurii pentru probe).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -1551,6 +1551,111 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare b public.trial_bookings; result jsonb;
+begin
+ if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+ select * into strict b from public.trial_bookings where id=p_booking for update;
+ if p_version is null or b.version<>p_version or p_correction is distinct from (b.attendance_at is not null) then raise exception 'trial_stale_booking'; end if;
+ result:=public.trial_set_attendance(p_booking,p_attended,'admin:'||(select user_id::text from runlift.admin_sessions where token=p_token),p_correction);
+ perform runlift.sala_jurnal(p_token,'trial_attendance',jsonb_build_object('booking',p_booking,'attended',p_attended,'version',p_version,'correction',p_correction));
+ return result;
+end $function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+ if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+ raise exception 'trial_refresh_required';
+end $function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_trial_config(p_token uuid, p_config jsonb)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare c public.trial_config; old_c public.trial_config;
+begin
+ if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+ insert into public.trial_config(id) values(1) on conflict do nothing;
+ select * into c from public.trial_config where id=1 for update;
+ old_c:=c;
+ select * into c from jsonb_populate_record(c,p_config - 'id' - 'permissions_verified_at' - 'updated_at');
+ if c.message_texts is null or jsonb_typeof(c.message_texts)<>'object' then raise exception 'invalid_trial_messages'; end if;
+ if exists(select 1 from jsonb_each(c.message_texts) e where e.key <> all(array['self_cancelled','booking_confirmed','reminder','session_changed','organizer_booking','attendance_request','cancelled','organizer_cancelled','continuation','rebook','invite','question','answer','name_prompt','choose_session','no_sessions','awaiting_attendance','question_prompt','question_received','booking_received','continuation_yes','continuation_no']) or jsonb_typeof(e.value)<>'string' or length(trim(e.value #>> '{}'))=0 or length(e.value #>> '{}')>1500) then raise exception 'invalid_trial_messages'; end if;
+ if c.bot_username is distinct from old_c.bot_username or c.organizer_telegram_id is distinct from old_c.organizer_telegram_id then c.permissions_verified_at:=null; end if;
+ if greatest(length(c.welcome_text),length(c.trial_conditions),length(c.trial_price),length(c.bring_text),length(c.continuation_conditions),length(c.contact_text))>1500 then raise exception 'trial_config_text_too_long'; end if;
+ if c.bot_username<>'' and c.bot_username !~ '^[A-Za-z][A-Za-z0-9_]{4,31}$' then raise exception 'invalid_bot_username'; end if;
+ if c.enabled and (length(trim(c.welcome_text))=0 or length(trim(c.trial_conditions))=0 or length(trim(c.trial_price))=0
+ or length(trim(c.contact_text))=0 or length(trim(c.bring_text))=0 or length(trim(c.continuation_conditions))=0 or c.bot_username=''
+ or c.duration_minutes not between 15 and 480 or c.permissions_verified_at is null
+ or c.permissions_verified_at<now()-interval '24 hours'
+ or not exists(select 1 from public.members where is_admin and telegram_user_id=c.organizer_telegram_id)) then raise exception 'trial_config_incomplete'; end if;
+ update public.trial_config set message_texts=c.message_texts,enabled=c.enabled,bot_username=c.bot_username,welcome_text=c.welcome_text,
+ trial_conditions=c.trial_conditions,trial_price=c.trial_price,bring_text=c.bring_text,continuation_conditions=c.continuation_conditions,
+ duration_minutes=c.duration_minutes,organizer_telegram_id=c.organizer_telegram_id,contact_text=c.contact_text,permissions_verified_at=c.permissions_verified_at,updated_at=now() where id=1;
+ perform runlift.sala_jurnal(p_token,'trial_config',jsonb_build_object('enabled',c.enabled));
+end $function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_trial_data(p_token uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+ if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+ return jsonb_build_object(
+ 'config',(select to_jsonb(c) from public.trial_config c where id=1),
+ 'prospects',coalesce((select jsonb_agg(p order by p.created_at desc) from public.trial_prospects p),'[]'),
+ 'bookings',coalesce((select jsonb_agg(b order by b.created_at desc) from public.trial_bookings b),'[]'),
+ 'questions',coalesce((select jsonb_agg(q order by q.created_at desc) from public.trial_questions q),'[]'),
+ 'messages',coalesce((select jsonb_agg(m order by m.created_at desc) from public.trial_messages m),'[]'),
+ 'invitations',coalesce((select jsonb_agg(jsonb_build_object('id',i.id,'booking_id',i.booking_id,'expires_at',i.expires_at,'revoked_at',i.revoked_at)) from public.trial_invitations i),'[]'),
+ 'organizers',coalesce((select jsonb_agg(jsonb_build_object('id',id,'full_name',full_name,'telegram_user_id',telegram_user_id)) from public.members where is_admin and telegram_user_id is not null),'[]'));
+end $function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_trial_reply(p_token uuid, p_question uuid, p_response text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+ if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+ perform public.trial_queue_reply(p_question,p_response);
+ perform runlift.sala_jurnal(p_token,'trial_reply',jsonb_build_object('question',p_question));
+end $function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_trial_retry(p_token uuid, p_message uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+ if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+ update public.trial_messages set status='pending',attempts=0,lease_until=null,due_at=now(),result=null where id=p_message and status in ('failed','ambiguous');
+ if not found then raise exception 'trial_message_not_retryable'; end if;
+ perform runlift.sala_jurnal(p_token,'trial_retry',jsonb_build_object('message',p_message));
+end $function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.admin_undelete_registration(p_token uuid, p_id uuid, p_force boolean DEFAULT false)
  RETURNS void
  LANGUAGE plpgsql
@@ -2337,6 +2442,16 @@ AS $function$
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.public_trial_config()
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+ select jsonb_build_object('enabled',enabled and coalesce(permissions_verified_at>now()-interval '24 hours',false),'bot_username',bot_username,'contact_text',contact_text) from public.trial_config where id=1
+$function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.public_weekly_workouts()
  RETURNS jsonb
  LANGUAGE sql
@@ -2976,6 +3091,30 @@ revoke all on function runlift.admin_set_coming_soon(p_token uuid, p_show boolea
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to anon;
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to authenticated;
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to service_role;
+revoke all on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to anon;
+grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to authenticated;
+grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to service_role;
+revoke all on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean) to anon;
+grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean) to authenticated;
+grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean) to service_role;
+revoke all on function runlift.admin_trial_config(p_token uuid, p_config jsonb) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_trial_config(p_token uuid, p_config jsonb) to anon;
+grant execute on function runlift.admin_trial_config(p_token uuid, p_config jsonb) to authenticated;
+grant execute on function runlift.admin_trial_config(p_token uuid, p_config jsonb) to service_role;
+revoke all on function runlift.admin_trial_data(p_token uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_trial_data(p_token uuid) to anon;
+grant execute on function runlift.admin_trial_data(p_token uuid) to authenticated;
+grant execute on function runlift.admin_trial_data(p_token uuid) to service_role;
+revoke all on function runlift.admin_trial_reply(p_token uuid, p_question uuid, p_response text) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_trial_reply(p_token uuid, p_question uuid, p_response text) to anon;
+grant execute on function runlift.admin_trial_reply(p_token uuid, p_question uuid, p_response text) to authenticated;
+grant execute on function runlift.admin_trial_reply(p_token uuid, p_question uuid, p_response text) to service_role;
+revoke all on function runlift.admin_trial_retry(p_token uuid, p_message uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_trial_retry(p_token uuid, p_message uuid) to anon;
+grant execute on function runlift.admin_trial_retry(p_token uuid, p_message uuid) to authenticated;
+grant execute on function runlift.admin_trial_retry(p_token uuid, p_message uuid) to service_role;
 revoke all on function runlift.admin_undelete_registration(p_token uuid, p_id uuid, p_force boolean) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_undelete_registration(p_token uuid, p_id uuid, p_force boolean) to anon;
 grant execute on function runlift.admin_undelete_registration(p_token uuid, p_id uuid, p_force boolean) to authenticated;
@@ -3066,6 +3205,10 @@ revoke all on function runlift.public_training_reels() from public, anon, authen
 grant execute on function runlift.public_training_reels() to anon;
 grant execute on function runlift.public_training_reels() to authenticated;
 grant execute on function runlift.public_training_reels() to service_role;
+revoke all on function runlift.public_trial_config() from public, anon, authenticated, service_role;
+grant execute on function runlift.public_trial_config() to anon;
+grant execute on function runlift.public_trial_config() to authenticated;
+grant execute on function runlift.public_trial_config() to service_role;
 revoke all on function runlift.public_weekly_workouts() from public, anon, authenticated, service_role;
 grant execute on function runlift.public_weekly_workouts() to anon;
 grant execute on function runlift.public_weekly_workouts() to authenticated;

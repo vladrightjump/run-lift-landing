@@ -19,12 +19,16 @@
 with obiecte as (
   select unnest(array[
     'members', 'payments', 'training_sessions', 'attendance', 'attendance_log',
-    'bot_config', 'bot_actions', 'telegram_unmatched', 'telegram_group_memberships'
+    'bot_config', 'bot_actions', 'telegram_unmatched', 'telegram_group_memberships',
+    'trial_config', 'trial_prospects', 'trial_bookings', 'trial_messages',
+    'trial_questions', 'trial_invitations', 'trial_reply_drafts'
   ]) as nume
 ), vederi_grup as (
   select unnest(array['member_attendance_stats', 'monthly_summary', 'telegram_training_members', 'telegram_training_stats']) as nume
 ), functii_grup as (
   select unnest(array['merge_members', 'record_telegram_membership', 'telegram_membership_candidates', 'telegram_membership_retry', 'queue_telegram_kick']) as nume
+  union select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+   where n.nspname='public' and left(p.proname,6)='trial_'
 ), coloane as (
   select c.relname, string_agg('  ' || quote_ident(a.attname) || ' ' || format_type(a.atttypid, a.atttypmod)
        || coalesce(' default ' || pg_get_expr(d.adbin, d.adrelid), '')
