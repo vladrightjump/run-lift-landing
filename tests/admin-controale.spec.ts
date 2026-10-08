@@ -36,8 +36,10 @@ const RASPUNSURI: Record<string, unknown> = {
   admin_list_launch_notifications: [],
   admin_list_email_templates: [],
   admin_get_event_config: [],
+  // Două clipuri: lista ordonabilă arată selectorul de poziție doar de la două.
   admin_list_training_reels: [
     { id: 'c1', numar: 1, youtube: 'dQw4w9WgXcQ', caption: 'Marți seara, în parc', url: 'https://www.instagram.com/reel/AAAAA11111/', vizibil: true },
+    { id: 'c2', numar: 2, youtube: 'Ab01234567x', caption: 'Circuit funcțional', url: 'https://www.instagram.com/reel/BBBBB22222/', vizibil: true },
   ],
   admin_list_weekly_workout: [],
   admin_sala_date: dateSala(),
@@ -54,9 +56,20 @@ const cuRaspunsuri = (page: Page) =>
     });
   });
 
+const pregatite = new WeakSet<Page>();
+
+/**
+ * Deschide ecranul cu o încărcare completă. `goto('/admin#b')` după
+ * `/admin#a` ar schimba doar fragmentul: aceeași pagină, `networkidle` gata
+ * imediat, iar testul ar citi încă ecranul de dinainte și ar trece pe nedrept.
+ */
 const deschideAdminul = async (page: Page, ecran: string) => {
-  await cuRaspunsuri(page);
-  await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+  if (!pregatite.has(page)) {
+    pregatite.add(page);
+    await cuRaspunsuri(page);
+    await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+  }
+  await page.goto('about:blank');
   await page.goto(`/admin${ecran}`);
   await page.waitForLoadState('networkidle');
 };
@@ -158,10 +171,42 @@ test.describe('câmpurile și listele, pe fiecare ecran', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     for (const ecran of ['#email', '#clipuri', '#grup-bot', '#participanti']) {
       await deschideAdminul(page, ecran);
-      for (const camp of await citesteCampurile(page)) {
+      const campuri = await citesteCampurile(page);
+      if (ecran === '#clipuri') {
+        expect(campuri.some((c) => c.compact), 'selectorul de poziție nu s-a randat').toBe(true);
+      }
+      for (const camp of campuri) {
         expect(camp.font, `${ecran} · ${camp.descriere}: ${camp.font}px`).toBeGreaterThanOrEqual(16);
       }
     }
+  });
+});
+
+test.describe('stările unui câmp', () => {
+  // Marcajul e cel din `src/admin/eventTab/primitive.tsx`: grupul primește
+  // `invalid` când oricare câmp din el greșește, câmpul primește `invalid` sau
+  // `atentie`. Doar câmpul greșit se înroșește, nu tot grupul.
+  test('eroarea și atenția colorează doar câmpul lor', async ({ page }) => {
+    await deschideAdminul(page, '#grup-bot');
+    // Doar câmpurile cu un control de text: zilele sondajului sînt butoane.
+    const CU_CONTROL = '.admin-config-camp:has(input:not([type=checkbox]):not([type=radio]), select, textarea)';
+    const campuri = page.locator('.admin-config-grup').first().locator(CU_CONTROL);
+    expect(await campuri.count(), 'grupul simulat are prea puține câmpuri').toBeGreaterThanOrEqual(3);
+    await page.evaluate((selector) => {
+      const grup = document.querySelector('.admin-config-grup');
+      const [gresit, atentie] = [...(grup?.querySelectorAll(selector) ?? [])];
+      grup?.classList.add('invalid');
+      gresit?.classList.add('invalid');
+      atentie?.classList.add('atentie');
+    }, CU_CONTROL);
+    await page.mouse.move(0, 0);
+    const control = (camp: number) => campuri.nth(camp).locator('input, select, textarea').first();
+    await expect(control(0)).toHaveCSS('border-top-color', await jeton(page, '--pa-danger'));
+    await expect(control(1)).toHaveCSS('border-top-color', await jeton(page, '--pa-graph-warn'));
+    await expect(control(2), 'un câmp corect s-a înroșit odată cu grupul').toHaveCSS(
+      'border-top-color',
+      await jeton(page, '--pa-line-control')
+    );
   });
 });
 
@@ -270,13 +315,21 @@ test.describe('butoanele', () => {
 
   test('starea dezactivat e aceeași pentru toate rolurile', async ({ page }) => {
     const fundaluri = new Set<string>();
-    for (const ecran of ['#clipuri', '#antrenament', '#grup-membri', '#grup-bot']) {
+    const roluri = new Set<string>();
+    for (const ecran of ['#clipuri', '#antrenament', '#grup-membri', '#grup-bot', '#eveniment']) {
       await deschideAdminul(page, ecran);
-      for (const buton of await page.locator('[class*="admin-btn-"]:disabled:visible').all()) {
-        fundaluri.add(await buton.evaluate((el) => getComputedStyle(el).backgroundColor));
+      // Link-ul e text în rând, fără umplere: nu intră în comparație.
+      for (const buton of await page.locator('[class*="admin-btn-"]:not(.admin-btn-link):disabled:visible').all()) {
+        const stil = await buton.evaluate((el) => ({
+          fundal: getComputedStyle(el).backgroundColor,
+          opacitate: getComputedStyle(el).opacity,
+          rol: [...el.classList].find((c) => c.startsWith('admin-btn-')) ?? '',
+        }));
+        fundaluri.add(`${stil.fundal} / ${stil.opacitate}`);
+        roluri.add(stil.rol);
       }
     }
-    expect(fundaluri.size, 'niciun buton dezactivat pe ecranele parcurse').toBeGreaterThan(0);
+    expect(roluri.size, `roluri dezactivate văzute: ${[...roluri].join(', ')}`).toBeGreaterThanOrEqual(2);
     expect([...fundaluri]).toHaveLength(1);
   });
 });
