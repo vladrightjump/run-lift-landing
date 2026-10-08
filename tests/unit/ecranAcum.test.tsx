@@ -12,7 +12,7 @@ import type { SemnaleAdmin } from '../../src/admin/stareCurenta';
  * datele existente (R8–R11, R35, R37; F1).
  */
 
-const api = vi.hoisted(() => ({ incarcaSala: vi.fn(), trimiteComanda: vi.fn() }));
+const api = vi.hoisted(() => ({ incarcaSala: vi.fn(), trimiteComanda: vi.fn(), marcheazaComandaVerificata: vi.fn() }));
 vi.mock('../../src/lib/salaApi', async (orig) => ({
   ...(await orig<typeof import('../../src/lib/salaApi')>()),
   ...api,
@@ -149,6 +149,28 @@ describe('Acum pe desktop', () => {
     randeaza();
     fireEvent.click(await screen.findByRole('button', { name: 'Reîncearcă' }));
     await waitFor(() => expect(api.trimiteComanda).toHaveBeenCalledWith('tok', 'send_summary'));
+  });
+
+  it('marchează avertizarea fără a retrimite comanda și o ascunde după reîncărcare', async () => {
+    const esec = { id: 'c1', action: 'kick_member' as const, member_id: 'ion', status: 'failed' as const, result: 'Blocat', created_at: '2026-10-07T03:00:00Z', processed_at: null };
+    api.incarcaSala.mockResolvedValue(dateSala({ comenzi: [esec] }));
+    randeaza();
+    const buton = await screen.findByRole('button', { name: 'Marchează ca verificat' });
+    api.incarcaSala.mockResolvedValue(dateSala({ comenzi: [{ ...esec, reviewed_at: '2026-10-07T04:00:00Z' }] }));
+    fireEvent.click(buton);
+    await waitFor(() => expect(api.marcheazaComandaVerificata).toHaveBeenCalledWith('tok', 'c1'));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Marchează ca verificat' })).toBeNull());
+    expect(api.trimiteComanda).not.toHaveBeenCalled();
+  });
+
+  it('păstrează avertizarea dacă marcarea eșuează', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala({ comenzi: [{ id: 'c1', action: 'kick_member', member_id: 'ion', status: 'failed', result: 'Blocat', created_at: '2026-10-07T03:00:00Z', processed_at: null }] }));
+    api.marcheazaComandaVerificata.mockRejectedValue(new Error('request failed'));
+    randeaza();
+    fireEvent.click(await screen.findByRole('button', { name: 'Marchează ca verificat' }));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' })));
+    expect(screen.getByRole('button', { name: 'Marchează ca verificat' })).toBeTruthy();
+    expect(api.trimiteComanda).not.toHaveBeenCalled();
   });
 
   it('o reluare pending blochează retrimiterea, inclusiv după reîncărcarea paginii', async () => {

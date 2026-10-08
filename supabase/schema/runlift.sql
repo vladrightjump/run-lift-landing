@@ -850,9 +850,12 @@ begin
       select jsonb_agg(jsonb_build_object(
         'id', m.id, 'full_name', m.full_name, 'status', m.status, 'is_admin', m.is_admin,
         'telegram_user_id', m.telegram_user_id, 'telegram_username', m.telegram_username,
-        'bot_dm_enabled', m.bot_dm_enabled, 'join_date', m.join_date
+        'bot_dm_enabled', m.bot_dm_enabled, 'join_date', m.join_date,
+        'telegram_membership', coalesce(g.state, 'unknown'),
+        'telegram_checked_at', g.observed_at, 'telegram_check_failed', coalesce(g.check_failed, false)
       ) order by m.full_name)
       from public.members m
+      left join public.telegram_group_memberships g on g.telegram_user_id = m.telegram_user_id
     ), '[]'::jsonb),
     'antrenamente', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -876,11 +879,14 @@ begin
         'first_name', n.first_name, 'last_name', n.last_name, 'created_at', n.created_at
       ) order by n.created_at desc)
       from public.telegram_unmatched n
+      left join public.telegram_group_memberships g on g.telegram_user_id = n.telegram_user_id
+      where coalesce(g.state, 'unknown') not in ('left', 'kicked')
+        and not exists (select 1 from public.members m where m.telegram_user_id = n.telegram_user_id)
     ), '[]'::jsonb),
     'comenzi', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', b.id, 'action', b.action, 'member_id', b.member_id, 'status', b.status,
-        'result', b.result, 'created_at', b.created_at, 'processed_at', b.processed_at,
+        'reviewed_at', b.reviewed_at, 'result', b.result, 'created_at', b.created_at, 'processed_at', b.processed_at,
         'sursa', b.payload ->> 'sursa', 'organizator', b.payload ->> 'organizator',
         'data', b.payload ->> 'data'
       ) order by b.created_at desc)
@@ -891,7 +897,7 @@ begin
     'scoateri', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', b.id, 'action', b.action, 'member_id', b.member_id, 'status', b.status,
-        'result', b.result, 'created_at', b.created_at, 'processed_at', b.processed_at
+        'reviewed_at', b.reviewed_at, 'result', b.result, 'created_at', b.created_at, 'processed_at', b.processed_at
       ) order by b.created_at desc)
       from (
         select distinct on (k.member_id) k.*
@@ -929,6 +935,24 @@ begin
   perform sala_jurnal(p_token, 'sala_legare', jsonb_build_object('membru', p_membru, 'telegram', p_telegram_id));
 end;
 $function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_marcheaza_verificat(p_token uuid, p_comanda uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare v_status text; v_reviewed timestamptz;
+begin
+  if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  select status, reviewed_at into v_status, v_reviewed from public.bot_actions where id = p_comanda for update;
+  if not found then raise exception 'comanda_inexistenta'; end if;
+  if v_status <> 'failed' then raise exception 'comanda_neesuata'; end if;
+  if v_reviewed is not null then return; end if;
+  update public.bot_actions set reviewed_at = now() where id = p_comanda;
+  perform runlift.sala_jurnal(p_token, 'sala_comanda_verificata', jsonb_build_object('comanda', p_comanda));
+end $function$
 ;
 
 CREATE OR REPLACE FUNCTION runlift.admin_sala_membru_din_cont(p_token uuid, p_telegram_id bigint, p_nume text)
@@ -1169,28 +1193,15 @@ CREATE OR REPLACE FUNCTION runlift.admin_sala_scoate_din_grup(p_token uuid, p_me
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'runlift'
+ SET search_path TO ''
 AS $function$
-declare
-  v_m public.members;
-  v_id uuid;
+declare v_id uuid;
 begin
-  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
-  select * into v_m from public.members where id = p_membru;
-  if v_m.id is null then raise exception 'membru_inexistent'; end if;
-  if v_m.is_admin then raise exception 'membru_admin'; end if;
-  if v_m.telegram_user_id is null then raise exception 'fara_telegram'; end if;
-
-  insert into public.bot_actions (action, member_id, telegram_user_id)
-  values ('kick_member', v_m.id, v_m.telegram_user_id)
-  returning id into v_id;
-  update public.members set status = 'cancelled' where id = v_m.id;
-
-  perform sala_jurnal(p_token, 'sala_scoatere',
-    jsonb_build_object('membru', v_m.id, 'nume', v_m.full_name, 'comanda', v_id));
+  if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  v_id := public.queue_telegram_kick(p_membru, null, null, null, null);
+  perform runlift.sala_jurnal(p_token, 'sala_scoatere', jsonb_build_object('membru', p_membru, 'comanda', v_id));
   return v_id;
-end;
-$function$
+end $function$
 ;
 
 CREATE OR REPLACE FUNCTION runlift.admin_sala_set_prezenta(p_token uuid, p_sesiune uuid, p_membru uuid, p_raspuns text)
@@ -1331,6 +1342,18 @@ begin
     jsonb_build_object('pastrat', p_pastrat, 'eliminat', p_eliminat, 'nume_eliminat', v_nume));
 end;
 $function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_sala_verifica_membri(p_token uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  update public.telegram_group_memberships set next_check_at = now();
+end $function$
 ;
 
 CREATE OR REPLACE FUNCTION runlift.admin_save_email_template(p_token uuid, p_cheie text, p_subiect text, p_text text)
@@ -2889,6 +2912,10 @@ revoke all on function runlift.admin_sala_leaga_cont(p_token uuid, p_telegram_id
 grant execute on function runlift.admin_sala_leaga_cont(p_token uuid, p_telegram_id bigint, p_membru uuid) to anon;
 grant execute on function runlift.admin_sala_leaga_cont(p_token uuid, p_telegram_id bigint, p_membru uuid) to authenticated;
 grant execute on function runlift.admin_sala_leaga_cont(p_token uuid, p_telegram_id bigint, p_membru uuid) to service_role;
+revoke all on function runlift.admin_sala_marcheaza_verificat(p_token uuid, p_comanda uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_marcheaza_verificat(p_token uuid, p_comanda uuid) to anon;
+grant execute on function runlift.admin_sala_marcheaza_verificat(p_token uuid, p_comanda uuid) to authenticated;
+grant execute on function runlift.admin_sala_marcheaza_verificat(p_token uuid, p_comanda uuid) to service_role;
 revoke all on function runlift.admin_sala_membru_din_cont(p_token uuid, p_telegram_id bigint, p_nume text) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_sala_membru_din_cont(p_token uuid, p_telegram_id bigint, p_nume text) to anon;
 grant execute on function runlift.admin_sala_membru_din_cont(p_token uuid, p_telegram_id bigint, p_nume text) to authenticated;
@@ -2925,6 +2952,10 @@ revoke all on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p
 grant execute on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) to anon;
 grant execute on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) to authenticated;
 grant execute on function runlift.admin_sala_uneste(p_token uuid, p_pastrat uuid, p_eliminat uuid) to service_role;
+revoke all on function runlift.admin_sala_verifica_membri(p_token uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_sala_verifica_membri(p_token uuid) to anon;
+grant execute on function runlift.admin_sala_verifica_membri(p_token uuid) to authenticated;
+grant execute on function runlift.admin_sala_verifica_membri(p_token uuid) to service_role;
 revoke all on function runlift.admin_save_email_template(p_token uuid, p_cheie text, p_subiect text, p_text text) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_save_email_template(p_token uuid, p_cheie text, p_subiect text, p_text text) to anon;
 grant execute on function runlift.admin_save_email_template(p_token uuid, p_cheie text, p_subiect text, p_text text) to authenticated;

@@ -246,6 +246,7 @@ export const cardAntrenament = (sala: SalaDate, acum: Date): CardAntrenament => 
 };
 
 export type ElementDeRezolvat = {
+  comandaDeVerificat?: string;
   cheie: string;
   titlu: string;
   detaliu: string;
@@ -316,7 +317,7 @@ export const deRezolvat = (
       });
     }
     for (const c of sala.comenzi) {
-      if (c.status !== 'failed' || aziLaChisinau(new Date(c.created_at)) !== azi) continue;
+      if (c.status !== 'failed' || c.reviewed_at || aziLaChisinau(new Date(c.created_at)) !== azi) continue;
       // Numai comenzile fără payload se pot relua din acest rezumat. Una dată din
       // Telegram era pentru o zi anume; reluarea de aici ar trimite pentru mâine.
       const reluabila =
@@ -334,6 +335,7 @@ export const deRezolvat = (
       const inAsteptare = reluabila && ulterioare.some((alta) => alta.status === 'pending');
       out.push({
         cheie: `comanda-${c.id}`,
+        comandaDeVerificat: c.id,
         titlu: `${NUME_COMANDA[c.action]} de azi, ${oraLaChisinau(c.created_at)}, n-a plecat`,
         detaliu: inAsteptare ? 'Reluarea este în coadă. Așteptăm răspunsul botului.' : c.result ?? 'Comanda a eșuat.',
         urgent: true,

@@ -97,6 +97,8 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
         <dd>Confirmările private expiră după 15 minute și se pierd dacă botul repornește. Trimite din nou comanda și verifică noua previzualizare.</dd>
         <dt>O scoatere a eșuat</dt>
         <dd>Citește motivul. Botul are nevoie de drepturi de administrator pentru a scoate persoane; administratorii și organizatorii sunt protejați. O eroare nu dovedește că persoana a rămas în grup.</dd>
+        <dt>Am verificat deja o avertizare</dt>
+        <dd>În „Acum → De rezolvat”, apasă „Marchează ca verificat”. Avertizarea dispare din listă, dar rezultatul rămâne în „Ultimele comenzi”, etichetat „verificat de admin”. Acțiunea nu retrimite comanda și nu deblochează persoane în Telegram.</dd>
         <dt>Verificarea membrilor a eșuat</dt>
         <dd>Dashboard-ul păstrează ultima stare cunoscută. Verifică data observației și cere o reverificare; persoana nu este marcată automat ca ieșită.</dd>
       </dl>
