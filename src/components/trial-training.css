@@ -1,0 +1,35 @@
+.trial-training, .trial-training *, .trial-hero-actions { box-sizing: border-box; }
+.trial-training {
+  position: relative;
+  width: min(1240px, calc(100% - 48px));
+  margin: 48px auto;
+  padding: clamp(24px, 4vw, 56px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(230px, 1fr);
+  align-items: center;
+  gap: 40px;
+  color: #f4f1e8;
+  background: #171b17;
+  border: 1px solid #3c4336;
+  text-align: left;
+}
+.trial-training-label { margin: 0 0 12px; color: #c7e78e; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+.trial-training h2 { margin: 0 0 16px; font: inherit; font-size: clamp(28px, 3vw, 44px); font-weight: 700; line-height: 1.08; letter-spacing: -.035em; }
+.trial-training-copy > p:not(.trial-training-label) { margin: 0; color: #c5c9bf; font-size: 16px; line-height: 1.65; max-width: 58ch; }
+.trial-training-steps { padding: 0; margin: 28px 0 0; list-style: none; display: flex; flex-wrap: wrap; gap: 12px 24px; font-size: 13px; }
+.trial-training-steps span { color: #c7e78e; margin-right: 6px; }
+.trial-training-actions { min-width: 0; }
+.trial-training-button { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 22px; background: #c7e78e; color: #14200c; text-decoration: none; font-weight: 700; line-height: 1.4; }
+.trial-training-button:hover { background: #d6efa9; }
+.trial-training a:focus-visible, .trial-hero-link:focus-visible { outline: 3px solid #e5ffb9; outline-offset: 5px; }
+.trial-training-actions p { font-size: 12px; line-height: 1.6; color: #c5c9bf; margin: 12px 0 0; }
+.trial-training-actions p a { color: inherit; text-underline-offset: 3px; }
+.trial-hero-actions { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
+.trial-hero-link { padding: 14px 18px; border: 1px solid currentColor; text-align: center; color: inherit; text-decoration: none; line-height: 1.5; }
+@media (max-width: 680px) {
+  .trial-training { width: calc(100% - 32px); grid-template-columns: minmax(0, 1fr); padding: 24px 20px; gap: 28px; margin: 28px auto; }
+  .trial-training-steps { flex-direction: column; }
+  .trial-hero-actions { width: 100%; }
+}
+
+.e3-root a.trial-training-button { color: #14200c; }

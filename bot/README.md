@@ -166,3 +166,36 @@ Pe baza reală, pornește-l doar cu `BOT_SCHEDULER=off` (vezi „Lansarea", pasu
 Observațiile `chat_member` și verificările periodice `getChatMember` alimentează filtrele
 „În grup / Ieșiți / Neverificați” din dashboard. Ghidul și ordinea obligatorie de activare
 (migrare, bot, UI, webhook): [`docs/features/telegram-membri-reali.md`](../docs/features/telegram-membri-reali.md).
+
+## Antrenamente de probă — activare separată
+
+Fluxul nou rămâne dezactivat implicit. `/start trial_home`, `/start trial_share` și
+`/start trial_instagram` deschid conversația privată; persoanele noi sunt salvate în
+`trial_prospects`, nu în `members`. `/stop` oprește automatizările pentru prospect,
+iar `/start` le reia. Accesul în grup cere **prezență confirmată + răspuns explicit
+„Da, vreau să continui”**; numele, rezervarea și confirmarea condițiilor nu acordă acces.
+
+Ordine de livrare (fără activare automată la deploy):
+
+1. Aplică `supabase/sql/supabase-migration-sala-probe.sql` și păstrează `enabled=false`.
+2. Livrează botul și adminul. Reînregistrează webhook-ul cu `npm --prefix bot run set-webhook`;
+   lista include acum `chat_join_request`, `chat_member`, `message`, `callback_query`.
+3. Configurează în admin username-ul real, costul și condițiile reale, ce trebuie adus,
+   durata, contactul și un organizator cu `members.is_admin=true` și Telegram ID asociat.
+   Acesta trebuie să fi pornit conversația privată cu botul. Comenzile istorice ale
+   organizatorilor continuă să folosească `TELEGRAM_ADMIN_CHAT_IDS`.
+4. Botul trebuie să fie administrator în `TELEGRAM_GROUP_CHAT_ID`, cu `can_invite_users`.
+   Workerul verifică username-ul și drepturile la cel mult cinci minute, inclusiv când
+   proba este oprită; adminul nu poate activa fără o verificare recentă. `BOT_SCHEDULER=off`
+   oprește și această verificare, și livrarea outbox-ului.
+5. Pe **bot/grup/bază de test**, verifică alegere → reminder → prezență → continuare →
+   cerere de aderare și apartenență confirmată. Verifică și anularea, o persoană exclusă,
+   un link redirecționat și lipsa răspunsului. Activează public numai după această probă.
+
+Workerul citește outbox-ul la minut. Telegram nu garantează livrarea exact o dată:
+lease-urile expirate, timeout-urile și mesajele livrate parțial rămân „ambigue” pentru
+verificare în admin, fără retrimitere automată. Erorile explicite temporare Telegram
+au maximum trei încercări; blocarea botului oprește mesajele participantului.
+Corecțiile de prezență invalidează invitațiile în baza de date, iar fiecare cerere de
+aderare verifică identitatea, versiunea și eligibilitatea actuale. Botul nu deblochează
+niciodată un cont exclus. Dezactivarea oprește automatizările și CTA-ul, păstrând istoricul.

@@ -94,6 +94,7 @@ describe('niciun formular din src/ nu scapă fără capcană', () => {
     'src/admin/sala/EcranPrezente.tsx',
     'src/admin/sala/EcranMembri.tsx',
     'src/admin/sala/EcranBot.tsx',
+    'src/admin/sala/TrialSettings.tsx',
   ]);
 
   it('fiecare fișier cu <form> folosește hpProps', () => {

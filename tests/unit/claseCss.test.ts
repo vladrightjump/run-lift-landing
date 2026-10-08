@@ -19,7 +19,7 @@ import { resolve, join } from 'node:path';
 const root = resolve(__dirname, '../..');
 // Toate fișierele de stil: `public.css` ține paginile publice, `edition3.css`
 // stările și keyframes-urile `e3-*`, `index.css` adminul și regulile globale.
-const css = ['src/index.css', 'src/public.css', 'src/edition3.css']
+const css = ['src/index.css', 'src/public.css', 'src/edition3.css', 'src/admin/sala/probe.css', 'src/components/trial-training.css']
   .map((f) => readFileSync(resolve(root, f), 'utf8'))
   .join('\n');
 

@@ -1,3 +1,5 @@
+import { useTrials } from './sala/useTrials';
+import { trialNeedsAttention } from '../lib/trialApi';
 import { useId } from 'react';
 import type { EventConfig } from '../content/eventConfig';
 import { trimiteComanda, marcheazaComandaVerificata } from '../lib/salaApi';
@@ -73,12 +75,15 @@ export const EcranAcum = ({ semnale, faza, config, inscrisi, asteptare, onEcran,
   const acum = new Date(useNow(30_000));
   const telefon = useEsteTelefon();
   const { date: sala, eroare, ocupat, fa } = useSala();
+  const { date: trials } = useTrials();
   const idSapt = useId();
   const idRez = useId();
 
   const s = saptamana(sala?.azi ?? aziLaChisinau(acum));
   const zile = evenimenteleSaptamanii(s, sala, { config, inscrisi, asteptare }, acum);
   const lista = deRezolvat(semnale, faza, sala, acum);
+  const trialAttention = trials ? trialNeedsAttention(trials) : 0;
+  if (trialAttention) lista.push({ cheie: 'probe', titlu: `${trialAttention} de rezolvat la persoanele noi`, detaliu: 'Prezențe de confirmat, întrebări sau mesaje nelivrate.', urgent: true, actiune: { eticheta: 'Vezi persoanele', ecran: 'grup-probe' } });
   const viu = sala ? ultimulRaspuns(sala, acum) : null;
 
   const laEveniment = (e: EvenimentZi) => {

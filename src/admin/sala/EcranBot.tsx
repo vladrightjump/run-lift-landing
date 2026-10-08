@@ -1,3 +1,4 @@
+import { TrialSettings } from './TrialSettings';
 import { useEffect, useState } from 'react';
 import {
   pornesteBot,
@@ -50,6 +51,7 @@ type Props = {
 export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
   const { date, eroare, ocupat, fa } = useSala();
   const salvat = date ? dinServer(date.config) : null;
+  const [trialDirty, setTrialDirty] = useState(false);
   const [ciorna, setCiorna] = useState<SalaConfig | null>(null);
   const [deConfirmat, setDeConfirmat] = useState<ComandaAcum | null>(null);
 
@@ -61,7 +63,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
   const nesalvat = forma !== null && salvat !== null && ciorna !== null && !configEgal(forma, salvat);
 
   const potPleca = (): boolean =>
-    !nesalvat || window.confirm('Setările botului nu sunt salvate. Dacă pleci acum, se pierd. Continui?');
+    (!nesalvat && !trialDirty) || window.confirm('Setările botului nu sunt salvate. Dacă pleci acum, se pierd. Continui?');
 
   useEffect(() => {
     inregistreazaGardaIesire(potPleca);
@@ -69,14 +71,14 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
   });
 
   useEffect(() => {
-    if (!nesalvat) return;
+    if (!nesalvat && !trialDirty) return;
     const avertizeaza = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = '';
     };
     window.addEventListener('beforeunload', avertizeaza);
     return () => window.removeEventListener('beforeunload', avertizeaza);
-  }, [nesalvat]);
+  }, [nesalvat, trialDirty]);
 
   if (!date || !forma || !salvat) {
     return (
@@ -266,6 +268,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
         </div>
       </form>
 
+      <TrialSettings onDirty={setTrialDirty} />
       <section className="admin-config-grup" aria-labelledby="bot-acum">
         <h3 id="bot-acum">Acum</h3>
         <p className="admin-config-hint">

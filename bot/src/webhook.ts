@@ -1,3 +1,4 @@
+import { trialCallback, trialJoinRequest, trialPrivateMessage, trialOrganizerText, missingTrialSchema } from './lib/trial.js';
 import { recordMembership } from "./lib/membership.js";
 import { memberControl, memberControlDeps } from "./member-control.js";
 import type { TelegramMember } from "./lib/telegram.js";
@@ -34,6 +35,7 @@ interface TgChat {
 }
 
 export interface TgUpdate {
+  chat_join_request?: { chat: TgChat; from: TgUser; invite_link?: { invite_link: string } };
   chat_member?: { chat: TgChat; date: number; new_chat_member: TelegramMember };
   callback_query?: {
     id: string;
@@ -42,6 +44,7 @@ export interface TgUpdate {
     message?: { message_id: number; chat: TgChat };
   };
   message?: {
+    message_id?: number;
     from?: TgUser;
     chat: TgChat;
     text?: string;
@@ -127,12 +130,17 @@ async function organizerSafely(chatId: number, work: () => Promise<void>): Promi
 // upsert is idempotent, which makes redelivery safe.
 export async function handleUpdate(update: TgUpdate): Promise<boolean> {
   try {
+    if (update.chat_join_request) { await trialJoinRequest(update.chat_join_request); return true; }
     if (update.chat_member) {
       const change = update.chat_member;
       await recordMembership(change.chat.id, change.new_chat_member, new Date(change.date * 1000).toISOString());
       return true;
     }
     const cb = update.callback_query;
+    if (cb?.data?.startsWith("t:")) {
+      await organizerSafely(cb.from.id, () => trialCallback({ ...cb, data: cb.data! }));
+      return true;
+    }
     if (cb?.data?.startsWith("m:")) {
       await organizerSafely(cb.message?.chat.id ?? cb.from.id, () => memberControl.callback({
         id: cb.id, fromId: cb.from.id, fromName: cb.from.first_name ?? String(cb.from.id),
@@ -390,15 +398,6 @@ async function resolveMember(
   return null;
 }
 
-// Prompt shown to an unknown user so they can self-register by typing their name.
-// force_reply pops the keyboard straight into a reply, so it feels like a form field.
-const NAME_PROMPT =
-  "Salut! 👋 Ca să te înscriu la antrenamente, scrie-mi numele și prenumele tău complet (ex. Vlad Filip).";
-
-async function askForName(chatId: number) {
-  await sendMessage(chatId, NAME_PROMPT, { reply_markup: { force_reply: true } });
-}
-
 // Normalize a free-text name reply: collapse inner whitespace and trim.
 export function cleanName(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -444,6 +443,18 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
   if (msg.chat.type !== "private") return;
   if (!msg.from) return;
   const text = (msg.text ?? "").trim();
+  if (/^\/stop(?:@\w+)?$/i.test(text)) {
+    const db = createAdminClient();
+    const memberResult = await db.from('members').update({ bot_dm_enabled: false }).eq('telegram_user_id', msg.from.id);
+    if (memberResult.error) throw memberResult.error;
+    const prospectResult = await db.from('trial_prospects').update({ dm_enabled: false }).eq('telegram_user_id', msg.from.id);
+    if (prospectResult.error && !missingTrialSchema(prospectResult.error)) throw prospectResult.error;
+    await sendMessage(msg.chat.id, 'Am oprit mesajele automate. Scrie /start pentru a le relua.');
+    return;
+  }
+
+  // A question reply has a persisted, expiring context and requires explicit confirmation.
+  if (text && await trialOrganizerText(msg.from.id, text)) return;
 
   // An organizer's command, or the answer to the bot's question (U4).
   if (text) {
@@ -473,12 +484,16 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
   }
 
   const supabase = createAdminClient();
-  const { data: existing } = await supabase
+  const { data: existing, error: memberError } = await supabase
     .from("members")
     .select("id, full_name")
     .eq("telegram_user_id", msg.from.id)
     .maybeSingle();
+  if (memberError) throw memberError;
   const member = existing as { id: string; full_name: string } | null;
+  const { data: membership, error: membershipError } = await supabase.from('telegram_group_memberships')
+    .select('state').eq('telegram_user_id', msg.from.id).eq('chat_id', process.env.TELEGRAM_GROUP_CHAT_ID ?? '').maybeSingle();
+  if (membershipError) throw membershipError;
 
   // ── /start ──────────────────────────────────────────────────────────────
   if (text === "/start" || text.startsWith("/start")) {
@@ -487,64 +502,29 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
       await registerOrganizerMenu(msg.chat.id);
       await sendMessage(msg.chat.id, "Ca organizator: /antrenament deschide cardul, /ajutor arată comenzile.");
     }
-    if (member) {
+    if (membership?.state === 'kicked') {
+      await sendMessage(msg.chat.id, 'Accesul tău în grup este restricționat. Contactează organizatorul; botul nu poate anula excluderea.');
+      return;
+    }
+    if ((member && membership?.state !== 'left') || membership?.state === 'in_group') {
       // Already registered — just (re)enable DMs and greet.
-      await supabase
+      if (member) await supabase
         .from("members")
         .update({ bot_dm_enabled: true })
         .eq("id", member.id);
-      const firstName = member.full_name.split(/\s+/)[0] || member.full_name;
+      const resumed = await supabase.from('trial_prospects').update({ dm_enabled: true }).eq('telegram_user_id', msg.from.id);
+      if (resumed.error && !missingTrialSchema(resumed.error)) throw resumed.error;
+      const firstName = member?.full_name.split(/\s+/)[0] || msg.from.first_name || 'prietene';
       await sendMessage(
         msg.chat.id,
         `Salut, ${firstName}! 👋 Ești deja înscris. Îți voi trimite aici mesaje despre antrenamente.`,
       );
       return;
     }
-    // Unknown → start the name form.
-    await askForName(msg.chat.id);
+    await trialPrivateMessage(msg.from, text, msg.message_id);
     return;
   }
 
-  // ── Any other private message ─────────────────────────────────────────────
-  if (member) return; // registered members: nothing to do here.
-
-  // Unknown user typing (expected: their name, in reply to the prompt).
-  const name = cleanName(text);
-  if (!isValidName(name)) {
-    await askForName(msg.chat.id);
-    return;
-  }
-
-  // Create the member, linked to this Telegram account, and clear any earlier
-  // "unmatched" parking row for them.
-  const { data: created } = await supabase
-    .from("members")
-    .insert({
-      full_name: name,
-      status: "active",
-      telegram_user_id: msg.from.id,
-      telegram_username: msg.from.username ?? null,
-      bot_dm_enabled: true,
-    })
-    .select("id")
-    .maybeSingle();
-
-  await supabase
-    .from("telegram_unmatched")
-    .delete()
-    .eq("telegram_user_id", msg.from.id);
-
-  if (!created) {
-    await sendMessage(
-      msg.chat.id,
-      "Ceva n-a mers la înscriere. Mai încearcă o dată, te rog.",
-    );
-    return;
-  }
-
-  const firstName = name.split(/\s+/)[0] || name;
-  await sendMessage(
-    msg.chat.id,
-    `Gata, ${firstName}! ✅ Ești înscris. Vei primi aici mesajele despre antrenamente și poți răspunde la sondaje.`,
-  );
+  if (membership?.state === 'in_group' || membership?.state === 'kicked' || (member && membership?.state !== 'left')) return;
+  await trialPrivateMessage(msg.from, text, msg.message_id);
 }

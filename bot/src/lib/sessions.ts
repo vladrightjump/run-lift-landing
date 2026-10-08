@@ -105,3 +105,13 @@ export function extraDays(s: Snapshot): string[] {
   }
   return out;
 }
+
+// Public trial choices use the same concrete-session precedence as the poll.
+export function trialSessions(s: Snapshot): Target[] {
+  const out: Target[] = [];
+  for (let n = 0; n < HORIZON_DAYS; n++) {
+    const t = sessionOn(s, addDays(s.today, n));
+    if (t && t.status === 'scheduled' && (n > 0 || t.time > s.now)) out.push(t);
+  }
+  return out;
+}

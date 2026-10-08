@@ -3,6 +3,7 @@ import { useEditionStrings } from '../../hooks/useEventConfig';
 import { HERO_POSTER, heroVideoSrc } from '../../lib/media';
 
 type Props = {
+  trialHref?: string | null;
   /** Deschide formularul ca overlay. Fără el, CTA-ul navighează la /inscriere. */
   onInscrie?: () => void;
   /** `false` ascunde CTA-ul „Rezervă-ți locul" (fereastra din ziua cursei). */
@@ -14,7 +15,7 @@ type Props = {
  * lățimea, apoi o bază despărțită de o linie, cu rezumatul și CTA-ul.
  * Aspectul stă în `.e3-hero*` (public.css); aici rămâne doar structura.
  */
-export const Hero = ({ onInscrie, showCta = true }: Props) => {
+export const Hero = ({ onInscrie, showCta = true, trialHref }: Props) => {
   const { HERO_KICKER } = useEditionStrings();
 
   return (
@@ -51,6 +52,7 @@ export const Hero = ({ onInscrie, showCta = true }: Props) => {
             Cursă în stil HYROX în aer liber: alergare combinată cu stații funcționale, contra
             cronometru, în ritmul tău. Stațiile și greutățile se adaptează nivelului tău.
           </p>
+          <div className="trial-hero-actions">
           {showCta && (
             <a
               href="/inscriere"
@@ -62,9 +64,11 @@ export const Hero = ({ onInscrie, showCta = true }: Props) => {
               }}
               className="e3-btn e3-cta-lg e3-shine e3-mag e3-hero-cta"
             >
-              Rezervă-ți locul
+              {trialHref ? 'Înscrie-te la eveniment' : 'Rezervă-ți locul'}
             </a>
           )}
+          {trialHref && <a className="trial-hero-link" href={trialHref}>Vreau la un antrenament</a>}
+          </div>
         </div>
       </div>
     </section>

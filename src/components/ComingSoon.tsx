@@ -5,6 +5,8 @@ import { useCountdown } from '../hooks/useCountdown';
 import { useLaunchForm } from '../hooks/useLaunchForm';
 import type { ToastKind } from '../hooks/useToast';
 import { momentComplet, ziLunaLunga } from '../lib/formatare';
+import { usePublicTrial } from '../hooks/usePublicTrial';
+import { TrialTraining } from './TrialTraining';
 import { CardAntrenament } from './CardAntrenament';
 
 type Props = {
@@ -23,6 +25,7 @@ const MARQUEE_ITEMS = ['Aleargă · Ridică · Rezistă', 'Antrenament nou', 'Ru
 
 
 export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => {
+  const trial = usePublicTrial();
   const { LAUNCH_EDITION_ORDINAL } = useEditionStrings();
   const { LAUNCH_DATE } = useEditionDates();
   // Implicitul nu poate sta în semnătură: vine din config, care e un hook.
@@ -173,6 +176,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
         {urmatorul && <CardAntrenament />}
       </main>
 
+      <TrialTraining config={trial} />
       <footer className="cs-footer">
         <span>Run + Lift · Chișinău</span>
         <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">

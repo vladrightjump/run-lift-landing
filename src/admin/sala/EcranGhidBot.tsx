@@ -45,6 +45,14 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
         Dacă meniul lipsește, cere responsabilului botului să îți activeze accesul, apoi repetă <code>/start</code>.</p>
     </header>
 
+    <section className="admin-config-grup" aria-labelledby="ghid-probe">
+      <h3 id="ghid-probe">Persoane noi și antrenamentul de probă</h3>
+      <p>Linkul public deschide botul în privat. Persoana apasă Start, citește condițiile și alege o dată din program. Botul trimite confirmarea și reminderul, apoi te întreabă după antrenament dacă a venit.</p>
+      <p>Apasă „A venit” sau „Nu a venit”. Fără răspuns, cazul rămâne de confirmat în admin. După „A venit”, botul întreabă persoana dacă vrea să continue. Invitația în grup pleacă numai după răspunsul ei „Da”.</p>
+      <p>Întrebările și mesajele nelivrate apar la Persoane noi. Un rezultat ambiguu poate însemna că mesajul a ajuns deja; verifică înainte să reîncerci. O persoană exclusă nu este deblocată automat.</p>
+      <button className="admin-btn-ghost" onClick={() => onEcran('grup-probe')}>Deschide Persoane noi</button>
+    </section>
+
     {GRUPE.map((grup) => (
       <section key={grup.titlu} aria-label={grup.titlu}>
         <h3>{grup.titlu}</h3>
