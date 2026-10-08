@@ -92,25 +92,37 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
-      # Build-ul urcă ÎNAINTEA testelor e2e, pentru că acelea rulează pe `dist/`,
-      # nu pe dev server. Tot aici pică garda CSP↔config. Browserul (sau, pe
-      # cache hit, doar bibliotecile lui de sistem, prin apt) se instalează în
-      # ACELAȘI timp cu build-ul: sunt independente, iar apt-ul singur lua ~15s.
-      - name: Build (cu garda CSP↔config) + browserul Playwright, în paralel
+      # Pași separați: logurile apt/Playwright sunt vizibile cât rulează.
+      - name: Build (cu garda CSP↔config)
+        timeout-minutes: 5
+        run: npm run build
+
+      - name: Instalează browserul Playwright (încercarea 1/2)
+        id: pw-install
+        timeout-minutes: 5
+        continue-on-error: true
         env:
           PW_CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
         run: |
           if [ "$PW_CACHE_HIT" = "true" ]; then
-            npx playwright install-deps chromium > "$RUNNER_TEMP/pw-install.log" 2>&1 &
+            npx playwright install-deps chromium
           else
-            npx playwright install --with-deps chromium > "$RUNNER_TEMP/pw-install.log" 2>&1 &
+            npx playwright install --with-deps chromium
           fi
-          PW_PID=$!
-          npm run build
-          if ! wait "$PW_PID"; then
-            echo "::error::Instalarea browserului Playwright a picat."
-            cat "$RUNNER_TEMP/pw-install.log"
-            exit 1
+
+      # outcome păstrează eșecul inițial chiar cu continue-on-error.
+      # Timeout-ul este tot eșec; anularea manuală nu pornește un retry.
+      - name: Reîncearcă instalarea Playwright (încercarea 2/2)
+        if: ${{ !cancelled() && steps.pw-install.outcome == 'failure' }}
+        timeout-minutes: 5
+        env:
+          PW_CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          echo "::warning::Prima instalare Playwright a eșuat sau a depășit 5 minute. Reîncerc o singură dată."
+          if [ "$PW_CACHE_HIT" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
           fi
 
       # Pe build-ul de producție, nu pe dev server, și doar jumătatea lui din
