@@ -2336,6 +2336,19 @@
   .admin-sala-buton.activ, .admin-sala-filtru.activ { background: var(--pa-accent); border-color: var(--pa-accent-text); color: var(--pa-accent-ink); }
   .admin-sala-buton:disabled:not(.activ) { opacity: 0.45; cursor: default; }
 
+  .admin-ghid-bot { display: grid; gap: 24px; max-width: 1080px; }
+  .admin-ghid-bot h2, .admin-ghid-bot h3, .admin-ghid-bot h4 { margin: 0 0 12px; }
+  .admin-ghid-bot p, .admin-ghid-bot li, .admin-ghid-bot dd { line-height: 1.65; }
+  .admin-ghid-bot p { margin: 0 0 12px; }
+  .admin-ghid-bot p:last-child { margin-bottom: 0; }
+  .admin-ghid-bot ul, .admin-ghid-bot ol { padding-left: 22px; margin: 12px 0; }
+  .admin-ghid-bot li + li { margin-top: 8px; }
+  .admin-ghid-bot dl { margin: 0; }
+  .admin-ghid-bot dt { font-weight: 600; margin-top: 16px; }
+  .admin-ghid-bot dd { margin: 4px 0 0; }
+  .admin-ghid-comenzi { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; }
+  .admin-ghid-bot .admin-config-grup { margin: 0; min-width: 0; padding: 20px; }
+  .admin-ghid-exemplu { display: block; padding: 10px 12px; margin-bottom: 12px; background: var(--pa-input); border-radius: 6px; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 13px; }
   .admin-sala-filtre { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
   .admin-sala-cauta { flex: 1 1 220px; min-width: 0; }
   .admin-sala-anulare { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }

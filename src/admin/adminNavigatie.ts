@@ -107,6 +107,15 @@ export const ZONE: ZonaRegistru[] = [
           },
         ],
       },
+      {
+        cheie: 'ghid-bot',
+        eticheta: 'Instrucțiuni bot',
+        ecrane: [{
+          cheie: 'grup-ghid',
+          eticheta: 'Instrucțiuni bot',
+          descriere: 'Comenzile din Telegram, acțiunile automate și răspunsurile la întrebările organizatorilor',
+        }],
+      },
     ],
   },
   {

@@ -11,12 +11,12 @@ const seed = async () => (await db.query<{ id: string }>(`insert into public.mem
 it('new members start unknown; updates preserve training status and ignore stale deliveries', async () => {
   await seed();
   await db.query(`select * from public.telegram_membership_candidates('-100')`);
-  expect((await db.query(`select state from public.telegram_group_memberships`)).rows[0].state).toBe('unknown');
+  expect((await db.query<{ state: string }>(`select state from public.telegram_group_memberships`)).rows[0].state).toBe('unknown');
   await observe('in_group', '2026-10-08T10:00:00Z');
   await observe('left', '2026-10-08T11:00:00Z');
   await observe('in_group', '2026-10-08T10:00:00Z');
-  expect((await db.query(`select state from public.telegram_group_memberships`)).rows[0].state).toBe('left');
-  expect((await db.query(`select status from public.members`)).rows[0].status).toBe('active');
+  expect((await db.query<{ state: string }>(`select state from public.telegram_group_memberships`)).rows[0].state).toBe('left');
+  expect((await db.query<{ status: string }>(`select status from public.members`)).rows[0].status).toBe('active');
   await observe('in_group', '2026-10-08T12:00:00Z');
   const result = await db.query<{ d: { membri: { telegram_membership: string }[] } }>(`select runlift.admin_sala_date($1) as d`, [ADMIN_TOKEN]);
   expect(result.rows[0].d.membri[0].telegram_membership).toBe('in_group');
@@ -38,7 +38,7 @@ it('both entry points deduplicate pending kicks, keep the history and reject rel
   const a = await db.query<{ id: string }>(`select runlift.admin_sala_scoate_din_grup($1, $2) as id`, [ADMIN_TOKEN, id]);
   const b = await db.query<{ id: string }>(`select public.queue_telegram_kick($1, 1234, '-100', 42, 'Vlad') as id`, [id]);
   expect(a.rows[0].id).toBe(b.rows[0].id);
-  expect((await db.query(`select status from public.members`)).rows[0].status).toBe('active');
+  expect((await db.query<{ status: string }>(`select status from public.members`)).rows[0].status).toBe('active');
   await expect(db.query(`select public.queue_telegram_kick($1, 9999, '-100', 42, 'Vlad')`, [id])).rejects.toThrow('telegram_changed');
 });
 it('anonymous callers cannot forge membership or invoke service-only removals', async () => {
