@@ -272,6 +272,9 @@ describe('admin_sala_date', () => {
       'is_admin',
       'join_date',
       'status',
+      'telegram_check_failed',
+      'telegram_checked_at',
+      'telegram_membership',
       'telegram_user_id',
       'telegram_username',
     ]);
@@ -826,12 +829,12 @@ describe('admin_sala_scoate_din_grup', () => {
     await expect(cheama('admin_sala_scoate_din_grup', ADMIN_TOKEN, m)).rejects.toThrow('fara_telegram');
   });
 
-  it('un membru obișnuit trece pe cancelled și primește o comandă kick_member', async () => {
+  it('un membru obișnuit își păstrează starea și primește o comandă kick_member', async () => {
     const m = await membru('Ana', 555);
     await cheama('admin_sala_scoate_din_grup', ADMIN_TOKEN, m);
     expect(await comenzi()).toEqual([{ action: 'kick_member', status: 'pending', member_id: m }]);
     const r = await db.query(`select status from public.members`);
-    expect(r.rows).toEqual([{ status: 'cancelled' }]);
+    expect(r.rows).toEqual([{ status: 'active' }]);
   });
 });
 

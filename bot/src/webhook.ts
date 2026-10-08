@@ -1,3 +1,6 @@
+import { recordMembership } from "./lib/membership.js";
+import { memberControl, memberControlDeps } from "./member-control.js";
+import type { TelegramMember } from "./lib/telegram.js";
 import { createAdminClient } from "./lib/supabase.js";
 import {
   answerCallbackQuery,
@@ -18,6 +21,7 @@ import type { SessionRow } from "./lib/sessions.js";
 
 // ── Telegram update payload (only the fields we use) ──────────────────────────
 interface TgUser {
+  is_bot?: boolean;
   id: number;
   username?: string;
   first_name?: string;
@@ -30,6 +34,7 @@ interface TgChat {
 }
 
 export interface TgUpdate {
+  chat_member?: { chat: TgChat; date: number; new_chat_member: TelegramMember };
   callback_query?: {
     id: string;
     from: TgUser;
@@ -122,7 +127,20 @@ async function organizerSafely(chatId: number, work: () => Promise<void>): Promi
 // upsert is idempotent, which makes redelivery safe.
 export async function handleUpdate(update: TgUpdate): Promise<boolean> {
   try {
+    if (update.chat_member) {
+      const change = update.chat_member;
+      await recordMembership(change.chat.id, change.new_chat_member, new Date(change.date * 1000).toISOString());
+      return true;
+    }
     const cb = update.callback_query;
+    if (cb?.data?.startsWith("m:")) {
+      await organizerSafely(cb.message?.chat.id ?? cb.from.id, () => memberControl.callback({
+        id: cb.id, fromId: cb.from.id, fromName: cb.from.first_name ?? String(cb.from.id),
+        chatId: cb.message?.chat.id ?? cb.from.id, chatType: cb.message?.chat.type ?? 'private',
+        messageId: cb.message?.message_id ?? null, data: cb.data!,
+      }, memberControlDeps()));
+      return true;
+    }
     if (cb?.data?.startsWith("c:")) {
       // The organizers' control buttons (see organizerSafely).
       const data = cb.data;
@@ -397,9 +415,10 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
   // Group join capture: anyone added to the group lands in the unmatched list
   // automatically (unless already a linked member), so admins see newcomers.
   if (msg.new_chat_members?.length && msg.chat.type !== "private") {
+    if (String(msg.chat.id) !== process.env.TELEGRAM_GROUP_CHAT_ID) return;
     const supabase = createAdminClient();
     for (const u of msg.new_chat_members) {
-      if (!u?.id) continue;
+      if (!u?.id || u.is_bot) continue;
       const { data: existing } = await supabase
         .from("members")
         .select("id")
@@ -430,6 +449,11 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
   if (text) {
     const from = msg.from;
     let handled = false;
+    await organizerSafely(msg.chat.id, async () => {
+      handled = await memberControl.text({ chatId: msg.chat.id, chatType: msg.chat.type,
+        fromId: from.id, fromName: from.first_name ?? String(from.id), text }, memberControlDeps());
+    });
+    if (handled || /^\/scoate(?:@\w+)?(?:\s|$)/i.test(text)) return;
     await organizerSafely(msg.chat.id, async () => {
       handled = await handleOrganizerText(
         {

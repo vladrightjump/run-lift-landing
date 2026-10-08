@@ -25,6 +25,7 @@ const membri = ['Ana Rusu', 'Ion Ceban', 'Maria Lungu', 'Roma Admin', 'Dan Făr�
   telegram_username: null,
   bot_dm_enabled: false,
   join_date: '2026-07-01',
+  telegram_membership: i === 4 ? 'unknown' : 'in_group',
 }));
 
 const SALA = {
@@ -76,7 +77,7 @@ const RASPUNSURI: Record<string, unknown> = {
 };
 
 /** Deschide adminul cu tokenul sărit peste login; întoarce scrierile spre grup. */
-const deschideAdminul = async (page: Page, ecran = '') => {
+const deschideAdminul = async (page: Page, ecran = '', sala = SALA) => {
   const scrieri: { rpc: string; corp: Record<string, unknown> }[] = [];
   await page.route(RPC, async (ruta) => {
     const nume = /\/rpc\/([a-z_]+)/.exec(ruta.request().url())?.[1] ?? '';
@@ -86,7 +87,7 @@ const deschideAdminul = async (page: Page, ecran = '') => {
     await ruta.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(nume in RASPUNSURI ? RASPUNSURI[nume] : null),
+      body: JSON.stringify(nume === 'admin_sala_date' ? sala : nume in RASPUNSURI ? RASPUNSURI[nume] : null),
     });
   });
   await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
@@ -194,3 +195,23 @@ test.describe('grupul din parc, pe telefon', () => {
     expect(cutie?.height ?? 0).toBeGreaterThanOrEqual(32);
   });
 });
+
+for (const width of [1280, 375]) {
+  test(`apartenența reală, filtrele și reverificarea funcționează la ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const scrieri = await deschideAdminul(page, '#grup-membri', { ...SALA,
+      membri: SALA.membri.map((m) => m.id === 'm1' ? { ...m, telegram_membership: 'left' } : m),
+    });
+    await expect(page.getByText('Ana Rusu', { exact: true })).toBeVisible();
+    await expect(page.getByText('Ion Ceban', { exact: true })).toHaveCount(0);
+    const filtre = page.getByRole('group', { name: 'Apartenență Telegram' });
+    await filtre.getByRole('button', { name: /^Ieșiți din Telegram/ }).click();
+    await expect(page.getByText('Ion Ceban', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Scoate din grup: E deja ieșit.' })).toBeDisabled();
+    await filtre.getByRole('button', { name: /^Neverificați/ }).click();
+    await expect(page.getByText('Dan Fără Cont', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Verifică apartenența' }).click();
+    await expect.poll(() => scrieri.filter((s) => s.rpc === 'admin_sala_verifica_membri').length).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  });
+}

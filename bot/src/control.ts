@@ -285,6 +285,7 @@ async function answerDraft(ctx: Ctx, draft: Draft, text: string): Promise<void> 
 
 const HELP = [
   "Comenzile tale:",
+  "• /scoate Nume · caută persoana, apoi cere confirmarea scoaterii",
   ...Object.values(EXAMPLES).map((e) => `• ${e}`),
   "",
   "Fiecare schimbare îți arată întâi ce se întâmplă și pleacă abia după „Confirmă”.",
@@ -431,6 +432,7 @@ export function summaryKeyboard(
 
 // The organizers' command menu (KTD13).
 export const ORGANIZER_COMMANDS = [
+  { command: "scoate", description: "Scoate un membru: /scoate Nume" },
   { command: "antrenament", description: "Cardul antrenamentului următor" },
   { command: "maine", description: "Cine vine" },
   { command: "anuleaza", description: "Anulează antrenamentul" },

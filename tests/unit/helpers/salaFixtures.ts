@@ -54,7 +54,7 @@ export const dateSala = (peste: Partial<SalaDate> = {}): SalaDate => ({
     membruSala('maria'),
     membruSala('roma', { is_admin: true }),
     membruSala('fara', { telegram_user_id: null }),
-  ],
+  ].map((m): SalaMembru => ({ ...m, telegram_membership: m.telegram_user_id === null ? 'unknown' : 'in_group' })),
   antrenamente: [
     { id: 's2', session_date: '2026-10-08', starts_at: '06:30', location: 'Parc', status: 'scheduled', poll_sent: true },
     { id: 's1', session_date: '2026-10-06', starts_at: '06:30', location: 'Parc', status: 'done', poll_sent: true },

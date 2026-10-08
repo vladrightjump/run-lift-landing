@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   leagaCont,
+  verificaMembri,
   membruDinCont,
   salveazaMembru,
   unesteMembri,
@@ -26,6 +27,12 @@ import { useSala } from './useSala';
  * acoperă aceleași nevoi.
  */
 
+type Apartenenta = 'in_group' | 'outside' | 'unknown' | 'all';
+const FILTRE_TELEGRAM: [Apartenenta, string][] = [
+  ['in_group', 'În grup'], ['outside', 'Ieșiți din Telegram'], ['unknown', 'Neverificați'], ['all', 'Toate conturile'],
+];
+const STARE_TELEGRAM = { in_group: 'În grup', left: 'A ieșit din grup', kicked: 'Scos / blocat în Telegram', unknown: 'Neverificat' };
+
 type Filtru = 'active' | 'paused' | 'cancelled' | 'toti';
 
 const FILTRE: [Filtru, string][] = [
@@ -48,13 +55,14 @@ const textScoatere = (c: SalaComanda): string =>
   c.status === 'pending'
     ? 'scoatere în așteptare'
     : c.status === 'done'
-      ? 'scos din grup'
+      ? 'ultima scoatere: reușită'
       : `scoaterea a eșuat${c.result ? `: ${c.result}` : ''}`;
 
 export const EcranMembri = () => {
   const { date, eroare, ocupat, fa } = useSala();
   const [cauta, setCauta] = useState('');
-  const [filtru, setFiltru] = useState<Filtru>('active');
+  const [filtru, setFiltru] = useState<Filtru>('toti');
+  const [apartenenta, setApartenenta] = useState<Apartenenta>('in_group');
   const [deEditat, setDeEditat] = useState<SalaMembru | null>(null);
   const [unire, setUnire] = useState(false);
 
@@ -84,6 +92,9 @@ export const EcranMembri = () => {
   const termen = cauta.trim().toLowerCase().replace(/^@/, '');
   const vizibili = date.membri.filter(
     (m) =>
+      (apartenenta === 'all' ||
+        (apartenenta === 'outside' ? ['left', 'kicked'].includes(m.telegram_membership ?? 'unknown') :
+          (m.telegram_membership ?? 'unknown') === apartenenta)) &&
       (filtru === 'toti' || m.status === filtru) &&
       (termen === '' ||
         m.full_name.toLowerCase().includes(termen) ||
@@ -127,8 +138,8 @@ export const EcranMembri = () => {
             Scoateri eșuate <span className="admin-tab-alert">{esuate.length}</span>
           </h3>
           <p className="admin-config-hint">
-            Botul n-a putut să-i scoată din grup, deci sunt încă acolo. Cel mai des, botul nu e admin
-            în grup. Rezolvă cauza, apoi reîncearcă.
+            Comanda nu s-a încheiat cu succes. Verifică motivul și apartenența curentă;
+            o eroare nu dovedește că persoana este încă în grup.
           </p>
           <ul className="admin-sala-lista">
             {esuate.map((m) => {
@@ -151,6 +162,27 @@ export const EcranMembri = () => {
 
       <section className="admin-config-grup" aria-labelledby="sala-membri">
         <h3 id="sala-membri">Membrii</h3>
+        <p className="admin-config-hint">
+          Apartenența la Telegram se verifică separat de starea la antrenamente.
+          Lista include conturile cunoscute botului; nu poate importa automat toți membrii vechi.
+          Conturile fără verificare apar la „Neverificați”.
+        </p>
+        <div className="admin-table-actions">
+          <button type="button" className="admin-btn-ghost" disabled={ocupat}
+            onClick={() => void fa(verificaMembri, 'Verificarea este programată. Botul verifică până la 10 conturi pe minut.')}>
+            Verifică apartenența
+          </button>
+        </div>
+        <div className="admin-cs-comutator" role="group" aria-label="Apartenență Telegram">
+          {FILTRE_TELEGRAM.map(([cheie, eticheta]) => (
+            <button key={cheie} type="button" className={`admin-sala-filtru${apartenenta === cheie ? ' activ' : ''}`}
+              aria-pressed={apartenenta === cheie} onClick={() => setApartenenta(cheie)}>
+              {eticheta} ({date.membri.filter((m) => cheie === 'all' || (cheie === 'outside'
+                ? ['left', 'kicked'].includes(m.telegram_membership ?? 'unknown')
+                : (m.telegram_membership ?? 'unknown') === cheie)).length})
+            </button>
+          ))}
+        </div>
         <div className="admin-sala-filtre">
           <input
             type="search"
@@ -191,7 +223,10 @@ export const EcranMembri = () => {
                   <span className="admin-sala-detaliu">
                     {m.telegram_username ? `@${m.telegram_username}` : m.telegram_user_id ? 'Telegram legat' : 'fără Telegram'}
                     {' · '}
-                    {ETICHETE_STARE[m.status]}
+                    {STARE_TELEGRAM[m.telegram_membership ?? 'unknown']}
+                    {m.telegram_check_failed && ' · verificarea recentă a eșuat'}
+                    {m.telegram_checked_at && ` · verificat ${new Date(m.telegram_checked_at).toLocaleString('ro-RO', { timeZone: 'Europe/Chisinau' })}`}
+                    {' · antrenamente: '}{ETICHETE_STARE[m.status]}
                     {' · '}
                     {ultima ? `ultima dată ${dataScurta(ultima)}` : 'n-a venit încă'}
                     {k && (

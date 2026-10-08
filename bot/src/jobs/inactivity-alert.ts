@@ -28,7 +28,7 @@ export async function inactivityAlert(): Promise<{ ok: boolean; detail?: string 
 
   const supabase = createAdminClient();
   const { data } = await supabase
-    .from("member_attendance_stats")
+    .from("telegram_training_stats")
     .select("full_name, status, yes_count, last_attended")
     .eq("status", "active");
   const rows = (data ?? []) as StatRow[];
