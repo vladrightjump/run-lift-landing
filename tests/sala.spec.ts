@@ -205,7 +205,7 @@ for (const width of [1280, 375]) {
     await expect(page.getByText('Ana Rusu', { exact: true })).toBeVisible();
     await expect(page.getByText('Ion Ceban', { exact: true })).toHaveCount(0);
     const filtre = page.getByRole('group', { name: 'Apartenență Telegram' });
-    await filtre.getByRole('button', { name: /^Ieșiți din Telegram/ }).click();
+    await filtre.getByRole('button', { name: /^Arhivă/ }).click();
     await expect(page.getByText('Ion Ceban', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Scoate din grup: E deja ieșit.' })).toBeDisabled();
     await filtre.getByRole('button', { name: /^Neverificați/ }).click();

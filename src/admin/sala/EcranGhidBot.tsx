@@ -78,7 +78,7 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
       <h3 id="ghid-membri">Cum citești lista de membri</h3>
       <ul>
         <li><strong>În grup:</strong> ultima verificare confirmă apartenența la Telegram.</li>
-        <li><strong>Ieșiți din Telegram:</strong> persoana a ieșit sau a fost scoasă/blocată. Istoricul rămâne disponibil.</li>
+        <li><strong>Arhivă:</strong> persoana a ieșit sau a fost scoasă/blocată. Istoricul rămâne disponibil.</li>
         <li><strong>Neverificați:</strong> botul nu a confirmat încă apartenența. Nu înseamnă că persoana a ieșit.</li>
         <li><strong>Conturi nelegate:</strong> asociază contul cu persoana existentă sau creează un membru nou, ca să eviți duplicatele.</li>
       </ul>

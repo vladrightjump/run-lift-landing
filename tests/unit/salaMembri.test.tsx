@@ -62,11 +62,10 @@ describe('Membrii grupului', () => {
   });
 
   it('Covers AE3. o scoatere eșuată rămâne la vedere, cu motivul, și se poate reîncerca', async () => {
-    // Starea reală de după cerere: serverul l-a trecut deja pe „ieșit", deci sub
-    // filtrul implicit („Activi") n-ar mai apărea în listă.
+    // Cererea păstrează starea sportivă; eșecul rămâne vizibil și pentru activi.
     api.incarcaSala.mockResolvedValue(
       dateSala({
-        membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'cancelled' })],
+        membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'active', telegram_membership: 'unknown' })],
         scoateri: [
           comandaSala({ action: 'kick_member', member_id: 'ion', status: 'failed', result: 'Bad Request: not enough rights' }),
         ],
@@ -90,7 +89,7 @@ describe('Membrii grupului', () => {
     randeaza();
     await screen.findByText('Ana');
     expect(screen.queryByRole('heading', { name: /Scoateri eșuate/ })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /^Ieșiți din Telegram/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Arhivă/ }));
     expect((within(randul('Ion')).getByRole('button', { name: /Scoate din grup: E deja ieșit/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -99,7 +98,7 @@ describe('Membrii grupului', () => {
     // deci o găsește doar `scoateri` (ultima scoatere a fiecărui membru).
     api.incarcaSala.mockResolvedValue(
       dateSala({
-        membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'cancelled' })],
+        membri: [...dateSala().membri.filter((m) => m.id !== 'ion'), membruSala('ion', { status: 'active', telegram_membership: 'unknown' })],
         comenzi: Array.from({ length: 30 }, (_, i) => comandaSala({ id: `c${i}`, action: 'send_summary', status: 'done' })),
         scoateri: [comandaSala({ action: 'kick_member', member_id: 'ion', status: 'failed', result: 'Bad Request: not enough rights' })],
       })
@@ -264,10 +263,36 @@ describe('Membrii grupului — editarea, conturile, unirea', () => {
   await screen.findByText('Prezent');
   expect(screen.queryByText('Plecat')).toBeNull();
   expect(screen.queryByText('Necunoscut')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: /^Ieșiți din Telegram/ }));
+  fireEvent.click(screen.getByRole('button', { name: /^Arhivă/ }));
   expect(screen.getByText('Plecat')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /^Neverificați/ }));
   expect(screen.getByText('Necunoscut')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Verifică apartenența' }));
   await waitFor(() => expect(api.verificaMembri).toHaveBeenCalledWith('tok'));
+});
+
+
+it('arhivează persoanele ieșite inclusiv cu erori, fără să piardă avertizările', async () => {
+  api.incarcaSala.mockResolvedValue(dateSala({ membri: [
+    membruSala('prezent', { telegram_membership: 'in_group' }),
+    membruSala('plecat', { telegram_membership: 'left' }),
+    membruSala('blocat', { telegram_membership: 'kicked' }),
+    membruSala('necunoscut', { telegram_membership: 'unknown' }),
+  ], scoateri: [comandaSala({ action: 'kick_member', member_id: 'blocat', status: 'failed', result: 'Deblochează manual în Telegram.' })] }));
+  randeaza();
+  await screen.findByText('Prezent');
+  expect(screen.queryByText('Blocat')).toBeNull();
+  expect(screen.queryByRole('heading', { name: /Scoateri eșuate/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /^Membri curenți/ }));
+  expect(screen.getByText('Necunoscut')).toBeTruthy();
+  expect(screen.queryByText('Plecat')).toBeNull();
+  expect(screen.queryByText('Blocat')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /^Arhivă/ }));
+  expect(screen.getByText('Plecat')).toBeTruthy();
+  const esuate = (await screen.findByRole('heading', { name: /Scoateri eșuate/ })).closest('section') as HTMLElement;
+  expect(within(esuate).getByText(/Deblochează manual/)).toBeTruthy();
+  expect(screen.queryByText('Prezent')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /^În grup/ }));
+  expect(screen.queryByText('Blocat')).toBeNull();
+  expect(api.scoateDinGrup).not.toHaveBeenCalled();
 });
