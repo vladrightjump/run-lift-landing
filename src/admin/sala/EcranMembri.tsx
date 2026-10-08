@@ -29,8 +29,11 @@ import { useSala } from './useSala';
 
 type Apartenenta = 'in_group' | 'outside' | 'unknown' | 'all';
 const FILTRE_TELEGRAM: [Apartenenta, string][] = [
-  ['in_group', 'În grup'], ['outside', 'Ieșiți din Telegram'], ['unknown', 'Neverificați'], ['all', 'Toate conturile'],
+  ['in_group', 'În grup'], ['outside', 'Arhivă'], ['unknown', 'Neverificați'], ['all', 'Membri curenți'],
 ];
+const esteArhivat = (m: SalaMembru) => m.telegram_membership === 'left' || m.telegram_membership === 'kicked';
+const corespundeApartenentei = (m: SalaMembru, filtru: Apartenenta) =>
+  filtru === 'outside' ? esteArhivat(m) : filtru === 'all' ? !esteArhivat(m) : (m.telegram_membership ?? 'unknown') === filtru;
 const STARE_TELEGRAM = { in_group: 'În grup', left: 'A ieșit din grup', kicked: 'Scos / blocat în Telegram', unknown: 'Neverificat' };
 
 type Filtru = 'active' | 'paused' | 'cancelled' | 'toti';
@@ -80,9 +83,10 @@ export const EcranMembri = () => {
   }
 
   const scoateri = ultimeleScoateri(date.scoateri);
-  // Serverul îi trece pe „ieșit" încă de la cerere, deci sub filtrul implicit
-  // („Activi") o scoatere eșuată n-ar mai fi vizibilă. Stă deasupra listei.
-  const esuate = date.membri.filter((m) => scoateri.get(m.id)?.status === 'failed' && m.status === 'cancelled');
+  // Eșecurile membrilor curenți rămân vizibile indiferent de starea sportivă.
+  // Persoanele confirmate ca ieșite și avertizările lor se consultă în arhivă.
+  const esuate = date.membri.filter((m) => scoateri.get(m.id)?.status === 'failed' &&
+    (apartenenta === 'outside' ? esteArhivat(m) : !esteArhivat(m)));
   // Un cont rămâne parcat și după ce un membru primește id-ul lui pe alt drum
   // (votul găsit după utilizator, sau id-ul scris în „Editează"). Legat deja,
   // n-are ce căuta aici: altfel ar sta în listă fără niciun buton care să-l
@@ -92,9 +96,7 @@ export const EcranMembri = () => {
   const termen = cauta.trim().toLowerCase().replace(/^@/, '');
   const vizibili = date.membri.filter(
     (m) =>
-      (apartenenta === 'all' ||
-        (apartenenta === 'outside' ? ['left', 'kicked'].includes(m.telegram_membership ?? 'unknown') :
-          (m.telegram_membership ?? 'unknown') === apartenenta)) &&
+      corespundeApartenentei(m, apartenenta) &&
       (filtru === 'toti' || m.status === filtru) &&
       (termen === '' ||
         m.full_name.toLowerCase().includes(termen) ||
@@ -165,7 +167,7 @@ export const EcranMembri = () => {
         <p className="admin-config-hint">
           Apartenența la Telegram se verifică separat de starea la antrenamente.
           Lista include conturile cunoscute botului; nu poate importa automat toți membrii vechi.
-          Conturile fără verificare apar la „Neverificați”.
+          Conturile fără verificare apar la „Neverificați”. Persoanele ieșite sau blocate sunt în „Arhivă”, cu istoricul păstrat.
         </p>
         <div className="admin-table-actions">
           <button type="button" className="admin-btn-ghost" disabled={ocupat}
@@ -177,9 +179,7 @@ export const EcranMembri = () => {
           {FILTRE_TELEGRAM.map(([cheie, eticheta]) => (
             <button key={cheie} type="button" className={`admin-sala-filtru${apartenenta === cheie ? ' activ' : ''}`}
               aria-pressed={apartenenta === cheie} onClick={() => setApartenenta(cheie)}>
-              {eticheta} ({date.membri.filter((m) => cheie === 'all' || (cheie === 'outside'
-                ? ['left', 'kicked'].includes(m.telegram_membership ?? 'unknown')
-                : (m.telegram_membership ?? 'unknown') === cheie)).length})
+              {eticheta} ({date.membri.filter((m) => corespundeApartenentei(m, cheie)).length})
             </button>
           ))}
         </div>
