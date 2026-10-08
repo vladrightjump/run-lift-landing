@@ -42,6 +42,7 @@ export type EcranAdmin =
   // prezențele și membrii. Nu țin de nicio ediție.
   | 'grup-prezente'
   | 'grup-membri'
+  | 'grup-probe'
   | 'grup-analiza'
   | 'grup-bot'
   | 'grup-ghid';

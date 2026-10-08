@@ -3,7 +3,7 @@
 Catalog al migrărilor care ating Run + Lift, cu granița clară față de aplicația vecină
 (gym-app + botul de Telegram) care împarte același proiect Supabase.
 
-Ultima actualizare: 7 octombrie 2026.
+Ultima actualizare: 8 octombrie 2026.
 
 ---
 
@@ -28,6 +28,18 @@ Proiectul Supabase **`ironworks-gym`** (`whyndrjcezmtajbykeil`, eu-central-1) e 
 Rutarea către `runlift` se face prin headerele PostgREST `Accept-Profile` (GET) /
 `Content-Profile` (scriere). Schema trebuie **expusă** în Supabase → Project Settings → API →
 Exposed schemas (`public, graphql_public, runlift`).
+
+---
+
+## Migrări în așteptare — antrenamente de probă
+
+PR #64 introduce tabelele `public.trial_*` și funcțiile aferente. Nu sunt aplicate în producție. Cu funcția dezactivată, aplică în ordine:
+
+1. `supabase/sql/supabase-migration-sala-probe.sql`
+2. `supabase/sql/supabase-migration-trial-messages.sql`
+3. `supabase/sql/supabase-migration-trial-review-fixes.sql`
+
+A treia migrare adaugă confirmarea atomică a răspunsurilor, eliberarea mesajelor suspendate, verificarea versiunii prezenței și oprirea înscrierilor când drepturile botului nu sunt confirmate. Livrează apoi aplicația și botul compatibile; [instrucțiunile de activare](docs/features/antrenament-proba.md) descriu verificările necesare. Snapshot-urile live se actualizează numai după aplicare.
 
 ---
 

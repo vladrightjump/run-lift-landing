@@ -97,6 +97,11 @@ export const ZONE: ZonaRegistru[] = [
         ],
       },
       {
+        cheie: 'probe',
+        eticheta: 'Persoane noi',
+        ecrane: [{ cheie: 'grup-probe', eticheta: 'Persoane noi', descriere: 'Probele programate, prezența și continuarea în grup' }],
+      },
+      {
         cheie: 'setari',
         eticheta: 'Setări bot',
         ecrane: [

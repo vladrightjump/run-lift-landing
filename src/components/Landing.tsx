@@ -1,4 +1,7 @@
 import '../edition3.css';
+import { usePublicTrial } from '../hooks/usePublicTrial';
+import { TrialTraining } from './TrialTraining';
+import { trialLink } from '../lib/trialPublic';
 import { useEffect, useRef, useState } from 'react';
 import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
 import { useCountdown } from '../hooks/useCountdown';
@@ -38,6 +41,7 @@ type Props = {
  * stă în `useRegistration`; fiecare secțiune într-un fișier din `landing/`.
  */
 export const Landing = ({ mode = 'full' }: Props) => {
+  const trial = usePublicTrial();
   const lista = mode === 'leaderboard';
   const config = useEventConfig();
   const { layout } = config;
@@ -105,8 +109,9 @@ export const Landing = ({ mode = 'full' }: Props) => {
 
       <SignupBanner />
       <TopBar cd={cd} onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
-      <Hero onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
+      <Hero trialHref={trial && !lista ? trialLink(trial.bot_username) : null} onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
       <Marquee items={marquee} />
+      {!lista && <TrialTraining config={trial} />}
       {lista ? (
         // În fereastra de dinaintea startului singurul lucru care contează e
         // cine vine — formatul și locația rămân dedesubt, pentru cine tocmai
@@ -143,6 +148,7 @@ export const Landing = ({ mode = 'full' }: Props) => {
           }
         })
       )}
+      {lista && <TrialTraining config={trial} />}
       <Footer />
       {!lista && overlay && (
         <RegistrationOverlay reg={reg} stats={stats} onClose={() => setOverlay(false)} />

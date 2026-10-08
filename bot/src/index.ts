@@ -1,3 +1,4 @@
+import { processTrialMessages } from './jobs/trial-messages.js';
 import "dotenv/config";
 import { syncMemberships } from "./lib/membership.js";
 import express from "express";
@@ -73,6 +74,7 @@ if (schedulerEnabled()) cron.schedule(
       // Always drain the command queue (kick, etc.), even if scheduling is off.
       await processCommands().catch((err) => console.error("[commands]", err));
 
+      await processTrialMessages().catch((err) => console.error("[trial]", err));
       void syncMemberships().catch((err) => console.error("[membership]", err));
       const cfg = await getBotConfig();
       if (!cfg.enabled) return;

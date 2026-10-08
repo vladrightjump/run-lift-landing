@@ -16,6 +16,11 @@ export async function recordMembership(chatId: string | number, member: Telegram
     p_first_name: member.user.first_name ?? null, p_last_name: member.user.last_name ?? null,
   });
   if (error) throw error;
+  {
+    // Conversion and closure follow the verified observation, never an invitation alone.
+    const result = await createAdminClient().rpc('trial_convert', { p_telegram_id: member.user.id });
+    if (result.error && !['PGRST202', '42883', '42P01'].includes(result.error.code)) throw result.error;
+  }
 }
 
 // One bounded batch per tick, including existing members who never rejoin.

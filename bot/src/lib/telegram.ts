@@ -132,3 +132,37 @@ export interface TelegramMember {
 }
 export const getChatMember = (chatId: string | number, userId: number) =>
   call<TelegramMember>('getChatMember', { chat_id: chatId, user_id: userId });
+
+export const getMe = () => call<{ id: number; username?: string }>('getMe', {});
+export const getBotGroupPermissions = (chatId: string | number, userId: number) =>
+  call<TelegramMember & { can_invite_users?: boolean }>('getChatMember', { chat_id: chatId, user_id: userId });
+export const createTrialInvite = (chatId: string | number, expires: number) =>
+  call<{ invite_link: string; expire_date?: number }>('createChatInviteLink', {
+    chat_id: chatId, creates_join_request: true, expire_date: expires, name: 'Antrenament de probă',
+  });
+export const approveJoinRequest = (chatId: string | number, userId: number) =>
+  call('approveChatJoinRequest', { chat_id: chatId, user_id: userId });
+export const declineJoinRequest = (chatId: string | number, userId: number) =>
+  call('declineChatJoinRequest', { chat_id: chatId, user_id: userId });
+export const revokeInvite = (chatId: string | number, link: string) =>
+  call('revokeChatInviteLink', { chat_id: chatId, invite_link: link });
+
+// Trial content is plain text: names, questions and configurable conditions are
+// never interpreted as Telegram HTML. Split long messages without dropping text.
+export function splitTelegramText(text: string): string[] {
+  const chars = Array.from(text);
+  const parts: string[] = [];
+  while (chars.length) parts.push(chars.splice(0, 1800).join(''));
+  return parts.length ? parts : [' '];
+}
+export async function sendTrialText(chatId: number | string, text: string, keyboard?: InlineKeyboard) {
+  const parts = splitTelegramText(text);
+  let sentCount = 0;
+  let last: TelegramResponse<SentMessage> = { ok: false };
+  for (let i = 0; i < parts.length; i++) {
+    last = await sendMessage(chatId, parts[i], i === parts.length - 1 && keyboard ? { reply_markup: { inline_keyboard: keyboard } } : undefined);
+    if (!last.ok) return { ...last, sentCount };
+    sentCount++;
+  }
+  return { ...last, sentCount };
+}

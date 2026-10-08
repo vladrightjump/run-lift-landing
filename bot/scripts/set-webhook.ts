@@ -29,7 +29,7 @@ async function main() {
     body: JSON.stringify({
       url: webhookUrl,
       secret_token: secret,
-      allowed_updates: ["message", "callback_query", "chat_member"],
+      allowed_updates: ["message", "callback_query", "chat_member", "chat_join_request"],
     }),
   });
 

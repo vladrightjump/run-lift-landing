@@ -17,13 +17,13 @@ import { useCallback, useEffect, useRef } from 'react';
 /** Ritmul poll-ului din backoffice. Un singur operator, ~30 de rânduri. */
 export const ADMIN_REFRESH_MS = 15_000;
 
-export const useAdminPolling = (
+export const useAdminPolling = <T = void>(
   /**
    * Stabil (`useCallback`) — identitatea lui repornește intervalul. Poate
    * întoarce promisiunea cererii: refresh-ul manual o dă mai departe, ca
    * apelantul să poată aștepta datele proaspete.
    */
-  fetch: (signal: AbortSignal) => void | Promise<void>,
+  fetch: (signal: AbortSignal) => T | Promise<T>,
   /**
    * `null` = o singură cerere, la montare.
    *
@@ -33,7 +33,7 @@ export const useAdminPolling = (
    * nimeni altcineva nu editează șabloanele în paralel.
    */
   intervalMs: number | null = ADMIN_REFRESH_MS
-): (() => Promise<void>) => {
+): (() => Promise<T>) => {
   const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(() => {

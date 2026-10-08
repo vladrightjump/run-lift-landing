@@ -132,6 +132,7 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
    * trebuie trecută AICI, conștient, sau revocată.
    */
   const PERMISE_PUBLIC = [
+    'public_trial_config', 'admin_trial_data', 'admin_trial_config', 'admin_trial_attendance', 'admin_trial_reply', 'admin_trial_retry',
     'public_stats',
     'public_config',
     // Întoarce doar săptămânile publicate ȘI vizibile, deci exact ce arată

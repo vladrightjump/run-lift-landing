@@ -26,9 +26,9 @@ export type ResursaAdmin<T> = {
   eroare: boolean;
   /**
    * Reîncarcă acum, anulând cererea în zbor. Promisiunea se împlinește când
-   * răspunsul a ajuns pe ecran (sau cererea a picat ori a fost anulată).
+   * răspunsul a ajuns pe ecran: true la succes, false la eșec sau anulare.
    */
-  reincarca: () => Promise<void>;
+  reincarca: () => Promise<boolean>;
 };
 
 export const useAdminResource = <T>(
@@ -51,13 +51,15 @@ export const useAdminResource = <T>(
         .then((raspuns) => {
           // O cerere anulată poate totuși să se rezolve (cu un corp gol): nu are
           // voie să înlocuiască datele bune cu nimic.
-          if (signal.aborted) return;
+          if (signal.aborted) return false;
           setDate(raspuns);
           setEroare(false);
+          return true;
         })
         .catch((err) => {
-          if (signal.aborted || onAuthError(err)) return;
+          if (signal.aborted || onAuthError(err)) return false;
           setEroare((precedent) => precedent || dateRef.current === null);
+          return false;
         }),
     [incarca, token, onAuthError]
   );

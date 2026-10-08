@@ -37,6 +37,7 @@ import { EcranPrezente } from './sala/EcranPrezente';
 import { EcranMembri } from './sala/EcranMembri';
 import { EcranAnaliza } from './sala/EcranAnaliza';
 import { EcranGhidBot } from './sala/EcranGhidBot';
+import { EcranProbe } from './sala/EcranProbe';
 import { EcranBot } from './sala/EcranBot';
 import { AdminClipuriTab } from './AdminClipuriTab';
 import { EcranAcum } from './EcranAcum';
@@ -367,6 +368,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
     sabloane: null,
     'grup-prezente': null,
     'grup-membri': null,
+    'grup-probe': null,
     'grup-analiza': null,
     'grup-bot': null,
     'grup-ghid': null,
@@ -745,6 +747,7 @@ export const AdminDashboard = ({ token, onLogout }: Props) => {
             vezi `sala/useSala.ts`): nu țin de ediția deschisă și n-au de ce să
             încarce odată cu participanții. */}
         {tab === 'grup-prezente' && <EcranPrezente />}
+        {tab === 'grup-probe' && <EcranProbe />}
         {tab === 'grup-membri' && <EcranMembri />}
         {tab === 'grup-analiza' && <EcranAnaliza />}
         {tab === 'grup-ghid' && <EcranGhidBot onEcran={schimbaTab} />}
