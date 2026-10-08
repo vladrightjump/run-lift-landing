@@ -616,7 +616,7 @@
        36 px pentru acțiunile de pe un rând de tabel. */
     --pa-control-h: 44px;
     --pa-control-h-sm: 36px;
-    --pa-control-px: 12px;
+    --pa-control-px: 14px;
     --pa-control-font: 14px;
     --pa-textarea-min: 96px;
     --pa-font: Archivo, system-ui, sans-serif;
@@ -659,7 +659,7 @@
     transition: border-color var(--pa-dur-fast) var(--pa-ease), box-shadow var(--pa-dur-fast) var(--pa-ease), background-color var(--pa-dur-fast) var(--pa-ease);
   }
   .admin-app :where(textarea) {
-    height: auto; min-height: var(--pa-textarea-min); padding: 10px var(--pa-control-px);
+    height: auto; min-height: var(--pa-textarea-min); padding: 12px var(--pa-control-px);
     line-height: 1.5; resize: vertical;
   }
   /* Lista derulantă arată ca un câmp din aceeași familie, cu săgeată proprie
@@ -1437,8 +1437,25 @@
      si jumatate. Organizatorul vine sa schimbe UN lucru, nu douazeci: cu
      grupurile inchise, tot documentul incape intr-un ecran. */
   .admin-config-grup {
-    margin: 0; padding: 0;
-    border: 1px solid var(--pa-line); background: var(--pa-surface);
+    margin: 0; padding: 20px; min-width: 0;
+    border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg); background: var(--pa-surface);
+  }
+  /* Grupurile pliabile au deja padding în antet și corp. Cele simple au
+     nevoie de aceeași margine interioară, inclusiv fieldset-urile native. */
+  .admin-config-grup:has(> .admin-config-grup-cap) { padding: 0; }
+  .admin-config-grup > legend {
+    padding: 0 8px; margin-left: -8px; max-width: 100%;
+    font-size: 16px; font-weight: 700; line-height: 1.5; color: var(--pa-text);
+  }
+  .admin-config-grup > :where(h2, h3) { margin: 0 0 12px; line-height: 1.35; }
+  .admin-config-grup > :where(.admin-config-camp, .admin-table-actions, .admin-cs-comutator, .admin-sala-filtre, .admin-sala-text-sondaj) {
+    margin-top: 16px;
+  }
+  .admin-config-grup > :first-child:not(legend) { margin-top: 0; }
+  .admin-config-grup > :last-child { margin-bottom: 0; }
+  .admin-config-grup :where(input, select, textarea) { max-width: 100%; }
+  @media (max-width: 760px) {
+    .admin-config-grup { padding: 16px; }
   }
   .admin-config-grup.invalid { border-color: var(--pa-danger); }
   .admin-config-grup-cap {
@@ -1516,9 +1533,9 @@
     letter-spacing: 0 !important; text-transform: none !important;
   }
 
-  .admin-config-camp { display: grid; gap: 6px; align-content: start; }
+  .admin-config-camp { display: grid; gap: 8px; min-width: 0; align-content: start; }
   .admin-config-eticheta {
-    font-size: 12px; font-weight: 700; color: var(--pa-muted);
+    font-size: 13px; font-weight: 600; line-height: 1.5; color: var(--pa-text-2);
   }
   /* Ecoul („sâmbătă, 22 august · peste 3 luni") și explicația. Ecoul e lime
      fiindcă e o confirmare a acțiunii tocmai făcute; explicația e text de
@@ -1533,7 +1550,7 @@
   }
   .admin-config-eroare { font-size: 13px; color: var(--pa-danger); line-height: 1.4; }
   .admin-config-camp.invalid .admin-config-eticheta { color: var(--pa-danger); }
-  .admin-config-hint { font-size: 13px; color: var(--pa-muted); margin: 0 0 8px; }
+  .admin-config-hint { font-size: 13px; line-height: 1.6; color: var(--pa-muted); margin: 0 0 12px; overflow-wrap: anywhere; }
   .admin-config-hint code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
     background: var(--pa-surface-2); border: 1px solid var(--pa-line);
@@ -2314,16 +2331,16 @@
   .admin-sala-lista { list-style: none; margin: 0; padding: 0; display: grid; }
   .admin-sala-rand {
     display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
-    padding: 9px 0; border-bottom: 1px solid var(--pa-line-soft); min-width: 0;
+    padding: 14px 0; border-bottom: 1px solid var(--pa-line-soft); min-width: 0;
   }
   .admin-sala-rand:last-child { border-bottom: 0; }
-  .admin-sala-nume { flex: 1 1 140px; min-width: 0; font-size: 14px; color: var(--pa-text); overflow-wrap: anywhere; }
-  .admin-sala-detaliu { font-size: 12px; color: var(--pa-muted); overflow-wrap: anywhere; }
+  .admin-sala-nume { flex: 1 1 140px; min-width: 0; font-size: 14px; line-height: 1.5; color: var(--pa-text); overflow-wrap: anywhere; }
+  .admin-sala-detaliu { line-height: 1.6; font-size: 12px; color: var(--pa-muted); overflow-wrap: anywhere; }
   .admin-sala-actiuni { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .admin-sala-membru .admin-sala-detaliu { flex: 1 1 220px; }
   .admin-sala-motiv { flex-basis: 100%; font-size: 12px; color: var(--pa-warn); }
   .admin-sala-eticheta-mica {
-    margin-left: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700; color: var(--pa-accent-ink); background: var(--pa-text-2);
+    margin-left: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700; color: var(--pa-accent-text); background: var(--pa-accent-soft);
   }
 
   .admin-sala-marcaj { display: inline-flex; gap: 4px; }
@@ -2365,7 +2382,11 @@
 
   .admin-sala-necunoscuti { border-color: var(--pa-warn); }
   .admin-sala-cont select { max-width: 220px; }
-  .admin-sala-formular { display: grid; gap: 8px; }
+  .admin-sala-formular { display: grid; gap: 8px; min-width: 0; }
+  .admin-sala-formular > .admin-config-eticheta:not(:first-child) { margin-top: 10px; }
+  .admin-sala-formular > :where(.admin-sala-bifa, .admin-table-actions) { margin-top: 12px; }
+  .admin-sala-text-sondaj > div:first-child { display: grid; gap: 18px; min-width: 0; }
+  .admin-sala-text-sondaj > div:first-child > * { min-width: 0; }
   .admin-sala-bifa { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--pa-text); }
 
   /* Analiza */
