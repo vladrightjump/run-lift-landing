@@ -54,3 +54,27 @@ it('departed users are excluded from reminders while historical attendance remai
   expect((await db.query(`select * from public.telegram_training_members`)).rows).toHaveLength(0);
   expect((await db.query(`select * from public.member_attendance_stats`)).rows).toHaveLength(1);
 });
+
+it('acknowledgement requires admin auth, persists in the journal and preserves failed status and membership', async () => {
+  const member = await seed();
+  await observe('kicked', '2026-10-08T10:00:00Z');
+  const { rows: [action] } = await db.query<{ id: string }>(`insert into public.bot_actions(action, member_id, telegram_user_id, status, result) values ('kick_member', $1, 1234, 'failed', 'Deblochează manual') returning id`, [member]);
+  const mark = (token: string) => db.query(`select runlift.admin_sala_marcheaza_verificat($1, $2)`, [token, action.id]);
+  await expect(mark('00000000-0000-0000-0000-000000000000')).rejects.toThrow('invalid_token');
+  await caRol(db, 'anon', () => mark(ADMIN_TOKEN));
+  const before = (await db.query(`select status, result, reviewed_at from public.bot_actions where id=$1`, [action.id])).rows;
+  await mark(ADMIN_TOKEN);
+  expect((await db.query(`select status, result, reviewed_at from public.bot_actions where id=$1`, [action.id])).rows).toEqual(before);
+  expect(before[0]).toMatchObject({ status: 'failed', result: 'Deblochează manual', reviewed_at: expect.anything() });
+  expect((await db.query(`select state from public.telegram_group_memberships`)).rows).toEqual([{ state: 'kicked' }]);
+  expect((await db.query(`select id from public.bot_actions`)).rows).toHaveLength(1);
+  const { rows: [r] } = await db.query<{ data: { comenzi: { reviewed_at: string }[], scoateri: { reviewed_at: string }[] } }>(`select runlift.admin_sala_date($1) as data`, [ADMIN_TOKEN]);
+  expect(r.data.comenzi[0].reviewed_at).toBeTruthy();
+  expect(r.data.scoateri[0].reviewed_at).toBe(r.data.comenzi[0].reviewed_at);
+});
+it('pending or completed commands cannot be dismissed', async () => {
+  for (const status of ['pending', 'done']) {
+    const { rows: [a] } = await db.query<{ id: string }>(`insert into public.bot_actions(action,status) values ('send_summary',$1) returning id`, [status]);
+    await expect(db.query(`select runlift.admin_sala_marcheaza_verificat($1,$2)`, [ADMIN_TOKEN,a.id])).rejects.toThrow('comanda_neesuata');
+  }
+});

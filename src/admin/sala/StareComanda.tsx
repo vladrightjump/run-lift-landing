@@ -10,5 +10,5 @@ const CLASA: Record<SalaComanda['status'], string> = {
 
 /** Starea unei comenzi pentru bot, colorată: în așteptare, făcută, eșuată. */
 export const StareComanda = ({ comanda, children }: { comanda: SalaComanda; children: ReactNode }) => (
-  <span className={CLASA[comanda.status]}>{children}</span>
+  <span className={CLASA[comanda.status]}>{children}{comanda.reviewed_at && ' · verificat de admin'}</span>
 );

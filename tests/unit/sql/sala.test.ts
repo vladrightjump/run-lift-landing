@@ -328,7 +328,7 @@ describe('admin_sala_date', () => {
       [ion, 'failed'],
     ]);
     expect(Object.keys(d.scoateri[1]).sort()).toEqual(
-      ['action', 'created_at', 'id', 'member_id', 'processed_at', 'result', 'status'].sort()
+      ['action', 'created_at', 'id', 'member_id', 'processed_at', 'result', 'reviewed_at', 'status'].sort()
     );
     expect(d.scoateri[1].result).toBe('Bad Request: not enough rights');
   });

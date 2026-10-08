@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { EventConfig } from '../content/eventConfig';
-import { trimiteComanda } from '../lib/salaApi';
+import { trimiteComanda, marcheazaComandaVerificata } from '../lib/salaApi';
 import { useNow } from '../hooks/useNow';
 import {
   cardAntrenament,
@@ -122,16 +122,28 @@ export const EcranAcum = ({ semnale, faza, config, inscrisi, asteptare, onEcran,
                 <p className="admin-inbox-titlu">{el.titlu}</p>
                 <p className="admin-inbox-detaliu">{el.detaliu}</p>
               </div>
-              {el.actiune && (
-                <button
-                  type="button"
-                  className="admin-buton"
-                  disabled={el.actiune.inAsteptare || (Boolean(el.actiune.reia) && ocupat)}
-                  onClick={() => laActiune(el)}
-                >
-                  {el.actiune.reia && ocupat ? 'Se reia…' : el.actiune.eticheta}
-                </button>
-              )}
+              <div className="admin-inbox-actiuni">
+                {el.actiune && (
+                  <button
+                    type="button"
+                    className="admin-buton"
+                    disabled={el.actiune.inAsteptare || (Boolean(el.actiune.reia) && ocupat)}
+                    onClick={() => laActiune(el)}
+                  >
+                    {el.actiune.reia && ocupat ? 'Se reia…' : el.actiune.eticheta}
+                  </button>
+                )}
+                {el.comandaDeVerificat && (
+                  <button type="button" className="admin-btn-ghost" disabled={ocupat}
+                    title="Ascunde avertizarea din De rezolvat. Istoricul și starea Telegram rămân neschimbate."
+                    onClick={() => {
+                      const id = el.comandaDeVerificat;
+                      if (id) void fa((t) => marcheazaComandaVerificata(t, id), 'Marcat ca verificat. Rezultatul rămâne în jurnal.');
+                    }}>
+                    Marchează ca verificat
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

@@ -39,7 +39,8 @@ create table public.bot_actions (
   result text,
   created_at timestamp with time zone default now() not null,
   processed_at timestamp with time zone,
-  payload jsonb
+  payload jsonb,
+  reviewed_at timestamp with time zone
 );
 
 create table public.bot_config (
@@ -87,6 +88,15 @@ create table public.payments (
   created_at timestamp with time zone default now() not null
 );
 
+create table public.telegram_group_memberships (
+  telegram_user_id bigint not null,
+  chat_id text not null,
+  state text default 'unknown'::text not null,
+  observed_at timestamp with time zone,
+  next_check_at timestamp with time zone default now() not null,
+  check_failed boolean default false not null
+);
+
 create table public.telegram_unmatched (
   telegram_user_id bigint not null,
   username text,
@@ -114,6 +124,7 @@ alter table public.bot_config add constraint bot_config_pkey PRIMARY KEY (id);
 alter table public.members add constraint members_pkey PRIMARY KEY (id);
 alter table public.members add constraint members_telegram_user_id_key UNIQUE (telegram_user_id);
 alter table public.payments add constraint payments_pkey PRIMARY KEY (id);
+alter table public.telegram_group_memberships add constraint telegram_group_memberships_pkey PRIMARY KEY (telegram_user_id);
 alter table public.telegram_unmatched add constraint telegram_unmatched_pkey PRIMARY KEY (telegram_user_id);
 alter table public.training_sessions add constraint training_sessions_pkey PRIMARY KEY (id);
 alter table public.training_sessions add constraint training_sessions_session_date_key UNIQUE (session_date);
@@ -134,6 +145,7 @@ alter table public.payments add constraint payments_member_id_fkey FOREIGN KEY (
 alter table public.payments add constraint payments_payment_method_check CHECK ((payment_method = ANY (ARRAY['Numerar'::text, 'Card'::text, 'Transfer bancar'::text, 'Altele'::text])));
 alter table public.payments add constraint payments_payment_type_check CHECK ((payment_type = ANY (ARRAY['Abonament nou'::text, 'Reînnoire'::text, 'Acces 1 zi'::text])));
 alter table public.payments add constraint payments_recorded_by_fkey FOREIGN KEY (recorded_by) REFERENCES auth.users(id);
+alter table public.telegram_group_memberships add constraint telegram_group_memberships_state_check CHECK ((state = ANY (ARRAY['unknown'::text, 'in_group'::text, 'left'::text, 'kicked'::text])));
 alter table public.training_sessions add constraint training_sessions_status_check CHECK ((status = ANY (ARRAY['scheduled'::text, 'done'::text, 'cancelled'::text])));
 
 CREATE INDEX attendance_log_session_idx ON public.attendance_log USING btree (session_id, created_at);
@@ -168,6 +180,39 @@ create view public.monthly_summary with (security_invoker=on) as
    FROM payments
   GROUP BY (date_trunc('month'::text, payment_date::timestamp with time zone)::date)
   ORDER BY (date_trunc('month'::text, payment_date::timestamp with time zone)::date) DESC;
+
+create view public.telegram_training_members as
+ SELECT m.id,
+    m.full_name,
+    m.phone,
+    m.email,
+    m.membership_type,
+    m.monthly_due,
+    m.status,
+    m.join_date,
+    m.created_at,
+    m.telegram_user_id,
+    m.telegram_username,
+    m.bot_dm_enabled,
+    m.is_admin
+   FROM members m
+     LEFT JOIN telegram_group_memberships g ON g.telegram_user_id = m.telegram_user_id
+  WHERE m.status = 'active'::text AND m.telegram_user_id IS NOT NULL AND (COALESCE(g.state, 'unknown'::text) <> ALL (ARRAY['left'::text, 'kicked'::text]));
+
+create view public.telegram_training_stats as
+ SELECT s.id,
+    s.full_name,
+    s.status,
+    s.is_admin,
+    s.telegram_user_id,
+    s.telegram_username,
+    s.bot_dm_enabled,
+    s.join_date,
+    s.yes_count,
+    s.no_count,
+    s.last_attended
+   FROM member_attendance_stats s
+     JOIN telegram_training_members m ON m.id = s.id;
 
 CREATE OR REPLACE FUNCTION public.merge_members(keep uuid, remove uuid)
  RETURNS void
@@ -210,36 +255,243 @@ BEGIN
 END $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.queue_telegram_kick(p_member uuid, p_expected_id bigint, p_chat_id text, p_actor bigint, p_name text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare m public.members; v_id uuid;
+begin
+  select * into m from public.members where id = p_member for update;
+  if not found then raise exception 'membru_inexistent'; end if;
+  if m.is_admin then raise exception 'membru_admin'; end if;
+  if m.telegram_user_id is null then raise exception 'fara_telegram'; end if;
+  if p_expected_id is not null and p_expected_id <> m.telegram_user_id then raise exception 'telegram_changed'; end if;
+  select id into v_id from public.bot_actions where action = 'kick_member'
+    and member_id = m.id and status = 'pending' order by created_at desc limit 1;
+  if v_id is not null then return v_id; end if;
+  insert into public.bot_actions (action, member_id, telegram_user_id, payload)
+  values ('kick_member', m.id, m.telegram_user_id, jsonb_build_object(
+    'sursa', case when p_actor is null then 'admin' else 'telegram' end,
+    'organizator_id', p_actor, 'organizator', p_name, 'chat_id', p_chat_id)) returning id into v_id;
+  return v_id;
+end $function$
+;
+
+CREATE OR REPLACE FUNCTION public.record_telegram_membership(p_user_id bigint, p_chat_id text, p_state text, p_observed_at timestamp with time zone, p_username text, p_first_name text, p_last_name text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  if p_state not in ('in_group', 'left', 'kicked') or p_observed_at is null then
+    raise exception 'membership_invalid';
+  end if;
+  insert into public.telegram_group_memberships as old
+    (telegram_user_id, chat_id, state, observed_at, next_check_at)
+  values (p_user_id, p_chat_id, p_state, p_observed_at, now() + interval '6 hours')
+  on conflict (telegram_user_id) do update set
+    chat_id = excluded.chat_id, state = excluded.state, observed_at = excluded.observed_at,
+    next_check_at = excluded.next_check_at, check_failed = false
+  where old.chat_id <> excluded.chat_id or old.observed_at is null or old.observed_at <= excluded.observed_at;
+  if not found then return; end if; -- redelivered/stale event cannot undo a newer check
+  if p_state = 'in_group' and not exists (select 1 from public.members where telegram_user_id = p_user_id) then
+    insert into public.telegram_unmatched (telegram_user_id, username, first_name, last_name)
+    values (p_user_id, p_username, p_first_name, p_last_name)
+    on conflict (telegram_user_id) do update set username = excluded.username,
+      first_name = excluded.first_name, last_name = excluded.last_name;
+  end if;
+end $function$
+;
+
+CREATE OR REPLACE FUNCTION public.telegram_membership_candidates(p_chat_id text)
+ RETURNS TABLE(telegram_user_id bigint)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  insert into public.telegram_group_memberships (telegram_user_id, chat_id)
+  select m.telegram_user_id, p_chat_id from public.members m where m.telegram_user_id is not null
+  union select n.telegram_user_id, p_chat_id from public.telegram_unmatched n where true
+  on conflict on constraint telegram_group_memberships_pkey do update set chat_id = excluded.chat_id,
+    state = 'unknown', observed_at = null, next_check_at = now(), check_failed = false
+    where public.telegram_group_memberships.chat_id <> excluded.chat_id;
+  return query select g.telegram_user_id from public.telegram_group_memberships g
+    where g.next_check_at <= now() or g.chat_id <> p_chat_id
+    order by g.next_check_at limit 10;
+end $function$
+;
+
+CREATE OR REPLACE FUNCTION public.telegram_membership_retry(p_user_id bigint, p_chat_id text)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  update public.telegram_group_memberships set next_check_at = now() + interval '15 minutes', check_failed = true
+    where telegram_user_id = p_user_id and chat_id = p_chat_id;
+$function$
+;
+
 revoke all on function public.merge_members(keep uuid, remove uuid) from public, anon, authenticated, service_role;
 grant execute on function public.merge_members(keep uuid, remove uuid) to service_role;
+revoke all on function public.queue_telegram_kick(p_member uuid, p_expected_id bigint, p_chat_id text, p_actor bigint, p_name text) from public, anon, authenticated, service_role;
+grant execute on function public.queue_telegram_kick(p_member uuid, p_expected_id bigint, p_chat_id text, p_actor bigint, p_name text) to service_role;
+revoke all on function public.record_telegram_membership(p_user_id bigint, p_chat_id text, p_state text, p_observed_at timestamp with time zone, p_username text, p_first_name text, p_last_name text) from public, anon, authenticated, service_role;
+grant execute on function public.record_telegram_membership(p_user_id bigint, p_chat_id text, p_state text, p_observed_at timestamp with time zone, p_username text, p_first_name text, p_last_name text) to service_role;
+revoke all on function public.telegram_membership_candidates(p_chat_id text) from public, anon, authenticated, service_role;
+grant execute on function public.telegram_membership_candidates(p_chat_id text) to service_role;
+revoke all on function public.telegram_membership_retry(p_user_id bigint, p_chat_id text) from public, anon, authenticated, service_role;
+grant execute on function public.telegram_membership_retry(p_user_id bigint, p_chat_id text) to service_role;
 
 revoke all on table public.attendance from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.attendance to anon, authenticated, service_role;
+grant select on table public.attendance to anon;
+grant insert on table public.attendance to anon;
+grant update on table public.attendance to anon;
+grant delete on table public.attendance to anon;
+grant select on table public.attendance to authenticated;
+grant insert on table public.attendance to authenticated;
+grant update on table public.attendance to authenticated;
+grant delete on table public.attendance to authenticated;
+grant select on table public.attendance to service_role;
+grant insert on table public.attendance to service_role;
+grant update on table public.attendance to service_role;
+grant delete on table public.attendance to service_role;
 alter table public.attendance enable row level security;
 revoke all on table public.attendance_log from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.attendance_log to anon, authenticated, service_role;
+grant select on table public.attendance_log to anon;
+grant insert on table public.attendance_log to anon;
+grant update on table public.attendance_log to anon;
+grant delete on table public.attendance_log to anon;
+grant select on table public.attendance_log to authenticated;
+grant insert on table public.attendance_log to authenticated;
+grant update on table public.attendance_log to authenticated;
+grant delete on table public.attendance_log to authenticated;
+grant select on table public.attendance_log to service_role;
+grant insert on table public.attendance_log to service_role;
+grant update on table public.attendance_log to service_role;
+grant delete on table public.attendance_log to service_role;
 alter table public.attendance_log enable row level security;
 revoke all on table public.bot_actions from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.bot_actions to anon, authenticated, service_role;
+grant select on table public.bot_actions to anon;
+grant insert on table public.bot_actions to anon;
+grant update on table public.bot_actions to anon;
+grant delete on table public.bot_actions to anon;
+grant select on table public.bot_actions to authenticated;
+grant insert on table public.bot_actions to authenticated;
+grant update on table public.bot_actions to authenticated;
+grant delete on table public.bot_actions to authenticated;
+grant select on table public.bot_actions to service_role;
+grant insert on table public.bot_actions to service_role;
+grant update on table public.bot_actions to service_role;
+grant delete on table public.bot_actions to service_role;
 alter table public.bot_actions enable row level security;
 revoke all on table public.bot_config from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.bot_config to anon, authenticated, service_role;
+grant select on table public.bot_config to anon;
+grant insert on table public.bot_config to anon;
+grant update on table public.bot_config to anon;
+grant delete on table public.bot_config to anon;
+grant select on table public.bot_config to authenticated;
+grant insert on table public.bot_config to authenticated;
+grant update on table public.bot_config to authenticated;
+grant delete on table public.bot_config to authenticated;
+grant select on table public.bot_config to service_role;
+grant insert on table public.bot_config to service_role;
+grant update on table public.bot_config to service_role;
+grant delete on table public.bot_config to service_role;
 alter table public.bot_config enable row level security;
 revoke all on table public.member_attendance_stats from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.member_attendance_stats to service_role;
+grant select on table public.member_attendance_stats to service_role;
+grant insert on table public.member_attendance_stats to service_role;
+grant update on table public.member_attendance_stats to service_role;
+grant delete on table public.member_attendance_stats to service_role;
 revoke all on table public.members from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.members to anon, authenticated, service_role;
+grant select on table public.members to anon;
+grant insert on table public.members to anon;
+grant update on table public.members to anon;
+grant delete on table public.members to anon;
+grant select on table public.members to authenticated;
+grant insert on table public.members to authenticated;
+grant update on table public.members to authenticated;
+grant delete on table public.members to authenticated;
+grant select on table public.members to service_role;
+grant insert on table public.members to service_role;
+grant update on table public.members to service_role;
+grant delete on table public.members to service_role;
 alter table public.members enable row level security;
 revoke all on table public.monthly_summary from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.monthly_summary to anon, authenticated, service_role;
+grant select on table public.monthly_summary to anon;
+grant insert on table public.monthly_summary to anon;
+grant update on table public.monthly_summary to anon;
+grant delete on table public.monthly_summary to anon;
+grant select on table public.monthly_summary to authenticated;
+grant insert on table public.monthly_summary to authenticated;
+grant update on table public.monthly_summary to authenticated;
+grant delete on table public.monthly_summary to authenticated;
+grant select on table public.monthly_summary to service_role;
+grant insert on table public.monthly_summary to service_role;
+grant update on table public.monthly_summary to service_role;
+grant delete on table public.monthly_summary to service_role;
 revoke all on table public.payments from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.payments to anon, authenticated, service_role;
+grant select on table public.payments to anon;
+grant insert on table public.payments to anon;
+grant update on table public.payments to anon;
+grant delete on table public.payments to anon;
+grant select on table public.payments to authenticated;
+grant insert on table public.payments to authenticated;
+grant update on table public.payments to authenticated;
+grant delete on table public.payments to authenticated;
+grant select on table public.payments to service_role;
+grant insert on table public.payments to service_role;
+grant update on table public.payments to service_role;
+grant delete on table public.payments to service_role;
 alter table public.payments enable row level security;
+revoke all on table public.telegram_group_memberships from public, anon, authenticated, service_role;
+grant select on table public.telegram_group_memberships to service_role;
+grant insert on table public.telegram_group_memberships to service_role;
+grant update on table public.telegram_group_memberships to service_role;
+grant delete on table public.telegram_group_memberships to service_role;
+alter table public.telegram_group_memberships enable row level security;
+revoke all on table public.telegram_training_members from public, anon, authenticated, service_role;
+grant select on table public.telegram_training_members to service_role;
+grant insert on table public.telegram_training_members to service_role;
+grant update on table public.telegram_training_members to service_role;
+grant delete on table public.telegram_training_members to service_role;
+revoke all on table public.telegram_training_stats from public, anon, authenticated, service_role;
+grant select on table public.telegram_training_stats to service_role;
+grant insert on table public.telegram_training_stats to service_role;
+grant update on table public.telegram_training_stats to service_role;
+grant delete on table public.telegram_training_stats to service_role;
 revoke all on table public.telegram_unmatched from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.telegram_unmatched to anon, authenticated, service_role;
+grant select on table public.telegram_unmatched to anon;
+grant insert on table public.telegram_unmatched to anon;
+grant update on table public.telegram_unmatched to anon;
+grant delete on table public.telegram_unmatched to anon;
+grant select on table public.telegram_unmatched to authenticated;
+grant insert on table public.telegram_unmatched to authenticated;
+grant update on table public.telegram_unmatched to authenticated;
+grant delete on table public.telegram_unmatched to authenticated;
+grant select on table public.telegram_unmatched to service_role;
+grant insert on table public.telegram_unmatched to service_role;
+grant update on table public.telegram_unmatched to service_role;
+grant delete on table public.telegram_unmatched to service_role;
 alter table public.telegram_unmatched enable row level security;
 revoke all on table public.training_sessions from public, anon, authenticated, service_role;
-grant select, insert, update, delete on table public.training_sessions to anon, authenticated, service_role;
+grant select on table public.training_sessions to anon;
+grant insert on table public.training_sessions to anon;
+grant update on table public.training_sessions to anon;
+grant delete on table public.training_sessions to anon;
+grant select on table public.training_sessions to authenticated;
+grant insert on table public.training_sessions to authenticated;
+grant update on table public.training_sessions to authenticated;
+grant delete on table public.training_sessions to authenticated;
+grant select on table public.training_sessions to service_role;
+grant insert on table public.training_sessions to service_role;
+grant update on table public.training_sessions to service_role;
+grant delete on table public.training_sessions to service_role;
 alter table public.training_sessions enable row level security;
 
 create policy "Authenticated read members" on public.members as PERMISSIVE for SELECT to authenticated using (true);

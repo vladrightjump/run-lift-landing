@@ -2534,6 +2534,12 @@
   /* „De rezolvat": inbox, fiecare rând cu acțiunea lui. */
   .admin-inbox { list-style: none; margin: 0; padding: 0; background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg); overflow: hidden; }
   .admin-inbox-rand { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--pa-line); animation: admin-intra var(--pa-dur) var(--pa-ease) both; }
+  .admin-inbox-actiuni { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; max-width: 100%; }
+  @media (max-width: 760px) {
+    .admin-inbox-rand { flex-wrap: wrap; }
+    .admin-inbox-actiuni { flex-basis: 100%; justify-content: flex-start; padding-left: 52px; }
+    .admin-inbox-actiuni button { white-space: normal; }
+  }
   .admin-inbox-rand:first-child { border-top: 0; }
   .admin-inbox-icon { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: var(--pa-r); background: var(--pa-surface-2); color: var(--pa-muted); }
   .admin-inbox-icon--urgent { background: var(--pa-danger-soft); color: var(--pa-danger); }

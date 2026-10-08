@@ -215,3 +215,28 @@ for (const width of [1280, 375]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
+
+for (const width of [1280, 375]) {
+  test(`verificarea unei avertizări persistă după reload și păstrează jurnalul la ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const scrieri = await deschideAdminul(page, '#acum');
+    const command = { id: 'check-1', action: 'kick_member', member_id: 'm1', status: 'failed', result: 'Persoana este blocată în Telegram.', created_at: new Date().toISOString(), processed_at: new Date().toISOString(), reviewed_at: null as string | null };
+    await page.route('**/rest/v1/rpc/admin_sala_date', (route) => route.fulfill({ json: { ...SALA, azi: new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Chisinau' }).format(new Date()), comenzi: [command], scoateri: [command] } }));
+    await page.route('**/rest/v1/rpc/admin_sala_marcheaza_verificat', async (route) => {
+      expect(route.request().postDataJSON()).toEqual({ p_token: 'token-e2e', p_comanda: 'check-1' });
+      command.reviewed_at = new Date().toISOString();
+      await route.fulfill({ json: null });
+    });
+    await page.reload();
+    await page.getByRole('button', { name: 'Marchează ca verificat' }).click();
+    await expect(page.getByRole('button', { name: 'Marchează ca verificat' })).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'De rezolvat' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Marchează ca verificat' })).toHaveCount(0);
+    await page.goto('/admin#grup-bot');
+    await expect(page.getByText(/verificat de admin/)).toBeVisible();
+    await expect(page.getByText(/Persoana este blocată în Telegram/)).toBeVisible();
+    expect(scrieri).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  });
+}

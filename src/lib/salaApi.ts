@@ -90,6 +90,8 @@ type ActiuneBot =
   | 'add_session';
 
 export type SalaComanda = {
+  /** Acknowledged by an admin; execution status and result remain unchanged. */
+  reviewed_at?: string | null;
   id: string;
   action: ActiuneBot;
   member_id: string | null;
@@ -284,3 +286,6 @@ export const MESAJE_REFUZ: Record<RefuzSala, string> = {
   motiv_prea_lung: 'Motivul are voie la 200 de caractere.',
   antrenament_anulat: 'Antrenamentul de mâine e anulat, deci botul n-are pentru ce să trimită sondaj sau reminder.',
 };
+
+export const marcheazaComandaVerificata = (token: string, comanda: string): Promise<void> =>
+  rpc('admin_sala_marcheaza_verificat', { p_token: token, p_comanda: comanda });
