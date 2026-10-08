@@ -14,3 +14,9 @@
 .admin-probe-settings details { margin-top: 20px; }
 .admin-probe-settings summary { cursor: pointer; padding: 12px 0; }
 @media (max-width: 700px) { .admin-probe-layout { grid-template-columns: minmax(0, 1fr); } }
+
+.admin-probe-copy { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 20px 0; border: 0; border-block: 1px solid var(--admin-border, #ddd); }
+.admin-probe-copy legend, .admin-probe-copy p { margin: 0; }
+.admin-probe-copy .admin-btn-ghost { justify-self: start; }
+
+.admin-probe-copy legend { font-weight: 700; padding: 0; }

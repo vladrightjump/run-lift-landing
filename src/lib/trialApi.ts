@@ -1,6 +1,7 @@
 import { rpc } from './adminApi';
 
 export type TrialConfig = {
+  message_texts?: Record<string, string>;
   enabled: boolean; bot_username: string; welcome_text: string; trial_conditions: string;
   trial_price: string; bring_text: string; continuation_conditions: string;
   duration_minutes: number; organizer_telegram_id: number | null; contact_text: string;

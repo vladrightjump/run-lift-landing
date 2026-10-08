@@ -25,3 +25,9 @@ Persoana rămâne la **Antrenamente → Persoane noi**, separat de membri. Botul
 ## Limite
 
 Un singur grup și o singură probă deschisă per persoană. Nu există plată online, chatbot AI sau verificare automată a prezenței fizice. Evenimentul HYROX Trial și înscrierea la antrenamente rămân fluxuri distincte. Configurația publică nu expune conversații, ID-uri private sau linkul grupului.
+
+## Editarea mesajelor
+
+În **Setări bot → Antrenamente de probă → Mesajele fluxului**, alege mesajul, modifică textul și salvează setările. Sunt disponibile confirmările, reminderul, notificările organizatorului, întrebarea de continuare, invitația și mesajele principale ale conversației. Bun venit, costul și condițiile rămân în câmpurile dedicate. Previzualizarea arată textul editabil și explică informațiile adăugate automat. Datele, condițiile acceptate, linkurile și butoanele sunt păstrate de bot. Mesajele de eroare și verificările de acces rămân gestionate de sistem.
+
+Modificările se folosesc la trimiterile viitoare, inclusiv mesajele încă în așteptare; mesajele deja trimise nu sunt editate în Telegram. „Restabilește mesajul implicit” elimină personalizarea după salvare. Aplică și `supabase/sql/supabase-migration-trial-messages.sql`, după migrarea inițială a probelor.

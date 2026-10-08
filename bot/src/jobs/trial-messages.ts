@@ -1,3 +1,4 @@
+import { trialCopy } from '../lib/trial-copy.js';
 import { createAdminClient } from '../lib/supabase.js';
 import { sendTrialText, createTrialInvite, getChatMember, revokeInvite, type InlineKeyboard } from '../lib/telegram.js';
 import { bookingText, button, conditionsText, eligibleForInvite, mainKeyboard, trialConfig, verifyTrialPermissions,
@@ -9,17 +10,17 @@ export function renderTrialMessage(m: Pick<TrialMessage, 'kind' | 'payload'>, p:
   const session = b ? bookingText(b) : '';
   const cancel = b ? [[button('Anulează / reprogramare', `t:cancel:${b.id}:${b.version}`)], [button('Am o întrebare', 't:question')]] : mainKeyboard;
   switch (m.kind) {
-    case 'booking_confirmed': return { text: `Proba ta este confirmată!\n${session}\n\n${conditionsText(b!.conditions_snapshot)}\n\nPoți opri mesajele cu /stop.`, keyboard: cancel };
-    case 'session_changed': return { text: `Programul probei tale a fost modificat:\n${session}\n\n${conditionsText(b!.conditions_snapshot)}`, keyboard: cancel };
-    case 'organizer_booking': return { text: `${name} vine la antrenamentul de probă:\n${session}` };
-    case 'reminder': return { text: `Te așteptăm la antrenamentul de probă:\n${session}\n\n${conditionsText(b!.conditions_snapshot)}`, keyboard: cancel };
-    case 'attendance_request': return { text: `${name} avea antrenamentul de probă:\n${session}\n\nA venit?`, keyboard: [[button('A venit', `t:present:${b!.id}:${b!.version}`), button('Nu a venit', `t:absent:${b!.id}:${b!.version}`)]] };
-    case 'cancelled': return { text: `Antrenamentul tău de probă a fost anulat:\n${session}\nPoți alege altă zi.`, keyboard: mainKeyboard };
-    case 'organizer_cancelled': return { text: `Proba pentru ${name} a fost anulată:\n${session}` };
-    case 'continuation': return { text: `Mulțumim că ai venit! Vrei să continui antrenamentele cu noi?\n\n${c.continuation_conditions}`, keyboard: [[button('Da, vreau să continui', `t:yes:${b!.id}:${b!.version}`)], [button('Nu acum', `t:no:${b!.id}:${b!.version}`)]] };
-    case 'rebook': return { text: 'Nu ne-am întâlnit la antrenamentul de probă. Dacă dorești, poți alege altă zi.', keyboard: mainKeyboard };
-    case 'question': return { text: `Întrebare de la ${name}:\n${String(m.payload.body ?? '').slice(0, 3000)}`, keyboard: [[button('Răspunde', `t:reply:${m.payload.id}`)]] };
-    case 'answer': return { text: `Răspuns de la organizator\nÎntrebarea ta: ${String(m.payload.body ?? '').slice(0, 400)}\n\n${String(m.payload.response ?? '')}`, keyboard: mainKeyboard };
+    case 'booking_confirmed': return { text: `${trialCopy(c, 'booking_confirmed')}\n${session}\n\n${conditionsText(b!.conditions_snapshot)}\n\nPoți opri mesajele cu /stop.`, keyboard: cancel };
+    case 'session_changed': return { text: `${trialCopy(c, 'session_changed')}\n${session}\n\n${conditionsText(b!.conditions_snapshot)}`, keyboard: cancel };
+    case 'organizer_booking': return { text: `${trialCopy(c, 'organizer_booking')}\n${name}\n${session}` };
+    case 'reminder': return { text: `${trialCopy(c, 'reminder')}\n${session}\n\n${conditionsText(b!.conditions_snapshot)}`, keyboard: cancel };
+    case 'attendance_request': return { text: `${trialCopy(c, 'attendance_request')}\n${name}\n${session}`, keyboard: [[button('A venit', `t:present:${b!.id}:${b!.version}`), button('Nu a venit', `t:absent:${b!.id}:${b!.version}`)]] };
+    case 'cancelled': return { text: `${trialCopy(c, 'cancelled')}\n${session}`, keyboard: mainKeyboard };
+    case 'organizer_cancelled': return { text: `${trialCopy(c, 'organizer_cancelled')}\n${name}\n${session}` };
+    case 'continuation': return { text: `${trialCopy(c, 'continuation')}\n\n${c.continuation_conditions}`, keyboard: [[button('Da, vreau să continui', `t:yes:${b!.id}:${b!.version}`)], [button('Nu acum', `t:no:${b!.id}:${b!.version}`)]] };
+    case 'rebook': return { text: trialCopy(c, 'rebook'), keyboard: mainKeyboard };
+    case 'question': return { text: `${trialCopy(c, 'question')}\n${name}:\n${String(m.payload.body ?? '').slice(0, 3000)}`, keyboard: [[button('Răspunde', `t:reply:${m.payload.id}`)]] };
+    case 'answer': return { text: `${trialCopy(c, 'answer')}\nÎntrebarea ta: ${String(m.payload.body ?? '').slice(0, 400)}\n\n${String(m.payload.response ?? '')}`, keyboard: mainKeyboard };
     default: throw new Error(`Tip de mesaj necunoscut: ${m.kind}`);
   }
 }
@@ -57,7 +58,7 @@ async function invitation(db: TrialDb, p: Prospect, b: Booking): Promise<string>
   if (saveError) { await revokeInvite(group, link); throw saveError; }
   return link;
 }
-async function deliver(db: TrialDb, m: TrialMessage, c: TrialConfig) {
+async function deliver(db: TrialDb, m: TrialMessage) {
   const { data: prospect, error } = await db.from('trial_prospects').select('*').eq('id', m.prospect_id).single();
   if (error) throw error;
   const p = prospect as Prospect;
@@ -76,8 +77,8 @@ async function deliver(db: TrialDb, m: TrialMessage, c: TrialConfig) {
   if (!freshConfig?.enabled || (!p.dm_enabled && participant) || !messageStillRelevant(m, b)) return complete(db, m, 'cancelled', 'Stare schimbată înaintea trimiterii');
   let text: string;
   let keyboard: InlineKeyboard | undefined;
-  if (m.kind === 'invite') text = `Te așteptăm în comunitate! Solicită intrarea cu acest link, folosind același cont Telegram:\n${await invitation(db, p, b!)}`;
-  else ({ text, keyboard } = renderTrialMessage(m, p, b, c));
+  if (m.kind === 'invite') text = `${trialCopy(freshConfig, 'invite')}\n${await invitation(db, p, b!)}`;
+  else ({ text, keyboard } = renderTrialMessage(m, p, b, freshConfig));
   try {
     const result = await sendTrialText(m.recipient_telegram_id, text, keyboard);
     if (result.ok && result.result) return complete(db, m, 'sent', `Telegram message ${result.result.message_id}`);
@@ -121,7 +122,7 @@ export async function processTrialMessages(): Promise<void> {
     const { data, error } = await db.rpc('trial_claim_messages', { p_limit: 10 });
     if (error) throw error;
     for (const m of (data ?? []) as TrialMessage[]) {
-      try { await deliver(db, m, c); }
+      try { await deliver(db, m); }
       catch (e) { await complete(db, m, 'failed', e instanceof Error ? e.message : 'Eroare la pregătirea mesajului'); }
     }
   } finally { running = false; }

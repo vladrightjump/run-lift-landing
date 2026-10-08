@@ -11,7 +11,7 @@ const api = vi.hoisted(() => ({ loadTrials: vi.fn(), saveTrialConfig: vi.fn(), t
 vi.mock('../../src/lib/trialApi', () => api);
 const toast = vi.fn();
 const fixture = (): TrialData => ({
-  config: { enabled: false, bot_username: 'ParkTrialBot', welcome_text: 'Bine ai venit', trial_conditions: 'Vino la timp', trial_price: '100 MDL', bring_text: 'Apă', continuation_conditions: 'Abonament', duration_minutes: 60, organizer_telegram_id: 123, contact_text: 'Scrie-ne', permissions_verified_at: null },
+  config: { message_texts: {}, enabled: false, bot_username: 'ParkTrialBot', welcome_text: 'Bine ai venit', trial_conditions: 'Vino la timp', trial_price: '100 MDL', bring_text: 'Apă', continuation_conditions: 'Abonament', duration_minutes: 60, organizer_telegram_id: 123, contact_text: 'Scrie-ne', permissions_verified_at: null },
   prospects: [{ id: 'p1', telegram_user_id: 456, telegram_username: 'ana', full_name: 'Ana Rusu', source: 'home', stage: 'awaiting_attendance', dm_enabled: true }],
   bookings: [{ id: 'b1', prospect_id: 'p1', status: 'awaiting_attendance', version: 1, session_start: '2026-10-08T03:30:00Z', session_location: 'Parc', attendance_at: null, continuation: null }],
   questions: [{ id: 'q1', prospect_id: 'p1', body: 'Ce aduc?', response: null, status: 'open' }],
@@ -70,4 +70,36 @@ describe('persoane noi', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvează setările probei' }));
     await waitFor(() => expect(api.saveTrialConfig).toHaveBeenCalledWith('token', expect.objectContaining({ enabled: false, trial_price: '150 MDL' })));
   });
+});
+
+it('editează, previzualizează și restabilește mesajele fără a pierde alte modificări', async () => {
+  admin(<TrialSettings />);
+  const editor = await screen.findByLabelText('Textul mesajului de probă');
+  fireEvent.change(editor, { target: { value: 'Ne vedem curând!\nEchipa Park' } });
+  expect(within(screen.getByLabelText('Previzualizarea textului')).getByText(/Ne vedem curând!/)).toBeDefined();
+  fireEvent.change(screen.getByLabelText('Mesaj de editat'), { target: { value: 'reminder' } });
+  fireEvent.change(screen.getByLabelText('Textul mesajului de probă'), { target: { value: 'Nu uita apa!' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Restabilește mesajul implicit' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Salvează setările probei' }));
+  await waitFor(() => expect(api.saveTrialConfig).toHaveBeenCalledWith('token', expect.objectContaining({ message_texts: { booking_confirmed: 'Ne vedem curând!\nEchipa Park' } })));
+});
+it('nu salvează un mesaj gol și păstrează ciorna după eroare', async () => {
+  api.saveTrialConfig.mockRejectedValue(new Error('offline'));
+  admin(<TrialSettings />);
+  const editor = await screen.findByLabelText('Textul mesajului de probă');
+  fireEvent.change(editor, { target: { value: '   ' } });
+  expect((screen.getByRole('button', { name: 'Salvează setările probei' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(editor, { target: { value: 'Mesaj personalizat' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Salvează setările probei' }));
+  await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' })));
+  expect((screen.getByLabelText('Textul mesajului de probă') as HTMLTextAreaElement).value).toBe('Mesaj personalizat');
+});
+
+it('dezactivează editorul când migrarea mesajelor nu este aplicată', async () => {
+  const data = fixture(); delete data.config.message_texts;
+  api.loadTrials.mockResolvedValue(data);
+  admin(<TrialSettings />);
+  const editor = await screen.findByLabelText('Textul mesajului de probă');
+  expect(editor.closest('fieldset')?.disabled).toBe(true);
+  expect(screen.getByText(/Editorul va fi disponibil/)).toBeDefined();
 });

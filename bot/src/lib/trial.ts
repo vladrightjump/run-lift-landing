@@ -1,3 +1,4 @@
+import { trialCopy } from './trial-copy.js';
 import { createAdminClient } from './supabase.js';
 import { trialSessions, type SessionRow } from './sessions.js';
 import { GYM_TZ, todayInTz, localWeekdayAndTime } from './tz.js';
@@ -7,6 +8,7 @@ import { membershipState, recordMembership } from './membership.js';
 
 export type TrialDb = ReturnType<typeof createAdminClient>;
 export interface TrialConfig {
+  message_texts?: Record<string, string>;
   enabled: boolean; bot_username: string; welcome_text: string; trial_conditions: string;
   trial_price: string; bring_text: string; continuation_conditions: string; duration_minutes: number;
   organizer_telegram_id: number | null; contact_text: string; permissions_verified_at: string | null;
@@ -64,21 +66,21 @@ async function showDates(db: TrialDb, p: Prospect, c: TrialConfig) {
   if (booking) return showProgress(p.telegram_user_id, booking, c);
   if (!p.full_name) {
     await step(db, p, 'name');
-    return send(p.telegram_user_id, 'Scrie numele și prenumele tău pentru antrenamentul de probă.');
+    return send(p.telegram_user_id, trialCopy(c, 'name_prompt'));
   }
   const dates = await eligibleTrialDates(db);
   await step(db, p, 'choose_session');
-  await send(p.telegram_user_id, dates.length ? 'Alege antrenamentul. Orele sunt pentru Chișinău.' : 'Nu sunt antrenamente disponibile în următoarele 14 zile. Poți reveni sau ne poți scrie.',
+  await send(p.telegram_user_id, dates.length ? trialCopy(c, 'choose_session') : trialCopy(c, 'no_sessions'),
     [...dates.map(t => [button(`${t.date}, ${t.time} · ${t.location}`.slice(0, 120), `t:date:${t.date}`)]),
       [button('Reîncarcă programul', 't:dates'), button('Am o întrebare', 't:question')]]);
 }
 async function showProgress(id: number, b: Booking, c: TrialConfig) {
   if (b.status === 'attended') {
     if (b.continuation === 'yes') return send(id, 'Ai confirmat continuarea. Invitația este trimisă separat; poți cere un link nou dacă a expirat.', [[button('Primește invitația', `t:invite:${b.id}:${b.version}`)]]);
-    return send(id, `Vrei să continui antrenamentele cu noi?\n\n${c.continuation_conditions}`, [[button('Da, vreau să continui', `t:yes:${b.id}:${b.version}`)], [button('Nu acum', `t:no:${b.id}:${b.version}`)]]);
+    return send(id, `${trialCopy(c, 'continuation')}\n\n${c.continuation_conditions}`, [[button('Da, vreau să continui', `t:yes:${b.id}:${b.version}`)], [button('Nu acum', `t:no:${b.id}:${b.version}`)]]);
   }
-  if (b.status === 'awaiting_attendance' || new Date(b.session_start).getTime() <= Date.now()) return send(id, 'Așteptăm confirmarea organizatorului privind prezența ta la probă.');
-  return send(id, `Proba ta este programată:\n${bookingText(b)}\n\n${conditionsText(b.conditions_snapshot)}`, [[button('Anulează / alege altă zi', `t:cancel:${b.id}:${b.version}`)], [button('Am o întrebare', 't:question')]]);
+  if (b.status === 'awaiting_attendance' || new Date(b.session_start).getTime() <= Date.now()) return send(id, trialCopy(c, 'awaiting_attendance'));
+  return send(id, `${trialCopy(c, 'booking_confirmed')}\n${bookingText(b)}\n\n${conditionsText(b.conditions_snapshot)}`, [[button('Anulează / alege altă zi', `t:cancel:${b.id}:${b.version}`)], [button('Am o întrebare', 't:question')]]);
 }
 async function prospect(db: TrialDb, id: number): Promise<Prospect | null> {
   const { data, error } = await db.from('trial_prospects').select('*').eq('telegram_user_id', id).maybeSingle();
@@ -108,7 +110,7 @@ export async function trialPrivateMessage(from: TrialUser, text: string, message
     if (error) throw error;
     p = await prospect(db, from.id);
     if (!p) throw new Error('Nu s-a putut crea înscrierea');
-    await send(from.id, `${c.welcome_text}\n\n${conditionsText(trialConditions(c))}\n\nScrie numele și prenumele tău.\nPoți opri mesajele cu /stop.`); return;
+    await send(from.id, `${c.welcome_text}\n\n${conditionsText(trialConditions(c))}\n\n${trialCopy(c, 'name_prompt')}\nPoți opri mesajele cu /stop.`); return;
   }
   if (start) {
     const { error } = await db.from('trial_prospects').update({ dm_enabled: true }).eq('id', p.id);
@@ -116,7 +118,7 @@ export async function trialPrivateMessage(from: TrialUser, text: string, message
     const b = await currentBooking(db, p.id);
     if (b) return showProgress(from.id, b, c);
     if (p.stage === 'closed') return send(from.id, 'Ai încheiat înscrierea. Dacă te răzgândești, poți alege o nouă probă.', mainKeyboard);
-    if (!p.full_name) return send(from.id, `${c.welcome_text}\n\n${conditionsText(trialConditions(c))}\n\nScrie numele și prenumele tău.`);
+    if (!p.full_name) return send(from.id, `${c.welcome_text}\n\n${conditionsText(trialConditions(c))}\n\n${trialCopy(c, 'name_prompt')}`);
     return send(from.id, `${c.welcome_text}\n\n${conditionsText(trialConditions(c))}`, mainKeyboard);
   }
   if (!p.dm_enabled) return send(from.id, 'Mesajele sunt oprite. Scrie /start pentru a relua.');
@@ -125,7 +127,7 @@ export async function trialPrivateMessage(from: TrialUser, text: string, message
     const { error } = await db.rpc('trial_question', { p_telegram_id: from.id, p_body: text, p_message_id: messageId ?? null });
     if (error) throw error;
     await step(db, p, p.full_name ? 'choose_session' : 'name');
-    return send(from.id, 'Întrebarea a fost înregistrată pentru organizator. Vei primi răspunsul aici.', mainKeyboard);
+    return send(from.id, trialCopy(c, 'question_received'), mainKeyboard);
   }
   if (!p.full_name) {
     const name = text.replace(/\s+/g, ' ').trim();
@@ -154,7 +156,7 @@ export async function trialCallback(cb: { id: string; from: TrialUser; data: str
   if (action === 'reply' || action === 'sendanswer' || action === 'discardanswer') return organizerReplyCallback(db, cb.from.id, action, id);
   const p = await prospect(db, cb.from.id);
   if (!p || !p.dm_enabled) return send(cb.from.id, 'Scrie /start pentru a începe sau relua.');
-  if (action === 'question') { await step(db, p, 'question'); return send(cb.from.id, 'Scrie întrebarea pentru organizator.'); }
+  if (action === 'question') { await step(db, p, 'question'); return send(cb.from.id, trialCopy(c, 'question_prompt')); }
   if (action === 'dates') return showDates(db, p, c);
   if (action === 'date') {
     const dates = await eligibleTrialDates(db);
@@ -172,13 +174,13 @@ export async function trialCallback(cb: { id: string; from: TrialUser; data: str
     if (accepted.date !== id || !accepted.conditions) return send(cb.from.id, 'Alege din nou ziua și verifică condițiile.', mainKeyboard);
     const { error } = await db.rpc('trial_book', { p_telegram_id: cb.from.id, p_date: id, p_conditions: accepted.conditions });
     if (error) return send(cb.from.id, 'Nu am putut rezerva această probă. Programul sau înscrierea s-a schimbat. Alege din nou.', mainKeyboard);
-    return send(cb.from.id, 'Rezervarea este înregistrată. Confirmarea completă va sosi aici.');
+    return send(cb.from.id, trialCopy(c, 'booking_received'));
   }
   if (action === 'cancel' || action === 'yes' || action === 'no') {
     const rpc = action === 'cancel' ? 'trial_cancel' : 'trial_continue';
     const { error } = await db.rpc(rpc, { p_telegram_id: cb.from.id, p_booking: id, p_version: Number(rawVersion), ...(action === 'cancel' ? {} : { p_continue: action === 'yes' }) });
     if (error) return send(cb.from.id, 'Acțiunea nu mai este disponibilă. Scrie /start pentru starea actuală.');
-    return send(cb.from.id, action === 'cancel' ? 'Proba a fost anulată. Poți alege altă zi.' : action === 'yes' ? 'Ai confirmat continuarea. Vei primi invitația după verificare.' : 'Am înregistrat răspunsul. Mulțumim că ai venit!', action === 'cancel' ? mainKeyboard : undefined);
+    return send(cb.from.id, action === 'cancel' ? trialCopy(c, 'cancelled') : action === 'yes' ? trialCopy(c, 'continuation_yes') : trialCopy(c, 'continuation_no'), action === 'cancel' ? mainKeyboard : undefined);
   }
   if (action === 'invite') {
     const b = await currentBooking(db, p.id);

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
 
-const config = { enabled: true, bot_username: 'ParkTrialBot', welcome_text: 'Bine ai venit!', trial_conditions: 'Vino cu 10 minute înainte.', trial_price: '100 MDL', bring_text: 'Apă și prosop.', continuation_conditions: 'Discutăm abonamentul.', duration_minutes: 60, organizer_telegram_id: 123, contact_text: 'Scrie-ne pe Instagram.', permissions_verified_at: new Date().toISOString() };
+const config = { message_texts: {}, enabled: true, bot_username: 'ParkTrialBot', welcome_text: 'Bine ai venit!', trial_conditions: 'Vino cu 10 minute înainte.', trial_price: '100 MDL', bring_text: 'Apă și prosop.', continuation_conditions: 'Discutăm abonamentul.', duration_minutes: 60, organizer_telegram_id: 123, contact_text: 'Scrie-ne pe Instagram.', permissions_verified_at: new Date().toISOString() };
 for (const width of [375, 1280]) {
   for (const phase of ['landing', 'soon', 'leaderboard', 'next']) {
     test(`intrare Telegram ${phase} la ${width}px`, async ({ page }) => {
@@ -46,3 +46,31 @@ for (const width of [375, 1280]) {
     await page.screenshot({ path: `/tmp/trial-admin-${width}.png`, fullPage: true });
   });
 }
+
+for (const width of [375, 1280]) test(`editează mesajul de probă în setări la ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  let saved: Record<string, unknown> | null = null;
+  await page.route('**/rest/v1/rpc/*', async route => {
+    const name = route.request().url().split('/').pop();
+    if (name === 'admin_trial_config') saved = route.request().postDataJSON().p_config;
+    const value = name === 'admin_check_token' ? true
+      : name === 'admin_trial_data' ? { config: saved ?? config, prospects: [], bookings: [], questions: [], messages: [], organizers: [] }
+      : name === 'admin_list_editions' ? [{ editie: SNAPSHOT_CONFIG.number, este_curenta: true }]
+      : name === 'admin_sala_date' ? { azi: '2026-10-08', config: { poll_days: [0, 2, 4], training_time: '06:30', location: 'Parc', enabled: false }, membri: [], antrenamente: [], raspunsuri: [], necunoscuti: [], comenzi: [], scoateri: [] } : [];
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) });
+  });
+  await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+  await page.goto('/admin#grup-bot');
+  await page.getByLabel('Mesaj de editat').selectOption('reminder');
+  await expect(page.getByLabel('Textul mesajului de probă', { exact: true })).toHaveValue('Te așteptăm la antrenamentul de probă:');
+  await page.getByLabel('Textul mesajului de probă', { exact: true }).fill('Ne vedem mâine!\nAdu apă și energie.');
+  await expect(page.getByLabel('Previzualizarea textului')).toContainText('Ne vedem mâine!');
+  await page.locator('.admin-probe-copy').scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('.admin-probe-copy').screenshot({ path: `/tmp/trial-copy-${width}.png` });
+  await page.getByRole('button', { name: 'Salvează setările probei' }).click();
+  await expect.poll(() => saved?.message_texts).toEqual({ reminder: 'Ne vedem mâine!\nAdu apă și energie.' });
+  await page.reload();
+  await page.getByLabel('Mesaj de editat').selectOption('reminder');
+  await expect(page.getByLabel('Textul mesajului de probă', { exact: true })).toHaveValue('Ne vedem mâine!\nAdu apă și energie.');
+});

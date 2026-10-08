@@ -98,7 +98,7 @@ test('stale accept cannot book an unreviewed date, and duplicate book shows exis
   await trialCallback(cb('t:book:2026-10-10'));
   assert.ok(!calls.some(x=>x.url.pathname.includes('/rpc/trial_book')));
   assert.ok(calls.some(x=>String(x.body.text).includes('Alege din nou ziua')));
-  assert.ok(calls.some(x=>String(x.body.text).includes('Proba ta este programată')));
+  assert.ok(calls.some(x=>String(x.body.text).includes('Proba ta este confirmată')));
 });
 test('attendance callbacks require private identity and organizer authorization', async () => {
   const calls=mock(url=>url.pathname.endsWith('/trial_config')?config:url.pathname.endsWith('/members')?null:telegram);
@@ -243,4 +243,19 @@ test('converted members can stop both trial and regular private messages', async
   await handleUpdate({message:{message_id: 50, chat:{id:11,type:'private'},from:{id:11},text:'/stop'}});
   assert.ok(calls.some(c => c.url.pathname.endsWith('/members') && c.method === 'PATCH' && c.body.bot_dm_enabled === false));
   assert.ok(calls.some(c => c.url.pathname.endsWith('/trial_prospects') && c.method === 'PATCH' && c.body.dm_enabled === false));
+});
+
+test('custom trial copy preserves booking conditions and action identities', () => {
+  const c = {...config, message_texts: {booking_confirmed: 'Salut <Ana>!\nNe vedem curând.', continuation: 'Mai vii cu noi?'}};
+  const confirmation = renderTrialMessage({kind:'booking_confirmed',payload:{}}, p, b, c);
+  assert.match(confirmation.text, /Salut <Ana>!/);
+  assert.match(confirmation.text, /50 lei/);
+  assert.match(confirmation.text, /Parc/);
+  assert.match(confirmation.text, /stop/);
+  assert.equal(confirmation.keyboard?.[0][0].callback_data, `t:cancel:${b.id}:2`);
+  const continuation = renderTrialMessage({kind:'continuation',payload:{}}, p, b, c);
+  assert.match(continuation.text, /Mai vii cu noi/);
+  assert.match(continuation.text, /Condițiile continuării/);
+  assert.equal(continuation.keyboard?.[0][0].callback_data, `t:yes:${b.id}:2`);
+  assert.match(renderTrialMessage({kind:'reminder',payload:{}},p,b,c).text, /Te așteptăm/);
 });

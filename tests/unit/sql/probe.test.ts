@@ -150,3 +150,16 @@ describe('trial onboarding transactions', () => {
   await expect(db.query(`select runlift.admin_trial_data('00000000-0000-0000-0000-000000000000')`)).rejects.toThrow('invalid_token');
  });
 });
+
+it('validează și păstrează mesajele personalizate numai pentru admini', async () => {
+ await db.exec('update public.trial_config set enabled=false');
+ const save = (messages: unknown, token = ADMIN_TOKEN) => db.query('select runlift.admin_trial_config($1,$2::jsonb)', [token, JSON.stringify({message_texts: messages})]);
+ await expect(save({reminder: 'Salut!'}, '00000000-0000-0000-0000-000000000000')).rejects.toThrow('invalid_token');
+ for (const invalid of [null, [], {reminder: 3}, {reminder: ' '}, {reminder: 'a'.repeat(1501)}, {unknown: 'text'}]) await expect(save(invalid)).rejects.toThrow('invalid_trial_messages');
+ await save({reminder: 'Salut!\nVino cu apă.'});
+ expect((await db.query<{message_texts: unknown}>('select message_texts from public.trial_config')).rows[0].message_texts).toEqual({reminder: 'Salut!\nVino cu apă.'});
+ const publicConfig = (await db.query<{c: object}>('select runlift.public_trial_config() c')).rows[0].c;
+ expect(publicConfig).not.toHaveProperty('message_texts');
+ await save({});
+ expect((await db.query<{message_texts: unknown}>('select message_texts from public.trial_config')).rows[0].message_texts).toEqual({});
+});
