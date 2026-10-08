@@ -31,15 +31,15 @@ Exposed schemas (`public, graphql_public, runlift`).
 
 ---
 
-## Migrări în așteptare — antrenamente de probă
+## Migrări aplicate — antrenamente de probă (8 octombrie 2026)
 
-PR #64 introduce tabelele `public.trial_*` și funcțiile aferente. Nu sunt aplicate în producție. Cu funcția dezactivată, aplică în ordine:
+PR #64 introduce tabelele `public.trial_*` și funcțiile aferente. Aplicate în producție într-o singură tranzacție, cu funcția dezactivată, în ordinea:
 
 1. `supabase/sql/supabase-migration-sala-probe.sql`
 2. `supabase/sql/supabase-migration-trial-messages.sql`
 3. `supabase/sql/supabase-migration-trial-review-fixes.sql`
 
-A treia migrare adaugă confirmarea atomică a răspunsurilor, eliberarea mesajelor suspendate, verificarea versiunii prezenței și oprirea înscrierilor când drepturile botului nu sunt confirmate. Livrează apoi aplicația și botul compatibile; [instrucțiunile de activare](docs/features/antrenament-proba.md) descriu verificările necesare. Snapshot-urile live se actualizează numai după aplicare.
+A treia migrare adaugă confirmarea atomică a răspunsurilor, eliberarea mesajelor suspendate, verificarea versiunii prezenței și oprirea înscrierilor când drepturile botului nu sunt confirmate. Livrează apoi aplicația și botul compatibile; [instrucțiunile de activare](docs/features/antrenament-proba.md) descriu verificările necesare. Snapshot-urile live sunt regenerate după aplicare. Webhook-ul include `chat_join_request`; botul rulează commitul `eee0861`. Activarea înscrierilor așteaptă condițiile reale și organizatorul.
 
 ---
 

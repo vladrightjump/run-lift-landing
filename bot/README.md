@@ -177,7 +177,7 @@ iar `/start` le reia. Accesul în grup cere **prezență confirmată + răspuns 
 
 Ordine de livrare (fără activare automată la deploy):
 
-1. Aplică `supabase/sql/supabase-migration-sala-probe.sql` și păstrează `enabled=false`.
+1. Aplică în ordine migrările `sala-probe`, `trial-messages` și `trial-review-fixes` din `supabase/sql/supabase-migration-*.sql` și păstrează `enabled=false`. Aplicate în producție pe 8 octombrie 2026.
 2. Livrează botul și adminul. Reînregistrează webhook-ul cu `npm --prefix bot run set-webhook`;
    lista include acum `chat_join_request`, `chat_member`, `message`, `callback_query`.
 3. Configurează în admin username-ul real, costul și condițiile reale, ce trebuie adus,
