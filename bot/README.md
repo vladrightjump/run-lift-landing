@@ -199,3 +199,14 @@ au maximum trei încercări; blocarea botului oprește mesajele participantului.
 Corecțiile de prezență invalidează invitațiile în baza de date, iar fiecare cerere de
 aderare verifică identitatea, versiunea și eligibilitatea actuale. Botul nu deblochează
 niciodată un cont exclus. Dezactivarea oprește automatizările și CTA-ul, păstrând istoricul.
+
+## Mesaje și sondaje libere din privat
+
+Organizatorii autorizați în `TELEGRAM_ADMIN_CHAT_IDS` pot scrie:
+
+- `/mesaj Salut! Ne vedem la antrenament.` — text simplu, maximum 3500 de caractere; păstrează rândurile, fără interpretare HTML/Markdown.
+- `/poll Ce preferați? | Alergare | Forță` — sondaj Telegram anonim, un singur răspuns, 2–12 variante distincte. Întrebare: maximum 300 de caractere; variantă: maximum 100. Separatorul `|` delimitează variantele.
+
+Botul afișează grupul configurat și conținutul exact înainte de „Trimite în grup” / „Renunță”. O comandă nouă înlocuiește previzualizarea anterioară pentru aceste două comenzi. Confirmarea este legată de organizator, expiră după 15 minute și nu poate fi folosită de două ori. Ciornele sunt în memorie, pe replica unică; un restart le invalidează. La timeout se raportează livrare neconfirmată: verifică grupul înainte de a repeta comanda.
+
+Sondajele `/poll` nu folosesc tabelele de prezență, iar `/sondaj` rămâne comanda antrenamentului. Publicările se verifică în grup și prin confirmarea privată; nu apar în istoricul acțiunilor din admin. Meniul și `/ajutor` includ comenzile; `/start` reînregistrează meniul organizatorului. Limitele sondajelor respectă [Telegram Bot API](https://core.telegram.org/bots/api#sendpoll).

@@ -22,6 +22,13 @@ const GRUPE = [
     ],
   },
   {
+    titlu: 'Publică în grup',
+    comenzi: [
+      { exemplu: '/mesaj Salut! Ne vedem la antrenament.', titlu: 'Trimite un mesaj din partea botului', text: 'Scrie textul în privat, verifică grupul și previzualizarea, apoi apasă „Trimite în grup”. Textul este publicat exact cum l-ai scris, fără interpretarea HTML sau Markdown. Maximum 3500 de caractere.' },
+      { exemplu: '/poll Ce preferați? | Alergare | Forță', titlu: 'Creează un sondaj liber', text: 'Separă întrebarea și cele 2–12 variante prin |. Sondajul este anonim, cu un singur răspuns, și nu modifică prezențele. Întrebarea are maximum 300 de caractere, fiecare variantă maximum 100. Confirmă înainte de publicare.' },
+    ],
+  },
+  {
     titlu: 'Administrează membrii',
     comenzi: [
       { exemplu: '/scoate Ion', titlu: 'Scoate o persoană din grup', text: 'Poți căuta și cu /scoate @utilizator. Alegi persoana din rezultate, verifici contul și grupul, apoi confirmi. Numele identice nu sunt alese automat. Botul trimite rezultatul în privat; istoricul persoanei rămâne.' },
@@ -34,7 +41,7 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
     <header className="admin-config-grup">
       <h2 id="ghid-bot-titlu">Instrucțiuni bot</h2>
       <p>Botul vă ajută să organizați antrenamentele din conversația privată de Telegram.
-        Dashboard-ul arată aceleași prezențe, comenzi și rezultate.</p>
+        Dashboard-ul arată prezențele și acțiunile de administrare. Mesajele /mesaj și sondajele /poll se verifică în grup, iar confirmarea publicării vine în privat.</p>
       <ol>
         <li><strong>Deschide chatul privat cu botul</strong> și trimite <code>/start</code>.</li>
         <li><strong>Alege o comandă</strong> din meniu sau scrie unul dintre exemplele de mai jos, cu datele tale.</li>

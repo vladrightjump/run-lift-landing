@@ -1,3 +1,4 @@
+import { broadcastControl } from './broadcast-control.js';
 import { trialCallback, trialJoinRequest, trialPrivateMessage, trialOrganizerText, missingTrialSchema } from './lib/trial.js';
 import { recordMembership } from "./lib/membership.js";
 import { memberControl, memberControlDeps } from "./member-control.js";
@@ -137,6 +138,14 @@ export async function handleUpdate(update: TgUpdate): Promise<boolean> {
       return true;
     }
     const cb = update.callback_query;
+    if (cb?.data?.startsWith('b:')) {
+      await organizerSafely(cb.from.id, () => broadcastControl.callback({
+        id: cb.id, fromId: cb.from.id, fromName: cb.from.first_name ?? String(cb.from.id),
+        chatId: cb.message?.chat.id ?? cb.from.id, chatType: cb.message?.chat.type ?? 'unknown',
+        messageId: cb.message?.message_id ?? null, data: cb.data!,
+      }));
+      return true;
+    }
     if (cb?.data?.startsWith("t:")) {
       await organizerSafely(cb.from.id, () => trialCallback({ ...cb, data: cb.data! }));
       return true;
@@ -450,6 +459,14 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
     const prospectResult = await db.from('trial_prospects').update({ dm_enabled: false }).eq('telegram_user_id', msg.from.id);
     if (prospectResult.error && !missingTrialSchema(prospectResult.error)) throw prospectResult.error;
     await sendMessage(msg.chat.id, 'Am oprit mesajele automate. Scrie /start pentru a le relua.');
+    return;
+  }
+
+  if (/^\/(mesaj|poll)(?:@\w+)?(?:\s|$)/i.test(text)) {
+    await organizerSafely(msg.chat.id, () => broadcastControl.text({
+      chatId: msg.chat.id, chatType: msg.chat.type, fromId: msg.from!.id,
+      fromName: msg.from!.first_name ?? String(msg.from!.id), text,
+    }).then(() => {}));
     return;
   }
 
