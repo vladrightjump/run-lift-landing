@@ -24,7 +24,7 @@ const css = ['src/index.css', 'src/public.css', 'src/edition3.css', 'src/admin/s
   .join('\n');
 
 /** Prefixele claselor scrise de noi. O clasă fără unul din ele nu se verifică. */
-const PREFIXE = ['admin-', 'an-', 'cs-', 'cf-', 'dn-', 'e3-', 'rn-'];
+const PREFIXE = ['admin-', 'an-', 'cs-', 'cf-', 'dn-', 'e3-', 'ie-', 'rn-'];
 
 /**
  * Restanțe găsite când garda a intrat în repo (19 septembrie 2026).
