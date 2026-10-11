@@ -141,6 +141,9 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
     // Întoarce doar clipurile VIZIBILE, deci exact ce arată banda. Un clip
     // ascuns din `/admin` nu iese niciodată prin funcția asta.
     'public_training_reels',
+    // Ordinea blocurilor de pe ecranul dintre ediții și locul antrenamentelor,
+    // pe care site-ul le arată oricum public.
+    'public_homepage',
     'confirm_signup',
     'decline_spot',
     'unsubscribe',
@@ -172,6 +175,7 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
       'admin_list_waitlist', 'admin_login', 'admin_logout', 'admin_promote_waitlist',
       'admin_publish_event_config', 'admin_replay_lookup', 'admin_restore_event_config',
       'admin_save_email_template', 'admin_save_event_config_draft', 'admin_set_coming_soon',
+      'admin_set_homepage_order',
       'admin_undelete_registration', 'admin_undelete_waitlist', 'admin_update_registration',
       'admin_save_weekly_workout', 'admin_list_weekly_workout', 'admin_restore_weekly_workout',
       'admin_move_weekly_workout', 'admin_delete_weekly_workout',
