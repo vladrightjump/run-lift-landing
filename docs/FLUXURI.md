@@ -407,8 +407,9 @@ flowchart TD
   W --> S["/start în privat → membru nou"]
 ```
 
-Pentru o zi anulată botul nu trimite sondaj. Lunea la 09:00 trimite adminilor lista inactivilor și
-la 09:05 verifică webhook-ul. Detaliile serviciului: `bot/README.md`.
+Pentru o zi anulată botul nu trimite sondaj. Zilnic, de la 09:00, trimite organizatorilor câte o
+alertă cu butoane (Scoate / Amână / Nu scoate) pentru fiecare membru fără „Da” în 3 săptămâni cu
+antrenamente; lunea la 09:05 verifică webhook-ul. Detaliile serviciului: `bot/README.md`.
 
 ---
 
