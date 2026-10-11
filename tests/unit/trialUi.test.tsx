@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { TrialTraining } from '../../src/components/TrialTraining';
 import { trialLink } from '../../src/lib/trialPublic';
-import { INSTAGRAM_URL } from '../../src/lib/config';
 import { EcranProbe } from '../../src/admin/sala/EcranProbe';
 import { TrialSettings } from '../../src/admin/sala/TrialSettings';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
@@ -35,28 +34,6 @@ describe('intrarea la proba', () => {
     rerender(<TrialTraining config={{ enabled: true, bot_username: 'https://evil.test', contact_text: '' }} />);
     expect(screen.queryByRole('link')).toBeNull();
     expect(trialLink('@ParkTrialBot', 'share')).toBe('https://t.me/ParkTrialBot?start=trial_share');
-  });
-});
-
-describe('proba ca prim bloc, intre editii', () => {
-  const pornit = { fel: 'pornit', config: { enabled: true, bot_username: 'ParkTrialBot', contact_text: '' } } as const;
-  it('pornit: duce la bot cu sursa home', () => {
-    render(<TrialTraining varianta="prim" stare={pornit} />);
-    expect(screen.getByRole('heading', { name: 'Primul tău antrenament cu noi.' })).toBeDefined();
-    expect(screen.getByRole('link', { name: /Vreau la un antrenament/ }).getAttribute('href')).toBe('https://t.me/ParkTrialBot?start=trial_home');
-  });
-  it('oprit: acelasi titlu, butonul duce la Instagram si nu mai pomeneste Telegram', () => {
-    const { container } = render(<TrialTraining varianta="prim" stare={{ fel: 'oprit' }} />);
-    expect(screen.getByRole('heading', { name: 'Primul tău antrenament cu noi.' })).toBeDefined();
-    const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(1);
-    expect(links[0].getAttribute('href')).toBe(INSTAGRAM_URL);
-    expect(container.textContent).not.toMatch(/Telegram/);
-  });
-  it('se incarca: titlul e vizibil, fara niciun link de actiune', () => {
-    render(<TrialTraining varianta="prim" stare={{ fel: 'incarca' }} />);
-    expect(screen.getByRole('heading', { name: 'Primul tău antrenament cu noi.' })).toBeDefined();
-    expect(screen.queryByRole('link')).toBeNull();
   });
 });
 

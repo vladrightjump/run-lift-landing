@@ -14,12 +14,15 @@ import type { AdminEventConfigRow } from '../../src/lib/adminApi';
  * anunțată înainte, nu descoperită după.
  */
 
-const { listEventConfig, setComingSoon } = vi.hoisted(() => ({
+const { listEventConfig, setComingSoon, setHomepageOrder, loadPublicHomepage } = vi.hoisted(() => ({
   listEventConfig: vi.fn(),
   setComingSoon: vi.fn(),
+  setHomepageOrder: vi.fn(),
+  loadPublicHomepage: vi.fn(),
 }));
 
-vi.mock('../../src/lib/adminApi', () => ({ listEventConfig, setComingSoon }));
+vi.mock('../../src/lib/adminApi', () => ({ listEventConfig, setComingSoon, setHomepageOrder }));
+vi.mock('../../src/lib/homepagePublic', () => ({ loadPublicHomepage }));
 
 const showToast = vi.fn();
 const onAuthError = vi.fn(() => false);
@@ -58,6 +61,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   listEventConfig.mockResolvedValue([rand()]);
   setComingSoon.mockResolvedValue('id-nou');
+  setHomepageOrder.mockResolvedValue(undefined);
+  loadPublicHomepage.mockResolvedValue({ trialFirst: false, trainingLocation: null });
 });
 
 afterEach(cleanup);
@@ -212,5 +217,63 @@ describe('refuzurile serverului ajung citibile', () => {
         })
       )
     );
+  });
+});
+
+describe('ordinea de pe ecranul dintre ediții', () => {
+  const optiune = (nume: RegExp): HTMLInputElement =>
+    screen.getByRole('radio', { name: nume }) as HTMLInputElement;
+
+  it('arată ordinea salvată pe server', async () => {
+    loadPublicHomepage.mockResolvedValue({ trialFirst: true, trainingLocation: null });
+    randeaza();
+    await waitFor(() => expect(optiune(/Proba primul/).checked).toBe(true));
+    expect(optiune(/Antrenamentul săptămânii primul/).checked).toBe(false);
+  });
+
+  it('o alegere pleacă imediat, cu tokenul sesiunii, și confirmă', async () => {
+    randeaza();
+    await waitFor(() => expect(optiune(/Antrenamentul săptămânii primul/).checked).toBe(true));
+
+    fireEvent.click(optiune(/Proba primul/));
+
+    await waitFor(() => expect(setHomepageOrder).toHaveBeenCalledWith('t', true));
+    await waitFor(() =>
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }))
+    );
+    expect(optiune(/Proba primul/).checked).toBe(true);
+  });
+
+  it('serverul refuză: alegerea revine la cea salvată și apare eroarea', async () => {
+    setHomepageOrder.mockRejectedValue(new Error('boom'));
+    randeaza();
+    await waitFor(() => expect(optiune(/Antrenamentul săptămânii primul/).checked).toBe(true));
+
+    fireEvent.click(optiune(/Proba primul/));
+
+    await waitFor(() =>
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }))
+    );
+    expect(optiune(/Antrenamentul săptămânii primul/).checked).toBe(true);
+  });
+
+  it('cât timp cererea e în zbor, alegerea e blocată', async () => {
+    let gata: () => void = () => {};
+    setHomepageOrder.mockReturnValue(new Promise<void>((r) => (gata = r)));
+    randeaza();
+    await waitFor(() => expect(optiune(/Antrenamentul săptămânii primul/).checked).toBe(true));
+
+    fireEvent.click(optiune(/Proba primul/));
+    await waitFor(() => expect(optiune(/Antrenamentul săptămânii primul/).disabled).toBe(true));
+
+    gata();
+    await waitFor(() => expect(optiune(/Antrenamentul săptămânii primul/).disabled).toBe(false));
+  });
+
+  it('setarea nu se poate citi (migrare neaplicată): spune asta și nu oferă alegerea', async () => {
+    loadPublicHomepage.mockRejectedValue(new Error('404'));
+    randeaza();
+    expect(await screen.findByText(/nu se poate citi/i)).toBeDefined();
+    expect(screen.queryByRole('radio', { name: /Proba primul/ })).toBeNull();
   });
 });

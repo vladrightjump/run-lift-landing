@@ -7,15 +7,11 @@ import { useMagnetic } from '../hooks/useMagnetic';
 import { Marquee } from './landing/Marquee';
 import type { LaunchDraft } from '../lib/launchForm';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
-// Antrenamentele, NU cursa: pagina asta descrie marțea și joia din parc, care nu
-// se mută odată cu ediția. Constantele `EVENT_*`/`MAP_*` sunt ale cursei — a le
-// folosi aici a trimis oameni la locul greșit.
-import {
-  TRAINING_WHERE,
-  TRAINING_MAP_EMBED_SRC,
-  TRAINING_MAP_DIRECTIONS_URL,
-  TRAINING_ORAR,
-} from '../content/format';
+// Antrenamentele, NU cursa: pagina asta descrie marțea și joia, care nu se mută
+// odată cu ediția. Constantele `EVENT_*`/`MAP_*` sunt ale cursei — a le folosi
+// aici a trimis oameni la locul greșit.
+import { trainingPlace } from '../content/format';
+import { usePublicHomepage } from '../hooks/usePublicHomepage';
 import { EDITION } from '../content/edition';
 import { HERO_POSTER, heroVideoSrc } from '../lib/media';
 import { useTrainingReels } from '../hooks/useTrainingReels';
@@ -46,7 +42,6 @@ const STATISTICI = [
   { valoare: 'O comunitate', eticheta: 'În continuă creștere', accent: true },
   { valoare: 'Antrenamente', eticheta: 'În fiecare săptămână', accent: false },
   { valoare: 'Evenimente', eticheta: 'Deschise oricui', accent: false },
-  { valoare: '100%', eticheta: 'În aer liber', accent: false },
 ];
 
 const ETAPE = [
@@ -59,24 +54,31 @@ const ETAPE = [
   { nr: '03', titlu: 'Stretching', text: 'Revenire, întindere și un moment să ne cunoaștem mai bine.' },
 ];
 
-const ORAR = [...TRAINING_ORAR, { k: 'Unde ne găsești', v: 'În aer liber, în parc', accent: false }];
+/**
+ * Programul. Locul vine din setările botului (vezi `trainingPlace`), deci nu mai
+ * are voie să promită „în parc": antrenamentele se pot muta într-o sală. Cât
+ * locul nu e încă știut, rândul „Unde" lipsește în loc să arate unul vechi.
+ */
+const orar = (unde: string | null) => [
+  { k: 'Când', v: EDITION.training.days, accent: false },
+  ...(unde ? [{ k: 'Unde', v: unde, accent: false }] : []),
+  { k: 'Ora', v: EDITION.training.time, accent: true },
+];
 
 /**
- * Banda de sub hero. Constante de build: antrenamentele nu se mută odată cu
- * ediția, deci nimic de aici nu cere nimic de la server.
+ * Banda de sub hero. Zilele și ora sunt constante de build; locul vine din
+ * setările botului.
  *
- * Pagina NU mai e complet fără backend, însă. Cere exact un lucru —
- * `public_training_reels()` — fiindcă banda cu clipuri se administrează din
- * `/admin`. Restul paginii rămâne cod. `tests/despre-noi.spec.ts` păzește acum
- * granița asta: un request, nu zero, și numai acela.
+ * Pagina cere de la server exact două lucruri: `public_training_reels()` (banda
+ * cu clipuri, administrată din `/admin`) și `public_homepage()` (locul).
+ * `tests/despre-noi.spec.ts` păzește granița asta.
  */
-const MARQUEE = [
+const marquee = (unde: string | null) => [
   'Alergare',
   'Forță',
-  'În aer liber',
   EDITION.training.days,
   EDITION.training.time,
-  TRAINING_WHERE,
+  ...(unde ? [unde] : []),
 ];
 
 type CheieSectiune = 'poveste' | 'comunitate' | 'antrenament' | 'clipuri' | 'unde' | 'info';
@@ -110,6 +112,11 @@ export const DespreNoi = () => {
   const { draft, setField: setFieldBase, errors, state, submit, hpProps } = useLaunchForm('despre-noi');
   const [eroare, setEroare] = useState('');
   const reels = useTrainingReels();
+  // Locul apare abia după răspunsul serverului (cel mult 2 s): după o mutare,
+  // nimeni nu trebuie să vadă, nici o clipă, locul vechi din cod. Dacă serverul
+  // nu răspunde, rămâne locul din cod.
+  const setari = usePublicHomepage();
+  const loc = setari.gata ? trainingPlace(setari.trainingLocation) : null;
   const nr = numerotare(reels.length > 0);
   const [emailTrimis, setEmailTrimis] = useState('');
 
@@ -191,7 +198,7 @@ export const DespreNoi = () => {
         </div>
       </section>
 
-      <Marquee items={MARQUEE} />
+      <Marquee items={marquee(loc?.where ?? null)} />
 
       <section className="dn-section">
         <div className="dn-container">
@@ -284,7 +291,7 @@ export const DespreNoi = () => {
           >
             <div>
               <div data-reveal style={{ display: 'grid', gap: 0, border: '1px solid var(--e3-border)' }}>
-                {ORAR.map((row, i, arr) => (
+                {orar(loc?.where ?? null).map((row, i, arr) => (
                   <div
                     key={row.k}
                     className="dn-orar-row"
@@ -305,26 +312,28 @@ export const DespreNoi = () => {
                   </div>
                 ))}
               </div>
-              <a
-                href={TRAINING_MAP_DIRECTIONS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="e3-cta e3-shine e3-mag"
-                style={{
-                  marginTop: 20,
-                  display: 'inline-block',
-                  background: 'var(--e3-accent)',
-                  color: 'var(--e3-bg)',
-                  fontFamily: 'Anton, sans-serif',
-                  fontSize: 15,
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
-                  padding: '12px 24px',
-                  textDecoration: 'none',
-                }}
-              >
-                Deschide în Google Maps →
-              </a>
+              {loc && (
+                <a
+                  href={loc.directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="e3-cta e3-shine e3-mag"
+                  style={{
+                    marginTop: 20,
+                    display: 'inline-block',
+                    background: 'var(--e3-accent)',
+                    color: 'var(--e3-bg)',
+                    fontFamily: 'Anton, sans-serif',
+                    fontSize: 15,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                    padding: '12px 24px',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Deschide în Google Maps →
+                </a>
+              )}
             </div>
             {/* `position: relative` ancorează butonul de direcții peste hartă. */}
             <div
@@ -337,22 +346,27 @@ export const DespreNoi = () => {
                 background: 'var(--e3-surface)',
               }}
             >
-              <iframe
-                title={`${TRAINING_WHERE}: hartă`}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-                src={TRAINING_MAP_EMBED_SRC}
-                style={{ width: '100%', height: '100%', border: 'none', display: 'block', filter: 'grayscale(0.3) contrast(1.05)' }}
-              />
-              <a
-                className="dn-map-link"
-                href={TRAINING_MAP_DIRECTIONS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Direcții ↗
-              </a>
+              {/* Cutia își păstrează mărimea; harta intră când locul e știut. */}
+              {loc && (
+                <>
+                  <iframe
+                    title={`${loc.where}: hartă`}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    allowFullScreen
+                    src={loc.embedSrc}
+                    style={{ width: '100%', height: '100%', border: 'none', display: 'block', filter: 'grayscale(0.3) contrast(1.05)' }}
+                  />
+                  <a
+                    className="dn-map-link"
+                    href={loc.directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Direcții ↗
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>

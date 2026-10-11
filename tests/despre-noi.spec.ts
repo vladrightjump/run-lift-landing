@@ -30,6 +30,18 @@ const completeaza = async (page: import('@playwright/test').Page) => {
   await page.getByPlaceholder('069 123 456').fill('069123456');
 };
 
+/**
+ * Locul antrenamentelor vine din `public_homepage()` (setările botului). Implicit
+ * funcția „nu există" — cazul de dinainte de migrare — ca testele care verifică
+ * locul din cod să nu depindă de ce e salvat în baza reală. Testele care vor un
+ * loc de la server își pun propria rută, care are prioritate.
+ */
+test.beforeEach(async ({ page }) => {
+  await page.route('**/rest/v1/rpc/public_homepage', (route) =>
+    route.fulfill({ status: 404, contentType: 'application/json', body: '{"message":"not found"}' })
+  );
+});
+
 test.describe('Despre noi — conținut', () => {
   test('se încarcă pe ruta /despre-noi (nu 404)', async ({ page }) => {
     const res = await page.goto('/despre-noi');
@@ -52,7 +64,7 @@ test.describe('Despre noi — conținut', () => {
       await expect(page.locator('.dn-section-head h2', { hasText: titlu })).toBeVisible();
     }
     await expect(page.locator('.dn-value-card')).toHaveCount(3);
-    await expect(page.locator('.dn-stat')).toHaveCount(4);
+    await expect(page.locator('.dn-stat')).toHaveCount(3);
   });
 
   /**
@@ -100,9 +112,9 @@ test.describe('Despre noi — conținut', () => {
     await expect(ig).toHaveAttribute('rel', /noopener/);
   });
 
-  test('cere de la Supabase EXACT un lucru: clipurile', async ({ page }) => {
+  test('cere de la Supabase EXACT două lucruri: clipurile și locul', async ({ page }) => {
     // Pagina a fost cândva complet fără backend. Acum banda cu clipuri se
-    // administrează din `/admin`, deci cere `public_training_reels` — și numai
+    // administrează din `/admin`, iar locul vine din setările botului — și numai
     // atât. Testul păzește granița, nu absența: un provider de config pus din
     // greșeală peste pagină ar aduce `public_config` și ar cădea aici.
     const rute: string[] = [];
@@ -114,7 +126,10 @@ test.describe('Despre noi — conținut', () => {
     await expect(page.locator('.dn-root')).toBeVisible();
     await page.waitForTimeout(1000);
 
-    expect([...new Set(rute)]).toEqual(['/rest/v1/rpc/public_training_reels']);
+    expect([...new Set(rute)].sort()).toEqual([
+      '/rest/v1/rpc/public_homepage',
+      '/rest/v1/rpc/public_training_reels',
+    ]);
   });
 
   test('nu cere nimic de la instagram.com la încărcare', async ({ page }) => {
@@ -361,5 +376,79 @@ test.describe('Navigare între pagini', () => {
       'href',
       'https://instagram.com/we_run_and_lift'
     );
+  });
+});
+
+test.describe('Despre noi — locul din setările botului', () => {
+  const cuLoc = (page: import('@playwright/test').Page, loc: string | null) =>
+    page.route('**/rest/v1/rpc/public_homepage', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ trial_first: false, training_location: loc }),
+      })
+    );
+
+  test('arată locul salvat pentru bot: în orar, pe hartă, în direcții și în bandă', async ({ page }) => {
+    const loc = 'Sala Ironworks, str. Ion Creangă';
+    await cuLoc(page, loc);
+    await page.goto('/despre-noi');
+    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+
+    await expect(orar).toContainText(loc);
+    await expect(orar).not.toContainText(TRAINING_WHERE);
+    const iframe = orar.locator('iframe');
+    await expect(iframe).toHaveAttribute('title', `${loc}: hartă`);
+    expect(new URL((await iframe.getAttribute('src'))!).searchParams.get('q')).toBe(loc);
+    for (const link of [orar.locator('a', { hasText: /google maps/i }), orar.locator('a.dn-map-link')]) {
+      expect(new URL((await link.getAttribute('href'))!).searchParams.get('query')).toBe(loc);
+    }
+    await expect(page.locator('.dn-root')).toContainText(loc);
+  });
+
+  test('nu mai promite „în parc" sau „în aer liber" în program, statistici și bandă', async ({ page }) => {
+    await cuLoc(page, 'Sala Ironworks');
+    await page.goto('/despre-noi');
+    await expect(page.locator('.dn-section', { hasText: 'Unde ne antrenăm' })).toContainText('Sala Ironworks');
+    await expect(page.locator('.dn-root')).not.toContainText('În aer liber, în parc');
+    await expect(page.locator('.dn-stats')).not.toContainText(/aer liber/i);
+    await expect(page.locator('.dn-stats .dn-stat')).toHaveCount(3);
+    await expect(page.locator('.e3-marquee').first()).not.toContainText(/aer liber/i);
+  });
+
+  test('cât serverul n-a răspuns, nu arată niciun loc, nici pe cel vechi', async ({ page }) => {
+    await page.route('**/rest/v1/rpc/public_homepage', async (route) => {
+      await new Promise((r) => setTimeout(r, 1200));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ trial_first: false, training_location: 'Sala Ironworks' }),
+      });
+    });
+    await page.goto('/despre-noi');
+    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    await expect(orar).toBeVisible();
+    await expect(orar).not.toContainText(TRAINING_WHERE);
+    await expect(orar.locator('iframe')).toHaveCount(0);
+    await expect(orar.locator('a', { hasText: /google maps/i })).toHaveCount(0);
+
+    await expect(orar).toContainText('Sala Ironworks');
+    await expect(orar.locator('iframe')).toHaveCount(1);
+  });
+
+  test('fără loc salvat: locul din cod, cu harta lui', async ({ page }) => {
+    await cuLoc(page, null);
+    await page.goto('/despre-noi');
+    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    await expect(orar).toContainText(TRAINING_WHERE);
+    await expect(orar.locator('iframe')).toHaveAttribute('src', TRAINING_MAP_EMBED_SRC);
+  });
+
+  test('funcția pică: locul din cod, fără eroare pe pagină', async ({ page }) => {
+    await page.goto('/despre-noi');
+    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    await expect(orar).toContainText(TRAINING_WHERE);
+    await expect(orar.locator('a.dn-map-link')).toHaveAttribute('href', TRAINING_MAP_DIRECTIONS_URL);
+    await expect(page.getByRole('alert')).toHaveCount(0);
   });
 });

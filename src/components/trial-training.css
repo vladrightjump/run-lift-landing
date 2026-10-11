@@ -33,15 +33,3 @@
 }
 
 .e3-root a.trial-training-button { color: #14200c; }
-
-/* Primul bloc al ecranului dintre ediții: o singură coloană, butonul sub titlu. */
-.trial-prim { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: 24px; }
-.trial-prim h1 { margin: 0 0 24px; font-family: 'Anton', sans-serif; font-weight: 400; font-size: clamp(40px, 7vw, 88px); line-height: .98; letter-spacing: .5px; text-transform: uppercase; }
-.trial-prim-actiune { min-height: 92px; max-width: 460px; }
-.trial-prim-actiune p, .trial-prim-alt { font-size: 12px; line-height: 1.6; color: #c5c9bf; margin: 12px 0 0; }
-.trial-prim-alt a { color: inherit; text-underline-offset: 3px; }
-.trial-prim-text { margin: 28px 0 0; color: #c5c9bf; font-size: 16px; line-height: 1.65; max-width: 58ch; }
-@media (max-width: 680px) {
-  .trial-prim { margin-top: 12px; padding: 20px; }
-  .trial-prim h1 { margin-bottom: 18px; }
-}

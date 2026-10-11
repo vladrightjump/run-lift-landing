@@ -31,6 +31,16 @@ Exposed schemas (`public, graphql_public, runlift`).
 
 ---
 
+## Migrare neaplicată — ordinea homepage-ului și locul antrenamentelor (11 octombrie 2026)
+
+`supabase/sql/supabase-migration-homepage-ordine-locatie.sql` adaugă `runlift.homepage_settings` (un rând, `trial_first`), `runlift.public_homepage()` (ordinea + `public.bot_config.location`, pentru site) și `runlift.admin_set_homepage_order()` (comutatorul din tabul Coming Soon). Nu atinge `public.bot_config`. Se poate rula de mai multe ori.
+
+Site-ul se poate livra înaintea migrării: fără `public_homepage`, homepage-ul păstrează ordinea implicită, iar `/despre-noi` arată locul din cod; doar comutatorul din /admin afișează o eroare până la aplicare.
+
+După aplicare: `select runlift.public_homepage();` întoarce `{"trial_first": false, "training_location": "<locul din Sala → Bot>"}`. Regenerează apoi instantaneele `supabase/schema/*.sql` și scoate fișierul din `MIGRARI_NEAPLICATE` în `tests/unit/sql/db.ts`.
+
+---
+
 ## Migrări aplicate — antrenamente de probă (8 octombrie 2026)
 
 PR #64 introduce tabelele `public.trial_*` și funcțiile aferente. Aplicate în producție într-o singură tranzacție, cu funcția dezactivată, în ordinea:

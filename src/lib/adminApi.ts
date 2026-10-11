@@ -234,6 +234,14 @@ export const setComingSoon = (
     p_next_edition_at: nextEditionAt,
   });
 
+/**
+ * Ordinea de pe ecranul dintre ediții: `true` = „Primul tău antrenament cu noi"
+ * deasupra cardului „Până atunci". Efect imediat, ca `setComingSoon`; site-ul o
+ * citește prin `public_homepage()`.
+ */
+export const setHomepageOrder = (token: string, trialFirst: boolean): Promise<void> =>
+  rpc<void>('admin_set_homepage_order', { p_token: token, p_trial_first: trialFirst });
+
 /** Revenire la o versiune păstrată — republicare, deci rescrie și scalarele. */
 export const restoreEventConfig = (token: string, id: string): Promise<string> =>
   rpc<string>('admin_restore_event_config', { p_token: token, p_id: id });
