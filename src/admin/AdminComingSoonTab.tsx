@@ -8,6 +8,7 @@ import { useSesiuneAdmin } from './adminSession';
 import { fazaSite } from './stareCurenta';
 import { laDatetimeLocal, dinDatetimeLocal, descrieMoment } from './eventConfigFields';
 import { Dialog } from './eventTab/Dialog';
+import { AdminOrdineHomepage } from './AdminOrdineHomepage';
 
 /** „2026-08-19T12:00:00" — local, fără fus. Aceeași formă ca în document. */
 const LOCAL_ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
@@ -315,6 +316,10 @@ export const AdminComingSoonTab = () => {
           )}
         </div>
       </div>
+
+      {/* Separat de formularul de mai sus: nu trece prin „Aplică acum", fiecare
+          alegere pleacă singură. */}
+      <AdminOrdineHomepage />
 
       {confirma && (
         <Dialog titlu="Aplici schimbarea acum?" rol="alertdialog" clasa="admin-confirm--neutru" onInchide={() => setConfirma(false)}>
