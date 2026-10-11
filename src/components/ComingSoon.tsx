@@ -6,6 +6,7 @@ import { useLaunchForm } from '../hooks/useLaunchForm';
 import type { ToastKind } from '../hooks/useToast';
 import { momentComplet, ziLunaLunga } from '../lib/formatare';
 import { usePublicTrial } from '../hooks/usePublicTrial';
+import { usePublicHomepage } from '../hooks/usePublicHomepage';
 import { TrialTraining } from './TrialTraining';
 import { CardAntrenament } from './CardAntrenament';
 
@@ -32,6 +33,12 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
   const tinta = target ?? LAUNCH_DATE;
   const cd = useCountdown(tinta);
   const urmatorul = variant === 'next-session';
+  // Doar ecranul dintre ediții are ordine de ales (setarea din tabul Coming Soon).
+  // Cardul își așteaptă locul: altfel ar apărea sub butoane și apoi ar sări sub
+  // secțiunea de probă. Cererile pleacă în paralel, deci așteptarea e scurtă.
+  const ordine = usePublicHomepage(urmatorul);
+  const cardSus = urmatorul && ordine.gata && !ordine.trialFirst;
+  const cardJos = urmatorul && ordine.gata && ordine.trialFirst;
   const momentLabel = momentComplet(tinta);
   const { draft, setField, errors, state, submit, reset, hpProps } = useLaunchForm();
   const [open, setOpen] = useState(false);
@@ -173,10 +180,19 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
           își construiește promisiunea, iar un al doilea conținut ar împărți
           atenția înainte de a o câștiga.
         */}
-        {urmatorul && <CardAntrenament />}
+        {cardSus && <CardAntrenament />}
       </main>
 
       <TrialTraining config={trial} />
+      {/*
+        „Proba primul" (din /admin): secțiunea de probă urcă imediat sub butoane,
+        iar cardul coboară sub ea, în propria coloană centrată.
+      */}
+      {cardJos && (
+        <div className="cs-dupa-proba">
+          <CardAntrenament />
+        </div>
+      )}
       <footer className="cs-footer">
         <span>Run + Lift · Chișinău</span>
         <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">

@@ -1,0 +1,118 @@
+import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+/**
+ * Ordinea de pe ecranul dintre ediții: cardul „Până atunci" și secțiunea
+ * „Primul tău antrenament cu noi" își schimbă locul după `public_homepage()`.
+ *
+ * Implicitul — și orice eșec al funcției — e ordinea de dinainte: antrenamentul
+ * primul. Setarea atinge doar ecranul dintre ediții; landing-ul și Coming
+ * Soon-ul de dinainte de anunț nu o citesc.
+ */
+
+const PROBA = { enabled: true, bot_username: 'ParkTrialBot', contact_text: 'Scrie-ne.' };
+const SAPTAMANA = [{ numar: 1, titlu: 'Intervale 1', corp: 'ÎNCĂLZIRE\n5 min alergare ușoară' }];
+
+type Raspunsuri = { homepage?: unknown; homepageStatus?: number; proba?: unknown };
+
+const mock = async (page: Page, r: Raspunsuri, apelate: string[] = []) =>
+  page.route('**/rest/v1/rpc/*', (route) => {
+    const name = route.request().url().split('/').pop()!;
+    apelate.push(name);
+    if (name === 'public_homepage') {
+      return route.fulfill({
+        status: r.homepageStatus ?? 200,
+        contentType: 'application/json',
+        body: JSON.stringify(r.homepage ?? null),
+      });
+    }
+    const value =
+      name === 'public_trial_config' ? ('proba' in r ? r.proba : PROBA)
+        : name === 'public_weekly_workouts' ? SAPTAMANA
+          : name === 'public_stats' ? { count: 0, participants: [], waitlist: 0 }
+            : null;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) });
+  });
+
+const card = (page: Page) => page.locator('.cs-antren');
+const proba = (page: Page) => page.getByRole('region', { name: 'Primul tău antrenament cu noi.' });
+
+/** `true` când `a` stă înaintea lui `b` în document. */
+const inainte = async (page: Page, a: string, b: string): Promise<boolean> =>
+  page.evaluate(
+    ([sa, sb]) => {
+      const ea = document.querySelector(sa)!;
+      const eb = document.querySelector(sb)!;
+      return !!(ea.compareDocumentPosition(eb) & Node.DOCUMENT_POSITION_FOLLOWING);
+    },
+    [a, b]
+  );
+
+test.describe('Ordinea de pe ecranul dintre ediții', () => {
+  test('implicit: „Până atunci" deasupra probei', async ({ page }) => {
+    await mock(page, { homepage: { trial_first: false, training_location: 'Parcul X' } });
+    await page.goto('/?preview=next');
+    await expect(card(page)).toBeVisible();
+    await expect(proba(page)).toBeVisible();
+    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+  });
+
+  test('„Proba primul": secțiunea de probă urcă deasupra cardului', async ({ page }) => {
+    await mock(page, { homepage: { trial_first: true, training_location: 'Parcul X' } });
+    await page.goto('/?preview=next');
+    await expect(card(page)).toBeVisible();
+    await expect(proba(page)).toBeVisible();
+    expect(await inainte(page, '.trial-training', '.cs-antren')).toBe(true);
+  });
+
+  test('funcția pică: ordinea implicită, fără eroare pe ecran', async ({ page }) => {
+    await mock(page, { homepageStatus: 404, homepage: { message: 'not found' } });
+    await page.goto('/?preview=next');
+    await expect(card(page)).toBeVisible();
+    await expect(proba(page)).toBeVisible();
+    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  });
+
+  test('funcția atârnă: cardul apare oricum, în locul implicit', async ({ page }) => {
+    await mock(page, {});
+    // Rutele adăugate mai târziu au prioritate: cererea nu primește niciodată răspuns.
+    await page.route('**/rest/v1/rpc/public_homepage', () => {});
+    await page.goto('/?preview=next');
+    await expect(card(page)).toBeVisible({ timeout: 5000 });
+    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+  });
+
+  test('„Proba primul" cu botul de probă oprit: rămâne doar cardul', async ({ page }) => {
+    await mock(page, { homepage: { trial_first: true, training_location: null }, proba: null });
+    await page.goto('/?preview=next');
+    await expect(card(page)).toBeVisible();
+    await expect(proba(page)).toHaveCount(0);
+  });
+
+  test('„Proba primul" pe telefon: fără scroll orizontal', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await mock(page, { homepage: { trial_first: true, training_location: null } });
+    await page.goto('/?preview=next');
+    await expect(card(page)).toBeVisible();
+    await card(page).scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test('Coming Soon-ul de dinainte de anunț nu cere ordinea', async ({ page }) => {
+    const apelate: string[] = [];
+    await mock(page, { homepage: { trial_first: true, training_location: null } }, apelate);
+    await page.goto('/?preview=soon');
+    await expect(page.locator('.cs-title')).toBeVisible();
+    await expect(card(page)).toHaveCount(0);
+    expect(apelate).not.toContain('public_homepage');
+  });
+
+  test('landing-ul unei ediții active nu cere ordinea', async ({ page }) => {
+    const apelate: string[] = [];
+    await mock(page, { homepage: { trial_first: true, training_location: null } }, apelate);
+    await page.goto('/?preview=landing');
+    await expect(proba(page)).toBeVisible();
+    expect(apelate).not.toContain('public_homepage');
+  });
+});
