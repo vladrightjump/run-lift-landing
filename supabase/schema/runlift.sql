@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 8 octombrie 2026 (activarea infrastructurii pentru probe).
+-- Ultima regenerare: 11 octombrie 2026 (ordinea homepage-ului și locul antrenamentelor).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -1551,6 +1551,26 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_trial_first is null then raise exception 'config_invalid: ordinea lipsește'; end if;
+
+  insert into homepage_settings (id, trial_first, updated_at)
+  values (1, p_trial_first, now())
+  on conflict (id) do update set trial_first = excluded.trial_first, updated_at = excluded.updated_at;
+
+  insert into admin_events (tip, detaliu)
+  values ('homepage_order_set', jsonb_build_object('trial_first', p_trial_first));
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -2395,6 +2415,21 @@ AS $function$
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.public_homepage()
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  -- Fără rând de setări sau fără configul botului, implicitele: antrenamentul
+  -- primul și niciun loc (site-ul cade pe locul din cod).
+  select jsonb_build_object(
+    'trial_first', coalesce((select s.trial_first from runlift.homepage_settings s where s.id = 1), false),
+    'training_location', (select c.location from public.bot_config c where c.id = 1)
+  );
+$function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.public_stats()
  RETURNS json
  LANGUAGE sql
@@ -2774,6 +2809,12 @@ create table runlift.event_waitlist (
   deleted_at timestamp with time zone
 );
 
+create table runlift.homepage_settings (
+  id smallint default 1 not null,
+  trial_first boolean default false not null,
+  updated_at timestamp with time zone default now() not null
+);
+
 create table runlift.launch_notifications (
   id uuid default gen_random_uuid() not null,
   created_at timestamp with time zone default now() not null,
@@ -2860,6 +2901,7 @@ alter table runlift.email_log add constraint email_log_pkey PRIMARY KEY (id);
 alter table runlift.email_templates add constraint email_templates_pkey PRIMARY KEY (cheie);
 alter table runlift.event_config add constraint event_config_pkey PRIMARY KEY (id);
 alter table runlift.event_waitlist add constraint event_waitlist_pkey PRIMARY KEY (id);
+alter table runlift.homepage_settings add constraint homepage_settings_pkey PRIMARY KEY (id);
 alter table runlift.launch_notifications add constraint launch_notifications_pkey PRIMARY KEY (id);
 alter table runlift.registrations add constraint registrations_pkey PRIMARY KEY (id);
 alter table runlift.registrations_backup add constraint registrations_backup_pkey PRIMARY KEY (id);
@@ -2867,6 +2909,7 @@ alter table runlift.training_reels add constraint training_reels_pkey PRIMARY KE
 alter table runlift.weekly_workout add constraint weekly_workout_pkey PRIMARY KEY (id);
 alter table runlift.admin_sessions add constraint admin_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES runlift.admin_users(id);
 alter table runlift.event_config add constraint event_config_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'superseded'::text])));
+alter table runlift.homepage_settings add constraint homepage_settings_id_check CHECK ((id = 1));
 alter table runlift.launch_notifications add constraint launch_notifications_editie_check CHECK (((editie >= 1) AND (editie <= 100)));
 alter table runlift.launch_notifications add constraint launch_notifications_sursa_check CHECK ((sursa = ANY (ARRAY['lansare'::text, 'despre-noi'::text])));
 alter table runlift.registrations add constraint registrations_acord_check CHECK (acord);
@@ -3091,6 +3134,10 @@ revoke all on function runlift.admin_set_coming_soon(p_token uuid, p_show boolea
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to anon;
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to authenticated;
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to service_role;
+revoke all on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) to anon;
+grant execute on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) to authenticated;
+grant execute on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) to service_role;
 revoke all on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to anon;
 grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to authenticated;
@@ -3197,6 +3244,10 @@ revoke all on function runlift.public_config() from public, anon, authenticated,
 grant execute on function runlift.public_config() to anon;
 grant execute on function runlift.public_config() to authenticated;
 grant execute on function runlift.public_config() to service_role;
+revoke all on function runlift.public_homepage() from public, anon, authenticated, service_role;
+grant execute on function runlift.public_homepage() to anon;
+grant execute on function runlift.public_homepage() to authenticated;
+grant execute on function runlift.public_homepage() to service_role;
 revoke all on function runlift.public_stats() from public, anon, authenticated, service_role;
 grant execute on function runlift.public_stats() to anon;
 grant execute on function runlift.public_stats() to authenticated;
@@ -3371,6 +3422,12 @@ grant insert on table runlift.event_waitlist to service_role;
 grant update on table runlift.event_waitlist to service_role;
 grant delete on table runlift.event_waitlist to service_role;
 alter table runlift.event_waitlist enable row level security;
+revoke all on table runlift.homepage_settings from public, anon, authenticated, service_role;
+grant select on table runlift.homepage_settings to service_role;
+grant insert on table runlift.homepage_settings to service_role;
+grant update on table runlift.homepage_settings to service_role;
+grant delete on table runlift.homepage_settings to service_role;
+alter table runlift.homepage_settings enable row level security;
 revoke all on table runlift.launch_notifications from public, anon, authenticated, service_role;
 grant select on table runlift.launch_notifications to anon;
 grant update on table runlift.launch_notifications to anon;
