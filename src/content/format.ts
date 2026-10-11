@@ -198,8 +198,10 @@ export const fillEventVars = (text: string, config: EventConfig | null): string 
 };
 
 // --- Antrenamentele săptămânale --------------------------------------------
-// Separate de cursă: antrenamentele sunt mereu în același parc, evenimentele se
-// mută. `/despre-noi` folosește EXCLUSIV constantele de mai jos.
+// Separate de cursă: evenimentele se mută cu ediția, antrenamentele au locul lor.
+// Locul VIU vine din setările botului (`public_homepage().training_location`),
+// același pe care îl folosesc sondajele; constantele de mai jos sunt rezerva,
+// cât timp serverul n-a răspuns sau nu răspunde.
 
 /** „Teren Sportiv, Parcul Râșcani" (rândul „Unde" din „Unde ne antrenăm"). */
 export const TRAINING_WHERE = TRAINING_PLACE.where;
@@ -207,3 +209,21 @@ export const TRAINING_WHERE = TRAINING_PLACE.where;
 /** Google Maps pentru locul ANTRENAMENTELOR: embed + link de direcții. */
 export const TRAINING_MAP_EMBED_SRC = TRAINING_PLACE.embedSrc;
 export const TRAINING_MAP_DIRECTIONS_URL = TRAINING_PLACE.directionsUrl;
+
+/**
+ * Locul antrenamentelor de afișat: cel din setările botului, sau rezerva din cod.
+ *
+ * Setările botului țin doar un text („Parcul Dumitru Râșcanu"), fără coordonate,
+ * deci harta CAUTĂ textul — pinul e mai puțin precis decât coordonatele rezervei.
+ */
+export const trainingPlace = (
+  locatie: string | null
+): { where: string; embedSrc: string; directionsUrl: string } => {
+  if (!locatie) return TRAINING_PLACE;
+  const q = encodeURIComponent(locatie);
+  return {
+    where: locatie,
+    embedSrc: `https://maps.google.com/maps?q=${q}&z=${EDITION.training.place.zoom}&hl=ro&output=embed`,
+    directionsUrl: `https://www.google.com/maps/search/?api=1&query=${q}`,
+  };
+};

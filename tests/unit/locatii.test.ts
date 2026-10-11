@@ -5,6 +5,7 @@ import {
   TRAINING_WHERE,
   TRAINING_MAP_EMBED_SRC,
   TRAINING_MAP_DIRECTIONS_URL,
+  trainingPlace,
 } from '../../src/content/format';
 import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 
@@ -91,5 +92,35 @@ describe('locația cursei și locația antrenamentelor sunt izolate', () => {
     for (const src of [MAP_EMBED_SRC, TRAINING_MAP_EMBED_SRC]) {
       expect(src.startsWith('https://maps.google.com/')).toBe(true);
     }
+  });
+});
+
+describe('trainingPlace — locul antrenamentelor din setările botului', () => {
+  it('fără loc de la server: exact locul din cod, cu coordonatele lui', () => {
+    expect(trainingPlace(null)).toEqual({
+      where: TRAINING_WHERE,
+      embedSrc: TRAINING_MAP_EMBED_SRC,
+      directionsUrl: TRAINING_MAP_DIRECTIONS_URL,
+    });
+  });
+
+  it('cu loc de la server: textul lui, iar harta îl caută', () => {
+    const p = trainingPlace('Sala Ironworks');
+    expect(p.where).toBe('Sala Ironworks');
+    expect(p.embedSrc.startsWith('https://maps.google.com/maps?q=Sala%20Ironworks&')).toBe(true);
+    expect(p.embedSrc).toContain('output=embed');
+    expect(p.directionsUrl).toBe('https://www.google.com/maps/search/?api=1&query=Sala%20Ironworks');
+  });
+
+  it('diacriticele, virgulele și & nu strică URL-ul hărții', () => {
+    const p = trainingPlace('Sala „Ion Creangă", str. Mică & Co');
+    const q = new URL(p.embedSrc).searchParams.get('q');
+    expect(q).toBe('Sala „Ion Creangă", str. Mică & Co');
+    expect(new URL(p.embedSrc).searchParams.get('output')).toBe('embed');
+    expect(new URL(p.directionsUrl).searchParams.get('query')).toBe('Sala „Ion Creangă", str. Mică & Co');
+  });
+
+  it('locul de la server nu poate fi confundat cu locul cursei', () => {
+    expect(trainingPlace('Sala X').embedSrc).not.toContain(EDITION.venue.mapQuery);
   });
 });
