@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
 import { useEditionStrings, useEditionDates } from '../hooks/useEventConfig';
 import { useCountdown } from '../hooks/useCountdown';
-import { useLaunchForm } from '../hooks/useLaunchForm';
+import { AnuntaMa } from './AnuntaMa';
 import type { ToastKind } from '../hooks/useToast';
 import { momentComplet, ziLunaLunga } from '../lib/formatare';
 import { usePublicTrial } from '../hooks/usePublicTrial';
@@ -33,48 +32,6 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
   const cd = useCountdown(tinta);
   const urmatorul = variant === 'next-session';
   const momentLabel = momentComplet(tinta);
-  const { draft, setField, errors, state, submit, reset, hpProps } = useLaunchForm();
-  const [open, setOpen] = useState(false);
-  const [duplicate, setDuplicate] = useState(false);
-
-  const closeForm = useCallback(() => {
-    setOpen(false);
-  }, []);
-
-  const openForm = () => {
-    reset();
-    setDuplicate(false);
-    setOpen(true);
-  };
-
-  // Închide modalul cu Esc.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeForm();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, closeForm]);
-
-  const handleSubmit = async () => {
-    const outcome = await submit();
-    switch (outcome.kind) {
-      case 'success':
-        setDuplicate(outcome.duplicate);
-        showToast(
-          'success',
-          outcome.duplicate ? 'Ești deja pe listă.' : 'Gata! Verifică emailul pentru confirmare.'
-        );
-        break;
-      case 'invalid':
-      case 'offline':
-      case 'error':
-        showToast('error', outcome.message);
-        break;
-      // 'busy' → fără feedback
-    }
-  };
 
   return (
     <div className="cs-root">
@@ -159,9 +116,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
         )}
 
         <div className="cs-actions">
-          <button type="button" className="cs-cta" onClick={openForm}>
-            Anunță-mă la lansare
-          </button>
+          <AnuntaMa showToast={showToast} label="Anunță-mă la lansare" className="cs-cta" />
           <a className="cs-cta-secondary" href="/despre-noi">
             Află mai multe
           </a>
@@ -199,104 +154,6 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
         </div>
       </div>
 
-      {open && (
-        <div
-          className="cs-modal-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeForm();
-          }}
-        >
-          <div className="cs-modal" role="dialog" aria-modal="true" aria-label="Anunță-mă la lansare">
-            <button type="button" className="cs-modal-close" aria-label="Închide" onClick={closeForm}>
-              ✕
-            </button>
-
-            {state === 'success' ? (
-              <div className="cs-success">
-                <div className="cs-success-check" aria-hidden="true">
-                  ✓
-                </div>
-                <h2 className="cs-modal-title">
-                  {duplicate ? 'Ești deja pe listă' : 'Te-am adăugat!'}
-                </h2>
-                <p className="cs-modal-sub">
-                  {duplicate
-                    ? 'Adresa ta era deja înscrisă. Te anunțăm când lansăm noul antrenament.'
-                    : 'Ți-am trimis un email. Apasă pe linkul din el ca să confirmi înscrierea.'}
-                </p>
-                <button type="button" className="cs-submit" onClick={closeForm}>
-                  Închide
-                </button>
-              </div>
-            ) : (
-              <>
-                <h2 className="cs-modal-title">Anunță-mă la lansare</h2>
-                <p className="cs-modal-sub">
-                  Îți scriem imediat ce anunțăm noul antrenament.
-                </p>
-
-                <form
-                  className="cs-form"
-                  noValidate
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSubmit();
-                  }}
-                >
-                  {/* Capcană anti-bot — invizibilă; verificată pe server. */}
-                  <input type="text" {...hpProps} />
-                  <div className="cs-form-row">
-                    <label className={`cs-field${errors.nume ? ' invalid' : ''}`}>
-                      <span>Nume</span>
-                      <input
-                        type="text"
-                        placeholder="Popescu"
-                        autoComplete="family-name"
-                        value={draft.nume}
-                        onChange={(e) => setField('nume', e.target.value)}
-                      />
-                    </label>
-                    <label className={`cs-field${errors.prenume ? ' invalid' : ''}`}>
-                      <span>Prenume</span>
-                      <input
-                        type="text"
-                        placeholder="Andrei"
-                        autoComplete="given-name"
-                        value={draft.prenume}
-                        onChange={(e) => setField('prenume', e.target.value)}
-                      />
-                    </label>
-                  </div>
-                  <label className={`cs-field${errors.email ? ' invalid' : ''}`}>
-                    <span>Email</span>
-                    <input
-                      type="email"
-                      placeholder="andrei@email.ro"
-                      autoComplete="email"
-                      value={draft.email}
-                      onChange={(e) => setField('email', e.target.value)}
-                    />
-                  </label>
-                  <label className={`cs-field${errors.telefon ? ' invalid' : ''}`}>
-                    <span>Telefon</span>
-                    <input
-                      type="tel"
-                      placeholder="07xx xxx xxx"
-                      autoComplete="tel"
-                      value={draft.telefon}
-                      onChange={(e) => setField('telefon', e.target.value)}
-                    />
-                  </label>
-
-                  <button type="submit" className="cs-submit" disabled={state === 'loading'}>
-                    {state === 'loading' ? 'Se trimite…' : 'Anunță-mă'}
-                  </button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
