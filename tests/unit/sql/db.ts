@@ -35,7 +35,7 @@ const SALA_SQL = readFileSync(resolve(__dirname, '../../../supabase/schema/sala.
  * de aici se poate rula de mai multe ori. După `apply_migration` și regenerarea
  * instantaneelor, scoate-o din listă: instantaneul o conține deja.
  */
-const MIGRARI_NEAPLICATE = ([] as string[]).map((f) =>
+const MIGRARI_NEAPLICATE = (['supabase/sql/supabase-migration-sala-inactivitate.sql'] as string[]).map((f) =>
   readFileSync(resolve(__dirname, '../../..', f), 'utf8'),
 );
 
@@ -95,6 +95,7 @@ const TABELE_SALA = [
   'bot_actions',
   'telegram_unmatched',
   'telegram_group_memberships',
+  'inactivity_reviews',
 ];
 
 export const ADMIN_TOKEN = '11111111-1111-1111-1111-111111111111';
