@@ -20,3 +20,7 @@
 .admin-probe-copy .admin-btn-ghost { justify-self: start; }
 
 .admin-probe-copy legend { font-weight: 700; padding: 0; }
+.admin-probe-timeline { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.admin-probe-timeline li { display: grid; grid-template-columns: minmax(96px, auto) minmax(0, 1fr); gap: 12px; overflow-wrap: anywhere; }
+.admin-probe-timeline time { opacity: .7; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) { .admin-probe-timeline li { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
