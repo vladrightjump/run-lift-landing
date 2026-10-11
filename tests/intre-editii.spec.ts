@@ -93,6 +93,18 @@ test.describe('Ecranul dintre ediții', () => {
     await expect(page.locator('a[href^="https://t.me/"]')).toHaveCount(0);
   });
 
+  test('configul probei nu răspunde: după limită apare butonul Instagram', async ({ page }) => {
+    await mockBackend(page);
+    // Rută înregistrată după mockBackend, deci câștigă: cererea rămâne fără răspuns.
+    await page.route('**/rest/v1/rpc/public_trial_config', () => new Promise(() => {}));
+    await page.goto('/?preview=next');
+
+    await expect(titluProba(page)).toBeVisible();
+    const sectiune = page.getByRole('region', { name: 'Primul tău antrenament cu noi.' });
+    await expect(sectiune.getByRole('link')).toHaveCount(0);
+    await expect(sectiune.getByRole('link', { name: /Scrie-ne pe Instagram/ })).toBeVisible({ timeout: 8000 });
+  });
+
   test('fără program sau cu eroare la program, cardul lipsește și restul rămâne', async ({ page }) => {
     await mockBackend(page, { program: { message: 'boom' }, programStatus: 500 });
     await page.goto('/?preview=next');

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StrictMode } from 'react';
-import { cleanup, renderHook, waitFor } from '@testing-library/react';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 
 const load = vi.hoisted(() => vi.fn());
 vi.mock('../../src/lib/trialPublic', async (orig) => ({
@@ -8,9 +8,10 @@ vi.mock('../../src/lib/trialPublic', async (orig) => ({
   loadPublicTrial: load,
 }));
 
-import { useStareProba } from '../../src/hooks/usePublicTrial';
+import { LIMITA_INCARCARE_PROBA_MS, usePublicTrial, useStareProba } from '../../src/hooks/usePublicTrial';
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   load.mockReset();
 });
@@ -48,5 +49,50 @@ describe('starea probei publice', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(load).toHaveBeenCalledTimes(2);
     expect(result.current).toEqual({ fel: 'incarca' });
+  });
+});
+
+describe('starea probei — cererea blocată', () => {
+  it('după limita de așteptare trece în oprit și anulează cererea', async () => {
+    vi.useFakeTimers();
+    let semnal: AbortSignal | undefined;
+    load.mockImplementation((signal?: AbortSignal) => {
+      semnal = signal;
+      return new Promise(() => {});
+    });
+    const { result } = renderHook(() => useStareProba({ cuLimita: true }));
+    expect(result.current).toEqual({ fel: 'incarca' });
+    await act(async () => {
+      vi.advanceTimersByTime(LIMITA_INCARCARE_PROBA_MS);
+    });
+    expect(result.current).toEqual({ fel: 'oprit' });
+    expect(semnal?.aborted).toBe(true);
+  });
+
+  it('fără limită (landing, teaser) așteaptă oricât, ca înainte', async () => {
+    vi.useFakeTimers();
+    load.mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useStareProba());
+    await act(async () => {
+      vi.advanceTimersByTime(LIMITA_INCARCARE_PROBA_MS * 3);
+    });
+    expect(result.current).toEqual({ fel: 'incarca' });
+  });
+});
+
+describe('usePublicTrial — ce văd landing-ul și teaser-ul', () => {
+  it('dă configul doar când proba e pornită', async () => {
+    const config = { enabled: true, bot_username: 'ParkTrialBot', contact_text: '' };
+    load.mockResolvedValue(config);
+    const { result } = renderHook(() => usePublicTrial());
+    expect(result.current).toBeNull();
+    await waitFor(() => expect(result.current).toEqual(config));
+  });
+
+  it('dă null când proba e oprită', async () => {
+    load.mockResolvedValue(null);
+    const { result } = renderHook(() => usePublicTrial());
+    await waitFor(() => expect(load).toHaveBeenCalled());
+    expect(result.current).toBeNull();
   });
 });

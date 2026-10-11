@@ -23,7 +23,7 @@ type Props = {
  * pagina să arate ca restul site-ului între ediții.
  */
 export const IntreEditii = ({ showToast }: Props) => {
-  const proba = useStareProba();
+  const proba = useStareProba({ cuLimita: true });
 
   return (
     <div className="cs-root ie-root">
