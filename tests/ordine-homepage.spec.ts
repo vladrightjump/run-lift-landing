@@ -83,6 +83,50 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
   });
 
+  test('„Proba primul" cu configul probei întârziat: cardul nu apare înaintea probei', async ({ page }) => {
+    // Ordinea în care blocurile APAR, nu doar unde ajung: un card montat sub
+    // butoane și împins apoi în jos de secțiunea de probă e exact saltul de evitat.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __aparitii: string[] };
+      w.__aparitii = [];
+      new MutationObserver(() => {
+        for (const [sel, nume] of [['.trial-training', 'proba'], ['.cs-antren', 'card']] as const) {
+          if (document.querySelector(sel) && !w.__aparitii.includes(nume)) w.__aparitii.push(nume);
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
+    await mock(page, { homepage: { trial_first: true, training_location: null } });
+    await page.route('**/rest/v1/rpc/public_trial_config', async (route) => {
+      await new Promise((r) => setTimeout(r, 800));
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PROBA) });
+    });
+    await page.goto('/?preview=next');
+    await expect(card(page)).toBeVisible();
+    await expect(proba(page)).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { __aparitii: string[] }).__aparitii)).toEqual([
+      'proba',
+      'card',
+    ]);
+  });
+
+  test('ordinea care sosește după limita de 2 s nu mai mută cardul afișat', async ({ page }) => {
+    await mock(page, {});
+    await page.route('**/rest/v1/rpc/public_homepage', async (route) => {
+      await new Promise((r) => setTimeout(r, 3000));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ trial_first: true, training_location: null }),
+      });
+    });
+    await page.goto('/?preview=next');
+    await expect(card(page)).toBeVisible({ timeout: 5000 });
+    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+    // Răspunsul întârziat sosește; cardul rămâne unde l-a văzut vizitatorul.
+    await page.waitForTimeout(3000);
+    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+  });
+
   test('„Proba primul" cu botul de probă oprit: rămâne doar cardul', async ({ page }) => {
     await mock(page, { homepage: { trial_first: true, training_location: null }, proba: null });
     await page.goto('/?preview=next');

@@ -86,6 +86,13 @@ describe('admin_set_homepage_order', () => {
     expect((await citeste()).trial_first).toBe(false);
   });
 
+  it('fără ordine (null) refuză și nu schimbă nimic', async () => {
+    await expect(
+      caRol(db, 'anon', () => db.query('select runlift.admin_set_homepage_order($1, null)', [ADMIN_TOKEN]))
+    ).rejects.toThrow(/config_invalid/);
+    expect((await citeste()).trial_first).toBe(false);
+  });
+
   it('migrarea rulată din nou nu resetează ordinea aleasă', async () => {
     await comuta(true);
     const migrare = readFileSync(

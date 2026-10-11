@@ -5,7 +5,7 @@ import { useCountdown } from '../hooks/useCountdown';
 import { useLaunchForm } from '../hooks/useLaunchForm';
 import type { ToastKind } from '../hooks/useToast';
 import { momentComplet, ziLunaLunga } from '../lib/formatare';
-import { usePublicTrial } from '../hooks/usePublicTrial';
+import { usePublicTrialStare } from '../hooks/usePublicTrial';
 import { usePublicHomepage } from '../hooks/usePublicHomepage';
 import { TrialTraining } from './TrialTraining';
 import { CardAntrenament } from './CardAntrenament';
@@ -26,7 +26,7 @@ const MARQUEE_ITEMS = ['Aleargă · Ridică · Rezistă', 'Antrenament nou', 'Ru
 
 
 export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => {
-  const trial = usePublicTrial();
+  const { config: trial, gata: trialGata } = usePublicTrialStare();
   const { LAUNCH_EDITION_ORDINAL } = useEditionStrings();
   const { LAUNCH_DATE } = useEditionDates();
   // Implicitul nu poate sta în semnătură: vine din config, care e un hook.
@@ -35,10 +35,12 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
   const urmatorul = variant === 'next-session';
   // Doar ecranul dintre ediții are ordine de ales (setarea din tabul Coming Soon).
   // Cardul își așteaptă locul: altfel ar apărea sub butoane și apoi ar sări sub
-  // secțiunea de probă. Cererile pleacă în paralel, deci așteptarea e scurtă.
+  // secțiunea de probă. Cu „Proba primul" așteaptă și configul probei, ca
+  // secțiunea să fie deja deasupra lui. Cererile pleacă în paralel și fiecare
+  // așteptare e plafonată la 2 s, deci întârzierea e scurtă.
   const ordine = usePublicHomepage(urmatorul);
   const cardSus = urmatorul && ordine.gata && !ordine.trialFirst;
-  const cardJos = urmatorul && ordine.gata && ordine.trialFirst;
+  const cardJos = urmatorul && ordine.gata && ordine.trialFirst && trialGata;
   const momentLabel = momentComplet(tinta);
   const { draft, setField, errors, state, submit, reset, hpProps } = useLaunchForm();
   const [open, setOpen] = useState(false);
