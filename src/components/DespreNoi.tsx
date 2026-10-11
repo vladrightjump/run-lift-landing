@@ -42,7 +42,6 @@ const STATISTICI = [
   { valoare: 'O comunitate', eticheta: 'În continuă creștere', accent: true },
   { valoare: 'Antrenamente', eticheta: 'În fiecare săptămână', accent: false },
   { valoare: 'Evenimente', eticheta: 'Deschise oricui', accent: false },
-  { valoare: '100%', eticheta: 'În aer liber', accent: false },
 ];
 
 const ETAPE = [
@@ -57,11 +56,12 @@ const ETAPE = [
 
 /**
  * Programul. Locul vine din setările botului (vezi `trainingPlace`), deci nu mai
- * are voie să promită „în parc": antrenamentele se pot muta într-o sală.
+ * are voie să promită „în parc": antrenamentele se pot muta într-o sală. Cât
+ * locul nu e încă știut, rândul „Unde" lipsește în loc să arate unul vechi.
  */
-const orar = (unde: string) => [
+const orar = (unde: string | null) => [
   { k: 'Când', v: EDITION.training.days, accent: false },
-  { k: 'Unde', v: unde, accent: false },
+  ...(unde ? [{ k: 'Unde', v: unde, accent: false }] : []),
   { k: 'Ora', v: EDITION.training.time, accent: true },
 ];
 
@@ -73,13 +73,12 @@ const orar = (unde: string) => [
  * cu clipuri, administrată din `/admin`) și `public_homepage()` (locul).
  * `tests/despre-noi.spec.ts` păzește granița asta.
  */
-const marquee = (unde: string) => [
+const marquee = (unde: string | null) => [
   'Alergare',
   'Forță',
-  'În aer liber',
   EDITION.training.days,
   EDITION.training.time,
-  unde,
+  ...(unde ? [unde] : []),
 ];
 
 type CheieSectiune = 'poveste' | 'comunitate' | 'antrenament' | 'clipuri' | 'unde' | 'info';
@@ -113,8 +112,11 @@ export const DespreNoi = () => {
   const { draft, setField: setFieldBase, errors, state, submit, hpProps } = useLaunchForm('despre-noi');
   const [eroare, setEroare] = useState('');
   const reels = useTrainingReels();
-  // Până răspunde serverul, și dacă nu răspunde, locul din cod.
-  const loc = trainingPlace(usePublicHomepage().trainingLocation);
+  // Locul apare abia după răspunsul serverului (cel mult 2 s): după o mutare,
+  // nimeni nu trebuie să vadă, nici o clipă, locul vechi din cod. Dacă serverul
+  // nu răspunde, rămâne locul din cod.
+  const setari = usePublicHomepage();
+  const loc = setari.gata ? trainingPlace(setari.trainingLocation) : null;
   const nr = numerotare(reels.length > 0);
   const [emailTrimis, setEmailTrimis] = useState('');
 
@@ -196,7 +198,7 @@ export const DespreNoi = () => {
         </div>
       </section>
 
-      <Marquee items={marquee(loc.where)} />
+      <Marquee items={marquee(loc?.where ?? null)} />
 
       <section className="dn-section">
         <div className="dn-container">
@@ -289,7 +291,7 @@ export const DespreNoi = () => {
           >
             <div>
               <div data-reveal style={{ display: 'grid', gap: 0, border: '1px solid var(--e3-border)' }}>
-                {orar(loc.where).map((row, i, arr) => (
+                {orar(loc?.where ?? null).map((row, i, arr) => (
                   <div
                     key={row.k}
                     className="dn-orar-row"
@@ -310,26 +312,28 @@ export const DespreNoi = () => {
                   </div>
                 ))}
               </div>
-              <a
-                href={loc.directionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="e3-cta e3-shine e3-mag"
-                style={{
-                  marginTop: 20,
-                  display: 'inline-block',
-                  background: 'var(--e3-accent)',
-                  color: 'var(--e3-bg)',
-                  fontFamily: 'Anton, sans-serif',
-                  fontSize: 15,
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
-                  padding: '12px 24px',
-                  textDecoration: 'none',
-                }}
-              >
-                Deschide în Google Maps →
-              </a>
+              {loc && (
+                <a
+                  href={loc.directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="e3-cta e3-shine e3-mag"
+                  style={{
+                    marginTop: 20,
+                    display: 'inline-block',
+                    background: 'var(--e3-accent)',
+                    color: 'var(--e3-bg)',
+                    fontFamily: 'Anton, sans-serif',
+                    fontSize: 15,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                    padding: '12px 24px',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Deschide în Google Maps →
+                </a>
+              )}
             </div>
             {/* `position: relative` ancorează butonul de direcții peste hartă. */}
             <div
@@ -342,22 +346,27 @@ export const DespreNoi = () => {
                 background: 'var(--e3-surface)',
               }}
             >
-              <iframe
-                title={`${loc.where}: hartă`}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-                src={loc.embedSrc}
-                style={{ width: '100%', height: '100%', border: 'none', display: 'block', filter: 'grayscale(0.3) contrast(1.05)' }}
-              />
-              <a
-                className="dn-map-link"
-                href={loc.directionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Direcții ↗
-              </a>
+              {/* Cutia își păstrează mărimea; harta intră când locul e știut. */}
+              {loc && (
+                <>
+                  <iframe
+                    title={`${loc.where}: hartă`}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    allowFullScreen
+                    src={loc.embedSrc}
+                    style={{ width: '100%', height: '100%', border: 'none', display: 'block', filter: 'grayscale(0.3) contrast(1.05)' }}
+                  />
+                  <a
+                    className="dn-map-link"
+                    href={loc.directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Direcții ↗
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>

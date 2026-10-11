@@ -64,7 +64,7 @@ test.describe('Despre noi — conținut', () => {
       await expect(page.locator('.dn-section-head h2', { hasText: titlu })).toBeVisible();
     }
     await expect(page.locator('.dn-value-card')).toHaveCount(3);
-    await expect(page.locator('.dn-stat')).toHaveCount(4);
+    await expect(page.locator('.dn-stat')).toHaveCount(3);
   });
 
   /**
@@ -406,11 +406,34 @@ test.describe('Despre noi — locul din setările botului', () => {
     await expect(page.locator('.dn-root')).toContainText(loc);
   });
 
-  test('nu mai promite „în parc"', async ({ page }) => {
+  test('nu mai promite „în parc" sau „în aer liber" în program, statistici și bandă', async ({ page }) => {
     await cuLoc(page, 'Sala Ironworks');
     await page.goto('/despre-noi');
     await expect(page.locator('.dn-section', { hasText: 'Unde ne antrenăm' })).toContainText('Sala Ironworks');
     await expect(page.locator('.dn-root')).not.toContainText('În aer liber, în parc');
+    await expect(page.locator('.dn-stats')).not.toContainText(/aer liber/i);
+    await expect(page.locator('.dn-stats .dn-stat')).toHaveCount(3);
+    await expect(page.locator('.e3-marquee').first()).not.toContainText(/aer liber/i);
+  });
+
+  test('cât serverul n-a răspuns, nu arată niciun loc, nici pe cel vechi', async ({ page }) => {
+    await page.route('**/rest/v1/rpc/public_homepage', async (route) => {
+      await new Promise((r) => setTimeout(r, 1200));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ trial_first: false, training_location: 'Sala Ironworks' }),
+      });
+    });
+    await page.goto('/despre-noi');
+    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    await expect(orar).toBeVisible();
+    await expect(orar).not.toContainText(TRAINING_WHERE);
+    await expect(orar.locator('iframe')).toHaveCount(0);
+    await expect(orar.locator('a', { hasText: /google maps/i })).toHaveCount(0);
+
+    await expect(orar).toContainText('Sala Ironworks');
+    await expect(orar.locator('iframe')).toHaveCount(1);
   });
 
   test('fără loc salvat: locul din cod, cu harta lui', async ({ page }) => {
