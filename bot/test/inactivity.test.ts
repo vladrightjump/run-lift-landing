@@ -4,6 +4,8 @@ import { runInactivity, type Candidate, type Change, type InactivityPorts, type 
 import { inactivityDue } from '../src/lib/schedule.js';
 import { alertText, callbackData, settledText, type ReviewView } from '../src/lib/inactivity-text.js';
 import type { InlineKeyboard, TelegramMember } from '../src/lib/telegram.js';
+import { inactivityCallback, type Decision, type InactivityControlDeps } from '../src/inactivity-control.js';
+import { reportKick, type KickReportPorts } from '../src/jobs/process-commands.js';
 
 const ion: Candidate = {
   member_id: 'm1', full_name: 'Ion Ștefan', telegram_user_id: 200, telegram_username: 'ion_run',
@@ -153,4 +155,115 @@ test('settled texts name who decided', () => {
   assert.match(settledText(review({ status: 'refused', result: 'returned' })), /a confirmat un antrenament după alertă/);
   assert.match(settledText(review({ status: 'refused', result: 'left' })), /nu mai e în grup/);
   assert.match(settledText(review({ status: 'kick_failed', decided_by_name: 'Vlad', result: 'Organizatorii nu pot fi scoși.' })), /a eșuat: Organizatorii nu pot fi scoși\./);
+});
+
+// ── U4: the buttons and the kick result ─────────────────────────────────────
+
+const CYCLE = '6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b';
+const tap = (data: string, fromId = 100, over = {}) => ({
+  id: 'cb', fromId, fromName: fromId === 100 ? 'Vlad' : 'Roma', chatId: fromId, chatType: 'private', messageId: 1, data, ...over,
+});
+
+function controlFixture(decide: InactivityControlDeps['decide']) {
+  const edits: { chat: number; msg: number; text: string }[] = [];
+  const answers: (string | undefined)[] = [];
+  const calls: unknown[][] = [];
+  const deps: InactivityControlDeps = {
+    organizers: [100, 101], group: '-123',
+    decide: async (...args) => { calls.push(args); return decide(...args); },
+    edit: async (chat, msg, text) => { edits.push({ chat, msg, text }); },
+    answer: async (_id, text) => { answers.push(text); },
+  };
+  return { deps, edits, answers, calls };
+}
+const at = '2026-10-12T06:05:00Z';
+
+test('AE5: Vlad kicks, then Roma postpones — one decision, Roma sees Vlad\'s', async () => {
+  let current: Decision | null = null;
+  const f = controlFixture(async (_id, action, _actor, name) => {
+    if (current) return { ...current, outcome: 'already' };
+    current = { outcome: 'decided', review: review({ status: action === 'kick' ? 'kick_queued' : 'postponed', decided_by_name: name, decided_at: at }) };
+    return current;
+  });
+  await inactivityCallback(tap(`i:${CYCLE}:k`), f.deps);
+  await inactivityCallback(tap(`i:${CYCLE}:p`, 101), f.deps);
+  assert.deepEqual(f.calls.map((c) => c[1]), ['kick', 'postpone']);
+  assert.match(f.answers[1] ?? '', /Deja decis: 🚪 Scoatere cerută de Vlad/);
+  assert.ok(f.edits.every((e) => /Scoatere cerută de Vlad/.test(e.text)));
+  assert.deepEqual([...new Set(f.edits.map((e) => e.chat))], [100, 101]);
+});
+
+test('AE3: postpone edits both copies with the end date', async () => {
+  const f = controlFixture(async () => ({ outcome: 'decided', review: review({ status: 'postponed', decided_by_name: 'Roma', snooze_until: '2026-10-19T06:05:00Z' }) }));
+  await inactivityCallback(tap(`i:${CYCLE}:p`, 101), f.deps);
+  assert.equal(f.edits.length, 2);
+  assert.match(f.edits[0].text, /Amânat de Roma până pe 19 oct/);
+});
+
+test('AE6: a refused kick shows the reason', async () => {
+  const f = controlFixture(async () => ({ outcome: 'refused', review: review({ status: 'refused', result: 'returned' }) }));
+  await inactivityCallback(tap(`i:${CYCLE}:k`), f.deps);
+  assert.match(f.edits[0].text, /a confirmat un antrenament după alertă/);
+});
+
+test('a non-organizer, a group chat or malformed data never reach the database', async () => {
+  const f = controlFixture(async () => { throw new Error('should not be called'); });
+  await inactivityCallback(tap(`i:${CYCLE}:k`, 555), f.deps);
+  await inactivityCallback(tap(`i:${CYCLE}:k`, 100, { chatId: -123, chatType: 'supergroup' }), f.deps);
+  await inactivityCallback(tap(`i:not-a-cycle:k`), f.deps);
+  await inactivityCallback(tap(`i:${CYCLE}:x`), f.deps);
+  assert.equal(f.calls.length, 0);
+  assert.equal(f.answers.length, 4);
+});
+
+test('a cycle that no longer exists: a toast, no error', async () => {
+  const f = controlFixture(async () => { throw new Error('inactivity_review_missing'); });
+  await inactivityCallback(tap(`i:${CYCLE}:n`), f.deps);
+  assert.deepEqual(f.answers, ['Alerta nu mai există.']);
+});
+
+test('a database error propagates (the organizer gets the usual error message)', async () => {
+  const f = controlFixture(async () => { throw new Error('connection reset'); });
+  await assert.rejects(inactivityCallback(tap(`i:${CYCLE}:n`), f.deps), /connection reset/);
+});
+
+test('an edit failing on a deleted copy keeps the decision', async () => {
+  const f = controlFixture(async () => ({ outcome: 'decided', review: review({ status: 'kept', decided_by_name: 'Vlad', decided_at: at }) }));
+  f.deps.edit = async () => { throw new Error('message to edit not found'); };
+  await inactivityCallback(tap(`i:${CYCLE}:n`), f.deps);
+  assert.equal(f.calls.length, 1);
+});
+
+function kickFixture(cycle: ReviewView | null) {
+  const edits: string[] = [];
+  const dms: [number, string][] = [];
+  const ports: KickReportPorts = {
+    organizers: [100, 101],
+    kickResult: async () => cycle,
+    edit: async (_c, _m, text) => { edits.push(text); },
+    dm: async (chat, text) => { dms.push([chat, text]); },
+  };
+  return { ports, edits, dms };
+}
+const cmd = { id: 'a1', telegram_user_id: 200, payload: { organizator_id: 100 } };
+
+test('kick from an alert, success: both copies say "Scos de Vlad", no separate DM', async () => {
+  const f = kickFixture(review({ status: 'kicked', decided_by_name: 'Vlad', decided_at: at }));
+  await reportKick(cmd, true, 'Scos din grup.', f.ports);
+  assert.equal(f.edits.length, 2);
+  assert.match(f.edits[0], /Scos de Vlad, 12 oct, 09:05/);
+  assert.equal(f.dms.length, 0);
+});
+
+test('kick from an alert, failure: the reason lands in the alert', async () => {
+  const f = kickFixture(review({ status: 'kick_failed', decided_by_name: 'Vlad', result: 'Organizatorii nu pot fi scoși.' }));
+  await reportKick(cmd, false, 'Organizatorii nu pot fi scoși.', f.ports);
+  assert.match(f.edits[0], /a eșuat: Organizatorii nu pot fi scoși\./);
+});
+
+test('a kick without a cycle (admin or /scoate) keeps the DM to the organizer', async () => {
+  const f = kickFixture(null);
+  await reportKick(cmd, true, 'Scos din grup.', f.ports);
+  assert.deepEqual(f.dms, [[100, '✅ Scoatere Telegram ID 200: Scos din grup.']]);
+  assert.equal(f.edits.length, 0);
 });
