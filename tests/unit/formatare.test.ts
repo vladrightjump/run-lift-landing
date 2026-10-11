@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ziLunaOra, ziSiLuna, momentComplet } from '../../src/lib/formatare';
+import { ziLunaOra, ziSiLuna, momentComplet, ziLunaLunga } from '../../src/lib/formatare';
 
 /**
  * Formatarea trebuie să scoată EXACT ce scoteau cele șase definiții risipite
@@ -69,10 +69,18 @@ describe('formatare — momentul scris în clar', () => {
   });
 });
 
+describe('formatare — ziua pentru badge', () => {
+  it('scrie doar ziua și luna, fără an și fără oră', () => {
+    expect(ziLunaLunga(DIMINEATA_CURSEI)).toBe('5 septembrie');
+    expect(ziLunaLunga(NOAPTEA_DE_IARNA)).toBe('10 ianuarie');
+  });
+});
+
 describe('formatare — fusul e al evenimentului, nu al cititorului', () => {
   it('un moment de la 23:30 UTC apare deja în ziua următoare, ca la Chișinău', () => {
     // 23:30 UTC pe 4 septembrie = 02:30 pe 5 septembrie la Chișinău.
     const inainteDeMiezulNoptii = new Date('2026-09-04T23:30:00Z');
     expect(ziLunaOra(inainteDeMiezulNoptii)).toBe('5 sept., 02:30');
+    expect(ziLunaLunga(inainteDeMiezulNoptii)).toBe('5 septembrie');
   });
 });

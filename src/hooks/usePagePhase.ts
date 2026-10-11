@@ -6,7 +6,7 @@ import { useEditionDates } from './useEventConfig';
  *
  * - `pre`         — landing normal, înscrierile deschise
  * - `leaderboard` — de la LEADERBOARD_DATE: landing fără formular, „cine vine" sus
- * - `next`        — de la EVENT_END_DATE: ecranul dintre ediții (`IntreEditii`)
+ * - `next`        — de la EVENT_END_DATE: countdown spre următorul antrenament
  *
  * Comutarea e a ceasului, nu a unui redeploy — aceeași mecanică pe care o
  * folosește deja `App.tsx` pentru poarta de lansare (`LAUNCH_DATE`): două

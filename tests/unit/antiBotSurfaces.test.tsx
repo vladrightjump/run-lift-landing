@@ -10,7 +10,6 @@ import { useRegistration } from '../../src/hooks/useRegistration';
 import { RegistrationSection } from '../../src/components/landing/RegistrationSection';
 import { RegistrationForm } from '../../src/components/landing/RegistrationForm';
 import { ComingSoon } from '../../src/components/ComingSoon';
-import { IntreEditii } from '../../src/components/IntreEditii';
 import { DespreNoi } from '../../src/components/DespreNoi';
 
 /**
@@ -68,11 +67,6 @@ const SUPRAFETE: { nume: string; element: () => ReactElement; deschide?: string 
     nume: 'ComingSoon (anunță-mă la lansare)',
     element: () => <ComingSoon showToast={() => {}} />,
     deschide: 'Anunță-mă la lansare',
-  },
-  {
-    nume: 'IntreEditii (banda ediției următoare)',
-    element: () => <IntreEditii showToast={() => {}} />,
-    deschide: 'Anunță-mă',
   },
   {
     nume: 'DespreNoi (cere informații)',
@@ -162,14 +156,13 @@ describe('capcana anti-bot e pe toate formularele publice', () => {
   });
 
   it.each(SUPRAFETE)('$nume are honeypot în <form>', ({ element, deschide }) => {
-    // `baseElement`, nu `container`: modalul „Anunță-mă" se randează prin portal în body.
-    const { baseElement } = render(
+    const { container } = render(
       <EventConfigProvider override={SNAPSHOT_CONFIG}>{element()}</EventConfigProvider>
     );
 
     if (deschide) fireEvent.click(screen.getByRole('button', { name: deschide }));
 
-    const formulare = Array.from(baseElement.querySelectorAll('form'));
+    const formulare = Array.from(container.querySelectorAll('form'));
     expect(formulare.length).toBeGreaterThan(0);
 
     for (const form of formulare) {

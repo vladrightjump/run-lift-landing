@@ -204,16 +204,6 @@ export const fillEventVars = (text: string, config: EventConfig | null): string 
 /** „Teren Sportiv, Parcul Râșcani" (rândul „Unde" din „Unde ne antrenăm"). */
 export const TRAINING_WHERE = TRAINING_PLACE.where;
 
-/**
- * Programul antrenamentelor (Când, Unde, Ora). O singură sursă pentru
- * `/despre-noi` și pentru ecranul dintre ediții, ca paginile să nu se contrazică.
- */
-export const TRAINING_ORAR = [
-  { k: 'Când', v: EDITION.training.days, accent: false },
-  { k: 'Unde', v: TRAINING_WHERE, accent: false },
-  { k: 'Ora', v: EDITION.training.time, accent: true },
-] as const;
-
 /** Google Maps pentru locul ANTRENAMENTELOR: embed + link de direcții. */
 export const TRAINING_MAP_EMBED_SRC = TRAINING_PLACE.embedSrc;
 export const TRAINING_MAP_DIRECTIONS_URL = TRAINING_PLACE.directionsUrl;

@@ -3,7 +3,7 @@ import type { Page, Route } from '@playwright/test';
 import { deriveEditionDates } from '../src/lib/config';
 import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
 
-const { LEADERBOARD_DATE, EVENT_DATE, EVENT_END_DATE } =
+const { LEADERBOARD_DATE, EVENT_DATE, EVENT_END_DATE, NEXT_EDITION_DATE } =
   deriveEditionDates(SNAPSHOT_CONFIG);
 
 /**
@@ -127,21 +127,23 @@ test.describe('Faza „leaderboard" — de la o oră înainte de start', () => {
 });
 
 test.describe('Faza „next" — de la finalul cursei', () => {
-  test('homepage-ul devine ecranul dintre ediții, fără înscriere', async ({ page }) => {
+  test('homepage-ul numără spre următorul antrenament', async ({ page }) => {
     await fixClock(page, DUPA_CURSA);
     await page.goto('/');
-    await expect(page.locator('.ie-root')).toBeVisible();
+    await expect(page.locator('.cs-root')).toBeVisible();
     await expect(page.locator('#inscriere')).toHaveCount(0);
     await expect(page.locator('#participanti')).toHaveCount(0);
   });
 
-  // Ținta `nextEditionAt` nu mai are o ediție în spate între ediții; un countdown
-  // spre ea ar face pagina să pară abandonată. Detaliile ecranului: intre-editii.spec.ts.
-  test('nu numără spre nicio dată', async ({ page }) => {
+  test('countdown-ul arată zilele rămase până la ținta din config', async ({ page }) => {
     await fixClock(page, DUPA_CURSA);
     await page.goto('/');
-    await expect(page.locator('.ie-root')).toBeVisible();
-    await expect(page.getByRole('timer')).toHaveCount(0);
+    const zileRamase = Math.floor((NEXT_EDITION_DATE.getTime() - DUPA_CURSA) / 86_400_000);
+    const countdown = page.locator('.cs-countdown');
+    await expect(countdown).toBeVisible();
+    await expect(countdown.locator('.cs-cd-value').first()).toHaveText(
+      String(zileRamase).padStart(2, '0')
+    );
   });
 });
 
@@ -168,7 +170,7 @@ test.describe('/inscriere — pe deadline-ul real, nu pe faza homepage-ului', ()
     await fixClock(page, DUPA_CURSA);
     await page.goto('/inscriere');
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator('.ie-root')).toBeVisible();
+    await expect(page.locator('.cs-root')).toBeVisible();
   });
 
   // Regresie: build-ul rămăsese pe ediția trecută, iar redirectul se lua pe
@@ -200,7 +202,7 @@ test.describe('pe telefon (375px)', () => {
 
   for (const [nume, moment] of [
     ['fereastra „cine vine"', IN_FEREASTRA],
-    ['ecranul dintre ediții', DUPA_CURSA],
+    ['countdown-ul spre următorul antrenament', DUPA_CURSA],
   ] as const) {
     test(`${nume}: fără scroll orizontal`, async ({ page }) => {
       await fixClock(page, moment);
@@ -224,7 +226,7 @@ test.describe('?preview bate ceasul', () => {
   test('„next" se vede înainte de ora lui', async ({ page }) => {
     await fixClock(page, INAINTE);
     await page.goto('/?preview=next');
-    await expect(page.locator('.ie-root')).toBeVisible();
+    await expect(page.locator('.cs-root')).toBeVisible();
   });
 
   test('„landing" readuce landing-ul complet peste o fază târzie', async ({ page }) => {
