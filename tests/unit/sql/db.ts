@@ -35,7 +35,10 @@ const SALA_SQL = readFileSync(resolve(__dirname, '../../../supabase/schema/sala.
  * de aici se poate rula de mai multe ori. După `apply_migration` și regenerarea
  * instantaneelor, scoate-o din listă: instantaneul o conține deja.
  */
-const MIGRARI_NEAPLICATE = (['supabase/sql/supabase-migration-sala-inactivitate.sql'] as string[]).map((f) =>
+const MIGRARI_NEAPLICATE = ([
+  'supabase/sql/supabase-migration-sala-inactivitate.sql',
+  'supabase/sql/supabase-migration-sala-istoric-probe.sql',
+] as string[]).map((f) =>
   readFileSync(resolve(__dirname, '../../..', f), 'utf8'),
 );
 
@@ -85,7 +88,7 @@ const TABELE = [
 
 /** Tabelele grupului de antrenament, din `public`. */
 const TABELE_SALA = [
-  'trial_reply_drafts', 'trial_invitations', 'trial_messages', 'trial_questions', 'trial_bookings', 'trial_prospects', 'trial_config',
+  'trial_events', 'trial_reply_drafts', 'trial_invitations', 'trial_messages', 'trial_questions', 'trial_bookings', 'trial_prospects', 'trial_config',
   'members',
   'payments',
   'training_sessions',
