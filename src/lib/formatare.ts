@@ -48,12 +48,6 @@ const momentCompletFmt = new Intl.DateTimeFormat('ro-RO', {
   timeZone: FUS,
 });
 
-const ziLunaLungaFmt = new Intl.DateTimeFormat('ro-RO', {
-  day: 'numeric',
-  month: 'long',
-  timeZone: FUS,
-});
-
 /** „5 sep, 07:00" — momentul unei difuzări sau al unui eveniment din jurnal. */
 export const ziLunaOra = (valoare: Date | string): string =>
   ziLunaOraFmt.format(caData(valoare));
@@ -70,7 +64,3 @@ export const ziSiLuna = (valoare: Date | string): string =>
 /** „5 septembrie 2026, 07:00" — ținta numărătorii inverse, scrisă în clar. */
 export const momentComplet = (valoare: Date | string): string =>
   momentCompletFmt.format(caData(valoare));
-
-/** „5 septembrie" — fără an și fără oră, pentru badge. */
-export const ziLunaLunga = (valoare: Date | string): string =>
-  ziLunaLungaFmt.format(caData(valoare));
