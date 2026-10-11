@@ -179,17 +179,51 @@ describe('ciclul de alertă', () => {
   it('AE3: amânarea expirată fără „Da" se redeschide; cu „Da" se închide ca revenit', async () => {
     const { ciclu, ion, s } = await pregateste();
     await decide(ciclu, 'postpone', 'Roma', 901);
-    expect(await intretinere()).toEqual([]);
+    await db.query(`select public.inactivity_set_messages($1, '[{"chat_id":900,"message_id":5}]')`, [ciclu]);
+    // Amânat luni la 18:00 (ora Chișinăului): revine în ziua termenului, la rularea de dimineață.
+    await db.query(`update public.inactivity_reviews set snooze_until = '2026-10-19T15:00:00Z'`);
+    expect(await intretinere('2026-10-18')).toEqual([]);
 
-    await db.query(`update public.inactivity_reviews set snooze_until = now() - interval '1 minute'`);
-    const [redeschis] = await intretinere();
+    const [redeschis] = await intretinere('2026-10-19');
     expect(redeschis.change).toBe('reopened');
-    expect((await db.query<{ status: string }>(`select status from public.inactivity_reviews`)).rows[0].status).toBe('open');
+    const rand = (await db.query<{ status: string; messages: unknown[] }>(`select status, messages from public.inactivity_reviews`)).rows[0];
+    expect(rand).toEqual({ status: 'open', messages: [] });
+    // Retrimiterea a eșuat: ciclul redeschis fără mesaje se poate renunța.
+    await db.query(`select public.inactivity_discard($1)`, [ciclu]);
+    expect((await db.query(`select * from public.inactivity_reviews`)).rows).toHaveLength(0);
+    const [c] = await candidati();
+    const ciclu2 = await deschide(c);
 
-    await decide(ciclu, 'postpone', 'Roma', 901);
+    await decide(ciclu2, 'postpone', 'Roma', 901);
     await da(s['10-05'], ion);
     const [revenit] = await intretinere();
     expect(revenit.change).toBe('returned');
+  });
+
+  it('cine a fost scos și reinvitat pornește de la zero, nu primește alertă a doua zi', async () => {
+    const { ciclu } = await pregateste();
+    const d = await decide(ciclu, 'kick');
+    await db.query(`select public.inactivity_kick_result($1, true, 'Scos din grup.')`, [d.review.bot_action_id]);
+    await db.query(`update public.inactivity_reviews set decided_at = '2026-10-12T08:00:00Z'`);
+    // Reinvitat: din nou în grup, cu aceeași dată de intrare.
+    expect(await candidati('2026-10-13')).toEqual([]);
+    expect(await candidati('2026-10-26')).toEqual([]);
+  });
+
+  it('o scoatere încheiată în coadă fără raport se așază la întreținere', async () => {
+    const { ciclu } = await pregateste();
+    const d = await decide(ciclu, 'kick');
+    await db.query(`update public.bot_actions set status = 'failed', result = 'Grupul s-a schimbat.' where id = $1`, [d.review.bot_action_id]);
+    const [asezat] = await intretinere();
+    expect(asezat.change).toBe('settled');
+    const rand = (await db.query<{ status: string; result: string }>(`select status, result from public.inactivity_reviews`)).rows[0];
+    expect(rand).toEqual({ status: 'kick_failed', result: 'Grupul s-a schimbat.' });
+  });
+
+  it('o scoatere pe care coada o refuză (membru devenit admin) e o decizie refuzată, nu o eroare', async () => {
+    const { ciclu, ion } = await pregateste();
+    await db.query(`update public.members set is_admin = true where id = $1`, [ion]);
+    expect(await decide(ciclu, 'kick')).toMatchObject({ outcome: 'refused', review: { status: 'refused', result: 'membru_admin' } });
   });
 
   it('AE4: după Nu scoate, 2 săptămâni fără „Da" → nimic; a 3-a → alertă nouă', async () => {

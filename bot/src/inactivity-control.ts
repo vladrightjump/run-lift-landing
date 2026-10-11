@@ -4,14 +4,13 @@
 import type { CallbackIn } from './control.js';
 import { createAdminClient } from './lib/supabase.js';
 import { organizerIds } from './lib/organizers.js';
-import { answerCallbackQuery, editMessageText } from './lib/telegram.js';
+import { answerCallbackQuery } from './lib/telegram.js';
 import { outcomeLine, type ReviewView } from './lib/inactivity-text.js';
-import { editAll } from './jobs/inactivity-alert.js';
+import { editAll, editOrThrow } from './jobs/inactivity-alert.js';
 
 export type Decision = { outcome: 'decided' | 'already' | 'refused'; review: ReviewView };
 export interface InactivityControlDeps {
   organizers: number[];
-  group: string;
   decide(reviewId: string, action: 'kick' | 'postpone' | 'keep', actor: number, name: string): Promise<Decision>;
   edit(chatId: number, messageId: number, text: string): Promise<void>;
   answer(id: string, text?: string): Promise<void>;
@@ -34,6 +33,8 @@ export async function inactivityCallback(input: CallbackIn, deps: InactivityCont
       await deps.answer(input.id, 'Alerta nu mai există.');
       return;
     }
+    // Stop the spinner; organizerSafely then reports the error in the chat.
+    await deps.answer(input.id, 'Nu s-a putut face acum. Încearcă din nou.').catch(() => {});
     throw err;
   }
   const line = outcomeLine(decision.review);
@@ -43,7 +44,6 @@ export async function inactivityCallback(input: CallbackIn, deps: InactivityCont
 
 export const inactivityControlDeps = (): InactivityControlDeps => ({
   organizers: organizerIds(),
-  group: process.env.TELEGRAM_GROUP_CHAT_ID ?? '',
   async decide(reviewId, action, actor, name) {
     const { data, error } = await createAdminClient().rpc('inactivity_decide', {
       p_review: reviewId, p_action: action, p_actor: actor, p_name: name,
@@ -52,9 +52,6 @@ export const inactivityControlDeps = (): InactivityControlDeps => ({
     if (error) throw error;
     return data as Decision;
   },
-  async edit(chatId, messageId, text) {
-    const r = await editMessageText(chatId, messageId, text);
-    if (!r.ok) throw new Error(r.description ?? 'editMessageText failed');
-  },
+  edit: editOrThrow,
   async answer(id, text) { await answerCallbackQuery(id, text); },
 });

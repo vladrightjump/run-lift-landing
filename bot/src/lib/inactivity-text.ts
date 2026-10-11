@@ -26,12 +26,26 @@ export type InactivityAction = "k" | "p" | "n";
 // Fits Telegram's 64-byte callback_data: "i:" + uuid + ":k".
 export const callbackData = (reviewId: string, action: InactivityAction) => `i:${reviewId}:${action}`;
 
+// Why a kick was refused: the database's reason codes, in words.
+const REFUSAL: Record<string, string> = {
+  returned: "a confirmat un antrenament după alertă",
+  left: "nu mai e în grup",
+  membru_admin: "e organizator",
+  fara_telegram: "nu are cont de Telegram legat",
+  telegram_changed: "contul de Telegram s-a schimbat",
+  membru_inexistent: "membrul nu mai există",
+};
+
+const dayInTz = (iso: string) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: GYM_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
+
+// "19 oct" — the day a postponement ends (the alert comes back that morning).
+export const fmtDay = (iso: string) => fmtDate(dayInTz(iso));
+
 // "12 oct, 09:05" in the gym's timezone.
 export function fmtDateTime(iso: string): string {
-  const d = new Date(iso);
-  const day = new Intl.DateTimeFormat("en-CA", { timeZone: GYM_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
-  const time = new Intl.DateTimeFormat("en-GB", { timeZone: GYM_TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
-  return `${fmtDate(day)}, ${time}`;
+  const time = new Intl.DateTimeFormat("en-GB", { timeZone: GYM_TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+  return `${fmtDay(iso)}, ${time}`;
 }
 
 const who = (r: ReviewView) => `${r.full_name} (${r.telegram_username ? "@" + r.telegram_username : "fără @utilizator"})`;
@@ -66,12 +80,9 @@ export function outcomeLine(r: ReviewView): string {
     case "kick_queued": return `🚪 Scoatere cerută de ${by}, ${at} — se execută…`;
     case "kicked": return `🚪 Scos de ${by}, ${at}. Poate fi invitat din nou; istoricul rămâne.`;
     case "kick_failed": return `⚠️ Scoaterea cerută de ${by} a eșuat: ${r.result ?? "motiv necunoscut"}`;
-    case "postponed": return `⏸ Amânat de ${by} până pe ${r.snooze_until ? fmtDateTime(r.snooze_until) : "săptămâna viitoare"}.`;
+    case "postponed": return `⏸ Amânat de ${by} până pe ${r.snooze_until ? fmtDay(r.snooze_until) : "săptămâna viitoare"}.`;
     case "kept": return `✅ Păstrat de ${by}, ${at}. Numărătoarea pornește din nou.`;
-    case "refused":
-      return r.result === "left"
-        ? `↩️ Scoatere refuzată: nu mai e în grup.`
-        : `↩️ Scoatere refuzată: a confirmat un antrenament după alertă.`;
+    case "refused": return `↩️ Scoatere refuzată: ${REFUSAL[r.result ?? ""] ?? r.result ?? "motiv necunoscut"}.`;
     case "returned": return `↩️ A revenit: a confirmat un antrenament.`;
     case "left": return `👋 Nu mai e în grup.`;
     default: return `Alertă deschisă.`;

@@ -151,7 +151,8 @@ test('settled texts name who decided', () => {
   const at = '2026-10-12T06:05:00Z';
   assert.match(settledText(review({ status: 'kick_queued', decided_by_name: 'Vlad', decided_at: at })), /Scoatere cerută de Vlad, 12 oct, 09:05 — se execută/);
   assert.match(settledText(review({ status: 'kept', decided_by_name: 'Roma', decided_at: at })), /Păstrat de Roma/);
-  assert.match(settledText(review({ status: 'postponed', decided_by_name: 'Roma', snooze_until: '2026-10-19T06:05:00Z' })), /Amânat de Roma până pe 19 oct, 09:05/);
+  assert.match(settledText(review({ status: 'postponed', decided_by_name: 'Roma', snooze_until: '2026-10-19T15:00:00Z' })), /Amânat de Roma până pe 19 oct\./);
+  assert.match(settledText(review({ status: 'refused', result: 'membru_admin' })), /Scoatere refuzată: e organizator\./);
   assert.match(settledText(review({ status: 'refused', result: 'returned' })), /a confirmat un antrenament după alertă/);
   assert.match(settledText(review({ status: 'refused', result: 'left' })), /nu mai e în grup/);
   assert.match(settledText(review({ status: 'kick_failed', decided_by_name: 'Vlad', result: 'Organizatorii nu pot fi scoși.' })), /a eșuat: Organizatorii nu pot fi scoși\./);
@@ -169,7 +170,7 @@ function controlFixture(decide: InactivityControlDeps['decide']) {
   const answers: (string | undefined)[] = [];
   const calls: unknown[][] = [];
   const deps: InactivityControlDeps = {
-    organizers: [100, 101], group: '-123',
+    organizers: [100, 101],
     decide: async (...args) => { calls.push(args); return decide(...args); },
     edit: async (chat, msg, text) => { edits.push({ chat, msg, text }); },
     answer: async (_id, text) => { answers.push(text); },
@@ -222,9 +223,18 @@ test('a cycle that no longer exists: a toast, no error', async () => {
   assert.deepEqual(f.answers, ['Alerta nu mai există.']);
 });
 
-test('a database error propagates (the organizer gets the usual error message)', async () => {
+test('a database error stops the spinner, then propagates (the organizer gets the usual error message)', async () => {
   const f = controlFixture(async () => { throw new Error('connection reset'); });
   await assert.rejects(inactivityCallback(tap(`i:${CYCLE}:n`), f.deps), /connection reset/);
+  assert.deepEqual(f.answers, ['Nu s-a putut face acum. Încearcă din nou.']);
+});
+
+test('a "settled" change (kick finished without a report) edits both copies', async () => {
+  const changes: Change[] = [{ change: 'settled', review: review({ status: 'kick_failed', decided_by_name: 'Vlad', result: 'Grupul s-a schimbat.' }) }];
+  const f = fixture({ maintain: async () => changes, candidates: async () => [] });
+  await runInactivity(f.ports);
+  assert.equal(f.edits.length, 2);
+  assert.match(f.edits[0].text, /a eșuat: Grupul s-a schimbat\./);
 });
 
 test('an edit failing on a deleted copy keeps the decision', async () => {

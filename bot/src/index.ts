@@ -68,6 +68,8 @@ let lastMinute = "";
 const remindedSessions = new Set<string>();
 // The local day the inactivity check last ran in this process.
 let lastInactivityRun: string | null = null;
+let inactivityRetryAt = 0;
+let inactivityAlertedOn: string | null = null;
 
 if (schedulerEnabled()) cron.schedule(
   "* * * * *",
@@ -124,8 +126,10 @@ if (schedulerEnabled()) cron.schedule(
       }
 
       // Inactivity alerts with action buttons — once a day from 09:00 local.
+      // A failed run retries every 15 minutes the same day; the organizers hear
+      // about it once a day.
       const localToday = todayInTz();
-      if (inactivityDue(hhmm, localToday, lastInactivityRun)) {
+      if (inactivityDue(hhmm, localToday, lastInactivityRun) && Date.now() >= inactivityRetryAt) {
         lastInactivityRun = localToday;
         void inactivityAlert()
           .then((r) => {
@@ -133,7 +137,12 @@ if (schedulerEnabled()) cron.schedule(
           })
           .catch((err) => {
             console.error("[cron/inactivity-alert]", err);
-            void alertAdmins(`⚠️ Eroare la alertele de inactivitate: ${err}`);
+            lastInactivityRun = null;
+            inactivityRetryAt = Date.now() + 15 * 60_000;
+            if (inactivityAlertedOn !== localToday) {
+              inactivityAlertedOn = localToday;
+              void alertAdmins(`⚠️ Eroare la alertele de inactivitate (reîncerc la 15 minute): ${err}`);
+            }
           });
       }
 

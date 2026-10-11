@@ -1,13 +1,13 @@
 import { executeKick, kickPorts } from "../lib/kick-member.js";
 import { organizerIds } from "../lib/organizers.js";
 import { createAdminClient } from "../lib/supabase.js";
-import { editMessageText, sendMessage } from "../lib/telegram.js";
+import { sendMessage } from "../lib/telegram.js";
 import { tomorrowInTz } from "../lib/tz.js";
 import { alertAdmins } from "../lib/notify.js";
 import { sendPoll } from "./send-poll.js";
 import { morningSummary } from "./morning-summary.js";
 import { realPorts, runQueuedNotice } from "./day-ops.js";
-import { editAll } from "./inactivity-alert.js";
+import { editAll, editOrThrow } from "./inactivity-alert.js";
 import type { ReviewView } from "../lib/inactivity-text.js";
 
 // The inactivity cycle that asked for this kick, now settled — or null for a
@@ -48,10 +48,7 @@ export async function reportKick(
 const kickReportPorts = (): KickReportPorts => ({
   organizers: organizerIds(),
   kickResult: inactivityKickResult,
-  async edit(chatId, messageId, text) {
-    const r = await editMessageText(chatId, messageId, text);
-    if (!r.ok) throw new Error(r.description ?? "editMessageText failed");
-  },
+  edit: editOrThrow,
   dm: (chatId, text) => sendMessage(chatId, text),
 });
 

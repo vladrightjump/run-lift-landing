@@ -15,7 +15,7 @@ export interface Candidate {
   anchor_date: string;
   weeks_missed: number;
 }
-export interface Change { change: "returned" | "left" | "reopened"; review: ReviewView }
+export interface Change { change: "returned" | "left" | "reopened" | "settled"; review: ReviewView }
 export type SentMessage = { chat_id: number; message_id: number };
 
 export interface InactivityPorts {
@@ -31,6 +31,13 @@ export interface InactivityPorts {
   record(member: TelegramMember): Promise<void>;
   send(chatId: number, text: string, keyboard: InlineKeyboard): Promise<number | null>;
   edit(chatId: number, messageId: number, text: string): Promise<void>;
+}
+
+// editMessageText that throws on a refused edit (the shared adapter for every
+// place that edits an alert).
+export async function editOrThrow(chatId: number, messageId: number, text: string): Promise<void> {
+  const r = await editMessageText(chatId, messageId, text);
+  if (!r.ok) throw new Error(r.description ?? "editMessageText failed");
 }
 
 // Edits every copy of a settled alert. A copy the organizer deleted only logs.
@@ -142,10 +149,7 @@ export const inactivityPorts = (): InactivityPorts => {
       const r = await sendMessage(chatId, text, { reply_markup: { inline_keyboard: keyboard } });
       return r.ok && r.result ? r.result.message_id : null;
     },
-    async edit(chatId, messageId, text) {
-      const r = await editMessageText(chatId, messageId, text);
-      if (!r.ok) throw new Error(r.description ?? "editMessageText failed");
-    },
+    edit: editOrThrow,
   };
 };
 

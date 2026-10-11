@@ -13,8 +13,8 @@
 --
 -- „Inactiv" = 3 săptămâni calendaristice (luni–duminică) cu cel puțin un
 -- antrenament neanulat, trecut, fără niciun „Da". Numărătoarea pornește după
--- săptămâna referinței: ultimul „Da", intrarea în grup sau ultima decizie
--- „Nu scoate" — cea mai recentă dintre ele.
+-- săptămâna referinței: ultimul „Da", intrarea în grup sau ultimul ciclu încheiat
+-- (Nu scoate, scos, ieșit, refuzat) — cea mai recentă dintre ele.
 --
 -- ÎNTOARCERE: `drop table public.inactivity_reviews cascade;` și `drop function`
 -- pentru funcțiile `public.inactivity_*`. Botul vechi nu le folosește.
@@ -62,7 +62,8 @@ as $$
 $$;
 
 -- Referința unui membru: cea mai recentă dintre ultimul „Da", intrarea în grup
--- și ultima decizie „Nu scoate" (ziua din Chișinău).
+-- și ultimul ciclu încheiat cu o decizie sau o ieșire (Nu scoate, scos, ieșit,
+-- refuzat) — ziua din Chișinău. Cine e scos și reinvitat pornește de la zero.
 create or replace function public.inactivity_anchor(p_member uuid)
 returns date
 language sql
@@ -73,9 +74,9 @@ as $$
   select greatest(
     s.last_attended,
     s.join_date,
-    (select max((r.decided_at at time zone 'Europe/Chisinau')::date)
+    (select max((coalesce(r.decided_at, r.updated_at) at time zone 'Europe/Chisinau')::date)
        from public.inactivity_reviews r
-      where r.member_id = s.id and r.status = 'kept')
+      where r.member_id = s.id and r.status in ('kept', 'kicked', 'left', 'refused'))
   )
   from public.member_attendance_stats s
   where s.id = p_member;
@@ -119,8 +120,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  select c.id, c.full_name, c.telegram_user_id, c.telegram_username, c.last_attended, c.join_date, c.anchor,
-         public.inactivity_weeks(c.anchor, p_today)
+  select c.id, c.full_name, c.telegram_user_id, c.telegram_username, c.last_attended, c.join_date, c.anchor, w.weeks
     from (
       select s.*, public.inactivity_anchor(s.id) as anchor
         from public.telegram_training_stats s
@@ -129,7 +129,8 @@ as $$
            select 1 from public.inactivity_reviews r
             where r.member_id = s.id and r.status in ('open', 'postponed', 'kick_queued'))
     ) c
-   where public.inactivity_weeks(c.anchor, p_today) >= 3
+    cross join lateral (select public.inactivity_weeks(c.anchor, p_today) as weeks) w
+   where w.weeks >= 3
    order by c.full_name;
 $$;
 
@@ -216,7 +217,16 @@ begin
       return jsonb_build_object('outcome', 'refused', 'review', public.inactivity_json(r.id));
     end if;
 
-    v_action := public.queue_telegram_kick(r.member_id, null, p_chat_id, p_actor, p_name);
+    begin
+      v_action := public.queue_telegram_kick(r.member_id, null, p_chat_id, p_actor, p_name);
+    exception when raise_exception then
+      -- membru_admin, fara_telegram, telegram_changed: o stare, nu o defecțiune.
+      update public.inactivity_reviews
+         set status = 'refused', result = sqlerrm, decided_by = p_actor, decided_by_name = p_name,
+             decided_at = now(), updated_at = now()
+       where id = r.id;
+      return jsonb_build_object('outcome', 'refused', 'review', public.inactivity_json(r.id));
+    end;
     update public.inactivity_reviews
        set status = 'kick_queued', bot_action_id = v_action, decided_by = p_actor, decided_by_name = p_name,
            decided_at = now(), updated_at = now()
@@ -239,9 +249,11 @@ $$;
 -- Întreținerea zilnică, înaintea candidaților:
 --   • a revenit (un „Da" după referință) → `returned`;
 --   • nu mai e în grup sau nu mai e activ → `left`;
---   • amânarea a expirat, tot fără „Da" → redeschis, cu săptămânile recalculate.
--- Ciclurile cu scoaterea în coadă nu se ating: rezultatul lor vine din coadă.
--- Întoarce [{ change: returned | left | reopened, review }].
+--   • amânarea a expirat (ziua ei a venit), tot fără „Da" → redeschis, cu
+--     săptămânile recalculate și fără mesajele vechi (botul trimite altele);
+--   • scoaterea din coadă s-a încheiat fără să-și raporteze rezultatul →
+--     `kicked` / `kick_failed` din rândul `bot_actions` (`settled`).
+-- Întoarce [{ change: returned | left | reopened | settled, review }].
 create or replace function public.inactivity_maintain(p_today date)
 returns jsonb
 language plpgsql
@@ -269,10 +281,10 @@ begin
     elsif not exists (select 1 from public.telegram_training_stats s where s.id = r.member_id) then
       update public.inactivity_reviews set status = 'left', updated_at = now() where id = r.id;
       v_change := 'left';
-    elsif r.status = 'postponed' and r.snooze_until <= now() then
+    elsif r.status = 'postponed' and (r.snooze_until at time zone 'Europe/Chisinau')::date <= p_today then
       update public.inactivity_reviews
          set status = 'open', snooze_until = null, weeks_missed = public.inactivity_weeks(r.anchor_date, p_today),
-             decided_by = null, decided_by_name = null, decided_at = null, updated_at = now()
+             decided_by = null, decided_by_name = null, decided_at = null, messages = '[]'::jsonb, updated_at = now()
        where id = r.id;
       v_change := 'reopened';
     end if;
@@ -280,6 +292,17 @@ begin
     if v_change is not null then
       v_out := v_out || jsonb_build_array(jsonb_build_object('change', v_change, 'review', public.inactivity_json(r.id)));
     end if;
+  end loop;
+
+  for r in
+    update public.inactivity_reviews ir
+       set status = case when a.status = 'done' then 'kicked' else 'kick_failed' end,
+           result = coalesce(a.result, ir.result), updated_at = now()
+      from public.bot_actions a
+     where ir.status = 'kick_queued' and a.id = ir.bot_action_id and a.status <> 'pending'
+    returning ir.*
+  loop
+    v_out := v_out || jsonb_build_array(jsonb_build_object('change', 'settled', 'review', public.inactivity_json(r.id)));
   end loop;
   return v_out;
 end;

@@ -163,7 +163,7 @@ export async function handleUpdate(update: TgUpdate): Promise<boolean> {
       // The inactivity alert's buttons (Scoate / Amână / Nu scoate).
       await organizerSafely(cb.message?.chat.id ?? cb.from.id, () => inactivityCallback({
         id: cb.id, fromId: cb.from.id, fromName: cb.from.first_name ?? cb.from.username ?? String(cb.from.id),
-        chatId: cb.message?.chat.id ?? cb.from.id, chatType: cb.message?.chat.type ?? 'private',
+        chatId: cb.message?.chat.id ?? cb.from.id, chatType: cb.message?.chat.type ?? 'unknown',
         messageId: cb.message?.message_id ?? null, data: cb.data!,
       }, inactivityControlDeps()));
       return true;
