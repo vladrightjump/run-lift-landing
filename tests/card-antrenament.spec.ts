@@ -2,14 +2,12 @@ import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
 
 /**
- * „Până atunci" — cardul antrenamentului de pe ecranul „Ne vedem curând".
+ * „Până atunci" — cardul antrenamentului de pe ecranul dintre ediții.
  *
- * Countdown-ul de deasupra ridică întrebarea „ce fac în zilele astea?", iar
- * cardul e răspunsul. De aceea arată CONȚINUT, nu o etichetă: numărul
- * săptămânii, titlul și primele rânduri.
+ * Arată CONȚINUT, nu o etichetă: numărul săptămânii, titlul și primele rânduri.
  *
  * Contractul păzit aici e mai ales ce NU face. Cardul e decor pe un ecran al
- * cărui rost e formularul de notificare, deci orice eșec al lui trebuie să fie
+ * cărui rost e antrenamentul de probă, deci orice eșec al lui trebuie să fie
  * invizibil: fără bandă de eroare, fără card gol, fără să atingă butonul
  * principal. Un card care strică homepage-ul când tace backend-ul ar fi mai rău
  * decât niciun card.
@@ -17,20 +15,6 @@ import type { Page, Route } from '@playwright/test';
 
 const PROGRAM_ROUTE = '**/rest/v1/rpc/public_weekly_workouts';
 
-/**
- * Ceasul se fixează înaintea țintei countdown-ului (`nextEditionAt`).
- *
- * Fără asta, testul care verifică „ecranul rămâne întreg la o eroare" ar fi
- * expirat de la sine după 26 septembrie 2026: `.cs-countdown` se randează doar
- * cât timp countdown-ul n-a ajuns la zero, iar eșecul ar fi arătat ca o
- * regresie a cardului, nu ca un ceas trecut.
- */
-const INAINTE_DE_TINTA = Date.parse('2026-09-22T09:00:00+03:00');
-
-const fixClock = (page: Page, moment: number) =>
-  page.addInitScript((fixed) => {
-    Date.now = () => fixed;
-  }, moment);
 
 const saptamana = (numar: number) => ({
   numar,
@@ -89,15 +73,14 @@ test.describe('Cardul „Până atunci"', () => {
   });
 
   test('o eroare de server rămâne INVIZIBILĂ — ecranul nu se strică', async ({ page }) => {
-    await fixClock(page, INAINTE_DE_TINTA);
     await mockProgram(page, { message: 'boom' }, 500);
     await page.goto('/?preview=next');
 
     await expect(page.locator('.cs-antren')).toHaveCount(0);
     await expect(page.locator('[role="alert"]')).toHaveCount(0);
     // Ce contează pe ecranul ăsta e în continuare acolo.
-    await expect(page.getByRole('button', { name: /Anunță-mă la lansare/i })).toBeVisible();
-    await expect(page.locator('.cs-countdown')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Primul tău antrenament cu noi.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Anunță-mă' })).toBeVisible();
   });
 
   test('un răspuns stricat e tratat la fel de tăcut', async ({ page }) => {
@@ -105,7 +88,7 @@ test.describe('Cardul „Până atunci"', () => {
     await page.goto('/?preview=next');
 
     await expect(page.locator('.cs-antren')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /Anunță-mă la lansare/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Anunță-mă' })).toBeVisible();
   });
 
   test('nu apare pe „Coming Soon" — acolo ecranul încă își face promisiunea', async ({

@@ -14,6 +14,7 @@ import {
   TRAINING_WHERE,
   TRAINING_MAP_EMBED_SRC,
   TRAINING_MAP_DIRECTIONS_URL,
+  TRAINING_ORAR,
 } from '../content/format';
 import { EDITION } from '../content/edition';
 import { HERO_POSTER, heroVideoSrc } from '../lib/media';
@@ -58,12 +59,7 @@ const ETAPE = [
   { nr: '03', titlu: 'Stretching', text: 'Revenire, întindere și un moment să ne cunoaștem mai bine.' },
 ];
 
-const ORAR = [
-  { k: 'Când', v: EDITION.training.days, accent: false },
-  { k: 'Unde', v: TRAINING_WHERE, accent: false },
-  { k: 'Ora', v: EDITION.training.time, accent: true },
-  { k: 'Unde ne găsești', v: 'În aer liber, în parc', accent: false },
-];
+const ORAR = [...TRAINING_ORAR, { k: 'Unde ne găsești', v: 'În aer liber, în parc', accent: false }];
 
 /**
  * Banda de sub hero. Constante de build: antrenamentele nu se mută odată cu

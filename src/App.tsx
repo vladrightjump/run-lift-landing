@@ -1,5 +1,6 @@
 import { ComingSoon } from './components/ComingSoon';
 import { Landing } from './components/Landing';
+import { IntreEditii } from './components/IntreEditii';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 import { useCountdown } from './hooks/useCountdown';
@@ -8,13 +9,13 @@ import { useEventConfig, useEditionDates } from './hooks/useEventConfig';
 
 export const App = () => {
   const { showComingSoon: SHOW_COMING_SOON } = useEventConfig();
-  const { LAUNCH_DATE, NEXT_EDITION_DATE } = useEditionDates();
+  const { LAUNCH_DATE } = useEditionDates();
   const { toast, hiding, showToast } = useToast();
   // La expirarea timerului de lansare (LAUNCH_DATE) ecranul comută singur de la
   // Coming Soon la landing-ul ediției curente — fără redeploy manual.
   const launch = useCountdown(LAUNCH_DATE);
-  // În ziua cursei landing-ul mai comută o dată („cine vine") și încă o dată
-  // (countdown spre următorul antrenament). Vezi `usePagePhase`.
+  // În ziua cursei landing-ul mai comută o dată („cine vine"), iar după finalul
+  // cursei homepage-ul devine ecranul dintre ediții. Vezi `usePagePhase`.
   const phase = usePagePhase();
   // Preview manual înainte de ora lansării: /?preview=landing (noul landing)
   // sau /?preview=soon (Coming Soon). Fazele zilei au propriile valori
@@ -28,7 +29,7 @@ export const App = () => {
   const ecran = preLansare ? (
     <ComingSoon showToast={showToast} />
   ) : phase === 'next' ? (
-    <ComingSoon showToast={showToast} target={NEXT_EDITION_DATE} variant="next-session" />
+    <IntreEditii showToast={showToast} />
   ) : (
     <Landing mode={phase === 'leaderboard' ? 'leaderboard' : 'full'} />
   );
