@@ -87,11 +87,11 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     // Ordinea în care blocurile APAR, nu doar unde ajung: un card montat sub
     // butoane și împins apoi în jos de secțiunea de probă e exact saltul de evitat.
     await page.addInitScript(() => {
-      const w = window as unknown as { __aparitii: string[] };
-      w.__aparitii = [];
+      const w = window as unknown as { aparitiiTest: string[] };
+      w.aparitiiTest = [];
       new MutationObserver(() => {
         for (const [sel, nume] of [['.trial-training', 'proba'], ['.cs-antren', 'card']] as const) {
-          if (document.querySelector(sel) && !w.__aparitii.includes(nume)) w.__aparitii.push(nume);
+          if (document.querySelector(sel) && !w.aparitiiTest.includes(nume)) w.aparitiiTest.push(nume);
         }
       }).observe(document, { childList: true, subtree: true });
     });
@@ -103,7 +103,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible();
     await expect(proba(page)).toBeVisible();
-    expect(await page.evaluate(() => (window as unknown as { __aparitii: string[] }).__aparitii)).toEqual([
+    expect(await page.evaluate(() => (window as unknown as { aparitiiTest: string[] }).aparitiiTest)).toEqual([
       'proba',
       'card',
     ]);
