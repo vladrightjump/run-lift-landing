@@ -14,9 +14,8 @@
 import { StrictMode } from 'react';
 import { AppProviders } from './app/providers';
 import { createRoot } from 'react-dom/client';
+// Ca în producție, unde `app/main.tsx` importă foaia globală.
 import './index.css';
-// Ca în producție, unde `app/main.tsx` le importă pe amândouă.
-import './public.css';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { RadacinaAdmin } from './admin/AdminApp';
 import { setupWorker } from 'msw/browser';
