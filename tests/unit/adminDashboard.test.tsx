@@ -31,7 +31,7 @@ vi.mock('../../src/lib/adminApi', async () => {
   return api.current;
 });
 
-vi.mock('../../src/lib/supabase', async (orig) => ({
+vi.mock('../../src/features/inscriere/data/api', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   sendConfirmationEmail: vi.fn(async () => undefined),
 }));

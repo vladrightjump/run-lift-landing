@@ -1,3 +1,5 @@
+import styles from './FormatSection.module.css';
+import shared1 from '../../../shared/ui/PublicLayout.module.css';
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { ETAPE } from '../../../shared/content/etape';
@@ -47,16 +49,16 @@ export const FormatSection = ({ num = '01' }: Props) => {
   };
 
   return (
-    <section className="e3-sec e3-format">
-      <div className="e3-wrap">
+    <section className={shared1['e3-sec']} data-css={"e3-sec e3-format"}>
+      <div className={shared1['e3-wrap']} data-css={"e3-wrap"}>
         <SectionHead num={num}>Formatul</SectionHead>
-        <p className="e3-lead e3-format-intro">
+        <p className={shared1['e3-lead'] + ' ' + styles['e3-format-intro']} data-css={"e3-lead e3-format-intro"}>
           Aleargă. Ridică. Repetă. Segmente de alergare alternate cu stații de exerciții funcționale, în
           stil HYROX. Fără trucuri: doar tu, cronometrul și traseul. Stațiile și greutățile se adaptează
           nivelului tău de către antrenori la fața locului.
         </p>
 
-        <div className="e3-format-tabs" role="tablist" aria-label="Etapele cursei" data-reveal>
+        <div className={styles['e3-format-tabs']} data-css={"e3-format-tabs"} role="tablist" aria-label="Etapele cursei" data-reveal>
           {ETAPE.map((etapa, i) => (
             <button
               key={etapa.nume}
@@ -69,19 +71,19 @@ export const FormatSection = ({ num = '01' }: Props) => {
               aria-selected={ales === i}
               aria-controls={idPanou}
               tabIndex={ales === i ? 0 : -1}
-              className="e3-format-tab"
+              className={styles['e3-format-tab']} data-css={"e3-format-tab"}
               onClick={() => setAles(i)}
               onKeyDown={laTasta}
             >
-              <span className="e3-num e3-format-tab-nr" aria-hidden="true">
+              <span className={shared1['e3-num'] + ' ' + styles['e3-format-tab-nr']} data-css={"e3-num e3-format-tab-nr"} aria-hidden="true">
                 {String(i + 1).padStart(2, '0')}
               </span>
-              <span className="e3-format-tab-name">{etapa.nume}</span>
+              <span className={styles['e3-format-tab-name']} data-css={"e3-format-tab-name"}>{etapa.nume}</span>
             </button>
           ))}
         </div>
 
-        <div className="e3-format-stage">
+        <div className={styles['e3-format-stage']} data-css={"e3-format-stage"}>
           {ETAPE.map((etapa, i) =>
             i === ales ? (
               <div
@@ -89,14 +91,14 @@ export const FormatSection = ({ num = '01' }: Props) => {
                 role="tabpanel"
                 id={idPanou}
                 aria-labelledby={idTab(i)}
-                className="e3-format-panel"
+                className={styles['e3-format-panel']} data-css={"e3-format-panel"}
               >
                 <Continut intro={etapa.intro} detalii={etapa.detalii} />
               </div>
             ) : (
               // Copia invizibilă ține doar locul: rezervă înălțimea celui mai
               // lung panou. Nu e focusabilă și nu e citită.
-              <div key={etapa.nume} className="e3-format-panel e3-format-ghost" aria-hidden="true">
+              <div key={etapa.nume} className={styles['e3-format-panel'] + ' ' + styles['e3-format-ghost']} data-css={"e3-format-panel e3-format-ghost"} aria-hidden="true">
                 <Continut intro={etapa.intro} detalii={etapa.detalii} />
               </div>
             )
@@ -109,8 +111,8 @@ export const FormatSection = ({ num = '01' }: Props) => {
 
 const Continut = ({ intro, detalii }: { intro: string; detalii: string[] }) => (
   <>
-    <p className="e3-format-panel-intro">{intro}</p>
-    <ul className="e3-format-list">
+    <p className={styles['e3-format-panel-intro']} data-css={"e3-format-panel-intro"}>{intro}</p>
+    <ul className={styles['e3-format-list']} data-css={"e3-format-list"}>
       {detalii.map((d) => (
         <li key={d}>{d}</li>
       ))}

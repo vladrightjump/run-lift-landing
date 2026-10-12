@@ -1,3 +1,4 @@
+import styles from './Toast.module.css';
 import type { ToastState } from '../lib/useToast';
 
 type Props = {
@@ -6,14 +7,14 @@ type Props = {
 };
 
 export const Toast = ({ toast, hiding }: Props) => {
-  const classes = ['toast'];
-  if (toast) classes.push('show');
-  if (toast?.kind === 'success') classes.push('success');
-  if (hiding) classes.push('hide');
+  const classes = [styles.toast];
+  if (toast) classes.push(styles.show);
+  if (toast?.kind === 'success') classes.push(styles.success);
+  if (hiding) classes.push(styles.hide);
 
   return (
     <div id="toast" className={classes.join(' ')} role="status" aria-live="polite">
-      <span className="icon">{toast?.kind === 'success' ? '✓' : '!'}</span>
+      <span className={styles.icon}>{toast?.kind === 'success' ? '✓' : '!'}</span>
       <span>{toast?.msg ?? ''}</span>
     </div>
   );

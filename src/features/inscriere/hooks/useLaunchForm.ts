@@ -1,12 +1,8 @@
+import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import {
-  submitLaunchNotification,
-  isDuplicateError,
-  isTimeoutError,
-  isAbortError,
-  isBotRejectedError,
-} from '../../../lib/supabase';
-import type { SursaInscriere } from '../../../lib/supabase';
+import { submitLaunchNotification, isDuplicateError, isBotRejectedError } from '../data/api';
+import { isTimeoutError, isAbortError } from '../../../shared/lib/errors';
+import type { SursaInscriere } from '../data/api';
 import { logClientError } from '../../../lib/monitoring';
 import { useAntiBot, antiBotErrorMessage, ANTIBOT_MESSAGES } from '../lib/antiBot';
 import { isTurnstileError } from '../../../shared/lib/turnstile';
@@ -36,6 +32,8 @@ export type LaunchOutcome =
  * și mașina de stări `form → loading → success`.
  */
 export const useLaunchForm = (sursa: SursaInscriere = 'lansare') => {
+  const submitLaunchNotificationMutation = useMutation({ mutationFn: (args: Parameters<typeof submitLaunchNotification>) => submitLaunchNotification(...args), networkMode: 'always' });
+
   const [draft, setDraft] = useState<LaunchDraft>(EMPTY_LAUNCH_DRAFT);
   const [errors, setErrors] = useState<LaunchFieldErrors>({});
   const [state, setState] = useState<LaunchFormState>('form');
@@ -86,7 +84,7 @@ export const useLaunchForm = (sursa: SursaInscriere = 'lansare') => {
       // Token-ul Turnstile se cere ACUM, nu la montare: e de unică folosință și
       // expiră în ~5 minute. Emailul de bun venit îl trimite funcția Edge.
       const proofs = await antiBot.collect();
-      await submitLaunchNotification(draft, proofs, controller.signal, sursa);
+      await submitLaunchNotificationMutation.mutateAsync([draft, proofs, controller.signal, sursa]);
       setState('success');
       return { kind: 'success', duplicate: false, email };
     } catch (err) {

@@ -1,7 +1,10 @@
+import shared4 from '../../../shared/ui/PublicMotion.module.css';
+import shared3 from '../../../shared/ui/PublicControls.module.css';
+import shared2 from '../../../shared/ui/PublicSurface.module.css';
+import styles from './ReelsRail.module.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import '../../../edition3.css';
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '../../../shared/lib/config';
-import type { Reel } from '../../../lib/supabase';
+import type { Reel } from '../data/api';
 import { posterClip, posterClipRezerva, sursaIncorporare } from '../../../shared/lib/youtube';
 import { SectionHead } from '../../landing';
 
@@ -34,7 +37,7 @@ const Poster = ({ id }: { id: string }) => {
   if (pas === 2) return null;
   return (
     <img
-      className="e3-reel-poster"
+      className={styles['e3-reel-poster']} data-css={"e3-reel-poster"}
       src={pas === 0 ? posterClip(id) : posterClipRezerva(id)}
       // Decorativ: legenda de sub card spune deja ce e clipul.
       alt=""
@@ -60,10 +63,10 @@ type CardProps = {
 };
 
 const ReelCard = ({ reel, index, redă, centrat, miscareRedusa, alege }: CardProps) => (
-  <figure className="e3-reels-item" data-centrat={centrat || undefined}>
-    <div className="e3-card e3-reel">
+  <figure className={styles['e3-reels-item']} data-css={"e3-reels-item"} data-centrat={centrat || undefined}>
+    <div className={shared2['e3-card'] + ' ' + styles['e3-reel']} data-css={"e3-card e3-reel"}>
       {/* Marcajul desenat stă cel mai jos: se vede doar dacă posterul nu vine. */}
-      <span className="e3-reel-fallback" aria-hidden="true">
+      <span className={styles['e3-reel-fallback']} data-css={"e3-reel-fallback"} aria-hidden="true">
         {doiDigiti(index + 1)}
       </span>
 
@@ -73,7 +76,7 @@ const ReelCard = ({ reel, index, redă, centrat, miscareRedusa, alege }: CardPro
           playere la unu: un player ascuns ar continua să coste. */}
       {redă && (
         <iframe
-          className="e3-reel-player"
+          className={styles['e3-reel-player']} data-css={"e3-reel-player"}
           src={sursaIncorporare(reel.youtube)}
           title={reel.caption}
           allow="autoplay; encrypted-media; picture-in-picture"
@@ -106,11 +109,11 @@ const ReelCard = ({ reel, index, redă, centrat, miscareRedusa, alege }: CardPro
       {!redă && (
         <button
           type="button"
-          className="e3-reel-select"
+          className={styles['e3-reel-select']} data-css={"e3-reel-select"}
           onClick={alege}
           aria-label={`Redă clipul: ${reel.caption}`}
         >
-          <span className="e3-reel-play" aria-hidden="true">
+          <span className={styles['e3-reel-play']} data-css={"e3-reel-play"} aria-hidden="true">
             ▶
           </span>
         </button>
@@ -122,7 +125,7 @@ const ReelCard = ({ reel, index, redă, centrat, miscareRedusa, alege }: CardPro
       {redă && miscareRedusa && (
         <button
           type="button"
-          className="e3-reel-play e3-reel-stop"
+          className={styles['e3-reel-play'] + ' ' + styles['e3-reel-stop']} data-css={"e3-reel-play e3-reel-stop"}
           onClick={alege}
           aria-label={`Oprește clipul: ${reel.caption}`}
         >
@@ -133,9 +136,9 @@ const ReelCard = ({ reel, index, redă, centrat, miscareRedusa, alege }: CardPro
 
     {/* Legenda SUB card, nu peste imagine: peste o filmare necontrolată nu se
         poate garanta contrastul. */}
-    <figcaption className="e3-reel-caption">
+    <figcaption className={styles['e3-reel-caption']} data-css={"e3-reel-caption"}>
       <span>{reel.caption}</span>
-      <a className="e3-link e3-reel-out" href={reel.url} target="_blank" rel="noopener noreferrer">
+      <a className={shared3['e3-link'] + ' ' + styles['e3-reel-out']} data-css={"e3-link e3-reel-out"} href={reel.url} target="_blank" rel="noopener noreferrer">
         <span aria-hidden="true">↗</span> Deschide pe Instagram
       </a>
     </figcaption>
@@ -297,15 +300,15 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
   const total = reels.length;
 
   return (
-    <section className="e3-reels">
+    <section className={styles['e3-reels']} data-css={"e3-reels"}>
       {/* Cuvântul-fantomă. Decorativ integral, deci ascuns de cititoarele de
           ecran: handle-ul e deja anunțat de linkul din coloana de text. */}
-      <span className="e3-reels-ghost" aria-hidden="true">
+      <span className={styles['e3-reels-ghost']} data-css={"e3-reels-ghost"} aria-hidden="true">
         {INSTAGRAM_HANDLE}
       </span>
 
-      <div className="e3-reels-inner">
-        <div className="e3-reels-media">
+      <div className={styles['e3-reels-inner']} data-css={"e3-reels-inner"}>
+        <div className={styles['e3-reels-media']} data-css={"e3-reels-media"}>
           {/* `data-reveal` pe ȘINĂ, nu pe fiecare card. `useScrollReveal` pune
               `opacity: 0` pe fiecare element observat și îl readuce doar când
               IntersectionObserver îl vede — iar cardurile tăiate orizontal de
@@ -313,7 +316,7 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
               cele de la capete ar rămâne invizibile exact când vizitatorul
               derulează șina ca să le vadă. */}
           <div
-            className="e3-reels-rail"
+            className={styles['e3-reels-rail']} data-css={"e3-reels-rail"}
             data-reveal
             ref={sinaRef}
             role="region"
@@ -345,10 +348,10 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
           {/* Navigarea. Un singur clip n-are unde naviga. Contor și segmente,
               nu buline: numărul spune și „unde sunt", și „câte mai sunt". */}
           {total > 1 && (
-            <div className="e3-reels-nav">
+            <div className={styles['e3-reels-nav']} data-css={"e3-reels-nav"}>
               <button
                 type="button"
-                className="e3-reels-arrow"
+                className={styles['e3-reels-arrow']} data-css={"e3-reels-arrow"}
                 onClick={() => mergiLa(centru - 1)}
                 disabled={centru === 0}
                 aria-label="Clipul anterior"
@@ -357,7 +360,7 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
               </button>
               <button
                 type="button"
-                className="e3-reels-arrow"
+                className={styles['e3-reels-arrow']} data-css={"e3-reels-arrow"}
                 onClick={() => mergiLa(centru + 1)}
                 disabled={centru === total - 1}
                 aria-label="Clipul următor"
@@ -365,24 +368,24 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
                 <span aria-hidden="true">→</span>
               </button>
 
-              <p className="e3-reels-count" aria-live="polite">
-                <span className="e3-reels-count-now">{doiDigiti(centru + 1)}</span>
-                <span className="e3-reels-count-sep" aria-hidden="true">
+              <p className={styles['e3-reels-count']} data-css={"e3-reels-count"} aria-live="polite">
+                <span className={styles['e3-reels-count-now']} data-css={"e3-reels-count-now"}>{doiDigiti(centru + 1)}</span>
+                <span className={styles['e3-reels-count-sep']} data-css={"e3-reels-count-sep"} aria-hidden="true">
                   /
                 </span>
-                <span className="e3-reels-count-total">{doiDigiti(total)}</span>
-                <span className="e3-sr">
+                <span className={styles['e3-reels-count-total']} data-css={"e3-reels-count-total"}>{doiDigiti(total)}</span>
+                <span className={shared4['e3-sr']} data-css={"e3-sr"}>
                   {' '}
                   , {reels[centru]?.caption}
                 </span>
               </p>
 
-              <div className="e3-reels-segments">
+              <div className={styles['e3-reels-segments']} data-css={"e3-reels-segments"}>
                 {reels.map((reel, i) => (
                   <button
                     key={reel.youtube}
                     type="button"
-                    className="e3-reels-segment"
+                    className={styles['e3-reels-segment']} data-css={"e3-reels-segment"}
                     onClick={() => mergiLa(i)}
                     aria-label={`Clipul ${i + 1}: ${reel.caption}`}
                     aria-current={centru === i || undefined}
@@ -393,11 +396,11 @@ export const ReelsRail = ({ reels, num, headline, body }: Props) => {
           )}
         </div>
 
-        <div className="e3-reels-text">
+        <div className={styles['e3-reels-text']} data-css={"e3-reels-text"}>
           <SectionHead num={num}>{headline}</SectionHead>
-          {body && <p className="e3-reels-body">{body}</p>}
+          {body && <p className={styles['e3-reels-body']} data-css={"e3-reels-body"}>{body}</p>}
           <a
-            className="e3-link e3-reels-cta"
+            className={shared3['e3-link'] + ' ' + styles['e3-reels-cta']} data-css={"e3-link e3-reels-cta"}
             href={INSTAGRAM_URL}
             target="_blank"
             rel="noopener noreferrer"

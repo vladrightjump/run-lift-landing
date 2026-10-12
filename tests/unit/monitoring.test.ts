@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { logClientError, installGlobalMonitoring } from '../../src/lib/monitoring';
-import { SubmitHttpError, isNetworkOrCspError } from '../../src/lib/supabase';
+import { SubmitHttpError, isNetworkOrCspError } from '../../src/shared/lib/errors';
 
 /**
  * Monitoringul ușor: garantează că eșecurile lasă o urmă structurată în consolă

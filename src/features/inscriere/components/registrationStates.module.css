@@ -1,0 +1,70 @@
+
+.e3-submit { transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
+.e3-submit:hover:not(:disabled) { background: var(--e3-accent-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,242,75,0.25); }
+.e3-submit:active:not(:disabled) { transform: translateY(0) scale(0.98); box-shadow: none; }
+.e3-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.e3-retry { transition: background 0.2s ease, transform 0.15s ease; }
+.e3-retry:hover { background: var(--e3-accent-hover); transform: translateY(-2px); }
+.e3-retry:active { transform: translateY(0) scale(0.97); }
+@supports (animation-timeline: view()) {
+  .e3-slot-fill {
+    animation: e3-slot-pop linear both;
+    animation-timeline: view(block);
+    animation-range: entry 20% cover 40%;
+    animation-delay: calc(var(--i, 0) * 18ms);
+    transform-origin: 50% 100%;
+  } }
+  .e3-progress-bar {
+    position: relative; overflow: hidden; width: min(220px, 70%); height: 6px;
+    background: var(--e3-border);
+  }
+  .e3-progress-bar::after {
+    content: ''; position: absolute; inset: 0; width: 40%;
+    background: var(--e3-accent);
+    animation: e3-progress-run 1s var(--e3-ease) infinite;
+  }
+@keyframes e3-slot-pop {
+  from { transform: scaleY(0.25); opacity: 0.35; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+  @keyframes e3-progress-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+.field1.field1.field1.field1 { display: grid; gap: 8px; }
+.text2 { composes: label from './FormControls.module.css'; }
+.input3 { composes: input from './FormControls.module.css'; }
+.input3On0.input3On0.input3On0.input3On0 { border-color: var(--e3-danger); }
+.input3Off0.input3Off0.input3Off0.input3Off0 { border-color: var(--e3-border); }
+.text4 { composes: fieldError from './FormControls.module.css'; }
+.field5.field5.field5.field5 { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.input6.input6.input6.input6 { accent-color: var(--e3-accent); cursor: pointer; outline-offset: 2px; }
+.text7.text7.text7.text7 { font-size: 14px; line-height: 1.5; }
+.text7On0.text7On0.text7On0.text7On0 { color: var(--e3-danger); }
+.text7Off0.text7Off0.text7Off0.text7Off0 { color: var(--e3-muted); }
+.text8.text8.text8.text8 { font-size: 13px; color: var(--e3-danger); }
+.button9.button9.button9.button9 { background: var(--e3-accent); color: var(--e3-bg); border: none; cursor: pointer; font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1.5px; text-transform: uppercase; padding: 18px; }
+.layout10.layout10.layout10.layout10 { position: relative; width: 84px; height: 84px; display: grid; place-items: center; }
+.layout11.layout11.layout11.layout11 { position: absolute; inset: 0; border: 2px solid var(--e3-accent); animation: e3-ring-pulse 1.6s ease-out 0.4s 3; }
+.layout12.layout12.layout12.layout12 { width: 84px; height: 84px; background: var(--e3-accent); display: grid; place-items: center; animation: e3-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.path13.path13.path13.path13 { stroke-dasharray: 40; stroke-dashoffset: 40; animation: e3-draw-check 0.5s ease-out 0.35s forwards; }
+.layout14.layout14.layout14.layout14 { width: 84px; height: 84px; background: var(--e3-danger-bg); display: grid; place-items: center; animation: e3-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.text15.text15.text15.text15 { font-size: 38px; font-weight: 700; color: var(--e3-danger); }
+.layout16.layout16.layout16.layout16 { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.button17 { composes: smallAction from './FormControls.module.css'; }
+.button18 { composes: smallAction from './FormControls.module.css'; }
+.button18.button18.button18.button18 { background: transparent; border: 1px solid var(--e3-accent); color: var(--e3-accent); }
+.button19.button19.button19.button19 { background: transparent; border: 1px solid var(--e3-border); color: var(--e3-muted); cursor: pointer; font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; padding: 12px 24px; }
+.button20 { composes: smallAction from './FormControls.module.css'; }
+.button20.button20.button20.button20 { font-size: 17px; padding: 14px 32px; }
+.link21.link21.link21.link21 { text-decoration: none; display: inline-block; }
+.layout22.layout22.layout22.layout22 { display: flex; }
+.layout23.layout23.layout23.layout23 { height: 8px; flex: 1; }
+.layout23On0.layout23On0.layout23On0.layout23On0 { background: var(--e3-accent); }
+.layout23Off0.layout23Off0.layout23Off0.layout23Off0 { background: var(--e3-border); }
+.layout24.layout24.layout24.layout24 { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.text25.text25.text25.text25 { font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--e3-muted); }
+@keyframes e3-ring-pulse { 0% { transform: scale(0.9); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes e3-pop-in { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes e3-draw-check { to { stroke-dashoffset: 0; } }
+
+.acordInvalid.acordInvalid.acordInvalid.acordInvalid { outline: 2px solid var(--e3-danger); }
+.acordValid.acordValid.acordValid.acordValid { outline: 2px solid transparent; }

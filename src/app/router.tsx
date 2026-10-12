@@ -9,7 +9,8 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router';
 import { EventConfigProvider } from '../shared/lib/useEventConfig';
-import { editionPages, independentPages, landingPage } from './routes';
+import { rutaLanding } from '../features/landing';
+import { editionPages, independentPages } from './routes';
 
 /**
  * `/despre-noi` și `/antrenament` NU primesc provider-ul, deliberat.
@@ -39,12 +40,12 @@ const EditionLayout = () => (
 // Restul căilor client rămân landing, ca înainte. Rewrites de server sunt
 // explicite: o adresă necunoscută pe Vercel continuă să răspundă cu 404.
 const LandingFallback = () => (
-  <EventConfigProvider><landingPage.component /></EventConfigProvider>
+  <EventConfigProvider><rutaLanding.component /></EventConfigProvider>
 );
 
 const rootRoute = createRootRoute({ component: Outlet, notFoundComponent: LandingFallback });
 const editionRoute = createRoute({ getParentRoute: () => rootRoute, id: 'edition', component: EditionLayout });
-const landingRoute = createRoute({ getParentRoute: () => editionRoute, ...landingPage });
+const landingRoute = createRoute({ getParentRoute: () => editionRoute, ...rutaLanding });
 const routeTree = rootRoute.addChildren([
   editionRoute.addChildren([
     landingRoute,

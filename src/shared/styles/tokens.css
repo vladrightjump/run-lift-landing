@@ -26,3 +26,18 @@
   --e3-bg-deep: #0C0E0A;
   --e3-surface-tint: #262C1B;
 }
+
+:root { --e3-spring: cubic-bezier(0.34, 1.4, 0.64, 1); }
+
+:root {
+    --e3-gutter: clamp(20px, 5vw, 48px);
+    --e3-wrap: 1280px;
+    /* Titlul din hero și titlurile de secțiune: scară de afiș, nu de pagină. */
+    --e3-fs-display: clamp(84px, min(21vw, 29dvh), 300px);
+    --e3-fs-h2: clamp(56px, 10vw, 148px);
+    /* Mișcarea: o curbă care pleacă repede și se așază lung, trei durate. */
+    --e3-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --e3-dur-fast: 0.16s;
+    --e3-dur: 0.3s;
+    --e3-dur-slow: 0.6s;
+  }

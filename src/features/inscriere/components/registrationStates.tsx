@@ -1,8 +1,10 @@
+import shared3 from '../../../shared/ui/PublicControls.module.css';
+import styles from './registrationStates.module.css';
+import shared1 from './RegistrationStyles.module.css';
 import type { CSSProperties, ReactNode, Ref } from 'react';
 import { INSTAGRAM_URL } from '../../../shared/lib/config';
 import { downloadEventIcs, shareSignup } from '../../../shared/lib/calendar';
 import type { EventConfig } from '../../../shared/content/eventConfig';
-import { label, inputStyle, fieldErr, ctaSmall } from './shared';
 
 /**
  * Bucățile pe care le randează AMÂNDOUĂ suprafețele de înscriere: secțiunea 03
@@ -84,19 +86,19 @@ export const CampText = ({
   mesajEroare,
   campRef,
 }: CampProps) => (
-  <label style={{ display: 'grid', gap: 8 }}>
-    <span style={label}>{eticheta}</span>
+  <label className={styles.field1}>
+    <span className={styles.text2}>{eticheta}</span>
     <input
       ref={campRef}
-      className="e3-input"
+      className={shared1['e3-input'] + ' ' + styles.input3 + ' ' + (eroare ? styles.input3On0 : styles.input3Off0)} data-css={"e3-input"}
       name={nume}
       type={tip}
       inputMode={inputMode}
       placeholder={placeholder}
       autoComplete={autoComplete}
-      style={{ ...inputStyle, borderColor: eroare ? 'var(--e3-danger)' : 'var(--e3-border)' }}
+
     />
-    {eroare && <span style={fieldErr}>{mesajEroare}</span>}
+    {eroare && <span className={styles.text4}>{mesajEroare}</span>}
   </label>
 );
 
@@ -107,65 +109,43 @@ export const CampText = ({
 export const BifaAcord = ({
   eroare = false,
   onClear,
-  marime,
-  margineSus,
+  className,
 }: {
   eroare?: boolean;
   onClear: () => void;
-  marime: number;
-  margineSus: string;
+  className: string;
 }) => (
   <>
     <label
-      style={{ display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer' }}
+      className={styles.field5}
       onChange={onClear}
     >
       <input
         name="acord"
         type="checkbox"
-        style={{
-          width: marime,
-          height: marime,
-          margin: margineSus,
-          accentColor: 'var(--e3-accent)',
-          cursor: 'pointer',
-          outline: `2px solid ${eroare ? 'var(--e3-danger)' : 'transparent'}`,
-          outlineOffset: 2,
-        }}
+        className={styles.input6 + ' ' + className + ' ' + (eroare ? styles.acordInvalid : styles.acordValid)}
       />
       <span
-        style={{ fontSize: 14, lineHeight: 1.5, color: eroare ? 'var(--e3-danger)' : 'var(--e3-muted)' }}
+        className={styles.text7 + ' ' + (eroare ? styles.text7On0 : styles.text7Off0)}
       >
         {TEXT_ACORD}
       </span>
     </label>
-    {eroare && <span style={fieldErr}>{TEXT_ACORD_EROARE}</span>}
+    {eroare && <span className={styles.text8}>{TEXT_ACORD_EROARE}</span>}
   </>
 );
 
 /** Butonul de trimitere; textul se schimbă când înscrierea intră pe listă. */
 export const ButonTrimite = ({
   peListaDeAsteptare,
-  marginTop,
+  className,
 }: {
   peListaDeAsteptare: boolean;
-  marginTop: number;
+  className: string;
 }) => (
   <button
     type="submit"
-    className="e3-submit e3-shine"
-    style={{
-      background: 'var(--e3-accent)',
-      color: 'var(--e3-bg)',
-      border: 'none',
-      cursor: 'pointer',
-      fontFamily: 'Anton, sans-serif',
-      fontSize: 20,
-      letterSpacing: 1.5,
-      textTransform: 'uppercase',
-      padding: 18,
-      marginTop,
-    }}
+    className={styles['e3-submit'] + ' ' + shared3['e3-shine'] + ' ' + styles.button9 + ' ' + className} data-css={"e3-submit e3-shine"}
   >
     {peListaDeAsteptare ? 'Intră pe lista de așteptare' : 'Trimite înscrierea'}
   </button>
@@ -177,28 +157,16 @@ export const ButonTrimite = ({
  * Cât timp înscrierea e pe drum: o bară care se umple și se golește, nu un
  * cerc care se învârte. Pagina are colțuri drepte peste tot.
  */
-export const BaraIncarcare = () => <div className="e3-progress-bar" aria-hidden="true" />;
+export const BaraIncarcare = () => <div className={styles['e3-progress-bar']} data-css={"e3-progress-bar"} aria-hidden="true" />;
 
 /** Bifa de succes: pătratul care pulsează o dată, apoi linia care se desenează. */
 export const BifaSucces = () => (
-  <div style={{ position: 'relative', width: 84, height: 84, display: 'grid', placeItems: 'center' }}>
+  <div className={styles.layout10}>
     <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        border: '2px solid var(--e3-accent)',
-        animation: 'e3-ring-pulse 1.6s ease-out 0.4s 3',
-      }}
+      className={styles.layout11}
     />
     <div
-      style={{
-        width: 84,
-        height: 84,
-        background: 'var(--e3-accent)',
-        display: 'grid',
-        placeItems: 'center',
-        animation: 'e3-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-      }}
+      className={styles.layout12}
     >
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
         <path
@@ -207,11 +175,7 @@ export const BifaSucces = () => (
           strokeWidth="5"
           strokeLinecap="square"
           strokeLinejoin="miter"
-          style={{
-            strokeDasharray: 40,
-            strokeDashoffset: 40,
-            animation: 'e3-draw-check 0.5s ease-out 0.35s forwards',
-          }}
+          className={styles.path13}
         />
       </svg>
     </div>
@@ -221,16 +185,9 @@ export const BifaSucces = () => (
 /** Pătratul roșu cu „✕", pentru starea de eroare. */
 export const IconEroare = () => (
   <div
-    style={{
-      width: 84,
-      height: 84,
-      background: 'var(--e3-danger-bg)',
-      display: 'grid',
-      placeItems: 'center',
-      animation: 'e3-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-    }}
+    className={styles.layout14}
   >
-    <span style={{ fontSize: 38, fontWeight: 700, color: 'var(--e3-danger)' }}>✕</span>
+    <span className={styles.text15}>✕</span>
   </div>
 );
 
@@ -241,19 +198,14 @@ export const IconEroare = () => (
  * calendar până nu se eliberează un loc.
  */
 export const ActiuniSucces = ({ config }: { config: EventConfig }) => (
-  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-    <button type="button" onClick={() => downloadEventIcs(config)} style={ctaSmall}>
+  <div className={styles.layout16}>
+    <button type="button" onClick={() => downloadEventIcs(config)} className={styles.button17}>
       Adaugă în calendar
     </button>
     <button
       type="button"
       onClick={() => void shareSignup(config)}
-      style={{
-        ...ctaSmall,
-        background: 'transparent',
-        border: '1px solid var(--e3-accent)',
-        color: 'var(--e3-accent)',
-      }}
+      className={styles.button18}
     >
       Distribuie
     </button>
@@ -264,29 +216,16 @@ export const ActiuniSucces = ({ config }: { config: EventConfig }) => (
 export const ButonReset = ({
   peListaDeAsteptare,
   onClick,
-  marginTop = 0,
+  className,
 }: {
   peListaDeAsteptare: boolean;
   onClick: () => void;
-  marginTop?: number;
+  className: string;
 }) => (
   <button
     type="button"
-    className="e3-ghost"
+    className={shared1['e3-ghost'] + ' ' + styles.button19 + ' ' + className} data-css={"e3-ghost"}
     onClick={onClick}
-    style={{
-      background: 'transparent',
-      border: '1px solid var(--e3-border)',
-      color: 'var(--e3-muted)',
-      cursor: 'pointer',
-      fontFamily: 'Archivo, sans-serif',
-      fontSize: 13,
-      fontWeight: 600,
-      letterSpacing: 2,
-      textTransform: 'uppercase',
-      padding: '12px 24px',
-      marginTop,
-    }}
   >
     {peListaDeAsteptare ? 'Adaugă altă persoană' : 'Înscrie altă persoană'}
   </button>
@@ -295,36 +234,34 @@ export const ButonReset = ({
 /**
  * „Încearcă din nou" — curăță erorile și readuce formularul.
  *
- * `stil` nu e un prop de comoditate: cele două suprafețe chiar desenează butonul
+ * Clasele locale păstrează diferențele dintre suprafețe: cele două suprafețe chiar desenează butonul
  * altfel (secțiunea răsfiră literele la 1.5, formularul la 1, moștenit din
- * `ctaSmall`). Un singur stil impus aici ar fi fost o schimbare vizuală
+ * butonul mic). Un singur stil impus aici ar fi fost o schimbare vizuală
  * strecurată într-un refactor.
  */
 export const ButonReincearca = ({
   onClick,
-  stil,
+  className,
 }: {
   onClick: () => void;
-  stil?: CSSProperties;
+  className?: string;
 }) => (
   <button
     type="button"
-    className="e3-retry"
+    className={styles['e3-retry'] + ' ' + styles.button20 + ' ' + (className ?? '')} data-css={"e3-retry"}
     onClick={onClick}
-    style={{ ...ctaSmall, fontSize: 17, padding: '14px 32px', ...stil }}
   >
     Încearcă din nou
   </button>
 );
 
 /** Linkul spre Instagram de pe ecranul „închis". */
-export const LinkContact = ({ stil }: { stil: CSSProperties }) => (
+export const LinkContact = ({ className }: { className: string }) => (
   <a
     href={INSTAGRAM_URL}
     target="_blank"
     rel="noopener noreferrer"
-    className="e3-cta"
-    style={{ ...stil, textDecoration: 'none', display: 'inline-block' }}
+    className={shared3['e3-cta'] + ' ' + styles.link21 + ' ' + className} data-css={"e3-cta"}
   >
     {TEXT_CONTACT}
   </a>
@@ -334,16 +271,16 @@ export const LinkContact = ({ stil }: { stil: CSSProperties }) => (
 export const BaraLocuri = ({
   total,
   ocupate,
-  gap,
+  className,
   animat,
 }: {
   total: number;
   ocupate: number;
-  gap: number;
+  className: string;
   /** Pe landing segmentele se umplu în lanț; în formular apar dintr-o dată. */
   animat: boolean;
 }) => (
-  <div style={{ display: 'flex', gap }} aria-hidden="true">
+  <div className={styles.layout22 + ' ' + className} aria-hidden="true">
     {Array.from({ length: total }, (_, i) => {
       const pline = i < ocupate;
       return (
@@ -351,13 +288,8 @@ export const BaraLocuri = ({
           key={i}
           // Doar segmentele ocupate se umplu în lanț; cele goale sunt fundal,
           // n-au ce anunța. `--i` dă decalajul din CSS.
-          className={pline && animat ? 'e3-slot-fill' : undefined}
-          style={{
-            height: 8,
-            flex: 1,
-            background: pline ? 'var(--e3-accent)' : 'var(--e3-border)',
-            ...(pline && animat ? ({ '--i': i } as CSSProperties) : null),
-          }}
+          className={(pline && animat ? styles['e3-slot-fill'] : undefined) + ' ' + styles.layout23 + ' ' + (pline ? styles.layout23On0 : styles.layout23Off0)} data-css={(pline && animat ? "e3-slot-fill" : undefined)}
+          style={{ ...(pline && animat ? ({ '--i': i } as CSSProperties) : null) }}
         />
       );
     })}
@@ -367,22 +299,10 @@ export const BaraLocuri = ({
 /** Antetul barei de locuri: eticheta și contorul. */
 export const AntetLocuri = ({ children }: { children: ReactNode }) => (
   <div
-    style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
-      gap: 16,
-      flexWrap: 'wrap',
-    }}
+    className={styles.layout24}
   >
     <span
-      style={{
-        fontSize: 13,
-        fontWeight: 600,
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-        color: 'var(--e3-muted)',
-      }}
+      className={styles.text25}
     >
       Locuri rămase
     </span>

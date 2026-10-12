@@ -37,14 +37,14 @@ test.beforeEach(async ({ page }) => {
 test.describe('App — comutarea Coming Soon ↔ landing', () => {
   test('?preview=soon forțează Coming Soon', async ({ page }) => {
     await page.goto('/?preview=soon');
-    await expect(page.locator('.cs-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"cs-root\"]")).toBeVisible();
     await expect(page.locator('#inscriere')).toHaveCount(0);
   });
 
   test('?preview=landing forțează landing-ul', async ({ page }) => {
     await page.goto('/?preview=landing');
     await expect(page.locator('#inscriere')).toBeVisible();
-    await expect(page.locator('.cs-root')).toHaveCount(0);
+    await expect(page.locator("[data-css~=\"cs-root\"]")).toHaveCount(0);
   });
 
   test('după ora lansării, „/" arată singur landing-ul (fără param)', async ({ page }) => {
@@ -55,7 +55,7 @@ test.describe('App — comutarea Coming Soon ↔ landing', () => {
     }, LAUNCH_DATE.getTime() + 1000);
     await page.goto('/');
     await expect(page.locator('#inscriere')).toBeVisible();
-    await expect(page.locator('.cs-root')).toHaveCount(0);
+    await expect(page.locator("[data-css~=\"cs-root\"]")).toHaveCount(0);
   });
 });
 

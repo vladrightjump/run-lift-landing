@@ -10,14 +10,14 @@ import {
   firstErrorField,
   errorMessage,
   numeComplet,
-} from '../../src/shared/lib/validation';
-import { maskName } from '../../src/shared/lib/mySignups';
-import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
+} from './validation';
+import { maskName } from './mySignups';
+import { SNAPSHOT_CONFIG } from '../content/eventConfig';
 
 // Startul ediției e acum argument, nu import: validarea de vârstă îl primește
 // de la apelant (configul activ), ca regula să urmeze ediția publicată.
 const START = SNAPSHOT_CONFIG.start;
-import type { FormData } from '../../src/shared/lib/validation';
+import type { FormData } from './validation';
 
 /** Formular complet valid — punctul de plecare pentru testele pe câmp. */
 const valid: FormData = {

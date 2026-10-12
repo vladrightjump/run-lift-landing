@@ -1,4 +1,6 @@
-import '../../../edition3.css';
+import shared3 from '../../../shared/ui/PublicControls.module.css';
+import styles from './InscrierePage.module.css';
+import shared1 from '../../../shared/ui/PublicSurface.module.css';
 import { useEffect, useRef, useState } from 'react';
 import {
   useEventConfig,
@@ -39,7 +41,7 @@ export const InscrierePage = () => {
   const cd = useCountdown(EVENT_DATE);
   const launch = useCountdown(LAUNCH_DATE);
   const phase = usePagePhase();
-  const { stats, refresh } = useStats();
+  const { stats } = useStats();
   const now = useNow(30_000);
   const [openSummary, setOpenSummary] = useState(false);
 
@@ -74,7 +76,7 @@ export const InscrierePage = () => {
   };
   useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
 
-  const reg = useRegistration({ stats, now, refresh, showToast });
+  const reg = useRegistration({ stats, now, showToast });
 
   // Ieșirea stă DUPĂ toate hookurile, ca ordinea lor să nu se schimbe între
   // randări (regulile hookurilor). Redirectul de mai sus face restul.
@@ -82,79 +84,43 @@ export const InscrierePage = () => {
   if (deRedirectat) return null;
 
   return (
-    <div className="e3-root">
+    <div className={shared1['e3-root']} data-css={"e3-root"}>
       {toast && (
         <div
           role="status"
-          style={{
-            position: 'fixed',
-            top: 20,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 200,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            background: toast.kind === 'error' ? 'var(--e3-danger-bg)' : 'var(--e3-accent)',
-            color: toast.kind === 'error' ? 'var(--e3-danger)' : 'var(--e3-bg)',
-            fontFamily: 'Archivo, sans-serif',
-            fontSize: 15,
-            fontWeight: 600,
-            padding: '14px 22px',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
-            animation: 'e3-toast-in 0.25s ease',
-            maxWidth: 'min(90vw, 480px)',
-          }}
+          className={styles.layout1 + ' ' + (toast.kind === 'error' ? styles.layout1On0 : styles.layout1Off0) + ' ' + (toast.kind === 'error' ? styles.layout1On1 : styles.layout1Off1)}
         >
-          <span style={{ fontSize: 17, fontWeight: 700 }}>{toast.kind === 'error' ? '!' : '✓'}</span>
+          <span className={styles.text2}>{toast.kind === 'error' ? '!' : '✓'}</span>
           {toast.msg}
         </div>
       )}
 
       {/* Antet compact: brand + countdown pe un rând. Fără nav, fără CTA — ești deja aici. */}
       <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '10px 20px',
-          padding: '12px clamp(16px, 5vw, 32px)',
-          borderBottom: '1px solid var(--e3-border)',
-          background: 'var(--e3-bg)',
-        }}
+        className={styles.header3}
       >
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+        <a href="/" className={styles.link4}>
           <div
-            style={{
-              width: 28,
-              height: 28,
-              background: 'var(--e3-accent)',
-              display: 'grid',
-              placeItems: 'center',
-              fontFamily: 'Anton, sans-serif',
-              fontSize: 14,
-              color: 'var(--e3-bg)',
-            }}
+            className={styles.layout5}
           >
             RL
           </div>
-          <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 17, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--e3-text)' }}>
+          <span className={styles.text6}>
             Run + Lift
           </span>
         </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} role="timer" aria-label="Timp rămas până la start">
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--e3-muted)' }}>Start în</span>
-          <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 19, color: 'var(--e3-text-bright)', fontVariantNumeric: 'tabular-nums' }}>
+        <div className={styles.layout7} role="timer" aria-label="Timp rămas până la start">
+          <span className={styles.text8}>Start în</span>
+          <span className={styles.text9}>
             {cd.zile}z {cd.ore}h {cd.minute}m
           </span>
         </div>
       </header>
 
-      <main style={{ maxWidth: 560, margin: '0 auto', padding: 'clamp(20px, 5vw, 36px) clamp(16px, 5vw, 32px) 48px', display: 'grid', gap: 18 }}>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <h1 className="e3-page-title">Înscrie-te</h1>
-          <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: 'var(--e3-muted-strong)', textWrap: 'pretty' }}>
+      <main className={styles.main10}>
+        <div className={styles.layout11}>
+          <h1 className={styles['e3-page-title']} data-css={"e3-page-title"}>Înscrie-te</h1>
+          <p className={styles.copy12}>
             {EVENT_META} · ora {EVENT_START_TIME}. Completezi 5 câmpuri și primești confirmarea pe email.
           </p>
         </div>
@@ -165,41 +131,27 @@ export const InscrierePage = () => {
           redirect
           autoFocus
           footerSlot={
-            <div style={{ borderTop: '1px solid var(--e3-border)', paddingTop: 14, display: 'grid', gap: 12 }}>
+            <div className={styles.layout13}>
               <button
                 type="button"
                 onClick={() => setOpenSummary((v) => !v)}
                 aria-expanded={openSummary}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  fontFamily: 'Anton, sans-serif',
-                  fontSize: 15,
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                  color: 'var(--e3-accent)',
-                }}
+                className={styles.button14}
               >
                 Pe scurt: ce e Hyrox Trial
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{openSummary ? '–' : '+'}</span>
+                <span className={styles.text15}>{openSummary ? '–' : '+'}</span>
               </button>
               {openSummary && (
-                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 12 }}>
+                <ul className={styles.list16}>
                   {SUMMARY_ITEMS.map((item) => (
-                    <li key={item} style={{ display: 'flex', gap: 10, fontSize: 15, lineHeight: 1.5, color: 'var(--e3-muted-strong)' }}>
-                      <span style={{ color: 'var(--e3-accent)', fontWeight: 700 }}>→</span>
+                    <li key={item} className={styles.item17}>
+                      <span className={styles.text18}>→</span>
                       {item}
                     </li>
                   ))}
                 </ul>
               )}
-              <a href="/" className="e3-link" style={{ fontSize: 14, fontWeight: 600, color: 'var(--e3-muted)' }}>
+              <a href="/" className={shared3['e3-link'] + ' ' + styles.link19} data-css={"e3-link"} >
                 Vezi tot despre eveniment →
               </a>
             </div>

@@ -11,13 +11,12 @@ import { useTrainingReels } from './useTrainingReels';
  * ca să nu dispară tăcut.
  */
 
-const { fetchTrainingReels, logClientError, isAbortError } = vi.hoisted(() => ({
+const { fetchTrainingReels, logClientError } = vi.hoisted(() => ({
   fetchTrainingReels: vi.fn(),
   logClientError: vi.fn(),
-  isAbortError: vi.fn(() => false),
 }));
 
-vi.mock('../../../lib/supabase', () => ({ fetchTrainingReels, isAbortError }));
+vi.mock('../data/api', () => ({ fetchTrainingReels }));
 vi.mock('../../../lib/monitoring', () => ({ logClientError }));
 
 const CLIP = {
@@ -35,7 +34,6 @@ const n = () => screen.getByTestId('n').textContent;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  isAbortError.mockReturnValue(false);
 });
 afterEach(cleanup);
 
@@ -60,8 +58,7 @@ describe('backendul căzut nu e o cale de eroare', () => {
   it('un abort la demontare NU se raportează ca eroare', async () => {
     // Demontarea anulează cererea în zbor. Raportat, ar fi umplut monitorizarea
     // cu „erori" produse de navigarea normală.
-    isAbortError.mockReturnValue(true);
-    fetchTrainingReels.mockRejectedValue(new Error('AbortError'));
+    fetchTrainingReels.mockRejectedValue(new DOMException('Navigare', 'AbortError'));
     render(<Proba />);
     await waitFor(() => expect(fetchTrainingReels).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 0));
@@ -83,7 +80,7 @@ describe('ciclul de viață', () => {
     fetchTrainingReels.mockImplementation(
       (signal: AbortSignal) =>
         new Promise((_, reject) => {
-          signal.addEventListener('abort', () => reject(new Error('AbortError')));
+          signal.addEventListener('abort', () => reject(new DOMException('Navigare', 'AbortError')));
         })
     );
     const { unmount } = render(<Proba />);

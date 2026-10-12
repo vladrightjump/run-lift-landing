@@ -1,21 +1,11 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { isBackendConfigured } from '../../../shared/lib/config';
 import { useEventConfig, useEditionDates } from '../../../shared/lib/useEventConfig';
-import {
-  submitRegistration,
-  submitWaitlist,
-  isTimeoutError,
-  isAbortError,
-  isDuplicateError,
-  isWaitlistFullError,
-  isEventFullError,
-  isRegistrationClosedError,
-  isNetworkOrCspError,
-  isBotRejectedError,
-  SubmitHttpError,
-} from '../../../lib/supabase';
-import type { AntiBot, PublicStats } from '../../../lib/supabase';
+import { submitRegistration, submitWaitlist, isDuplicateError, isWaitlistFullError, isEventFullError, isRegistrationClosedError, isBotRejectedError } from '../data/api';
+import { isTimeoutError, isAbortError, isNetworkOrCspError, SubmitHttpError } from '../../../shared/lib/errors';
+import type { AntiBot, PublicStats } from '../data/api';
 import { logClientError } from '../../../lib/monitoring';
 import { useAntiBot, antiBotErrorMessage, ANTIBOT_MESSAGES } from '../lib/antiBot';
 import { isTurnstileError } from '../../../shared/lib/turnstile';
@@ -60,7 +50,6 @@ const mesajPentru = (err: unknown): string =>
 type Params = {
   stats: PublicStats | null;
   now: number;
-  refresh: () => void;
   showToast: (kind: ToastKind, msg: string) => void;
 };
 
@@ -69,7 +58,15 @@ type Params = {
  * (din `stats` + `now`), mașina de stări `form → loading → success/error` și trimiterea
  * (înscriere sau listă de așteptare). Prezentarea stă în `RegistrationSection`.
  */
-export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
+export const useRegistration = ({ stats, now, showToast }: Params) => {
+  const submitRegistrationMutation = useMutation({ mutationFn: (args: Parameters<typeof submitRegistration>) => submitRegistration(...args), networkMode: 'always' });
+  const submitWaitlistMutation = useMutation({ mutationFn: (args: Parameters<typeof submitWaitlist>) => submitWaitlist(...args), networkMode: 'always' });
+
+  const client = useQueryClient();
+  const refreshStats = () => {
+    void client.cancelQueries({ queryKey: ['public', 'stats'] });
+    void client.invalidateQueries({ queryKey: ['public', 'stats'] });
+  };
   const config = useEventConfig();
   const { EVENT_END_DATE, REGISTRATION_DEADLINE } = useEditionDates();
   const [phase, setPhase] = useState<Phase>('form');
@@ -192,7 +189,7 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
         setSessionSignups((n) => n + 1);
         rememberMySignup(numeComplet(data));
       }
-      if (isBackendConfigured()) refresh();
+      if (isBackendConfigured()) refreshStats();
       setPhase('success');
       submittingRef.current = false;
       showToast('success', wasWaitlist ? 'Ai fost adăugat pe lista de așteptare!' : 'Înscrierea a fost trimisă!');
@@ -237,10 +234,10 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
 
     try {
       if (asWaitlist) {
-        await submitWaitlist(data, proofs, controller.signal);
+        await submitWaitlistMutation.mutateAsync([data, proofs, controller.signal]);
       } else {
         // Emailul de confirmare îl trimite funcția Edge, imediat după insert.
-        await submitRegistration(data, proofs, controller.signal);
+        await submitRegistrationMutation.mutateAsync([data, proofs, controller.signal]);
       }
       await enforceMin();
       finishSuccess();
@@ -249,7 +246,7 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
       await enforceMin();
       if (asWaitlist && isWaitlistFullError(err)) {
         setWlFull(true);
-        if (isBackendConfigured()) refresh();
+        if (isBackendConfigured()) refreshStats();
         setPhase('form');
         submittingRef.current = false;
         showToast('error', 'Lista de așteptare tocmai s-a umplut.');
@@ -266,14 +263,14 @@ export const useRegistration = ({ stats, now, refresh, showToast }: Params) => {
       if (!asWaitlist && isEventFullError(err)) {
         try {
           // Token nou: cel folosit la înscriere s-a consumat la prima cerere.
-          await submitWaitlist(data, await antiBot.collect(), controller.signal);
+          await submitWaitlistMutation.mutateAsync([data, await antiBot.collect(), controller.signal]);
           finishSuccess(true);
           return;
         } catch (wlErr) {
           if (isAbortError(wlErr)) return;
           if (isWaitlistFullError(wlErr)) {
             setWlFull(true);
-            if (isBackendConfigured()) refresh();
+            if (isBackendConfigured()) refreshStats();
             setPhase('form');
             submittingRef.current = false;
             showToast('error', 'Locurile și lista de așteptare s-au ocupat.');

@@ -1,6 +1,10 @@
+import shared4 from './RegistrationStyles.module.css';
+import shared3 from '../../../shared/ui/PublicSurface.module.css';
+import styles from './RegistrationSection.module.css';
+import shared1 from '../../../shared/ui/PublicLayout.module.css';
 import { useEventConfig, useEditionStrings } from '../../../shared/lib/useEventConfig';
 import type { FieldName } from '../../../shared/lib/validation';
-import type { PublicStats } from '../../../lib/supabase';
+import type { PublicStats } from '../data/api';
 import type { useRegistration } from '../hooks/useRegistration';
 import { useCountUp } from '../../../shared/lib/useCountUp';
 import { BirthDateField } from './BirthDateField';
@@ -63,19 +67,19 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
   };
 
   return (
-    <section id="inscriere" className="e3-sec e3-reg">
+    <section id="inscriere" className={shared1['e3-sec'] + ' ' + styles['e3-reg']} data-css={"e3-sec e3-reg"}>
       {/* Linia de sosire. Stă în secțiune, la marginea ei de sus, și nu depinde
           de ce vine înainte sau după: ordinea secțiunilor se schimbă din admin,
           iar înscrierea nu e neapărat ultima. */}
-      <div className="e3-finish" aria-hidden="true">
-        <span className="e3-finish-band" />
-        <span className="e3-finish-word">Finish</span>
+      <div className={styles['e3-finish']} data-css={"e3-finish"} aria-hidden="true">
+        <span className={styles['e3-finish-band']} data-css={"e3-finish-band"} />
+        <span className={styles['e3-finish-word']} data-css={"e3-finish-word"}>Finish</span>
       </div>
-      <div className="e3-wrap">
+      <div className={shared1['e3-wrap']} data-css={"e3-wrap"}>
         <SectionHead num={num}>Înscriere</SectionHead>
-        <div className="e3-reg-grid">
-          <div className="e3-reg-side">
-            <p className="e3-lead e3-reg-lead">
+        <div className={styles['e3-reg-grid']} data-css={"e3-reg-grid"}>
+          <div className={styles['e3-reg-side']} data-css={"e3-reg-side"}>
+            <p className={shared1['e3-lead'] + ' ' + styles['e3-reg-lead']} data-css={"e3-lead e3-reg-lead"}>
               {waitlistMode ? (
                 <>
                   Locurile s-au epuizat, dar te poți pune pe <strong>lista de așteptare</strong>.
@@ -94,9 +98,9 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
             </p>
             {/* Fundalul și bordura vin din `.e3-card` (edition3.css): inline ar
                 bate `:hover`. */}
-            <div data-reveal className="e3-card e3-spot e3-reg-summary">
-              <div className="e3-reg-summary-title">Pe scurt</div>
-              <ul className="e3-reg-summary-list">
+            <div data-reveal className={shared3['e3-card'] + ' ' + shared3['e3-spot'] + ' ' + styles['e3-reg-summary']} data-css={"e3-card e3-spot e3-reg-summary"}>
+              <div className={styles['e3-reg-summary-title']} data-css={"e3-reg-summary-title"}>Pe scurt</div>
+              <ul className={styles['e3-reg-summary-list']} data-css={"e3-reg-summary-list"}>
                 {summaryItems(EVENT_SUMMARY_LINE).map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -104,14 +108,20 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
             </div>
           </div>
 
-          <div className="e3-reg-main">
-            <div className="e3-reg-slots">
+          <div className={styles['e3-reg-main']} data-css={"e3-reg-main"}>
+            <div className={styles['e3-reg-slots']} data-css={"e3-reg-slots"}>
               <AntetLocuri>
                 {/* Contorul respiră doar cât chiar mai sunt locuri puține.
                     Pe zero n-ar mai fi urgență, ci doar zgomot lângă mesajul
                     de „epuizat" de dedesubt. */}
                 <span
                   className={[
+                    shared1['e3-num'] + ' ' + styles['e3-reg-count'],
+                    slots.remaining <= 3 ? styles['e3-reg-count-low'] : '',
+                    stats && slots.remaining > 0 && slots.remaining <= 5 ? styles['e3-urgent'] : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')} data-css={[
                     'e3-num e3-reg-count',
                     slots.remaining <= 3 ? 'e3-reg-count-low' : '',
                     stats && slots.remaining > 0 && slots.remaining <= 5 ? 'e3-urgent' : '',
@@ -122,9 +132,9 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                   {remainingShown ?? '–'} / {TOTAL_SLOTS}
                 </span>
               </AntetLocuri>
-              <BaraLocuri total={TOTAL_SLOTS} ocupate={slots.occupied} gap={4} animat />
+              <BaraLocuri total={TOTAL_SLOTS} ocupate={slots.occupied} className={styles.locuri} animat />
               {isSoldOut && !isWaitlistFull && (
-                <p className="e3-reg-soldout">
+                <p className={styles['e3-reg-soldout']} data-css={"e3-reg-soldout"}>
                   Locurile s-au epuizat. Completează formularul și intri pe lista de așteptare. Te contactăm
                   imediat ce se eliberează un loc.
                 </p>
@@ -141,12 +151,12 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                   const name = el.getAttribute('name') as FieldName | null;
                   if (name && name !== 'acord') clearErrorFor(name);
                 }}
-                className="e3-reg-form"
+                className={styles['e3-reg-form']} data-css={"e3-reg-form"}
               >
                 {/* Capcană anti-bot: invizibilă pentru oameni, tentantă pentru
                     scripturile care completează orice câmp. Verificată pe server. */}
                 <input type="text" {...hpProps} />
-                <div className="e3-reg-fields">
+                <div className={styles['e3-reg-fields']} data-css={"e3-reg-fields"}>
                   <CampText
                     nume="nume"
                     eticheta="Nume *"
@@ -175,7 +185,7 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                     mesajEroare="Numărul de telefon nu e valid."
                   />
                 </div>
-                <div className="e3-reg-stack">
+                <div className={styles['e3-reg-stack']} data-css={"e3-reg-stack"}>
                   <CampText
                     nume="email"
                     eticheta="Email *"
@@ -195,55 +205,46 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                     errMsg={dateErrMsg}
                   />
                 </div>
-                <p className="e3-reg-note">
+                <p className={styles['e3-reg-note']} data-css={"e3-reg-note"}>
                   Participanții trebuie să aibă minim 14 ani în ziua evenimentului. Stațiile și greutățile sunt
                   adaptate de antrenori la fața locului.
                 </p>
                 <BifaAcord
                   eroare={errors.acord}
                   onClear={() => clearErrorFor('acord')}
-                  marime={18}
-                  margineSus="2px 0 0"
+                  className={styles.acord}
                 />
-                <ButonTrimite peListaDeAsteptare={waitlistMode} marginTop={4} />
+                <ButonTrimite peListaDeAsteptare={waitlistMode} className={styles.trimite} />
               </form>
             )}
 
             {/* Închis (eveniment trecut / înscrieri închise / totul plin) */}
             {closedReason && (
-              <div className="e3-reg-panel">
-                <div className="e3-reg-panel-title">{textInchis(closedReason).titlu}</div>
-                <p className="e3-reg-panel-msg">{textInchis(closedReason).mesaj}</p>
+              <div className={shared4['e3-reg-panel']} data-css={"e3-reg-panel"}>
+                <div className={shared4['e3-reg-panel-title']} data-css={"e3-reg-panel-title"}>{textInchis(closedReason).titlu}</div>
+                <p className={shared4['e3-reg-panel-msg']} data-css={"e3-reg-panel-msg"}>{textInchis(closedReason).mesaj}</p>
                 <LinkContact
-                  stil={{
-                    background: 'var(--e3-accent)',
-                    color: 'var(--e3-bg)',
-                    fontFamily: 'Anton, sans-serif',
-                    fontSize: 17,
-                    letterSpacing: 1.5,
-                    textTransform: 'uppercase',
-                    padding: '14px 32px',
-                  }}
+                  className={styles.contact}
                 />
               </div>
             )}
 
             {phase === 'loading' && (
-              <div className="e3-reg-panel e3-reg-panel-loading">
+              <div className={shared4['e3-reg-panel'] + ' ' + shared4['e3-reg-panel-loading']} data-css={"e3-reg-panel e3-reg-panel-loading"}>
                 <BaraIncarcare />
-                <div className="e3-reg-panel-title e3-reg-panel-wait">{TEXT_INCARCARE}</div>
+                <div className={shared4['e3-reg-panel-title'] + ' ' + shared4['e3-reg-panel-wait']} data-css={"e3-reg-panel-title e3-reg-panel-wait"}>{TEXT_INCARCARE}</div>
               </div>
             )}
 
             {/* Succes: ai trecut linia. Bordura lime o spune. */}
             {phase === 'success' && (
-              <div className="e3-reg-panel e3-reg-panel-ok">
+              <div className={shared4['e3-reg-panel'] + ' ' + shared4['e3-reg-panel-ok']} data-css={"e3-reg-panel e3-reg-panel-ok"}>
                 <BifaSucces />
-                <div className="e3-reg-panel-title">
+                <div className={shared4['e3-reg-panel-title']} data-css={"e3-reg-panel-title"}>
                   {submittedAsWaitlist ? 'Ești pe lista de așteptare, ' : 'Te-ai înregistrat, '}
                   {confirmName}!
                 </div>
-                <p className="e3-reg-panel-msg">
+                <p className={shared4['e3-reg-panel-msg']} data-css={"e3-reg-panel-msg"}>
                   {submittedAsWaitlist
                     ? TEXT_SUCCES_ASTEPTARE
                     : `Ți-am trimis un email de confirmare cu toate detaliile. ${SUCCESS_SEE_YOU}`}
@@ -252,22 +253,22 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                 <ButonReset
                   peListaDeAsteptare={submittedAsWaitlist}
                   onClick={resetForm}
-                  marginTop={8}
+                  className={styles.reset}
                 />
               </div>
             )}
 
             {phase === 'error' && (
-              <div className="e3-reg-panel e3-reg-panel-err">
+              <div className={shared4['e3-reg-panel'] + ' ' + shared4['e3-reg-panel-err']} data-css={"e3-reg-panel e3-reg-panel-err"}>
                 <IconEroare />
-                <div className="e3-reg-panel-title">{TEXT_EROARE_TITLU}</div>
-                <p className="e3-reg-panel-msg">{TEXT_EROARE_MESAJ}</p>
+                <div className={shared4['e3-reg-panel-title']} data-css={"e3-reg-panel-title"}>{TEXT_EROARE_TITLU}</div>
+                <p className={shared4['e3-reg-panel-msg']} data-css={"e3-reg-panel-msg"}>{TEXT_EROARE_MESAJ}</p>
                 <ButonReincearca
                   onClick={() => {
                     setErrors({});
                     setPhase('form');
                   }}
-                  stil={{ letterSpacing: 1.5, marginTop: 8 }}
+                  className={styles.retry}
                 />
               </div>
             )}

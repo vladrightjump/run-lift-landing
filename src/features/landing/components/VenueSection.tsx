@@ -1,3 +1,7 @@
+import shared4 from '../../../shared/ui/PublicControls.module.css';
+import shared3 from './LandingStyles.module.css';
+import styles from './VenueSection.module.css';
+import shared1 from '../../../shared/ui/PublicLayout.module.css';
 import { useEditionStrings } from '../../../shared/lib/useEventConfig';
 import { SectionHead } from './SectionHead';
 
@@ -21,28 +25,28 @@ export const VenueSection = ({ num = '02' }: Props) => {
   } = useEditionStrings();
 
   return (
-    <section className="e3-sec e3-venue">
-      <div className="e3-wrap">
+    <section className={shared1['e3-sec'] + ' ' + styles['e3-venue']} data-css={"e3-sec e3-venue"}>
+      <div className={shared1['e3-wrap']} data-css={"e3-wrap"}>
         <SectionHead num={num}>Locația</SectionHead>
-        <div className="e3-venue-grid">
-          <div className="e3-venue-info" data-reveal>
-            <span className="e3-label">Start</span>
-            <p className="e3-num e3-venue-time">{EVENT_START_TIME}</p>
-            <dl className="e3-venue-list">
-              <div className="e3-row e3-venue-row">
-                <dt className="e3-label">Unde</dt>
+        <div className={styles['e3-venue-grid']} data-css={"e3-venue-grid"}>
+          <div className={styles['e3-venue-info']} data-css={"e3-venue-info"} data-reveal>
+            <span className={shared3['e3-label']} data-css={"e3-label"}>Start</span>
+            <p className={shared1['e3-num'] + ' ' + styles['e3-venue-time']} data-css={"e3-num e3-venue-time"}>{EVENT_START_TIME}</p>
+            <dl className={styles['e3-venue-list']} data-css={"e3-venue-list"}>
+              <div className={styles['e3-row'] + ' ' + styles['e3-venue-row']} data-css={"e3-row e3-venue-row"}>
+                <dt className={shared3['e3-label']} data-css={"e3-label"}>Unde</dt>
                 <dd>{EVENT_WHERE}</dd>
               </div>
-              <div className="e3-row e3-venue-row">
-                <dt className="e3-label">Când</dt>
+              <div className={styles['e3-row'] + ' ' + styles['e3-venue-row']} data-css={"e3-row e3-venue-row"}>
+                <dt className={shared3['e3-label']} data-css={"e3-label"}>Când</dt>
                 <dd>{EVENT_WHEN}</dd>
               </div>
             </dl>
-            <p className="e3-venue-note">
+            <p className={styles['e3-venue-note']} data-css={"e3-venue-note"}>
               Vino cu 30 de minute înainte pentru check-in și încălzire. Hidratare la fața locului.
             </p>
           </div>
-          <div className="e3-venue-map" data-reveal>
+          <div className={styles['e3-venue-map']} data-css={"e3-venue-map"} data-reveal>
             <iframe
               title={`${EVENT_WHERE}: hartă`}
               loading="lazy"
@@ -50,7 +54,7 @@ export const VenueSection = ({ num = '02' }: Props) => {
               allowFullScreen
               src={MAP_SRC}
             />
-            <a className="e3-link e3-arrow-link" href={DIRECTIONS_URL} target="_blank" rel="noopener noreferrer">
+            <a className={shared4['e3-link'] + ' ' + styles['e3-arrow-link']} data-css={"e3-link e3-arrow-link"} href={DIRECTIONS_URL} target="_blank" rel="noopener noreferrer">
               <span aria-hidden="true">↗</span> Deschide în Google Maps
             </a>
           </div>

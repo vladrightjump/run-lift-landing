@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 /**
  * Stratul anti-bot al formularelor publice: honeypot + timp pe formular + token
@@ -11,13 +13,13 @@ import { renderHook, act } from '@testing-library/react';
 const getTurnstileToken = vi.fn(async () => 'tok-proaspat');
 const isTurnstileError = vi.fn((err: unknown) => (err as Error)?.name === 'TurnstileError');
 
-vi.mock('../../src/shared/lib/turnstile', () => ({
+vi.mock('../../../shared/lib/turnstile', () => ({
   getTurnstileToken: () => getTurnstileToken(),
   isTurnstileError: (err: unknown) => isTurnstileError(err),
 }));
 
 const { useAntiBot, antiBotErrorMessage, ANTIBOT_MESSAGES, HONEYPOT_NAME } = await import(
-  '../../src/features/inscriere/lib/antiBot'
+  './antiBot'
 );
 
 beforeEach(() => {
@@ -115,8 +117,11 @@ describe('câmpul-capcană (honeypot)', () => {
     expect(hpProps.tabIndex).toBe(-1);
     expect(hpProps.autoComplete).toBe('off');
     expect(hpProps['aria-hidden']).toBe(true);
-    expect(hpProps.style.position).toBe('absolute');
-    expect(hpProps.style.pointerEvents).toBe('none');
+    expect(hpProps.className).toBeTruthy();
+    const css = readFileSync(resolve(__dirname, './AntiBot.module.css'), 'utf8');
+    expect(css).toMatch(/position:\s*absolute/);
+    expect(css).toMatch(/pointer-events:\s*none/);
+    expect(css).toMatch(/font-size:\s*16px/);
   });
 });
 

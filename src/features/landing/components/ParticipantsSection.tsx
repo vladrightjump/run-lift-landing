@@ -1,7 +1,11 @@
+import shared4 from '../../../shared/ui/PublicMotion.module.css';
+import shared3 from './LandingStyles.module.css';
+import styles from './ParticipantsSection.module.css';
+import shared1 from '../../../shared/ui/PublicLayout.module.css';
 import type { CSSProperties } from 'react';
 import { useEventConfig } from '../../../shared/lib/useEventConfig';
 import { getMySignups } from '../../../shared/lib/mySignups';
-import type { PublicStats } from '../../../lib/supabase';
+import type { PublicStats } from '../../inscriere';
 import { useCountUp } from '../../../shared/lib/useCountUp';
 import { SectionHead } from './SectionHead';
 
@@ -25,33 +29,33 @@ export const ParticipantsSection = ({ stats, canSignUp = true, num = '04' }: Pro
   // Contorul urcă spre numărul real în loc să apară dintr-odată.
   const countShown = useCountUp(stats ? stats.count : null);
   return (
-    <section id="participanti" className="e3-sec e3-people">
-      <div className="e3-wrap">
+    <section id="participanti" className={shared1['e3-sec']} data-css={"e3-sec e3-people"}>
+      <div className={shared1['e3-wrap']} data-css={"e3-wrap"}>
         <SectionHead num={num}>Cine vine</SectionHead>
-        <div className="e3-people-head">
-          <span className="e3-label">Participanți înscriși</span>
-          <span className="e3-num e3-people-count">
+        <div className={styles['e3-people-head']} data-css={"e3-people-head"}>
+          <span className={shared3['e3-label']} data-css={"e3-label"}>Participanți înscriși</span>
+          <span className={shared1['e3-num'] + ' ' + styles['e3-people-count']} data-css={"e3-num e3-people-count"}>
             {countShown ?? '–'} / {TOTAL_SLOTS}
           </span>
         </div>
         {/* Lista de start: fiecare înscris e un număr de concurs. Fără
             `data-reveal` pe grilă: rândurile intră singure, unul câte unul
             (`.e3-row-in`), iar un fade pe tot blocul ar dubla intrarea. */}
-        <ol className="e3-people-grid">
+        <ol className={styles['e3-people-grid']} data-css={"e3-people-grid"}>
           {participants.map((p, i) => (
             <li
               key={`${p.nume}-${i}`}
-              className="e3-row-in e3-bib"
+              className={styles['e3-row-in'] + ' ' + styles['e3-bib']} data-css={"e3-row-in e3-bib"}
               style={{ '--i': i } as CSSProperties}
             >
-              <span className="e3-num e3-bib-nr">{String(i + 1).padStart(2, '0')}</span>
-              <span className="e3-bib-name">{p.nume}</span>
-              {mine.has(p.nume) && <span className="e3-bib-new">Nou</span>}
+              <span className={shared1['e3-num'] + ' ' + styles['e3-bib-nr']} data-css={"e3-num e3-bib-nr"}>{String(i + 1).padStart(2, '0')}</span>
+              <span className={styles['e3-bib-name']} data-css={"e3-bib-name"}>{p.nume}</span>
+              {mine.has(p.nume) && <span className={styles['e3-bib-new']} data-css={"e3-bib-new"}>Nou</span>}
             </li>
           ))}
         </ol>
         {stats && participants.length === 0 && (
-          <p className="e3-people-empty">
+          <p className={styles['e3-people-empty']} data-css={"e3-people-empty"}>
             {canSignUp ? (
               <>
                 Încă nimeni înscris. Fii primul!{' '}
@@ -63,20 +67,20 @@ export const ParticipantsSection = ({ stats, canSignUp = true, num = '04' }: Pro
           </p>
         )}
         {!stats && (
-          <div role="status" aria-busy="true" className="e3-people-grid">
-            <span className="e3-sr">Se încarcă lista…</span>
+          <div role="status" aria-busy="true" className={styles['e3-people-grid']} data-css={"e3-people-grid"}>
+            <span className={shared4['e3-sr']} data-css={"e3-sr"}>Se încarcă lista…</span>
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="e3-bib e3-bib-skel" aria-hidden="true">
-                <span className="e3-skel" style={{ width: 44, height: 28 }} />
-                <span className="e3-skel" style={{ width: 90 + i * 18 }} />
+              <div key={i} className={styles['e3-bib'] + ' ' + styles['e3-bib-skel']} data-css={"e3-bib e3-bib-skel"} aria-hidden="true">
+                <span className={styles['e3-skel'] + ' ' + styles.text1} data-css={"e3-skel"}  />
+                <span className={styles['e3-skel']} data-css={"e3-skel"} style={{ width: 90 + i * 18 }} />
               </div>
             ))}
           </div>
         )}
         {waitlistCount > 0 && (
-          <div className="e3-people-head e3-people-wait">
-            <span className="e3-label">Pe lista de așteptare</span>
-            <span className="e3-num e3-people-count">{waitlistCount}</span>
+          <div className={styles['e3-people-head'] + ' ' + styles['e3-people-wait']} data-css={"e3-people-head e3-people-wait"}>
+            <span className={shared3['e3-label']} data-css={"e3-label"}>Pe lista de așteptare</span>
+            <span className={shared1['e3-num'] + ' ' + styles['e3-people-count']} data-css={"e3-num e3-people-count"}>{waitlistCount}</span>
           </div>
         )}
       </div>

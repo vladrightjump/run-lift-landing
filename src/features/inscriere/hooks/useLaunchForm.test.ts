@@ -3,6 +3,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useLaunchForm } from './useLaunchForm';
 import type { LaunchOutcome } from './useLaunchForm';
+import { onlineManager } from '@tanstack/react-query';
+import { formResponse } from '../../../../tests/support/publicForms';
 
 const VALID = { nume: 'Popescu', prenume: 'Andrei', email: 'a@b.ro', telefon: '069123456' } as const;
 
@@ -12,13 +14,6 @@ const fillValid = (r: Hook) => {
   act(() => {
     (Object.keys(VALID) as Array<keyof typeof VALID>).forEach((k) => r.current.setField(k, VALID[k]));
   });
-};
-
-/** Înlocuiește `fetch` global cu un mock (auto-restaurat de unstubAllGlobals). */
-const stubFetch = (response: unknown) => {
-  const fn = vi.fn(async () => response);
-  vi.stubGlobal('fetch', fn);
-  return fn;
 };
 
 const submitOnce = async (r: Hook): Promise<LaunchOutcome> => {
@@ -36,15 +31,15 @@ afterEach(() => {
 
 describe('useLaunchForm', () => {
   it('draft invalid → outcome „invalid", fără fetch', async () => {
-    const fetchMock = stubFetch({ ok: true });
+    const requests = formResponse();
     const { result } = renderHook(() => useLaunchForm());
     const outcome = await submitOnce(result);
     expect(outcome.kind).toBe('invalid');
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(requests.count).toBe(0);
   });
 
   it('draft valid → outcome „success" și state „success"', async () => {
-    stubFetch({ ok: true, status: 201 });
+    formResponse({ status: 201 });
     const { result } = renderHook(() => useLaunchForm());
     fillValid(result);
     const outcome = await submitOnce(result);
@@ -53,7 +48,7 @@ describe('useLaunchForm', () => {
   });
 
   it('HTTP 409 (email deja înscris) → success cu duplicate=true', async () => {
-    stubFetch({ ok: false, status: 409, text: async () => 'duplicate' });
+    formResponse({ status: 409, text: 'duplicate' });
     const { result } = renderHook(() => useLaunchForm('despre-noi'));
     fillValid(result);
     const outcome = await submitOnce(result);
@@ -63,15 +58,17 @@ describe('useLaunchForm', () => {
   it('navigator.onLine=false (fals-offline) NU blochează — încearcă submit-ul', async () => {
     // Regresie: pe unele rețele/VPN `navigator.onLine` e fals `false`. Formularul nu
     // trebuie să refuze preemptiv, ci să încerce trimiterea (ca la înscriere).
-    const fetchMock = stubFetch({ ok: true, status: 201 });
+    const requests = formResponse({ status: 201 });
+    onlineManager.setOnline(false);
     Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
     try {
       const { result } = renderHook(() => useLaunchForm());
       fillValid(result);
       const outcome = await submitOnce(result);
       expect(outcome.kind).toBe('success');
-      expect(fetchMock).toHaveBeenCalled();
+      expect(requests.count).toBe(1);
     } finally {
+      onlineManager.setOnline(true);
       delete (navigator as { onLine?: boolean }).onLine;
     }
   });
@@ -79,25 +76,19 @@ describe('useLaunchForm', () => {
 
 describe('useLaunchForm — stratul anti-bot', () => {
   it('trimite dovezile anti-bot în plicul către submit-form', async () => {
-    const fetchMock = stubFetch({ ok: true, status: 200, json: async () => ({ ok: true }) });
+    const requests = formResponse();
     const { result } = renderHook(() => useLaunchForm());
     fillValid(result);
     await submitOnce(result);
 
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, { body: string }];
-    expect(url).toMatch(/\/functions\/v1\/submit-form$/);
-    const plic = JSON.parse(init.body);
+    const plic = requests.bodies[0];
     expect(plic).toMatchObject({ mode: 'launch', hp: '' });
     expect(typeof plic.elapsed).toBe('number');
   });
 
   it('serverul respinge ca bot → mesaj despre verificare, nu despre conexiune', async () => {
     // „Verifică conexiunea" ar trimite omul pe o pistă greșită.
-    stubFetch({
-      ok: false,
-      status: 403,
-      text: async () => '{"error":"captcha_failed"}',
-    });
+    formResponse({ status: 403, text: '{"error":"captcha_failed"}' });
     const { result } = renderHook(() => useLaunchForm());
     fillValid(result);
     const outcome = await submitOnce(result);

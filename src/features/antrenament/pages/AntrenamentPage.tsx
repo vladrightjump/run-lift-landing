@@ -1,3 +1,4 @@
+import cadruStyles from '../../../shared/ui/CadruScurt.module.css';
 import { useState } from 'react';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../../shared/lib/config';
 import type { WeeklyWorkout } from '../data/api';
@@ -76,7 +77,7 @@ export const AntrenamentPage = () => {
       <TitluScurt>Antrenamentul săptămânii</TitluScurt>
 
       {!isError && program === undefined && (
-        <p className="cs-sub" role="status">
+        <p className={cadruStyles['cs-sub']} data-css="cs-sub" role="status">
           Se încarcă…
         </p>
       )}
@@ -119,7 +120,7 @@ export const AntrenamentPage = () => {
         trimis săptămâna trecută trebuie să rămână bun.
       */}
       {!isError && program?.length === 0 && (
-        <p className="cs-sub">
+        <p className={cadruStyles['cs-sub']} data-css="cs-sub">
           Nu e publicat niciun antrenament acum. Revino peste câteva zile sau vezi ce mai
           facem pe{' '}
           <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
@@ -130,7 +131,7 @@ export const AntrenamentPage = () => {
       )}
 
       {isError && (
-        <p className="cs-sub" role="alert">
+        <p className={cadruStyles['cs-sub']} data-css="cs-sub" role="alert">
           Nu am putut încărca antrenamentul. Reîncarcă pagina în câteva momente.
         </p>
       )}

@@ -1,3 +1,5 @@
+import shared2 from '../../../shared/ui/PublicLayout.module.css';
+import styles from './SectionHead.module.css';
 import type { ReactNode } from 'react';
 
 type Props = {
@@ -12,8 +14,8 @@ type Props = {
  * dezvăluirea legată de scroll din `edition3.css`.
  */
 export const SectionHead = ({ num, children }: Props) => (
-  <div className="e3-sec-head">
-    <span className="e3-title-num">{num}</span>
-    <h2 className="e3-title">{children}</h2>
+  <div className={styles['e3-sec-head']} data-css={"e3-sec-head"}>
+    <span className={shared2['e3-title-num']} data-css={"e3-title-num"}>{num}</span>
+    <h2 className={shared2['e3-title']} data-css={"e3-title"}>{children}</h2>
   </div>
 );

@@ -1,3 +1,4 @@
+import styles from './Marquee.module.css';
 import { useState } from 'react';
 
 type Props = {
@@ -24,9 +25,9 @@ export const Marquee = ({ items }: Props) => {
   if (items.length === 0) return null;
 
   const group = (hidden: boolean) => (
-    <div className="e3-marquee-group" aria-hidden={hidden || undefined}>
+    <div className={styles['e3-marquee-group']} data-css="e3-marquee-group" aria-hidden={hidden || undefined}>
       {items.map((text, i) => (
-        <span className="e3-marquee-item" key={`${text}-${i}`}>
+        <span className={styles['e3-marquee-item']} data-css="e3-marquee-item" key={`${text}-${i}`}>
           {text}
         </span>
       ))}
@@ -34,14 +35,14 @@ export const Marquee = ({ items }: Props) => {
   );
 
   return (
-    <div className="e3-marquee" data-oprita={oprita}>
-      <div className="e3-marquee-track">
+    <div className={styles['e3-marquee']} data-css="e3-marquee" data-oprita={oprita}>
+      <div className={styles['e3-marquee-track']} data-css="e3-marquee-track">
         {group(false)}
         {group(true)}
       </div>
       <button
         type="button"
-        className="e3-marquee-pauza"
+        className={styles['e3-marquee-pauza']} data-css="e3-marquee-pauza"
         aria-pressed={oprita}
         aria-label={oprita ? 'Pornește banda' : 'Oprește banda'}
         onClick={() => setOprita((v) => !v)}

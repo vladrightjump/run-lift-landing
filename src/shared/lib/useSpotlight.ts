@@ -26,7 +26,7 @@ export const useSpotlight = () => {
     };
 
     const onMove = (e: PointerEvent) => {
-      const el = (e.target as Element | null)?.closest<HTMLElement>('.e3-spot');
+      const el = (e.target as Element | null)?.closest<HTMLElement>('[data-css~="e3-spot"]');
       if (!el) return;
       const r = el.getBoundingClientRect();
       pending = {

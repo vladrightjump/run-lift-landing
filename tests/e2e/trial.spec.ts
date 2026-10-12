@@ -17,7 +17,7 @@ for (const width of [375, 1280]) {
       await expect(section).toBeVisible();
       await expect(section.getByRole('link', { name: /Vreau la un antrenament/ })).toHaveAttribute('href', 'https://t.me/ParkTrialBot?start=trial_home');
       await expect(page.locator('body')).not.toContainText('Gratuit');
-      if (phase === 'landing') await expect(page.locator('.e3-hero').getByRole('link', { name: 'Înscrie-te la eveniment' })).toBeVisible();
+      if (phase === 'landing') await expect(page.locator("[data-css~=\"e3-hero\"]").getByRole('link', { name: 'Înscrie-te la eveniment' })).toBeVisible();
       await section.scrollIntoViewIfNeeded();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       if (phase === 'landing') await section.screenshot({ path: `/tmp/trial-home-${width}.png` });

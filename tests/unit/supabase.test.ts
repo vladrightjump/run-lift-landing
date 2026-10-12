@@ -1,25 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  submitLaunchNotification,
-  submitRegistration,
-  submitWaitlist,
-  sendConfirmationEmail,
-  fetchStats,
-  isDuplicateError,
-  isTimeoutError,
-  isAbortError,
-  isWaitlistFullError,
-  isBotRejectedError,
-  SubmitHttpError,
-  SUBMIT_TIMEOUT_MS,
-} from '../../src/lib/supabase';
+import { submitLaunchNotification, submitRegistration, submitWaitlist, sendConfirmationEmail, fetchStats, isDuplicateError, isWaitlistFullError, isBotRejectedError, SUBMIT_TIMEOUT_MS } from '../../src/features/inscriere/data/api';
+import { isTimeoutError, isAbortError, SubmitHttpError } from '../../src/shared/lib/errors';
 import { confirmSignup } from '../../src/features/confirmare/data/api';
 import { HttpResponse } from 'msw';
 import { server, withExpectedUnhandledRequest } from '../support/vitest.setup';
 import { functionHandler, responseHandler } from '../support/handlers';
 import { SUPABASE } from '../../src/lib/backend';
-import type { AntiBot } from '../../src/lib/supabase';
+import type { AntiBot } from '../../src/features/inscriere/data/api';
 
 const draft = {
   nume: '  Popescu  ',

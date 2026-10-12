@@ -1,0 +1,9 @@
+
+.layout1.layout1.layout1.layout1 { display: grid; gap: 8px; }
+.text2 { composes: label from './FormControls.module.css'; }
+.input3 { composes: input from './FormControls.module.css'; }
+.input3.input3.input3.input3 { letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.input3On0.input3On0.input3On0.input3On0 { border-color: var(--e3-danger); }
+.input3Off0.input3Off0.input3Off0.input3Off0 { border-color: var(--e3-border); }
+.text4 { composes: fieldError from './FormControls.module.css'; }
+.text5.text5.text5.text5 { font-size: 13px; color: var(--e3-muted); }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { idYouTube, linkYouTube, sursaIncorporare } from '../../src/shared/lib/youtube';
+import { idYouTube, linkYouTube, sursaIncorporare } from './youtube';
 
 /**
  * Normalizarea linkului lipit.

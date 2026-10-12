@@ -1,3 +1,4 @@
+import cadruStyles from '../../../shared/ui/CadruScurt.module.css';
 import { useEditionStrings } from '../../../shared/lib/useEventConfig';
 import { CadruScurt } from '../../../shared/ui/CadruScurt';
 import { RezultatLink, type Rezultat } from '../../../shared/ui/RezultatLink';
@@ -33,7 +34,7 @@ export const UnsubscribePage = () => {
 
   return (
     <CadruScurt meta={<>Run + Lift · Ediția {LAUNCH_EDITION_ORDINAL}</>}>
-      {stare === 'incarca' ? <p className="cs-sub">Procesăm cererea…</p> : <RezultatLink {...CONTINUT[stare]} />}
+      {stare === 'incarca' ? <p className={cadruStyles['cs-sub']} data-css="cs-sub">Procesăm cererea…</p> : <RezultatLink {...CONTINUT[stare]} />}
     </CadruScurt>
   );
 };

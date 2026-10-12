@@ -1,5 +1,5 @@
 import { SUPABASE } from '../../../shared/lib/config';
-import { SubmitHttpError } from '../../../lib/supabase';
+import { SubmitHttpError } from '../../../shared/lib/errors';
 
 /** O săptămână din programul de antrenamente, așa cum o vede pagina publică. */
 export type WeeklyWorkout = { numar: number; titlu: string; corp: string };

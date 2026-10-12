@@ -1,5 +1,5 @@
 import { useEventConfig } from '../../../shared/lib/useEventConfig';
-import type { Reel } from '../../../lib/supabase';
+import type { Reel } from '../../reels';
 import { ReelsRail } from '../../reels';
 
 type Props = {

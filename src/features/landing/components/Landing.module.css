@@ -1,0 +1,14 @@
+
+  .e3-toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 200;
+    display: flex; align-items: center; gap: 12px; max-width: min(90vw, 480px);
+    padding: 14px 22px;
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-size: 15px; font-weight: 600;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    animation: e3-toast-in 0.25s ease;
+  }
+  .e3-toast-err { background: var(--e3-danger-bg); color: var(--e3-danger); }
+  .e3-toast-mark { font-size: 17px; font-weight: 700; }
+
+@keyframes e3-toast-in { from { opacity: 0; transform: translate(-50%, -16px); } to { opacity: 1; transform: translate(-50%, 0); } }

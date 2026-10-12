@@ -1,0 +1,3 @@
+
+  .e3-sec-head { display: grid; gap: clamp(10px, 1.6vw, 18px); margin-bottom: clamp(40px, 6vw, 80px); }
+  [data-css~="e3-reels"] .e3-sec-head { margin-bottom: 24px; }

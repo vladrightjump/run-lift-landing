@@ -1,11 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  submitRegistration,
-  submitWaitlist,
-  submitLaunchNotification,
-  fetchStats,
-} from '../../src/lib/supabase';
+import { submitRegistration, submitWaitlist, submitLaunchNotification, fetchStats } from '../../src/features/inscriere/data/api';
 import { confirmSignup } from '../../src/features/confirmare/data/api';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

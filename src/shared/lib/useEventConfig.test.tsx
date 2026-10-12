@@ -24,7 +24,7 @@ const { fetchPublicConfig, setMonitoringEdition, logClientError } = vi.hoisted((
   logClientError: vi.fn(),
 }));
 
-vi.mock('../../lib/supabase', () => ({
+vi.mock('./publicConfig', () => ({
   fetchPublicConfig,
   isAbortError: (e: unknown) => e instanceof DOMException && e.name === 'AbortError',
 }));

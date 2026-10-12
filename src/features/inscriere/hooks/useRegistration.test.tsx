@@ -4,7 +4,8 @@ import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { useRegistration } from './useRegistration';
 import { EventConfigProvider } from '../../../shared/lib/useEventConfig';
 import { SNAPSHOT_CONFIG } from '../../../shared/content/eventConfig';
-import { SubmitHttpError, type PublicStats } from '../../../lib/supabase';
+import { SubmitHttpError } from '../../../shared/lib/errors';
+import { type PublicStats } from '../data/api';
 
 /**
  * Mașina de stări a înscrierii — `form → loading → success/error`, plus ramura
@@ -32,8 +33,8 @@ const { submitRegistration, submitWaitlist, sendConfirmationEmail, rememberMySig
 // Predicatele de eroare și `SubmitHttpError` rămân CELE REALE: testele trebuie
 // să prindă dacă se schimbă felul în care o eroare e clasificată, nu doar dacă
 // hook-ul reacționează la un boolean pe care tot testul l-a fabricat.
-vi.mock('../../../lib/supabase', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../lib/supabase')>()),
+vi.mock('../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/api')>()),
   submitRegistration,
   submitWaitlist,
   sendConfirmationEmail,
@@ -46,7 +47,6 @@ vi.mock('../../../lib/monitoring', () => ({
 }));
 
 const showToast = vi.fn();
-const refresh = vi.fn();
 
 /** Un `stats` complet, cu numărul de locuri ocupate cerut de test. */
 const stats = (count: number, waitlist = 0): PublicStats => ({
@@ -73,7 +73,7 @@ const reg = (): Reg => {
 };
 
 const Harnasament = ({ s, now }: { s: PublicStats | null; now: number }) => {
-  const r = useRegistration({ stats: s, now, refresh, showToast });
+  const r = useRegistration({ stats: s, now, showToast });
   // Captura se face din efect, nu din render: scrierea în timpul randării e un
   // efect secundar, iar `react(immutability)` o semnalează pe bună dreptate.
   // `render`/`act` golesc efectele înainte ca testul să citească, deci `reg()`
@@ -158,7 +158,6 @@ describe('useRegistration — drumul fericit', () => {
     randeaza();
     await trimiteSiAsteapta();
     expect(rememberMySignup).toHaveBeenCalledWith('Ana Popescu');
-    expect(refresh).toHaveBeenCalled();
   });
 
   it('urcă numărul de locuri ocupate imediat, fără să aștepte statisticile', async () => {

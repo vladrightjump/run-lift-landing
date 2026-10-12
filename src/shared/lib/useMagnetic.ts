@@ -40,7 +40,7 @@ export const useMagnetic = () => {
     };
 
     const onMove = (e: PointerEvent) => {
-      const el = (e.target as Element | null)?.closest<HTMLElement>('.e3-mag') ?? null;
+      const el = (e.target as Element | null)?.closest<HTMLElement>('[data-css~="e3-mag"]') ?? null;
       if (el !== activ) {
         if (activ) reset(activ);
         activ = el;

@@ -1,1 +1,1 @@
-export { DespreNoi } from './pages/DespreNoiPage';
+export { rutaDespreNoi } from './route';

@@ -1,12 +1,15 @@
+import { useStats } from '../hooks/useStats';
+import { useRegistration } from '../hooks/useRegistration';
+import { formResponse } from '../../../../tests/support/publicForms';
+import { raspunde } from '../../../../tests/support/linkEmail';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, within } from '@testing-library/react';
+import { fireEvent, waitFor, render, screen, cleanup, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { RegistrationSection } from './RegistrationSection';
 import { RegistrationForm } from './RegistrationForm';
 import { EventConfigProvider } from '../../../shared/lib/useEventConfig';
 import { SNAPSHOT_CONFIG } from '../../../shared/content/eventConfig';
-import type { useRegistration } from '../hooks/useRegistration';
-import type { PublicStats } from '../../../lib/supabase';
+import type { PublicStats } from '../data/api';
 
 /**
  * Cele cinci stări ale înscrierii, randate de AMBELE suprafețe: secțiunea 03 de
@@ -20,8 +23,8 @@ import type { PublicStats } from '../../../lib/supabase';
  * unde trebuie citit. Verifică textul și rolurile pe care le vede omul.
  */
 
-vi.mock('../../../lib/supabase', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../lib/supabase')>()),
+vi.mock('../../../shared/lib/publicConfig', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../shared/lib/publicConfig')>()),
   fetchPublicConfig: vi.fn().mockResolvedValue(null),
 }));
 vi.mock('../../../lib/monitoring', () => ({
@@ -225,7 +228,7 @@ describe('diferențele dintre suprafețe se păstrează', () => {
   it('doar secțiunea de pe landing are numărul și titlul de secțiune', () => {
     const { container } = randeaza(<RegistrationSection reg={regDeBaza()} stats={stats} />);
     expect(within(container).getByText('Înscriere')).toBeDefined();
-    expect(container.querySelector('.e3-title-num')?.textContent).toBe('03');
+    expect(within(container).getByRole('heading', { name: 'Înscriere' }).previousElementSibling?.textContent).toBe('03');
   });
 
   it('doar formularul de sine stătător poate primi conținut sub el', () => {
@@ -243,7 +246,7 @@ describe('diferențele dintre suprafețe se păstrează', () => {
  */
 describe('linia de sosire, în toate stările secțiunii', () => {
   const marcaj = (container: HTMLElement) =>
-    container.querySelector('#inscriere > .e3-finish');
+    container.querySelector('#inscriere > [aria-hidden="true"]');
 
   it.each([
     ['deschisă', cu({})],
@@ -273,5 +276,43 @@ describe('linia de sosire, în toate stările secțiunii', () => {
     );
     expect(container.textContent).toContain('Locurile s-au epuizat');
     expect(container.textContent).not.toMatch(/—/);
+  });
+});
+
+const FormularReal = () => {
+  const { stats: liveStats } = useStats();
+  const reg = useRegistration({ stats: liveStats, now: new Date(SNAPSHOT_CONFIG.start + SNAPSHOT_CONFIG.tz).getTime() - 3_600_000, showToast: () => {} });
+  return <RegistrationForm reg={reg} stats={liveStats} />;
+};
+
+describe('înscrierea prin formularul real', () => {
+  it('validarea goală arată erorile lângă câmpuri fără o comandă', async () => {
+    const commands = formResponse();
+    randeaza(<FormularReal />);
+    fireEvent.click(screen.getByRole('button', { name: /Trimite înscrierea/ }));
+    expect(screen.getByText('Completează numele de familie.')).toBeDefined();
+    expect(screen.getByText('Completează prenumele.')).toBeDefined();
+    expect(screen.getByText('Adresa de email nu e validă.')).toBeDefined();
+    expect(screen.getByText('Introdu data nașterii.')).toBeDefined();
+    expect(screen.getByText('Trebuie să accepți regulamentul ca să te poți înscrie.')).toBeDefined();
+    expect(commands.count).toBe(0);
+  });
+
+  it('succesul invalidează statisticile și arată confirmarea', async () => {
+    const statsRequests = raspunde('public_stats', { body: { count: 0, participants: [], waitlist: 0 } });
+    const commands = formResponse();
+    randeaza(<FormularReal />);
+    await waitFor(() => expect(statsRequests.numar).toBe(1));
+    fireEvent.change(screen.getByLabelText('Nume *'), { target: { value: 'Popescu' } });
+    fireEvent.change(screen.getByLabelText('Prenume *'), { target: { value: 'Ana' } });
+    fireEvent.change(screen.getByLabelText('Telefon *'), { target: { value: '069123456' } });
+    fireEvent.change(screen.getByLabelText('Email *'), { target: { value: 'ana@example.com' } });
+    fireEvent.change(screen.getByLabelText('Data nașterii, în format zi punct lună punct an'), { target: { value: '15.05.1994' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Trimite înscrierea/ }));
+    await screen.findByText(/Te-ai înscris, Ana/);
+    expect(commands.count).toBe(1);
+    expect(commands.bodies[0].mode).toBe('registration');
+    await waitFor(() => expect(statsRequests.numar).toBe(2));
   });
 });

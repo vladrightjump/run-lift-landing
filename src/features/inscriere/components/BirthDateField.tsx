@@ -1,6 +1,6 @@
+import localStyles from './BirthDateField.module.css';
+import shared1 from './RegistrationStyles.module.css';
 import { useEffect, useState } from 'react';
-import type { CSSProperties } from 'react';
-import { label, inputStyle as inputComun } from './shared';
 
 /**
  * Data nașterii într-un SINGUR câmp scris: `zz.ll.aaaa`, tastatură numerică pe
@@ -17,11 +17,7 @@ import { label, inputStyle as inputComun } from './shared';
  * inputurile obișnuite: cifrele au lățime egală (`tabular-nums`), ca punctele
  * puse automat să nu miște textul sub deget, și sunt puțin răsfirate.
  */
-const inputStyle: CSSProperties = {
-  ...inputComun,
-  letterSpacing: 1,
-  fontVariantNumeric: 'tabular-nums',
-};
+
 
 const pad2 = (n: string) => n.padStart(2, '0');
 
@@ -66,11 +62,11 @@ export const BirthDateField = ({ value, onChange, error, errMsg, hint }: Props) 
   }, [value]);
 
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      <span style={label}>Data nașterii *</span>
+    <div className={localStyles.layout1}>
+      <span className={localStyles.text2}>Data nașterii *</span>
       <input type="hidden" name="dataNasterii" value={toISO(text)} readOnly />
       <input
-        className="e3-input"
+        className={shared1['e3-input'] + ' ' + localStyles.input3 + ' ' + (error ? localStyles.input3On0 : localStyles.input3Off0)} data-css={"e3-input"}
         aria-label="Data nașterii, în format zi punct lună punct an"
         inputMode="numeric"
         autoComplete="bday"
@@ -90,12 +86,12 @@ export const BirthDateField = ({ value, onChange, error, errMsg, hint }: Props) 
             onChange(toISO(next));
           }
         }}
-        style={{ ...inputStyle, borderColor: error ? 'var(--e3-danger)' : 'var(--e3-border)' }}
+
       />
       {error ? (
-        <span style={{ fontSize: 13, color: 'var(--e3-danger)' }}>{errMsg ?? 'Data nașterii nu e validă.'}</span>
+        <span className={localStyles.text4}>{errMsg ?? 'Data nașterii nu e validă.'}</span>
       ) : (
-        hint && <span style={{ fontSize: 13, color: 'var(--e3-muted)' }}>{hint}</span>
+        hint && <span className={localStyles.text5}>{hint}</span>
       )}
     </div>
   );

@@ -18,11 +18,11 @@ test.beforeEach(async ({ network }) => {
 test('toate paginile existente răspund la acces direct pe build', async ({ page }) => {
   await page.addInitScript((now) => { Date.now = () => now; }, BEFORE_LAUNCH);
   const pages = [
-    ['/?preview=landing', '.e3-root'],
+    ['/?preview=landing', "[data-css~=\"e3-root\"]"],
     ['/admin', '.admin-auth'],
-    ['/despre-noi', '.dn-root'],
+    ['/despre-noi', "[data-css~=\"dn-root\"]"],
     ['/confirmare', 'h1'],
-    ['/inscriere?preview=landing', '.e3-page-title'],
+    ['/inscriere?preview=landing', "[data-css~=\"e3-page-title\"]"],
     ['/unsubscribe', 'h1'],
     ['/renunt', 'h1'],
     ['/antrenament', 'h1'],
@@ -51,7 +51,7 @@ test('slash-urile finale nu schimbă pagina admin sau adresa', async ({ page }) 
 
 test('o cale client necunoscută păstrează fallback-ul landing', async ({ page }) => {
   await page.goto('/pagina-necunoscuta?preview=landing#format');
-  await expect(page.locator('.e3-root')).toBeVisible();
+  await expect(page.locator("[data-css~=\"e3-root\"]")).toBeVisible();
   await expect(page).toHaveURL(/\/pagina-necunoscuta\?preview=landing#format$/);
 });
 
@@ -62,8 +62,8 @@ test('Despre noi nu cere documentul ediției', async ({ page, network }) => {
     return HttpResponse.json(null);
   }));
   await page.goto('/despre-noi');
-  await expect(page.locator('.dn-root')).toBeVisible();
-  await expect(page.locator('.dn-footer')).toBeVisible();
+  await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
+  await expect(page.locator("[data-css~=\"dn-footer\"]")).toBeVisible();
   expect(configRequests).toBe(0);
 });
 
@@ -73,7 +73,7 @@ test('preview păstrează query-ul brut, config și hash; valoarea necunoscută 
   for (const preview of ['soon', 'landing', 'necunoscut', 'soon&preview=landing']) {
     const path = `/?preview=${preview}&config=draft&origine=a%20b&origine=c#format`;
     await page.goto(path);
-    await expect(page.locator(preview === 'landing' ? '.e3-root' : '.cs-root')).toBeVisible();
+    await expect(page.locator(preview === 'landing' ? "[data-css~=\"e3-root\"]" : "[data-css~=\"cs-root\"]")).toBeVisible();
     await expect(page).toHaveURL(`http://localhost:5173${path}`);
   }
 });
@@ -106,7 +106,7 @@ test('Coming Soon nu descarcă interfața sau API-ul admin', async ({ page }) =>
   const requested: string[] = [];
   page.on('request', (request) => requested.push(new URL(request.url()).pathname));
   await page.goto('/?preview=soon');
-  await expect(page.locator('.cs-root')).toBeVisible();
+  await expect(page.locator("[data-css~=\"cs-root\"]")).toBeVisible();
   expect(requested.filter((path) => adminAssets.some((name) => path.endsWith(`/${name}`)))).toEqual([]);
   // Același artefact chiar servește adminul, deci absența de pe / nu poate
   // proveni dintr-o identificare a unui fișier care nu e folosit nicăieri.
@@ -139,7 +139,7 @@ test('Escape restaurează query-ul brut al landing-ului', async ({ page }) => {
   // Închiderea manuală păstrează comportamentul existent: fragmentul se elimină.
   await expect(page).toHaveURL(`http://localhost:5173${path}`);
   expect(await page.evaluate(() => new URLSearchParams(location.search).get('preview'))).toBe('landing');
-  await expect(page.locator('.e3-root')).toBeVisible();
+  await expect(page.locator("[data-css~=\"e3-root\"]")).toBeVisible();
 });
 
 test('Back închide overlay-ul de înscriere și păstrează landing-ul', async ({ page }) => {
@@ -150,7 +150,7 @@ test('Back închide overlay-ul de înscriere și păstrează landing-ul', async 
   await expect(page).toHaveURL('http://localhost:5173/inscriere');
   await page.goBack();
   await expect(page.getByRole('dialog', { name: /înscriere/i })).toHaveCount(0);
-  await expect(page.locator('.e3-root')).toBeVisible();
+  await expect(page.locator("[data-css~=\"e3-root\"]")).toBeVisible();
   await expect(page).toHaveURL('http://localhost:5173/?preview=landing');
 });
 
@@ -160,7 +160,7 @@ test('reload pe URL-ul overlay-ului deschide pagina de înscriere de sine stăt�
   await page.getByRole('link', { name: /înscrie-te/i }).first().click();
   await expect(page.getByRole('dialog', { name: /înscriere/i })).toBeVisible();
   await page.reload();
-  await expect(page.locator('.e3-page-title')).toHaveText('Înscrie-te');
+  await expect(page.locator("[data-css~=\"e3-page-title\"]")).toHaveText('Înscrie-te');
   await expect(page.getByRole('dialog', { name: /înscriere/i })).toHaveCount(0);
   await expect(page).toHaveURL('http://localhost:5173/inscriere');
 });

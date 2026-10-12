@@ -1,3 +1,4 @@
+import styles from './AntiBot.module.css';
 /**
  * Dovezile anti-bot atașate fiecărui submit public: token Turnstile + honeypot +
  * timpul petrecut pe formular. Partajat de `useLaunchForm` și `useRegistration`,
@@ -14,7 +15,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { getTurnstileToken, isTurnstileError } from '../../../shared/lib/turnstile';
-import type { AntiBot } from '../../../lib/supabase';
+import type { AntiBot } from '../data/api';
 
 /** Numele câmpului-capcană. Plauzibil pentru un bot, irelevant pentru formular. */
 export const HONEYPOT_NAME = 'website';
@@ -66,20 +67,7 @@ export const useAntiBot = () => {
     tabIndex: -1,
     autoComplete: 'off',
     'aria-hidden': true as const,
-    style: {
-      position: 'absolute' as const,
-      left: '-9999px',
-      width: 1,
-      height: 1,
-      opacity: 0,
-      pointerEvents: 'none' as const,
-      // 16px deși câmpul e invizibil: garda de pe mobil (`tests/e2e/mobil.spec.ts`)
-      // se uită la TOATE `input`-urile din `<form>`, fără excepții — și e bine
-      // că e așa, fiindcă o excepție ar lăsa un câmp real să treacă pe sub ea.
-      // Capcana n-are cum să primească focus (tabIndex -1, off-screen), deci
-      // regula o satisface gratis.
-      fontSize: 16,
-    },
+    className: styles.honeypot,
   };
 
   return { collect, hpProps, restart };

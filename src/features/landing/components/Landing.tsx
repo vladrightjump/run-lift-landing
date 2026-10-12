@@ -1,4 +1,6 @@
-import '../../../edition3.css';
+import styles from './Landing.module.css';
+import shared2 from '../../../shared/ui/PublicMotion.module.css';
+import shared1 from '../../../shared/ui/PublicSurface.module.css';
 import { usePublicTrial } from '../../trial';
 import { TrialTraining } from '../../trial';
 import { trialLink } from '../../trial';
@@ -71,7 +73,7 @@ export const Landing = ({ mode = 'full' }: Props) => {
     (s) => s.visible && (s.key !== 'reels' || reels.length > 0)
   );
   const cd = useCountdown(EVENT_DATE);
-  const { stats, refresh } = useStats();
+  const { stats } = useStats();
   const now = useNow(30_000);
   // Secțiunile de sub fold intră cu fade-up în cascadă, nu dintr-odată.
   useScrollReveal();
@@ -93,16 +95,16 @@ export const Landing = ({ mode = 'full' }: Props) => {
   };
   useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
 
-  const reg = useRegistration({ stats, now, refresh, showToast });
+  const reg = useRegistration({ stats, now, showToast });
 
   return (
-    <div className="e3-root">
+    <div className={shared1['e3-root']} data-css={"e3-root"}>
       {/* Firul de progres al paginii. Decorativ — scroll-ul e deja indicat de
           bara nativă; aici doar dublează, în culoarea brandului. */}
-      <div className="e3-progress" aria-hidden="true" />
+      <div className={shared2['e3-progress']} data-css={"e3-progress"} aria-hidden="true" />
       {toast && (
-        <div role="status" className={toast.kind === 'error' ? 'e3-toast e3-toast-err' : 'e3-toast'}>
-          <span className="e3-toast-mark" aria-hidden="true">{toast.kind === 'error' ? '!' : '✓'}</span>
+        <div role="status" className={(toast.kind === 'error' ? styles['e3-toast'] + ' ' + styles['e3-toast-err'] : styles['e3-toast'])} data-css={(toast.kind === 'error' ? "e3-toast e3-toast-err" : "e3-toast")}>
+          <span className={styles['e3-toast-mark']} data-css={"e3-toast-mark"} aria-hidden="true">{toast.kind === 'error' ? '!' : '✓'}</span>
           {toast.msg}
         </div>
       )}

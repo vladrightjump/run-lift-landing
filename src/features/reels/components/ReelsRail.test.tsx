@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { ReelsRail } from './ReelsRail';
-import type { Reel } from '../../../lib/supabase';
+import type { Reel } from '../data/api';
 
 /**
  * Caruselul cu clipurile de antrenament.
@@ -87,11 +87,11 @@ const monteazaStuburi = (miscareRedusa: boolean) => {
  * cardul 1, iar derularea mută centrul previzibil.
  */
 const geometrie = (container: HTMLElement) => {
-  const sina = container.querySelector('.e3-reels-rail') as HTMLElement | null;
+  const sina = container.querySelector('[role="region"]') as HTMLElement | null;
   if (!sina) return null;
   sina.getBoundingClientRect = () =>
     ({ left: 0, width: 300, right: 300, top: 0, height: 500, bottom: 500 }) as DOMRect;
-  const carduri = Array.from(container.querySelectorAll('.e3-reels-item')) as HTMLElement[];
+  const carduri = Array.from(container.querySelectorAll('figure')) as HTMLElement[];
   carduri.forEach((card, i) => {
     card.getBoundingClientRect = () =>
       ({
@@ -145,17 +145,17 @@ const iframeuri = (c: HTMLElement) => Array.from(c.querySelectorAll('iframe'));
 describe('randarea', () => {
   it('un card per clip', () => {
     const { container } = randeaza();
-    expect(container.querySelectorAll('.e3-reels-item')).toHaveLength(3);
+    expect(container.querySelectorAll('figure')).toHaveLength(3);
   });
 
   it('lista goală nu randează nimic', () => {
     const { container } = randeaza([]);
-    expect(container.querySelector('.e3-reels')).toBeNull();
+    expect(container.querySelector('section')).toBeNull();
   });
 
   it('legenda și linkul stau sub card, nu peste imagine', () => {
     const { container } = randeaza();
-    const legenda = container.querySelector('.e3-reel-caption');
+    const legenda = container.querySelector('figcaption');
     expect(legenda?.textContent).toContain('Marți în parc');
   });
 
@@ -168,7 +168,7 @@ describe('randarea', () => {
 
   it('sub poster rămâne marcajul desenat, pentru când gazda nu dă miniatura', () => {
     const { container } = randeaza();
-    expect(container.querySelectorAll('.e3-reel-fallback')).toHaveLength(3);
+    expect(container.querySelectorAll('figure > div > [aria-hidden="true"]')).toHaveLength(3);
   });
 });
 
@@ -194,7 +194,7 @@ describe('un singur player, pe cardul centrat', () => {
   it('playerul se montează pe cardul din centrul șinei', () => {
     const { container } = randeaza();
     intersecteaza(true);
-    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    const carduri = Array.from(container.querySelectorAll('figure'));
     expect(carduri[1].querySelector('iframe')).not.toBeNull();
     expect(carduri[0].querySelector('iframe')).toBeNull();
     expect(carduri[2].querySelector('iframe')).toBeNull();
@@ -203,7 +203,7 @@ describe('un singur player, pe cardul centrat', () => {
   it('derularea mută playerul, fără să adauge altul', () => {
     const { container } = randeaza();
     intersecteaza(true);
-    const sina = container.querySelector('.e3-reels-rail') as HTMLElement;
+    const sina = container.querySelector('[role="region"]') as HTMLElement;
 
     sina.scrollLeft = 100;
     act(() => {
@@ -211,7 +211,7 @@ describe('un singur player, pe cardul centrat', () => {
       vi.advanceTimersByTime(200);
     });
 
-    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    const carduri = Array.from(container.querySelectorAll('figure'));
     expect(iframeuri(container)).toHaveLength(1);
     expect(carduri[2].querySelector('iframe')).not.toBeNull();
     expect(carduri[1].querySelector('iframe')).toBeNull();
@@ -265,7 +265,7 @@ describe('la mișcare redusă', () => {
     const { container } = randeaza(CLIPURI, true);
     intersecteaza(true);
     fireEvent.click(screen.getByLabelText(/Redă clipul: Marți în parc/));
-    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    const carduri = Array.from(container.querySelectorAll('figure'));
     expect(carduri[0].querySelector('iframe')).not.toBeNull();
     expect(iframeuri(container)).toHaveLength(1);
   });
@@ -295,7 +295,7 @@ describe('la mișcare redusă', () => {
 describe('caruselul', () => {
   it('fiecare card arată posterul clipului lui, nu o casetă goală', () => {
     const { container } = randeaza();
-    const postere = Array.from(container.querySelectorAll('img.e3-reel-poster'));
+    const postere = Array.from(container.querySelectorAll('figure img'));
     expect(postere).toHaveLength(3);
     expect(postere[0].getAttribute('src')).toBe('https://i.ytimg.com/vi/dQw4w9WgXcQ/oar2.jpg');
     expect(postere[0].getAttribute('loading')).toBe('lazy');
@@ -303,13 +303,13 @@ describe('caruselul', () => {
 
   it('posterul care lipsește cade pe rezervă, apoi dispare', () => {
     const { container } = randeaza();
-    const poster = () => container.querySelector('img.e3-reel-poster') as HTMLImageElement | null;
+    const poster = () => container.querySelector('figure img') as HTMLImageElement | null;
     fireEvent.error(poster()!);
     expect(poster()!.getAttribute('src')).toBe(
       'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
     );
     fireEvent.error(poster()!);
-    expect(container.querySelectorAll('img.e3-reel-poster')).toHaveLength(2);
+    expect(container.querySelectorAll('figure img')).toHaveLength(2);
   });
 
   it('cardurile care nu redă sunt butoane; apăsat, unul ia locul celui care reda', () => {
@@ -319,15 +319,15 @@ describe('caruselul', () => {
     expect(screen.getAllByLabelText(/Redă clipul/)).toHaveLength(2);
 
     fireEvent.click(screen.getByLabelText(/Redă clipul: Forță pe scări/));
-    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    const carduri = Array.from(container.querySelectorAll('figure'));
     expect(iframeuri(container)).toHaveLength(1);
     expect(carduri[2].querySelector('iframe')).not.toBeNull();
-    expect(container.querySelector('.e3-reels-count-now')?.textContent).toBe('03');
+    expect(container.querySelector('[aria-live="polite"] > span')?.textContent).toBe('03');
   });
 
   it('pornește pe clipul din mijlocul listei', () => {
     const { container } = randeaza();
-    const centrat = container.querySelector('.e3-reels-item[data-centrat]');
+    const centrat = container.querySelector('figure[data-centrat]');
     expect(centrat?.textContent).toContain('Circuit funcțional');
   });
 
@@ -338,7 +338,7 @@ describe('caruselul', () => {
     const anterior = screen.getByLabelText('Clipul anterior');
 
     fireEvent.click(urmator);
-    const carduri = Array.from(container.querySelectorAll('.e3-reels-item'));
+    const carduri = Array.from(container.querySelectorAll('figure'));
     expect(carduri[2].querySelector('iframe')).not.toBeNull();
     expect(urmator).toHaveProperty('disabled', true);
 

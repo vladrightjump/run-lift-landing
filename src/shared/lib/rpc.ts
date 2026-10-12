@@ -1,5 +1,5 @@
 import { SUPABASE } from './config';
-import { SubmitHttpError } from '../../lib/supabase';
+import { SubmitHttpError } from './errors';
 
 /** Sesiune invalidă/expirată — semnal pentru revenirea la login. */
 export class InvalidTokenError extends Error {

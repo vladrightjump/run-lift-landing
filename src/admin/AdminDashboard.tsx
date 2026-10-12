@@ -50,7 +50,7 @@ import { AdminDeliveryTab } from './AdminDeliveryTab';
 import { emailuriNelivrate, acoperire } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
 import { useAdminPolling } from './useAdminPolling';
-import { isDuplicateError, sendConfirmationEmail } from '../lib/supabase';
+import { isDuplicateError, sendConfirmationEmail } from '../features/inscriere';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../shared/lib/validation';
 import { useCountdown } from '../shared/lib/useCountdown';
 import { useNow } from '../shared/lib/useNow';

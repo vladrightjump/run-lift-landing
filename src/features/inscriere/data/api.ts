@@ -1,21 +1,8 @@
-import { SUPABASE } from '../shared/lib/config';
-import { parseEventConfig, type EventConfig } from '../shared/content/eventConfig';
-import { logClientError } from './monitoring';
-import { normalizePhone, numeComplet } from '../shared/lib/validation';
-import type { FormData } from '../shared/lib/validation';
-import { esteIdYouTube } from '../shared/lib/youtube';
-
+import { SUPABASE } from '../../../shared/lib/config';
+import { normalizePhone, numeComplet, type FormData } from '../../../shared/lib/validation';
+import { logClientError } from '../../../lib/monitoring';
+import { SubmitHttpError } from '../../../shared/lib/errors';
 export const SUBMIT_TIMEOUT_MS = 15_000;
-
-/** Eroare HTTP de la PostgREST — status-ul permite distincția duplicate (409). */
-export class SubmitHttpError extends Error {
-  status: number;
-
-  constructor(status: number, body: string) {
-    super(`Supabase ${status}: ${body}`);
-    this.status = status;
-  }
-}
 
 /**
  * Timeout de 15s via AbortController, compus cu un semnal extern opțional
@@ -178,6 +165,7 @@ export const submitLaunchNotification = async (
 };
 
 type PublicParticipant = { nume: string; echipa: string };
+
 export type PublicStats = { count: number; participants: PublicParticipant[]; waitlist: number };
 
 /**
@@ -231,92 +219,6 @@ export const fetchStats = async (signal?: AbortSignal): Promise<PublicStats> => 
   return (await res.json()) as PublicStats;
 };
 
-/**
- * Configurarea ediției publicate. Date publice, ne-personale — aceeași formă ca
- * `fetchStats`: RPC stabil peste un tabel închis de RLS, cu cheia publicabilă.
- * E o CITIRE, deci lockdown-ul pe INSERT n-o atinge.
- *
- * Întoarce `null` când documentul nu se poate randa, ca apelantul să rămână pe
- * instantaneul de build în loc să afișeze o pagină ciuntită.
- */
-export const fetchPublicConfig = async (signal?: AbortSignal): Promise<EventConfig | null> => {
-  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/public_config`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE.publishableKey,
-      'Content-Type': 'application/json',
-      'Content-Profile': SUPABASE.schema,
-    },
-    body: '{}',
-    signal,
-  });
-  if (!res.ok) {
-    throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
-  }
-  return parseEventConfig(await res.json());
-};
-
-/**
- * Un clip de antrenament, așa cum îl arată pagina.
- *
- * CLIPUL nu vine de aici: `youtube` e identificatorul de pe gazdă, iar octeții
- * lui îi servește ea. Din backend vine PREZENTAREA — ordinea, legenda, linkul
- * postării și dacă se vede.
- *
- * `url` rămâne o adresă de Instagram, nu de YouTube: gazda ține fișierul, dar
- * publicul e pe Instagram, iar acolo trimite cardul.
- */
-export type Reel = { youtube: string; caption: string; url: string };
-
-/**
- * Clipurile vizibile, în ordinea din bandă.
- *
- * Aceeași formă ca `fetchWeeklyWorkouts` (`features/antrenament/data/api.ts`): RPC stabil peste un tabel închis, cu
- * cheia publicabilă. Clipurile nu aparțin niciunei ediții — antrenamentele nu se
- * mută odată cu cursa — deci nu trec prin documentul de configurare.
- *
- * Tolerant ca `parseEventConfig`: o intrare stricată se sare, în loc să rupă
- * secțiunea. Lista goală e o stare validă și normală — atunci banda dispare
- * complet, fără să lase un număr de secțiune sărit.
- */
-export const fetchTrainingReels = async (signal?: AbortSignal): Promise<Reel[]> => {
-  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/public_training_reels`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE.publishableKey,
-      'Content-Type': 'application/json',
-      'Content-Profile': SUPABASE.schema,
-    },
-    body: '{}',
-    signal,
-  });
-  if (!res.ok) {
-    throw new SubmitHttpError(res.status, await res.text().catch(() => ''));
-  }
-  const raw: unknown = await res.json();
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((element): Reel[] => {
-    if (typeof element !== 'object' || element === null) return [];
-    const { youtube, caption, url } = element as Record<string, unknown>;
-    // `youtube` și `url` sunt singurele obligatorii: fără ele cardul n-are ce
-    // reda și n-are unde trimite. Serverul le validează deja prin constrângeri;
-    // asta e apărarea în adâncime pentru o scriere directă în DB.
-    //
-    // Forma identificatorului se verifică, nu doar tipul: de aici iese un `src`
-    // de `iframe` spre o origine pe care CSP-ul o permite acum, deci un șir
-    // arbitrar n-are voie să ajungă până acolo.
-    if (typeof youtube !== 'string' || !esteIdYouTube(youtube)) return [];
-    if (typeof url !== 'string' || !url.startsWith('https://www.instagram.com/')) return [];
-    return [
-      {
-        youtube,
-        caption: typeof caption === 'string' ? caption : '',
-        url,
-      },
-    ];
-  });
-};
-
 export const isDuplicateError = (err: unknown): boolean =>
   err instanceof SubmitHttpError && err.status === 409;
 
@@ -327,19 +229,3 @@ export const isDuplicateError = (err: unknown): boolean =>
  */
 export const isBotRejectedError = (err: unknown): boolean =>
   err instanceof SubmitHttpError && /captcha_failed|"bot"|too_fast/.test(err.message);
-
-export const isTimeoutError = (err: unknown): boolean =>
-  err instanceof DOMException && err.name === 'TimeoutError';
-
-export const isAbortError = (err: unknown): boolean =>
-  err instanceof DOMException && err.name === 'AbortError';
-
-/**
- * `fetch` a eșuat la nivel de rețea — inclusiv când browserul BLOCHEAZĂ cererea
- * prin CSP (`connect-src`). Un `fetch` care nu ajunge la un răspuns aruncă mereu
- * `TypeError`, dar MESAJUL diferă între browsere (Chrome „Failed to fetch",
- * Safari/iOS „Load failed", Firefox „NetworkError…"), așa că NU ne bazăm pe text.
- * Un răspuns HTTP de eroare e `SubmitHttpError`, nu `TypeError`, deci `instanceof
- * TypeError` separă corect cele două, pe toate browserele.
- */
-export const isNetworkOrCspError = (err: unknown): boolean => err instanceof TypeError;

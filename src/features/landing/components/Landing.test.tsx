@@ -3,7 +3,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 import { Landing } from './Landing';
 import { EventConfigProvider } from '../../../shared/lib/useEventConfig';
 import { SNAPSHOT_CONFIG, type SectionLayoutEntry } from '../../../shared/content/eventConfig';
-import type { Reel } from '../../../lib/supabase';
+import type { Reel } from '../../reels';
 
 /**
  * Clipurile nu mai vin din configul publicat, ci din `public_training_reels()`.
@@ -45,9 +45,9 @@ const randeaza = (layout: SectionLayoutEntry[], mode?: 'full' | 'leaderboard') =
 
 /** Titlurile secțiunilor, în ordinea în care apar în DOM, cu numărul lor. */
 const sectiuniDinPagina = (): string[] =>
-  Array.from(document.querySelectorAll('.e3-title-num')).map((el) => {
-    const titlu = el.parentElement?.querySelector('.e3-title')?.textContent?.trim() ?? '?';
-    return `${el.textContent?.trim()} ${titlu}`;
+  screen.queryAllByRole('heading', { level: 2 }).flatMap(heading => {
+    const number = heading.previousElementSibling?.textContent?.trim();
+    return number && /^\d{2}$/.test(number) ? [`${number} ${heading.textContent?.trim()}`] : [];
   });
 
 beforeEach(() => {
@@ -191,7 +191,7 @@ describe('secțiunea „Instagram" nu cere NIMIC de la Instagram', () => {
   it('cardul e desenat cât timp nu redă, nu gol', () => {
     cuClipuri(UN_CLIP);
     randeaza([{ key: 'reels', visible: true }]);
-    expect(document.querySelector('.e3-reel-fallback')?.textContent).toBe('01');
+    expect(document.querySelector('figure [aria-hidden="true"]')?.textContent).toBe('01');
   });
 
   it('linkul spre postare e singurul lucru care duce pe Instagram', () => {
@@ -203,7 +203,7 @@ describe('secțiunea „Instagram" nu cere NIMIC de la Instagram', () => {
 });
 
 describe('linia de sosire nu depinde de poziție', () => {
-  const banda = () => document.querySelector('#inscriere > .e3-finish');
+  const banda = () => document.querySelector('#inscriere > [aria-hidden="true"]');
 
   it('Covers AE2. Înscrierea prima, Reels ascuns: e 01 și poartă banda de sosire', () => {
     cuClipuri(UN_CLIP);

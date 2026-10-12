@@ -1,37 +1,12 @@
-import { useEffect, useState } from 'react';
-import { fetchTrainingReels, isAbortError, type Reel } from '../../../lib/supabase';
+import { useEffect } from 'react';
+import { fetchTrainingReels, type Reel } from '../data/api';
+import { isAbortError } from '../../../shared/lib/errors';
 import { logClientError } from '../../../lib/monitoring';
+import { usePublicQuery } from '../../../shared/lib/usePublicQuery';
 
-/**
- * Clipurile de antrenament, cerute o singură dată la montare.
- *
- * Fără provider și fără reîmprospătare periodică, spre deosebire de configul
- * ediției: banda nu e o cronologie care se schimbă sub degetul vizitatorului, iar
- * un tab lăsat deschis n-are de ce să reîncarce clipuri.
- *
- * Pornește de la lista goală, nu de la un instantaneu de build. Consecința e că
- * secțiunea apare abia după răspuns — acceptabil, fiindcă ea stă oricum sub fold
- * pe amândouă paginile, iar alternativa (o listă în cod, reconciliată din DB) ar
- * fi însemnat două surse care pot să difere.
- *
- * Un backend căzut nu e o cale de eroare: lista rămâne goală, secțiunea nu se
- * randează, iar restul paginii nu știe că a existat.
- */
+/** O singură încărcare pe montare; lipsa serviciului ascunde banda. */
 export const useTrainingReels = (): readonly Reel[] => {
-  const [reels, setReels] = useState<readonly Reel[]>([]);
-
-  useEffect(() => {
-    const control = new AbortController();
-    fetchTrainingReels(control.signal)
-      .then(setReels)
-      .catch((err) => {
-        // Abort la unmount e normal. Restul lasă o urmă, dar pagina rămâne
-        // întreagă, fără bandă.
-        if (isAbortError(err)) return;
-        logClientError('fetch-training-reels', err);
-      });
-    return () => control.abort();
-  }, []);
-
-  return reels;
+  const query = usePublicQuery('reels', fetchTrainingReels);
+  useEffect(() => { if (query.error && !isAbortError(query.error)) logClientError('fetch-training-reels', query.error); }, [query.error]);
+  return query.data?.value ?? [];
 };

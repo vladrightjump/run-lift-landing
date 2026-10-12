@@ -1,3 +1,4 @@
+import styles from './SignupBanner.module.css';
 import { useEffect, useState } from 'react';
 import { useEventConfig } from '../../../shared/lib/useEventConfig';
 import { consumeJustSignedUp } from '../../../shared/lib/justSignedUp';
@@ -36,14 +37,14 @@ export const SignupBanner = () => {
   if (!data || hidden) return null;
 
   return (
-    <div role="status" className="e3-banner">
-      <span className="e3-banner-mark" aria-hidden="true">✓</span>
-      <span className="e3-banner-text">
+    <div role="status" className={styles['e3-banner']} data-css={"e3-banner"}>
+      <span className={styles['e3-banner-mark']} data-css={"e3-banner-mark"} aria-hidden="true">✓</span>
+      <span className={styles['e3-banner-text']} data-css={"e3-banner-text"}>
         {data.waitlist
           ? `${data.prenume}, ești pe lista de așteptare. Te anunțăm imediat ce se eliberează un loc.`
           : `${data.prenume}, ești înscris${data.loc ? `, locul ${data.loc}/${TOTAL_SLOTS}` : ''}. Confirmarea a plecat pe email.`}
       </span>
-      <button type="button" onClick={() => setHidden(true)} aria-label="Închide" className="e3-banner-close">
+      <button type="button" onClick={() => setHidden(true)} aria-label="Închide" className={styles['e3-banner-close']} data-css={"e3-banner-close"}>
         ✕
       </button>
     </div>

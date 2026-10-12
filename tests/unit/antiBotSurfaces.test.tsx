@@ -43,7 +43,7 @@ const CuInscriere = ({ variant }: { variant: 'sectiune' | 'formular' }) => {
   const reg = useRegistration({
     stats: null,
     now: acum,
-    refresh: () => {},
+
     showToast: () => {},
   });
   return variant === 'sectiune' ? (

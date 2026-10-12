@@ -1,0 +1,16 @@
+
+  .e3-banner {
+    position: sticky; top: 0; z-index: 60;
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px var(--e3-gutter);
+    background: var(--e3-accent); color: var(--e3-bg);
+    font-size: 15px; font-weight: 600;
+    animation: e3-rise 0.3s var(--e3-ease) backwards;
+  }
+  .e3-banner-mark { font-size: 17px; font-weight: 700; }
+  .e3-banner-text { flex: 1; text-wrap: pretty; }
+  .e3-banner-close {
+    background: transparent; border: 0; color: var(--e3-bg); cursor: pointer;
+    font-size: 16px; line-height: 1; padding: 6px;
+  }
+@keyframes e3-rise { from { clip-path: inset(0 0 100% 0); transform: translateY(14px); } to { clip-path: inset(0); transform: translateY(0); } }

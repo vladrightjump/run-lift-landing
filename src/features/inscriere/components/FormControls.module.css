@@ -1,0 +1,7 @@
+.label.label.label.label { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--e3-muted); }
+
+.input.input.input.input { background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text); font-family: Archivo, sans-serif; font-size: 16px; padding: 13px 14px; outline: none; width: 100%; box-sizing: border-box; }
+
+.fieldError.fieldError.fieldError.fieldError { font-size: 13px; color: var(--e3-danger); }
+
+.smallAction.smallAction.smallAction.smallAction { background: var(--e3-accent); color: var(--e3-bg); border: none; cursor: pointer; font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; padding: 12px 22px; }

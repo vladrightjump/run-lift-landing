@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ziLunaOra, ziSiLuna, momentComplet, ziLunaLunga } from '../../src/shared/lib/formatare';
+import { ziLunaOra, ziSiLuna, momentComplet, ziLunaLunga } from './formatare';
 
 /**
  * Formatarea trebuie să scoată EXACT ce scoteau cele șase definiții risipite

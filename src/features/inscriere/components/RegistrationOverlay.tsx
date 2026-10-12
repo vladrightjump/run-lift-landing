@@ -1,6 +1,8 @@
+import localStyles from './RegistrationOverlay.module.css';
+import shared1 from './RegistrationStyles.module.css';
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { useRouter } from '@tanstack/react-router';
-import type { PublicStats } from '../../../lib/supabase';
+import type { PublicStats } from '../data/api';
 import type { useRegistration } from '../hooks/useRegistration';
 import { useEditionStrings } from '../../../shared/lib/useEventConfig';
 import { RegistrationForm } from './RegistrationForm';
@@ -110,53 +112,24 @@ export const RegistrationOverlay = ({ reg, stats, onClose }: Props) => {
       onMouseDown={(e) => {
         if (!boxRef.current?.contains(e.target as Node)) onClose();
       }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 300,
-        background: 'rgba(12,14,10,0.72)',
-        backdropFilter: 'blur(3px)',
-        overflowY: 'auto',
-        padding: 'clamp(12px, 4vw, 40px)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        animation: 'e3-fade-up 0.25s ease-out',
-      }}
+      className={localStyles.layout1}
     >
-      <div ref={boxRef} style={{ width: '100%', maxWidth: 560, display: 'grid', gap: 0 }}>
+      <div ref={boxRef} className={localStyles.layout2}>
         <div
-          style={{
-            border: '1px solid var(--e3-border)',
-            borderBottom: 'none',
-            background: 'var(--e3-bg)',
-            padding: '16px 20px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: 16,
-          }}
+          className={localStyles.layout3}
         >
-          <div style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontFamily: 'Anton, sans-serif', fontSize: 24, textTransform: 'uppercase', letterSpacing: 1 }}>
+          <div className={localStyles.layout4}>
+            <span className={localStyles.text5}>
               Înscrie-te
             </span>
-            <span style={{ fontSize: 13, color: 'var(--e3-muted)' }}>{EVENT_META}</span>
+            <span className={localStyles.text6}>{EVENT_META}</span>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Închide"
-            className="e3-ghost"
-            style={{
-              background: 'transparent',
-              border: '1px solid var(--e3-border)',
-              color: 'var(--e3-muted)',
-              cursor: 'pointer',
-              fontSize: 16,
-              lineHeight: 1,
-              padding: '9px 13px',
-            }}
+            className={shared1['e3-ghost'] + ' ' + localStyles.button7} data-css={"e3-ghost"}
+
           >
             ✕
           </button>

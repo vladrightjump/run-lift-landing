@@ -3,14 +3,15 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { SNAPSHOT_CONFIG, parseEventConfig, type EventConfig } from '../content/eventConfig';
 import { deriveEventStrings, type EventStrings } from '../content/format';
 import { deriveEditionDates, type EditionDates } from './config';
-import { fetchPublicConfig, isAbortError } from '../../lib/supabase';
+import { fetchPublicConfig } from './publicConfig';
+import { isAbortError } from './errors';
+import { usePublicQuery } from './usePublicQuery';
 import { logClientError, setMonitoringEdition } from '../../lib/monitoring';
 
 /**
@@ -76,54 +77,27 @@ const sursaConfig = async (signal: AbortSignal): Promise<EventConfig | null> => 
 export const EventConfigProvider = ({ children, override = null }: Props) => {
   const [config, setConfig] = useState<EventConfig>(override ?? SNAPSHOT_CONFIG);
   const [settled, setSettled] = useState(override !== null);
-  const abortRef = useRef<AbortController | null>(null);
-
+  const query = usePublicQuery('config', sursaConfig, override === null, REFRESH_MS);
   useEffect(() => {
     if (override) {
       setConfig(override);
       setSettled(true);
       setMonitoringEdition(override.number);
-      return;
-    }
-
-    const refresh = () => {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      sursaConfig(controller.signal)
-        .then((live) => {
-          setSettled(true);
-          // `null` = document nerandabil. Rămânem pe ce aveam; o pagină ciuntită
-          // e mai rea decât o ediție cu o publicare întârziere.
-          if (!live) return;
+    } else {
+      if (query.data) {
+        setSettled(true);
+        const live = query.data.value;
+        if (live) {
           setConfig(live);
-          // Rapoartele de eroare trebuie să numească ediția SERVITĂ, nu pe cea
-          // din bundle — altfel, după o publicare, filtrarea logurilor pe ediția
-          // nouă nu găsește nimic, exact când e nevoie de ele.
           setMonitoringEdition(live.number);
-        })
-        .catch((err) => {
-          // Abort la refresh/unmount e normal. Restul lasă o urmă, dar pagina
-          // rămâne pe ultima valoare bună — exact ca `useStats`.
-          if (isAbortError(err)) return;
-          // Backendul căzut: instantaneul e tot ce vom avea, deci e „definitiv".
-          setSettled(true);
-          logClientError('fetch-public-config', err);
-        });
-    };
-
-    refresh();
-    const id = window.setInterval(refresh, REFRESH_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener('visibilitychange', onVisible);
-      abortRef.current?.abort();
-    };
-  }, [override]);
+        }
+      }
+      if (query.error && !isAbortError(query.error)) {
+        setSettled(true);
+        logClientError('fetch-public-config', query.error);
+      }
+    }
+  }, [override, query.data, query.error]);
 
   return (
     <EventConfigContext.Provider value={config}>

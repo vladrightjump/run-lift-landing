@@ -1,12 +1,14 @@
+import shared3 from '../../../shared/ui/PublicControls.module.css';
+import styles from './RegistrationForm.module.css';
+import shared1 from './RegistrationStyles.module.css';
 import { useEffect, useRef } from 'react';
 import { useEventConfig, useEditionStrings } from '../../../shared/lib/useEventConfig';
 import type { FieldName } from '../../../shared/lib/validation';
-import type { PublicStats } from '../../../lib/supabase';
+import type { PublicStats } from '../data/api';
 import type { useRegistration } from '../hooks/useRegistration';
 import { markJustSignedUp } from '../../../shared/lib/justSignedUp';
 import { useSuccessRedirect } from '../hooks/useSuccessRedirect';
 import { BirthDateField } from './BirthDateField';
-import { ctaSmall } from './shared';
 import {
   ActiuniSucces,
   AntetLocuri,
@@ -85,33 +87,21 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
   };
 
   return (
-    <div style={{ display: 'grid', gap: 0 }}>
+    <div className={styles.layout1}>
       {/* Locuri rămase — lipit peste formular, ca pe landing */}
       <div
-        style={{
-          border: '1px solid var(--e3-border)',
-          borderBottom: 'none',
-          background: 'var(--e3-surface)',
-          padding: '16px 20px',
-          display: 'grid',
-          gap: 12,
-        }}
+        className={styles.layout2}
       >
         <AntetLocuri>
           <span
-            style={{
-              fontFamily: 'Anton, sans-serif',
-              fontSize: 22,
-              letterSpacing: 1,
-              color: slots.remaining <= 3 ? 'var(--e3-danger)' : 'var(--e3-accent)',
-            }}
+            className={styles.text3 + ' ' + (slots.remaining <= 3 ? styles.text3On0 : styles.text3Off0)}
           >
             {stats ? slots.remaining : '–'} / {TOTAL_SLOTS}
           </span>
         </AntetLocuri>
-        <BaraLocuri total={TOTAL_SLOTS} ocupate={slots.occupied} gap={3} animat={false} />
+        <BaraLocuri total={TOTAL_SLOTS} ocupate={slots.occupied} className={styles.locuri} animat={false} />
         {isSoldOut && !isWaitlistFull && (
-          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--e3-accent)', fontWeight: 600, textWrap: 'pretty' }}>
+          <p className={styles.copy4}>
             Locurile s-au epuizat. Completează formularul și intri pe lista de așteptare
             ({waitlistLeft} {waitlistLeft === 1 ? 'loc' : 'locuri'} rămase).
           </p>
@@ -128,13 +118,7 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
             const name = el.getAttribute('name') as FieldName | null;
             if (name && name !== 'acord') clearErrorFor(name);
           }}
-          style={{
-            border: '1px solid var(--e3-border)',
-            background: 'var(--e3-surface)',
-            padding: 'clamp(18px, 4vw, 32px)',
-            display: 'grid',
-            gap: 18,
-          }}
+          className={styles.element5}
         >
           {/* Capcană anti-bot: invizibilă pentru oameni, tentantă pentru
               scripturile care completează orice câmp. Verificată pe server.
@@ -196,12 +180,11 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
           <BifaAcord
             eroare={errors.acord}
             onClear={() => clearErrorFor('acord')}
-            marime={20}
-            margineSus="1px 0 0"
+            className={styles.acord}
           />
 
-          <ButonTrimite peListaDeAsteptare={waitlistMode} marginTop={2} />
-          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--e3-muted)', textAlign: 'center' }}>
+          <ButonTrimite peListaDeAsteptare={waitlistMode} className={styles.trimite} />
+          <p className={styles.copy6}>
             Primești confirmarea pe email imediat. {EVENT_SUMMARY_LINE}
           </p>
           {footerSlot}
@@ -209,30 +192,30 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
       )}
 
       {closedReason && (
-        <div className="e3-reg-panel e3-reg-panel-compact">
-          <div className="e3-reg-panel-title">{textInchis(closedReason).titlu}</div>
-          <p className="e3-reg-panel-msg">
+        <div className={shared1['e3-reg-panel'] + ' ' + styles['e3-reg-panel-compact']} data-css={"e3-reg-panel e3-reg-panel-compact"}>
+          <div className={shared1['e3-reg-panel-title']} data-css={"e3-reg-panel-title"}>{textInchis(closedReason).titlu}</div>
+          <p className={shared1['e3-reg-panel-msg']} data-css={"e3-reg-panel-msg"}>
             {textInchis(closedReason).mesaj}
           </p>
-          <LinkContact stil={ctaSmall} />
+          <LinkContact className={styles.contact} />
         </div>
       )}
 
       {phase === 'loading' && (
-        <div className="e3-reg-panel e3-reg-panel-loading">
+        <div className={shared1['e3-reg-panel'] + ' ' + shared1['e3-reg-panel-loading']} data-css={"e3-reg-panel e3-reg-panel-loading"}>
           <BaraIncarcare />
-          <div className="e3-reg-panel-title e3-reg-panel-wait">{TEXT_INCARCARE}</div>
+          <div className={shared1['e3-reg-panel-title'] + ' ' + shared1['e3-reg-panel-wait']} data-css={"e3-reg-panel-title e3-reg-panel-wait"}>{TEXT_INCARCARE}</div>
         </div>
       )}
 
       {phase === 'success' && (
-        <div className="e3-reg-panel e3-reg-panel-compact e3-reg-panel-ok">
+        <div className={shared1['e3-reg-panel'] + ' ' + styles['e3-reg-panel-compact'] + ' ' + shared1['e3-reg-panel-ok']} data-css={"e3-reg-panel e3-reg-panel-compact e3-reg-panel-ok"}>
           <BifaSucces />
-          <div className="e3-reg-panel-title">
+          <div className={shared1['e3-reg-panel-title']} data-css={"e3-reg-panel-title"}>
             {submittedAsWaitlist ? 'Ești pe lista de așteptare, ' : 'Te-ai înscris, '}
             {confirmName}!
           </div>
-          <p className="e3-reg-panel-msg">
+          <p className={shared1['e3-reg-panel-msg']} data-css={"e3-reg-panel-msg"}>
             {submittedAsWaitlist
               ? TEXT_SUCCES_ASTEPTARE
               : `Locul ${slots.occupied} din ${TOTAL_SLOTS}. Ți-am trimis emailul de confirmare cu toate detaliile. ${SUCCESS_SEE_YOU}`}
@@ -241,49 +224,37 @@ export const RegistrationForm = ({ reg, stats, redirect = false, footerSlot, aut
 
           {/* Numărătoare inversă spre pagina evenimentului — orice atingere o oprește. */}
           {redirect && !rd.cancelled && (
-            <div style={{ width: '100%', maxWidth: 400, border: '1px dashed var(--e3-border)', padding: 14, display: 'grid', gap: 10, justifyItems: 'stretch' }}>
-              <div style={{ fontSize: 14, color: 'var(--e3-muted-strong)', textAlign: 'center' }}>
+            <div className={styles.layout7}>
+              <div className={styles.layout8}>
                 Te ducem la pagina evenimentului… {rd.left}
               </div>
-              <div style={{ height: 6, background: 'var(--e3-border)' }} aria-hidden="true">
-                <div style={{ height: '100%', width: `${((rd.total - rd.left) / rd.total) * 100}%`, background: 'var(--e3-accent)', transition: 'width 1s linear' }} />
+              <div className={styles.layout9} aria-hidden="true">
+                <div className={styles.layout10} style={{ width: `${((rd.total - rd.left) / rd.total) * 100}%` }} />
               </div>
               <button
                 type="button"
                 onClick={rd.cancel}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--e3-muted)',
-                  cursor: 'pointer',
-                  fontFamily: 'Archivo, sans-serif',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  letterSpacing: 1.5,
-                  textTransform: 'uppercase',
-                  textDecoration: 'underline',
-                  padding: 4,
-                }}
+                className={styles.button11}
               >
                 Rămân aici
               </button>
             </div>
           )}
           {redirect && rd.cancelled && (
-            <a href="/#participanti" className="e3-cta" style={{ ...ctaSmall, textDecoration: 'none', display: 'inline-block' }}>
+            <a href="/#participanti" className={shared3['e3-cta'] + ' ' + styles.link12} data-css={"e3-cta"} >
               Vezi pagina evenimentului
             </a>
           )}
 
-          <ButonReset peListaDeAsteptare={submittedAsWaitlist} onClick={resetForm} />
+          <ButonReset peListaDeAsteptare={submittedAsWaitlist} onClick={resetForm} className={styles.reset} />
         </div>
       )}
 
       {phase === 'error' && (
-        <div className="e3-reg-panel e3-reg-panel-compact e3-reg-panel-err">
+        <div className={shared1['e3-reg-panel'] + ' ' + styles['e3-reg-panel-compact'] + ' ' + shared1['e3-reg-panel-err']} data-css={"e3-reg-panel e3-reg-panel-compact e3-reg-panel-err"}>
           <IconEroare />
-          <div className="e3-reg-panel-title">{TEXT_EROARE_TITLU}</div>
-          <p className="e3-reg-panel-msg">
+          <div className={shared1['e3-reg-panel-title']} data-css={"e3-reg-panel-title"}>{TEXT_EROARE_TITLU}</div>
+          <p className={shared1['e3-reg-panel-msg']} data-css={"e3-reg-panel-msg"}>
             {TEXT_EROARE_MESAJ}
           </p>
           <ButonReincearca

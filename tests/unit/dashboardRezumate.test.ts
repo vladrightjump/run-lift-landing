@@ -6,7 +6,7 @@ import {
 } from '../../src/admin/dashboardRezumate';
 import type { StareCelula } from '../../src/admin/deliveryLog';
 import type { AdminEvent } from '../../src/lib/adminApi';
-import { SubmitHttpError } from '../../src/lib/supabase';
+import { SubmitHttpError } from '../../src/shared/lib/errors';
 
 /**
  * Funcțiile care decid ce scrie pe ecranul de participanți. Erau prinse într-un

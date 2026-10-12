@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchTrainingReels, SubmitHttpError } from '../../src/lib/supabase';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { fetchTrainingReels } from './api';
+import { SubmitHttpError } from '../../../shared/lib/errors';
 
 /**
  * Citirea clipurilor din `public_training_reels()`.
@@ -12,12 +13,12 @@ import { fetchTrainingReels, SubmitHttpError } from '../../src/lib/supabase';
  * directă în bază.
  */
 
-let fetchMock: ReturnType<typeof vi.fn>;
+import { raspunde as raspunsRpc } from '../../../../tests/support/linkEmail';
+import { server } from '../../../../tests/support/vitest.setup';
 
-const raspunde = (corp: unknown, status = 200) => {
-  fetchMock = vi.fn(async () => new Response(JSON.stringify(corp), { status }));
-  vi.stubGlobal('fetch', fetchMock);
-};
+let requests: Request[] = [];
+const record = ({ request }: { request: Request }) => { requests.push(request.clone()); };
+const raspunde = (body: unknown, status = 200) => raspunsRpc('public_training_reels', { body, status });
 
 const CLIP = {
   youtube: 'dQw4w9WgXcQ',
@@ -25,8 +26,8 @@ const CLIP = {
   url: 'https://www.instagram.com/reel/ABC12345/',
 };
 
-beforeEach(() => raspunde([]));
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => { requests = []; server.events.on('request:start', record); raspunde([]); });
+afterEach(() => { server.events.removeListener('request:start', record); });
 
 describe('lista publică', () => {
   it('păstrează ordinea primită de la server — ea E ordinea din bandă', async () => {
@@ -85,9 +86,8 @@ describe('intrarea stricată cade, restul rămâne', () => {
 describe('forma cererii', () => {
   it('merge pe RPC-ul public, cu schema rutată prin header', async () => {
     await fetchTrainingReels();
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('/rest/v1/rpc/public_training_reels');
-    expect(init.method).toBe('POST');
-    expect((init.headers as Record<string, string>)['Content-Profile']).toBe('runlift');
+    expect(requests[0].url).toContain('/rest/v1/rpc/public_training_reels');
+    expect(requests[0].method).toBe('POST');
+    expect(requests[0].headers.get('Content-Profile')).toBe('runlift');
   });
 });

@@ -1,2 +1,2 @@
-export { LandingPage } from './pages/LandingPage';
+export { rutaLanding } from './route';
 export { SectionHead } from './components/SectionHead';

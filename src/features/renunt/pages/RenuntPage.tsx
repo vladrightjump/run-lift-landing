@@ -1,3 +1,4 @@
+import cadruStyles from '../../../shared/ui/CadruScurt.module.css';
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useEditionStrings, useEventConfig } from '../../../shared/lib/useEventConfig';
@@ -79,7 +80,7 @@ export const RenuntPage = () => {
       {rezultat === null ? (
         <>
           <TitluScurt>Nu mai poți veni?</TitluScurt>
-          <p className="cs-sub">
+          <p className={cadruStyles['cs-sub']} data-css="cs-sub">
             Ești pe lista de participanți la <strong>{eventName}</strong>, {EVENT_WHEN}, ora{' '}
             {EVENT_START_TIME}, la {EVENT_WHERE}.
           </p>
@@ -88,7 +89,7 @@ export const RenuntPage = () => {
             scoate din listă, ci dă locul mai departe pe loc. Cine apasă
             trebuie să știe că nu se poate întoarce singur.
           */}
-          <p className="cs-sub">
+          <p className={cadruStyles['cs-sub']} data-css="cs-sub">
             Dacă apeși mai jos, îți eliberăm locul imediat și îl primește primul om de pe lista
             de așteptare. Nu-l poți lua înapoi singur.
           </p>
@@ -98,13 +99,13 @@ export const RenuntPage = () => {
             paginii. Aici acțiunea paginii e cea ireversibilă, deci nu ea trebuie
             să fie butonul pe care cade degetul din greșeală.
           */}
-          <div className="cs-actions">
-            <a className="cs-cta" href="/">
+          <div className={cadruStyles['cs-actions']} data-css="cs-actions">
+            <a className={cadruStyles['cs-cta']} data-css="cs-cta" href="/">
               Nu, rămân înscris
             </a>
             <button
               type="button"
-              className="cs-cta-secondary"
+              className={cadruStyles['cs-cta-secondary']} data-css="cs-cta-secondary"
               onClick={renunta}
               disabled={trimite}
             >

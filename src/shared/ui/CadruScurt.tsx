@@ -20,20 +20,20 @@ export const CadruScurt = ({
   subsol?: boolean;
   children: ReactNode;
 }) => (
-  <div className="cs-root">
-    <div className="cs-bg" aria-hidden="true" />
+  <div className={styles['cs-root']} data-css={"cs-root"}>
+    <div className={styles['cs-bg']} data-css={"cs-bg"} aria-hidden="true" />
 
-    <header className="cs-topbar">
-      <a className="cs-logo" href="/">
-        R<span className="cs-accent">+</span>L
+    <header className={styles['cs-topbar']} data-css={"cs-topbar"}>
+      <a className={styles['cs-logo']} data-css={"cs-logo"} href="/">
+        R<span className={styles['cs-accent']} data-css={"cs-accent"}>+</span>L
       </a>
-      <span className="cs-brand-meta">{meta}</span>
+      <span className={styles['cs-brand-meta']} data-css={"cs-brand-meta"}>{meta}</span>
     </header>
 
-    <main className="cs-main">{children}</main>
+    <main className={styles['cs-main']} data-css={"cs-main"}>{children}</main>
 
     {subsol && (
-      <footer className="cs-footer">
+      <footer className={styles['cs-footer']} data-css={"cs-footer"}>
         <span>Run + Lift · Chișinău</span>
         <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
           Instagram {INSTAGRAM_HANDLE}
