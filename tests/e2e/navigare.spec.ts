@@ -41,16 +41,16 @@ const mockStats = (page: Page) =>
 test.describe('Tabul „Despre noi" — Coming Soon', () => {
   test('e prezent în antet și trimite către /despre-noi', async ({ page }) => {
     await page.goto('/?preview=soon');
-    const tab = page.locator('.cs-topbar a.cs-tab');
+    const tab = page.locator("[data-css~=\"cs-topbar\"] a[data-css~=\"cs-tab\"]");
     await expect(tab).toBeVisible();
     await expect(tab).toHaveAttribute('href', '/despre-noi');
   });
 
   test('clic pe tab deschide pagina Despre noi', async ({ page }) => {
     await page.goto('/?preview=soon');
-    await page.locator('.cs-topbar a.cs-tab').click();
+    await page.locator("[data-css~=\"cs-topbar\"] a[data-css~=\"cs-tab\"]").click();
     await expect(page).toHaveURL(/\/despre-noi$/);
-    await expect(page.locator('.dn-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
   });
 
   test('rămâne vizibil pe mobil (375px), fără să fie tăiat de marginea paginii', async ({
@@ -62,7 +62,7 @@ test.describe('Tabul „Despre noi" — Coming Soon', () => {
     await page.setViewportSize({ width: 375, height: 720 });
     await page.goto('/?preview=soon');
 
-    const tab = page.locator('.cs-topbar a.cs-tab');
+    const tab = page.locator("[data-css~=\"cs-topbar\"] a[data-css~=\"cs-tab\"]");
     await expect(tab).toBeVisible();
     const box = await tab.boundingBox();
     expect(box).not.toBeNull();
@@ -86,7 +86,7 @@ test.describe('Tabul „Despre noi" — landing', () => {
     await page.goto('/?preview=landing');
     await page.locator('header a[href="/despre-noi"]').click();
     await expect(page).toHaveURL(/\/despre-noi$/);
-    await expect(page.locator('.dn-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
   });
 
   test('nu strică celelalte acțiuni din antet (Înscrie-te duce la formular)', async ({ page }) => {
@@ -115,20 +115,20 @@ test.describe('Drumul dus-întors', () => {
   test('Despre noi → înapoi la eveniment („/")', async ({ page }) => {
     await mockStats(page);
     await page.goto('/despre-noi');
-    await page.locator('.dn-footer a[href="/"]').click();
+    await page.locator("[data-css~=\"dn-footer\"] a[href=\"/\"]").click();
     await expect(page).toHaveURL(/\/$/);
     // La „/" apare Coming Soon (`.cs-root`) sau landing-ul (`.e3-root`), în
     // funcție de fază. Testul ăsta verifică DRUMUL, nu faza, deci acceptă orice
     // fază: landing-ul are trei (`pre`, `leaderboard`, `next`) și doar în `pre`
     // există `#inscriere`. Fixarea pe `#inscriere` pica în ziua cursei, când
     // înscrierea dispare de pe homepage. Fazele se testează în `faze.spec.ts`.
-    await expect(page.locator('.cs-root, .e3-root').first()).toBeVisible();
+    await expect(page.locator("[data-css~=\"cs-root\"], [data-css~=\"e3-root\"]").first()).toBeVisible();
   });
 
   test('logoul din antetul Despre noi duce la pagina principală', async ({ page }) => {
     await mockStats(page);
     await page.goto('/despre-noi');
-    await page.locator('a.dn-logo').click();
+    await page.locator("a[data-css~=\"dn-logo\"]").click();
     await expect(page).toHaveURL(/\/$/);
   });
 

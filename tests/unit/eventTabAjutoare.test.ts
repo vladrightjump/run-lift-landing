@@ -8,7 +8,7 @@ import {
   AVANSURI_CHECKIN,
   AVANSURI_LEADERBOARD,
 } from '../../src/admin/eventTab/ajutoare';
-import { SubmitHttpError } from '../../src/lib/supabase';
+import { SubmitHttpError } from '../../src/shared/lib/errors';
 
 /**
  * Derivările de timp din tabul „Eveniment".

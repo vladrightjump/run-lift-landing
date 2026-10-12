@@ -7,7 +7,6 @@ import { installGlobalMonitoring } from '../lib/monitoring';
 import { pornesteAnalitice } from '../lib/analytics';
 import { redirectCanonic } from '../lib/canonicalHost';
 import '../index.css';
-import '../public.css';
 
 // Vizitatorii ajunși pe URL-ul de `*.vercel.app` al producției sunt mutați pe
 // domeniul evenimentului, cu tot cu cale și parametri. Preview-urile de PR și

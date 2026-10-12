@@ -19,7 +19,7 @@ const PAYLOAD = { prenume: 'Vlad', loc: 13, waitlist: false };
 /** O „încărcare de pagină": modul proaspăt, cu cache-ul golit. */
 const incarcaPagina = async () => {
   vi.resetModules();
-  return import('../../src/lib/justSignedUp');
+  return import('../../src/shared/lib/justSignedUp');
 };
 
 beforeEach(() => {

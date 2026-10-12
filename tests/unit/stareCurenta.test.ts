@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { fazaSite, semnaleDeAtentie, stareCurenta } from '../../src/admin/stareCurenta';
 import type { SemnaleAdmin } from '../../src/admin/stareCurenta';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
-import { deriveEditionDates, type EditionDates } from '../../src/lib/config';
-import type { EventConfig } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
+import { deriveEditionDates, type EditionDates } from '../../src/shared/lib/config';
+import type { EventConfig } from '../../src/shared/content/eventConfig';
 
 /**
  * Panoul „Acum" din backoffice.

@@ -24,7 +24,7 @@ import {
   REMINDER_TEMPLATE_KEYS,
   type EventConfig,
   type ReminderEntry,
-} from '../../src/content/eventConfig';
+} from '../../src/shared/content/eventConfig';
 import { ETICHETE_SABLOANE } from '../../src/admin/eventTab/ajutoare';
 
 /**

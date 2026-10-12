@@ -1,0 +1,19 @@
+
+  .e3-foot { display: block; border-top: 1px solid var(--e3-border); padding: clamp(48px, 7vw, 88px) 0 32px; }
+  .e3-foot-mark {
+    margin: 0 0 clamp(28px, 4vw, 48px);
+    font-family: Anton, sans-serif; font-size: clamp(64px, 15vw, 216px); line-height: 0.84;
+    letter-spacing: -0.01em; text-transform: uppercase; color: var(--e3-surface-tint);
+    white-space: nowrap; overflow: hidden;
+  }
+  .e3-foot-grid {
+    display: grid; grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr)); gap: 28px 32px;
+    padding-top: 24px; border-top: 1px solid var(--e3-border);
+    font-size: 14px; line-height: 1.6;
+  }
+  .e3-foot-year { font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--e3-muted); }
+  .e3-foot-org { display: grid; gap: 2px; align-content: start; }
+  .e3-foot-name { font-weight: 600; color: var(--e3-muted-strong); }
+  .e3-foot-org a { font-weight: 600; width: fit-content; }
+  @media (max-width: 900px) { .e3-foot-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .e3-foot-grid { grid-template-columns: 1fr; } }

@@ -8,11 +8,11 @@ import {
 } from '../lib/adminApi';
 import type { AdminEmailLogEntry, DestinatarAnunt } from '../lib/adminApi';
 import { useSesiuneAdmin } from './adminSession';
-import { useEventConfig } from '../hooks/useEventConfig';
+import { useEventConfig } from '../shared/lib/useEventConfig';
 import { fillTemplate } from './emailAudience';
 import { cheieDifuzare } from './sendLock';
-import { ziLunaOra } from '../lib/formatare';
-import { EMAIL_RE } from '../lib/validation';
+import { ziLunaOra } from '../shared/lib/formatare';
+import { EMAIL_RE } from '../shared/lib/validation';
 import {
   SABLON_ANUNT,
   VARIABILE_ANUNT,

@@ -9,7 +9,7 @@ import {
   cioarnaEditieNoua,
   rezumatCiornaNoua,
 } from '../../src/admin/eventConfigForm';
-import { SNAPSHOT_CONFIG, SECTION_KEYS, type EventConfig } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG, SECTION_KEYS, type EventConfig } from '../../src/shared/content/eventConfig';
 
 /**
  * Regulile formularului trebuie să spună același lucru ca

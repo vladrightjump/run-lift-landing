@@ -1,4 +1,4 @@
-import { REMINDER_GRACE_HOURS, type EventConfig, type ReminderEntry } from '../content/eventConfig';
+import { REMINDER_GRACE_HOURS, type EventConfig, type ReminderEntry } from '../shared/content/eventConfig';
 import { candScurt, durataRo, isoLocalDin } from './reperele';
 
 /**

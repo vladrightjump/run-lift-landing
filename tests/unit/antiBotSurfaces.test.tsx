@@ -3,14 +3,14 @@ import { render, cleanup, fireEvent, screen } from '@testing-library/react';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ReactElement } from 'react';
-import { EventConfigProvider } from '../../src/hooks/useEventConfig';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
-import { HONEYPOT_NAME } from '../../src/lib/antiBot';
-import { useRegistration } from '../../src/hooks/useRegistration';
-import { RegistrationSection } from '../../src/components/landing/RegistrationSection';
-import { RegistrationForm } from '../../src/components/landing/RegistrationForm';
-import { ComingSoon } from '../../src/components/ComingSoon';
-import { DespreNoi } from '../../src/components/DespreNoi';
+import { EventConfigProvider } from '../../src/shared/lib/useEventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
+import { HONEYPOT_NAME } from '../../src/features/inscriere/lib/antiBot';
+import { useRegistration } from '../../src/features/inscriere/hooks/useRegistration';
+import { RegistrationSection } from '../../src/features/inscriere/components/RegistrationSection';
+import { RegistrationForm } from '../../src/features/inscriere/components/RegistrationForm';
+import { ComingSoon } from '../../src/features/landing/components/ComingSoon';
+import { DespreNoi } from '../../src/features/despre-noi/pages/DespreNoiPage';
 
 /**
  * Fiecare formular public trebuie să aibă capcana anti-bot ÎN `<form>`.
@@ -43,7 +43,7 @@ const CuInscriere = ({ variant }: { variant: 'sectiune' | 'formular' }) => {
   const reg = useRegistration({
     stats: null,
     now: acum,
-    refresh: () => {},
+
     showToast: () => {},
   });
   return variant === 'sectiune' ? (
@@ -104,7 +104,7 @@ describe('niciun formular din src/ nu scapă fără capcană', () => {
       for (const intrare of readdirSync(dir, { withFileTypes: true })) {
         const p = path.join(dir, intrare.name);
         if (intrare.isDirectory()) scaneaza(p);
-        else if (intrare.name.endsWith('.tsx')) fisiere.push(p);
+        else if (intrare.name.endsWith('.tsx') && !intrare.name.endsWith('.test.tsx')) fisiere.push(p);
       }
     };
     scaneaza(path.join(radacina, 'src'));

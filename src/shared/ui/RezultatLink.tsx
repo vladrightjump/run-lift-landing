@@ -1,3 +1,4 @@
+import cadruStyles from './CadruScurt.module.css';
 import { TitluScurt } from './CadruScurt';
 import styles from './RezultatLink.module.css';
 
@@ -14,8 +15,8 @@ export const RezultatLink = ({ titlu, text, ok }: Rezultat) => (
       {ok ? '✓' : '✕'}
     </div>
     <TitluScurt>{titlu}</TitluScurt>
-    <p className="cs-sub">{text}</p>
-    <a className="cs-cta" href="/">
+    <p className={cadruStyles['cs-sub']} data-css="cs-sub">{text}</p>
+    <a className={cadruStyles['cs-cta']} data-css="cs-cta" href="/">
       Înapoi la pagina principală
     </a>
   </>

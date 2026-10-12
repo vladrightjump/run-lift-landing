@@ -1,0 +1,60 @@
+
+.e3-skel {
+  height: 12px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--e3-border) 0%, var(--e3-surface-hover) 50%, var(--e3-border) 100%);
+  background-size: 200% 100%;
+  animation: e3-shimmer 1.4s ease-in-out infinite;
+}
+.e3-row-in {
+  animation: e3-fade-up 0.5s ease-out both;
+  animation-delay: min(calc(var(--i, 0) * 45ms), 620ms);
+}
+  .e3-people-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    padding-bottom: 16px; border-bottom: 2px solid var(--e3-muted-dim);
+  }
+  .e3-people-count { font-size: clamp(32px, 4vw, 48px); line-height: 1; color: var(--e3-accent); }
+  .e3-people-grid {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    border-left: 1px solid var(--e3-border);
+  }
+  .e3-people-grid:empty { display: none; }
+  .e3-bib {
+    position: relative; display: grid; gap: 6px; align-content: start;
+    padding: 18px 20px 20px; background: var(--e3-bg);
+    border-right: 1px solid var(--e3-border); border-bottom: 1px solid var(--e3-border);
+    transition: background var(--e3-dur) var(--e3-ease);
+  }
+  .e3-bib:hover { background: var(--e3-surface); }
+  .e3-bib-nr { font-size: 34px; line-height: 1; color: var(--e3-muted-dim); transition: color var(--e3-dur) var(--e3-ease); }
+  .e3-bib:hover .e3-bib-nr { color: var(--e3-accent); }
+  .e3-bib-name { font-size: 16px; font-weight: 600; color: var(--e3-text); overflow-wrap: anywhere; }
+  .e3-bib-new {
+    position: absolute; top: 16px; right: 16px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--e3-bg); background: var(--e3-accent); padding: 3px 8px;
+  }
+  .e3-bib-skel { gap: 12px; }
+  .e3-people-empty {
+    margin: 0; padding: 40px 0; border-bottom: 1px solid var(--e3-border);
+    font-size: 16px; color: var(--e3-muted);
+  }
+  .e3-people-empty a { font-weight: 600; }
+  .e3-people-wait { margin-top: clamp(28px, 4vw, 44px); }
+  @media (max-width: 480px) {
+    .e3-people-grid { grid-template-columns: 1fr 1fr; }
+}
+  @media (max-width: 480px) {
+    .e3-bib { padding: 14px 14px 16px; }
+}
+  @media (max-width: 480px) {
+    .e3-bib-nr { font-size: 28px; }
+}
+@keyframes e3-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+@keyframes e3-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+.text1.text1.text1.text1 { width: 44px; height: 28px; }

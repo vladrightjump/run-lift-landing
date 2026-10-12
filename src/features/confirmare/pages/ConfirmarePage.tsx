@@ -1,4 +1,5 @@
-import { useEditionStrings } from '../../../hooks/useEventConfig';
+import cadruStyles from '../../../shared/ui/CadruScurt.module.css';
+import { useEditionStrings } from '../../../shared/lib/useEventConfig';
 import { CadruScurt } from '../../../shared/ui/CadruScurt';
 import { RezultatLink, type Rezultat } from '../../../shared/ui/RezultatLink';
 import { useLinkDinEmail } from '../../../shared/lib/useLinkDinEmail';
@@ -33,7 +34,7 @@ export const ConfirmarePage = () => {
 
   return (
     <CadruScurt meta={<>Run + Lift · Ediția {LAUNCH_EDITION_ORDINAL}</>}>
-      {stare === 'incarca' ? <p className="cs-sub">Verificăm linkul…</p> : <RezultatLink {...CONTINUT[stare]} />}
+      {stare === 'incarca' ? <p className={cadruStyles['cs-sub']} data-css="cs-sub">Verificăm linkul…</p> : <RezultatLink {...CONTINUT[stare]} />}
     </CadruScurt>
   );
 };

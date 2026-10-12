@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
-import { FormatSection } from '../../src/components/landing/FormatSection';
-import { ETAPE } from '../../src/content/etape';
+import { FormatSection } from '../../src/features/landing/components/FormatSection';
+import { ETAPE } from '../../src/shared/content/etape';
 
 /**
  * Exploratorul formatului: RUN / LIFT / REPEAT ca tab-uri (modelul WAI-ARIA

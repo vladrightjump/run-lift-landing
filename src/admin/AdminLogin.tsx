@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { adminLogin } from '../lib/adminApi';
-import { useCountdown } from '../hooks/useCountdown';
-import { useEditionDates } from '../hooks/useEventConfig';
+import { useCountdown } from '../shared/lib/useCountdown';
+import { useEditionDates } from '../shared/lib/useEventConfig';
 
 type Props = {
   onLogin: (token: string) => void;

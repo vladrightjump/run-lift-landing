@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { AdminWaitlistEntry } from '../lib/adminApi';
 import { AdminSkeleton } from './AdminSkeleton';
-import { ziSiLuna } from '../lib/formatare';
+import { ziSiLuna } from '../shared/lib/formatare';
 
 type Props = {
   waitAll: AdminWaitlistEntry[];

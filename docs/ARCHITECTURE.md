@@ -89,8 +89,8 @@ unitățile planificate, câte o zonă; schimbarea unui fișier vechi nu îl mut
 cod în [`src/app/router.tsx`](../src/app/router.tsx). Registrul din `app/routes.ts` compune
 paginile și lista canonică de căi. Landing-ul este eager, celelalte pagini sunt lazy; layout-ul
 fără cale montează provider-ul de config numai pentru paginile dependente de ediție.
-[`/antrenament`](../src/components/Antrenament.tsx) va fi exemplul complet de
-funcționalitate în U7; pagina actuală nu a fost încă mutată în `features/antrenament/`.
+[`/antrenament`](../src/features/antrenament/pages/AntrenamentPage.tsx) este exemplul complet de
+funcționalitate din U7.
 
 ## Granițele de dependență
 
@@ -149,7 +149,7 @@ Regulile SQL/RPC se execută în PGlite, fără a le reconstitui în mock-uri de
 
 | Comportament | Strat care îl deține | Exemplu existent în repo |
 | --- | --- | --- |
-| Validare și transformări fără DOM | Vitest unit, `.test.ts` | [`tests/unit/validation.test.ts`](../tests/unit/validation.test.ts) |
+| Validare și transformări fără DOM | Vitest unit, `.test.ts` | [`shared/lib/validation.test.ts`](../src/shared/lib/validation.test.ts) |
 | Focus, interacțiuni și stări ale componentelor | Vitest componentă, `.test.tsx`, Testing Library + jsdom | [`tests/unit/dialog.test.tsx`](../tests/unit/dialog.test.tsx) |
 | Parcurs critic al utilizatorului, prin mai multe ecrane | Playwright, `tests/e2e/` | [`tests/e2e/inscriere.spec.ts`](../tests/e2e/inscriere.spec.ts) |
 | Rutare directă și metadate livrate de build; rewrites și CSP | Playwright pe build, `npm run test:e2e:preview` | [`tests/e2e/navigare.spec.ts`](../tests/e2e/navigare.spec.ts) verifică accesul direct; [`tests/e2e/coming-soon.spec.ts`](../tests/e2e/coming-soon.spec.ts) verifică descrierea din meta. Guard-urile de configurare existente pentru rewrites/CSP rămân în [`tests/unit/rute.test.ts`](../tests/unit/rute.test.ts) și [`tests/unit/deploy-config.test.ts`](../tests/unit/deploy-config.test.ts). |
@@ -179,3 +179,25 @@ existente; nu redistribuie încă acoperirea dintre straturi.
   `tests/support/`; mutarea helper-elor vechi aparține unităților de migrare.
 - TypeScript pentru teste și lint-ul includ deja `src/`, `tests/` și `scripts/`; mutarea
   parcursurilor și colocarea testelor nu cer excepții noi.
+
+Pagini publice: `features/landing`, `features/inscriere`, `features/despre-noi`, `features/reels` și `features/trial` dețin compoziția, componentele și testele lor. Contextul ediției, conținutul comun și efectele refolosite sunt în `shared/`; paginile consumă alte funcționalități numai prin `index.ts`.
+
+U9 mută accesul public la date în Query, prin transportul funcționalității proprietare.
+`shared/lib/usePublicQuery` dă fiecărei montări o cheie proprie, fără reutilizarea datelor
+între pagini. Poll-ul configului și al participanților anulează cererea în zbor la 15
+secunde și la revenirea în tab. Configul păstrează instantaneul sincron, iar ordinea
+homepage-ului se fixează după limita de două secunde; un loc primit mai târziu se poate
+afișa în continuare. Mutațiile formularelor pornesc și când browserul raportează offline,
+folosind `networkMode: always`, cu anularea și timeout-ul transportului anterior.
+
+Stilurile landing-ului, Coming Soon, înscrierii, paginii Despre noi, clipurilor și probei
+sunt CSS Modules lângă componente. `CadruScurt` deține acum și cadrul comun `.cs-*`;
+Marquee, Toast și grupurile de mișcare/controale refolosite au modulele lor în `shared/ui`.
+Atributele `data-css` țin selectorii de mișcare și măsurătorile browserului stabili, fără
+să depindă de clasele generate. Valorile CSS și diferențele dintre cele două suprafețe
+de înscriere rămân cele existente.
+
+Validarea înscrierii și stările formularelor sunt acoperite lângă proprietarii lor,
+pe handler-ele MSW comune. Playwright păstrează înscrierea completă, plicul trimis,
+rutarea, CSS-ul calculat, CSP-ul și metadatele din build; scenariile de validare și
+stare deja acoperite de componente au fost eliminate din parcursurile duplicate.

@@ -1,4 +1,4 @@
-import { formatRoDate, timeOf, weekdayRo } from '../content/format';
+import { formatRoDate, timeOf, weekdayRo } from '../shared/content/format';
 import type { CampInvalid } from './eventConfigForm';
 
 /**

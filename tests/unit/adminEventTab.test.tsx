@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } fr
 import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { AdminEventTab } from '../../src/admin/AdminEventTab';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
-import { formatRoDate } from '../../src/content/format';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
+import { formatRoDate } from '../../src/shared/content/format';
 import type { AdminEventConfigRow } from '../../src/lib/adminApi';
 
 /**

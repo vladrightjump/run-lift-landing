@@ -24,10 +24,7 @@ const css = [
   'src/shared/styles/tokens.css',
   'src/shared/styles/base.css',
   'src/index.css',
-  'src/public.css',
-  'src/edition3.css',
   'src/admin/sala/probe.css',
-  'src/components/trial-training.css',
 ]
   .map((f) => readFileSync(resolve(root, f), 'utf8'))
   .join('\n');
@@ -67,7 +64,7 @@ const faraComentarii = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//
 
 /** Clasele definite într-un `*.module.css`. */
 const claseModul = (stil: string): Set<string> =>
-  new Set([...faraComentarii(stil).matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1]));
+  new Set([...faraComentarii(stil).replace(/(['"])(?:\\.|(?!\1)[^\\])*?\1/g, '').matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1]));
 
 /** Modulele CSS importate de o sursă: numele legat și calea relativă. */
 const importuriModul = (sursa: string): { nume: string; cale: string }[] =>
@@ -166,6 +163,37 @@ describe('fiecare `styles.x` există în modulul lui', () => {
   });
 });
 
+/**
+ * Modulele comune importate după modulul propriu al componentei.
+ *
+ * În bundle, CSS-ul intră în ordinea primului import. Când `styles` vine
+ * înaintea unui modul comun, regulile comune pot ajunge după el și câștigă la
+ * specificitate egală: `.e3-reg` își pierdea padding-ul în fața lui `.e3-sec`,
+ * iar landing-ul ieșea cu 24px mai scurt, fără ca vreun test să observe.
+ */
+export const moduleDupaStyles = (sursa: string): string[] => {
+  const importuri = importuriModul(sursa);
+  const propriu = importuri.findIndex(({ nume }) => nume === 'styles');
+  return propriu < 0 ? [] : importuri.slice(propriu + 1).map(({ cale }) => cale);
+};
+
+describe('modulul propriu vine ultimul', () => {
+  it('`styles` e importat după modulele comune pe care le suprascrie', () => {
+    const gresite: Record<string, string[]> = {};
+    for (const fisier of fisiereTsx(resolve(root, 'src'))) {
+      const dupa = moduleDupaStyles(readFileSync(fisier, 'utf8'));
+      if (dupa.length) gresite[fisier.slice(root.length + 1)] = dupa;
+    }
+    expect(gresite, 'Mută `import styles` după celelalte importuri `*.module.css`').toEqual({});
+  });
+
+  it('prinde un modul comun importat după `styles`', () => {
+    const sursa = "import styles from './A.module.css';\nimport shared1 from '../shared/ui/B.module.css';";
+    expect(moduleDupaStyles(sursa)).toEqual(['../shared/ui/B.module.css']);
+    expect(moduleDupaStyles("import shared1 from '../B.module.css';\nimport styles from './A.module.css';")).toEqual([]);
+  });
+});
+
 /** Toate fișierele `*.module.css` din `src/`. */
 const fisiereModul = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -192,6 +220,7 @@ const CUVINTE_ANIMATIE = new Set([
 const numeAnimatii = (valoare: string): string[] =>
   valoare
     // Funcțiile de timing (`cubic-bezier(...)`, `steps(...)`) și `var(...)` nu sunt nume.
+    .replace(/\s*!important\b/g, '')
     .replace(/(?<!global)\([^)]*\)/g, '')
     .split(',')
     .flatMap((parte) => {
@@ -231,7 +260,7 @@ describe('garda însăși', () => {
     expect(animatiiLipsa('.a { animation: fade-up 1s both; }', global)).toEqual(['fade-up']);
     expect(animatiiLipsa('.a { animation: global(fade-up) 1s; }', global)).toEqual([]);
     expect(animatiiLipsa('.a { animation: global(nu-exista) 1s; }', global)).toEqual(['global(nu-exista)']);
-    expect(animatiiLipsa('@keyframes in { } .a { animation: in 1s; } .b { animation: none; }', global)).toEqual([]);
+    expect(animatiiLipsa('@keyframes in { } .a { animation: in 1s; } .b { animation: none !important; }', global)).toEqual([]);
     // Durata înainte de nume și liste separate prin virgulă.
     expect(animatiiLipsa('.a { animation: 1s ease-out fade-up; }', global)).toEqual(['fade-up']);
     expect(animatiiLipsa('.a { animation: global(fade-up) 1s, fade-up 2s; }', global)).toEqual(['fade-up']);
@@ -242,6 +271,8 @@ describe('garda însăși', () => {
   it('prinde un `styles.x` care nu există în modul', () => {
     const sursa = "import styles from './Card.module.css';\nexport const C = () => <div className={styles.nuExista} />;";
     expect(claseModulLipsa(sursa, () => '.exista { color: red; }')).toEqual(['nuExista']);
+    const svg = "import styles from './Card.module.css';\nconst C = () => <div className={styles.card} />;";
+    expect(claseModulLipsa(svg, () => '.card { background: url("https://www.w3.org/a.svg"); }')).toEqual([]);
   });
 
   it('nu sare peste un import de modul pe care nu-l poate citi', () => {

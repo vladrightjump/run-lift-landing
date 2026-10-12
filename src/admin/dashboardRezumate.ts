@@ -1,4 +1,4 @@
-import { isTimeoutError, isNetworkOrCspError } from '../lib/supabase';
+import { isTimeoutError, isNetworkOrCspError } from '../shared/lib/errors';
 import { COMUNICARI_EDITIE } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
 import type { AdminEvent } from '../lib/adminApi';

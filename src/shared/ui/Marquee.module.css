@@ -1,0 +1,55 @@
+
+.e3-marquee {
+  overflow: hidden; position: relative;
+  background: var(--e3-accent);
+  padding: 12px 0;
+  /* Capetele se sting în fundal, ca banda să nu pară retezată de viewport. */
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.e3-marquee-track {
+  display: flex; width: max-content;
+  animation: e3-marquee 32s linear infinite;
+  will-change: transform;
+}
+.e3-marquee-group { display: flex; flex-shrink: 0; }
+.e3-marquee-item {
+  font-family: Anton, sans-serif; font-size: clamp(15px, 2.2vw, 20px);
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--e3-bg); padding: 0 22px; white-space: nowrap;
+}
+.e3-marquee-item::after {
+  content: ''; display: inline-block; vertical-align: middle;
+  width: 6px; height: 6px; margin-left: 22px;
+  background: var(--e3-bg); opacity: 0.55;
+}
+.e3-marquee:hover .e3-marquee-track,
+.e3-marquee[data-oprita='true'] .e3-marquee-track { animation-play-state: paused; }
+
+.e3-marquee-pauza {
+  position: absolute; right: 0; top: 0; bottom: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; border: none; cursor: pointer;
+  background: var(--e3-accent); color: var(--e3-bg);
+  font-size: 11px; line-height: 1;
+  /* Se vede doar când e nevoie de ea: la hover, la focus de tastatură, sau cât
+     timp banda e oprită. În rest ar fi un buton permanent peste un element pur
+     decorativ. */
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.e3-marquee:hover .e3-marquee-pauza,
+.e3-marquee:focus-within .e3-marquee-pauza,
+.e3-marquee[data-oprita='true'] .e3-marquee-pauza { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .e3-marquee-pauza { display: none; }
+}
+@supports (animation-timeline: scroll()) {
+  .e3-marquee-track {
+    animation: e3-marquee 32s linear infinite, e3-marquee-push linear both;
+    animation-timeline: auto, scroll(root block);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .e3-marquee-track { transform: none !important; translate: none !important; }
+}
+@keyframes e3-marquee { to { transform: translateX(-50%); } }
+  @keyframes e3-marquee-push { to { translate: -8% 0; } }

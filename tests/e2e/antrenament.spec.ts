@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { HttpResponse } from 'msw';
 import { rpcHandler } from '../support/handlers';
 import { programDe, saptamanaPublica } from '../support/builders/workouts';
-import { META_ANTRENAMENT } from '../../src/content/meta';
+import { META_ANTRENAMENT } from '../../src/shared/content/meta';
 
 /**
  * `/antrenament` și cardul „Până atunci", în browser: drumul vizitatorului și
@@ -110,7 +110,7 @@ test.describe('Cardul „Până atunci"', () => {
 
     // Întâi dovedim că suntem chiar pe ecranul acela; altfel absența cardului
     // n-ar însemna nimic.
-    await expect(page.locator('.cs-title')).toContainText('Coming');
+    await expect(page.locator("[data-css~=\"cs-title\"]")).toContainText('Coming');
     await expect(page.getByRole('link', { name: /Antrenamentul săptămânii/ })).toHaveCount(0);
   });
 
@@ -119,7 +119,7 @@ test.describe('Cardul „Până atunci"', () => {
     await page.goto('/?preview=next');
 
     await expect(page.getByRole('button', { name: /Anunță-mă la lansare/i })).toBeVisible();
-    await expect(page.locator('.cs-countdown')).toBeVisible();
+    await expect(page.locator("[data-css~=\"cs-countdown\"]")).toBeVisible();
     await expect(page.getByRole('link', { name: /Antrenamentul săptămânii/ })).toHaveCount(0);
     await expect(page.getByRole('alert')).toHaveCount(0);
   });

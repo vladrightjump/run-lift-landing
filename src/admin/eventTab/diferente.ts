@@ -1,4 +1,4 @@
-import type { EventConfig, ReminderEntry, SectionLayoutEntry } from '../../content/eventConfig';
+import type { EventConfig, ReminderEntry, SectionLayoutEntry } from '../../shared/content/eventConfig';
 import { candScurt, durataRo } from '../reperele';
 import { ETICHETE_SABLOANE } from './ajutoare';
 

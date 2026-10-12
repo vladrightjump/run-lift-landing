@@ -3,7 +3,7 @@ import { basename, relative, resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { msw } from 'msw/vite';
-import { META_PLACEHOLDERS, META_PER_SHELL } from './src/content/meta';
+import { META_PLACEHOLDERS, META_PER_SHELL } from './src/shared/content/meta';
 
 // Injectează meta (title/description/Open Graph) în shell-urile HTML la build ȘI
 // în dev, din `src/content/meta.ts` (derivat din EDITION). Astfel meta de share e

@@ -1,4 +1,4 @@
-import type { EventConfig } from '../../../content/eventConfig';
+import type { EventConfig } from '../../../shared/content/eventConfig';
 import { useContext, useMemo } from 'react';
 import { Grup, Blocat } from '../primitive';
 import { adaugaReminder, stergeReminder, seteazaReminder } from '../../eventConfigForm';
@@ -6,7 +6,7 @@ import {
   MAX_REMINDERS,
   REMINDER_TEMPLATE_KEYS,
   type ReminderTemplateKey,
-} from '../../../content/eventConfig';
+} from '../../../shared/content/eventConfig';
 import {
   remindereleProgramate,
   urmatorulReminder,

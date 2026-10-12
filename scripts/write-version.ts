@@ -16,7 +16,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { EDITION } from '../src/content/edition';
+import { EDITION } from '../src/shared/content/edition';
 
 const gitSha = () => {
   try {

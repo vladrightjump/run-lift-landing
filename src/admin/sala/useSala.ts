@@ -4,7 +4,7 @@ import { useAdminResource } from '../useAdminResource';
 import { ADMIN_REFRESH_MS } from '../useAdminPolling';
 import { useSesiuneAdmin } from '../adminSession';
 import { logClientError } from '../../lib/monitoring';
-import { isNetworkOrCspError, isTimeoutError } from '../../lib/supabase';
+import { isNetworkOrCspError, isTimeoutError } from '../../shared/lib/errors';
 
 const NU_STIM =
   'Nu știm dacă a ajuns: legătura cu serverul s-a întrerupt. Verifică pe ecran (sau în „Ultimele comenzi") înainte să reîncerci.';

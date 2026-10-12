@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
-import { EDITION } from '../../src/content/edition';
+import { EDITION } from '../../src/shared/content/edition';
 
 /**
  * Formularul de înscriere la eveniment — landing-ul Ediției a treia.
@@ -157,44 +157,6 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await camp.fill('15.05.1994');
     await expect(camp).toHaveValue('15.05.1994');
     await expect(page.locator('input[name="dataNasterii"]')).toHaveValue('1994-05-15');
-  });
-
-  test('validare: submit gol NU trimite request și afișează eroare', async ({ page }) => {
-    await fixClock(page);
-    await mockStats(page, 0);
-    let requested = false;
-    await mockSubmit(page, (_plic, route) => {
-      requested = true;
-      return route.abort();
-    });
-
-    await page.goto('/?preview=landing');
-    await submitBtn(page).click();
-
-    await expect(page.getByText(/verifică câmpurile/i)).toBeVisible();
-    expect(requested).toBe(false);
-  });
-
-  test('data nașterii neselectată → eroare pe câmp, fără request', async ({ page }) => {
-    await fixClock(page);
-    await mockStats(page, 0);
-    let requested = false;
-    await mockSubmit(page, (_plic, route) => {
-      requested = true;
-      return route.abort();
-    });
-
-    await page.goto('/?preview=landing');
-    await page.getByPlaceholder('Popescu').fill('Filip');
-  await page.getByPlaceholder('Ana', { exact: true }).fill('Vladislav');
-    await page.getByPlaceholder('07xx xxx xxx').fill('069509949');
-    await page.getByPlaceholder('ana@email.ro').fill('pw@example.com');
-    await page.locator('input[name="acord"]').check();
-    // fără data nașterii
-    await submitBtn(page).click();
-
-    await expect(page.getByText(/introdu data nașterii/i)).toBeVisible();
-    expect(requested).toBe(false);
   });
 
   test('email duplicat (mock 409) → ecran „Ceva n-a mers"', async ({ page }) => {

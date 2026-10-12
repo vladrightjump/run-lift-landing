@@ -1,0 +1,1 @@
+export { rutaDespreNoi } from './route';

@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import type { EventConfig } from '../../content/eventConfig';
+import type { EventConfig } from '../../shared/content/eventConfig';
 import {
   cioarnaEditieNoua,
   rezumatCiornaNoua,
   validateEventConfig,
   type CampInvalid,
 } from '../eventConfigForm';
-import { timeOf } from '../../content/format';
+import { timeOf } from '../../shared/content/format';
 import { Camp } from './primitive';
 import { Dialog } from '../../shared/ui/Dialog';
 

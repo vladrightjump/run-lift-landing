@@ -1,18 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  submitRegistration,
-  submitWaitlist,
-  submitLaunchNotification,
-  fetchStats,
-} from '../../src/lib/supabase';
+import { submitRegistration, submitWaitlist, submitLaunchNotification, fetchStats } from '../../src/features/inscriere/data/api';
 import { confirmSignup } from '../../src/features/confirmare/data/api';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fetchWeeklyWorkouts } from '../../src/features/antrenament/data/api';
 import { listWeeklyWorkout, mesajRefuzAntrenament, InvalidTokenError } from '../../src/lib/adminApi';
 import * as sala from '../../src/lib/salaApi';
-import { SUPABASE } from '../../src/lib/config';
+import { SUPABASE } from '../../src/shared/lib/config';
 
 /**
  * Contractul cererilor către Supabase — păzește exact regresiile care au picat

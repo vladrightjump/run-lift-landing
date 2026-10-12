@@ -1,4 +1,4 @@
-import type { EventConfig } from '../../../content/eventConfig';
+import type { EventConfig } from '../../../shared/content/eventConfig';
 import type { Reper } from '../../reperele';
 import { durataRo } from '../../reperele';
 import { useContext, useMemo } from 'react';

@@ -1,4 +1,4 @@
-import type { EventConfig } from '../../../content/eventConfig';
+import type { EventConfig } from '../../../shared/content/eventConfig';
 import { useContext } from 'react';
 import { Grup, Camp, Blocat } from '../primitive';
 import { linkHarta } from '../../eventConfigFields';

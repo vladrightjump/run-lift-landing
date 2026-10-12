@@ -1,7 +1,7 @@
 import type { AdminEvent } from '../lib/adminApi';
 import { AdminFeedSkeleton } from './AdminSkeleton';
 import { activitateVizibila } from './dashboardRezumate';
-import { ziLunaOra } from '../lib/formatare';
+import { ziLunaOra } from '../shared/lib/formatare';
 
 /**
  * „Activitate recentă" — ce s-a întâmplat în backoffice FĂRĂ organizator.

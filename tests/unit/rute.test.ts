@@ -97,7 +97,7 @@ describe('legăturile interne duc spre rute reale', () => {
           ? [`${dir}/${e.name}`]
           : []
     );
-  const fisiere = ['src/components', 'src/features', 'src/shared/ui'].flatMap(tsxDin);
+  const fisiere = ['src/features', 'src/shared/ui'].flatMap(tsxDin);
 
   it('fiecare href intern e o rută cunoscută sau o ancoră', () => {
     const cunoscute = new Set([...ruteDinCod(), '/']);

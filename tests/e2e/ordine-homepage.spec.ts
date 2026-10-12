@@ -56,7 +56,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible();
     await expect(proba(page)).toBeVisible();
-    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, "[data-css~=\"trial-training\"]")).toBe(true);
   });
 
   test('„Proba primul": secțiunea de probă urcă deasupra cardului', async ({ page }) => {
@@ -64,7 +64,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible();
     await expect(proba(page)).toBeVisible();
-    expect(await inainte(page, '.trial-training', CARD)).toBe(true);
+    expect(await inainte(page, "[data-css~=\"trial-training\"]", CARD)).toBe(true);
   });
 
   test('funcția pică: ordinea implicită, fără eroare pe ecran', async ({ page }) => {
@@ -72,7 +72,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible();
     await expect(proba(page)).toBeVisible();
-    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, "[data-css~=\"trial-training\"]")).toBe(true);
     await expect(page.getByRole('alert')).toHaveCount(0);
   });
 
@@ -82,7 +82,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     await page.route('**/rest/v1/rpc/public_homepage', () => {});
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible({ timeout: 5000 });
-    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, "[data-css~=\"trial-training\"]")).toBe(true);
   });
 
   test('„Proba primul" cu configul probei întârziat: cardul nu apare înaintea probei', async ({ page }) => {
@@ -92,7 +92,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
       const w = window as unknown as { aparitiiTest: string[] };
       w.aparitiiTest = [];
       new MutationObserver(() => {
-        for (const [sel, nume] of [['.trial-training', 'proba'], [selectorCard, 'card']] as const) {
+        for (const [sel, nume] of [["[data-css~=\"trial-training\"]", 'proba'], [selectorCard, 'card']] as const) {
           if (document.querySelector(sel) && !w.aparitiiTest.includes(nume)) w.aparitiiTest.push(nume);
         }
       }).observe(document, { childList: true, subtree: true });
@@ -123,10 +123,10 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     });
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible({ timeout: 5000 });
-    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, "[data-css~=\"trial-training\"]")).toBe(true);
     // Răspunsul întârziat sosește; cardul rămâne unde l-a văzut vizitatorul.
     await page.waitForTimeout(3000);
-    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, "[data-css~=\"trial-training\"]")).toBe(true);
   });
 
   test('„Proba primul" cu botul de probă oprit: rămâne doar cardul', async ({ page }) => {
@@ -149,7 +149,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     const apelate: string[] = [];
     await mock(page, { homepage: { trial_first: true, training_location: null } }, apelate);
     await page.goto('/?preview=soon');
-    await expect(page.locator('.cs-title')).toBeVisible();
+    await expect(page.locator("[data-css~=\"cs-title\"]")).toBeVisible();
     await expect(card(page)).toHaveCount(0);
     expect(apelate).not.toContain('public_homepage');
   });

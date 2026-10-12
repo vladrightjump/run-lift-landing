@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, within, fireEvent, waitFor } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { EcranPrezente } from '../../src/admin/sala/EcranPrezente';
-import { SubmitHttpError } from '../../src/lib/supabase';
+import { SubmitHttpError } from '../../src/shared/lib/errors';
 import { dateSala, membruSala } from './helpers/salaFixtures';
 import { dataLunga, urmatorulSondaj } from '../../src/admin/sala/sondaj';
 import type { SalaAntrenament } from '../../src/lib/salaApi';

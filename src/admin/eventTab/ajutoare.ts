@@ -1,5 +1,5 @@
 import { durataRo } from '../reperele';
-import type { ReminderTemplateKey, SectionKey } from '../../content/eventConfig';
+import type { ReminderTemplateKey, SectionKey } from '../../shared/content/eventConfig';
 
 /**
  * Ajutoarele pure ale tabului „Eveniment": listele de opțiuni și derivările de

@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { AdminComingSoonTab } from '../../src/admin/AdminComingSoonTab';
-import { EventConfigProvider } from '../../src/hooks/useEventConfig';
-import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig';
+import { EventConfigProvider } from '../../src/shared/lib/useEventConfig';
+import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/shared/content/eventConfig';
 import type { AdminEventConfigRow } from '../../src/lib/adminApi';
 
 /**
@@ -22,7 +22,7 @@ const { listEventConfig, setComingSoon, setHomepageOrder, loadPublicHomepage } =
 }));
 
 vi.mock('../../src/lib/adminApi', () => ({ listEventConfig, setComingSoon, setHomepageOrder }));
-vi.mock('../../src/lib/homepagePublic', () => ({ loadPublicHomepage }));
+vi.mock('../../src/shared/lib/homepagePublic', () => ({ loadPublicHomepage }));
 
 const showToast = vi.fn();
 const onAuthError = vi.fn(() => false);

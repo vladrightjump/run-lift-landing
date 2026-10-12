@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { participant, logEntry } from '../unit/helpers/adminHarness';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 /**
  * Primul test de browser al backoffice-ului.

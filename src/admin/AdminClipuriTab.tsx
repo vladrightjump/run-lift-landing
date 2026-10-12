@@ -8,7 +8,7 @@ import {
   type AdminReelRow,
 } from '../lib/adminApi';
 import { useSesiuneAdmin } from './adminSession';
-import { idYouTube, esteIdYouTube, sursaIncorporare } from '../lib/youtube';
+import { idYouTube, esteIdYouTube, sursaIncorporare } from '../shared/lib/youtube';
 import { InvelisEditare } from './continut/InvelisEditare';
 import { CampEditare } from './continut/campuri';
 import { ListaOrdonabila } from './controale/ListaOrdonabila';

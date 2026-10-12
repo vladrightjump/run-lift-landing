@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
-import { deriveEditionDates } from '../../src/lib/config';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { deriveEditionDates } from '../../src/shared/lib/config';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 const { LEADERBOARD_DATE, EVENT_DATE, EVENT_END_DATE, NEXT_EDITION_DATE } =
   deriveEditionDates(SNAPSHOT_CONFIG);
@@ -55,7 +55,7 @@ test.describe('Faza „pre" — până cu o oră înainte de start', () => {
     await fixClock(page, INAINTE);
     await page.goto('/');
     await expect(page.locator('#inscriere')).toBeVisible();
-    await expect(page.locator('.cs-root')).toHaveCount(0);
+    await expect(page.locator("[data-css~=\"cs-root\"]")).toHaveCount(0);
   });
 });
 
@@ -130,7 +130,7 @@ test.describe('Faza „next" — de la finalul cursei', () => {
   test('homepage-ul numără spre următorul antrenament', async ({ page }) => {
     await fixClock(page, DUPA_CURSA);
     await page.goto('/');
-    await expect(page.locator('.cs-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"cs-root\"]")).toBeVisible();
     await expect(page.locator('#inscriere')).toHaveCount(0);
     await expect(page.locator('#participanti')).toHaveCount(0);
   });
@@ -139,9 +139,9 @@ test.describe('Faza „next" — de la finalul cursei', () => {
     await fixClock(page, DUPA_CURSA);
     await page.goto('/');
     const zileRamase = Math.floor((NEXT_EDITION_DATE.getTime() - DUPA_CURSA) / 86_400_000);
-    const countdown = page.locator('.cs-countdown');
+    const countdown = page.locator("[data-css~=\"cs-countdown\"]");
     await expect(countdown).toBeVisible();
-    await expect(countdown.locator('.cs-cd-value').first()).toHaveText(
+    await expect(countdown.locator("[data-css~=\"cs-cd-value\"]").first()).toHaveText(
       String(zileRamase).padStart(2, '0')
     );
   });
@@ -170,7 +170,7 @@ test.describe('/inscriere — pe deadline-ul real, nu pe faza homepage-ului', ()
     await fixClock(page, DUPA_CURSA);
     await page.goto('/inscriere');
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator('.cs-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"cs-root\"]")).toBeVisible();
   });
 
   // Regresie: build-ul rămăsese pe ediția trecută, iar redirectul se lua pe
@@ -226,14 +226,14 @@ test.describe('?preview bate ceasul', () => {
   test('„next" se vede înainte de ora lui', async ({ page }) => {
     await fixClock(page, INAINTE);
     await page.goto('/?preview=next');
-    await expect(page.locator('.cs-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"cs-root\"]")).toBeVisible();
   });
 
   test('„landing" readuce landing-ul complet peste o fază târzie', async ({ page }) => {
     await fixClock(page, DUPA_CURSA);
     await page.goto('/?preview=landing');
     await expect(page.locator('#inscriere')).toBeVisible();
-    await expect(page.locator('.cs-root')).toHaveCount(0);
+    await expect(page.locator("[data-css~=\"cs-root\"]")).toHaveCount(0);
   });
 });
 

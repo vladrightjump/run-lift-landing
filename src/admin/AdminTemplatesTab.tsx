@@ -12,7 +12,7 @@ import { useAdminResource } from './useAdminResource';
 import {
   REMINDER_TEMPLATE_KEYS,
   type ReminderTemplateKey,
-} from '../content/eventConfig';
+} from '../shared/content/eventConfig';
 
 /** Eticheta prietenoasă pentru fiecare șablon cunoscut. */
 const ETICHETE: Record<string, { titlu: string; descriere: string }> = {

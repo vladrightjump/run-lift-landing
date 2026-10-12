@@ -1,7 +1,7 @@
 import { TRIAL_COPY, type TrialCopyKey } from '../../../bot/src/lib/trial-copy';
 import { useEffect, useState } from 'react';
 import { saveTrialConfig, type TrialConfig } from '../../lib/trialApi';
-import { trialLink } from '../../lib/trialPublic';
+import { trialLink } from '../../features/trial';
 import { useTrials } from './useTrials';
 import './probe.css';
 

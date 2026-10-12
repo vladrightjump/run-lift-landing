@@ -1,0 +1,75 @@
+
+.e3-hero-video { background: var(--e3-bg); }
+@supports (animation-timeline: view()) {
+  .e3-hero-copy {
+    animation: e3-hero-exit linear both;
+    animation-timeline: view(block);
+    animation-range: exit-crossing 0% exit-crossing 100%;
+    will-change: transform, opacity;
+  } }
+@supports (animation-timeline: view()) {
+  .e3-hero-video {
+    animation: e3-hero-drift linear both;
+    animation-timeline: view(block);
+    animation-range: exit-crossing 0% exit-crossing 100%;
+  } }
+@supports (animation-timeline: view()) {
+  .e3-title {
+    animation: e3-wipe linear both;
+    animation-timeline: view(block);
+    animation-range: entry 10% cover 28%;
+  } }
+@supports (animation-timeline: view()) {
+  .e3-title-num {
+    animation: e3-slide-in linear both;
+    animation-timeline: view(block);
+    animation-range: entry 10% cover 26%;
+  } }
+@media (prefers-reduced-motion: reduce) {
+  .e3-hero-video { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .e3-title { clip-path: none !important; } }
+
+  .e3-wrap { box-sizing: border-box; max-width: var(--e3-wrap); margin-inline: auto; padding-inline: var(--e3-gutter); }
+  .e3-sec { position: relative; padding-block: clamp(72px, 11vw, 144px); border-top: 1px solid var(--e3-border); }
+  [data-css~="e3-sec-head"] .e3-title-num {
+    display: flex; align-items: center; gap: 16px;
+    font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 0.14em;
+    color: var(--e3-accent); font-variant-numeric: tabular-nums;
+  }
+  [data-css~="e3-sec-head"] .e3-title-num::after { content: ''; flex: 1; height: 2px; background: var(--e3-border); }
+  [data-css~="e3-sec-head"] .e3-title {
+    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+    font-size: var(--e3-fs-h2); line-height: 0.88; letter-spacing: -0.005em;
+    text-transform: uppercase; text-wrap: balance;
+    /* Loc pentru diacritice: căciula lui Î/Â/Ă urcă peste înălțimea
+       interliniei strânse, iar virgula de sub Ș/Ț coboară sub linia de bază. */
+    padding-block: 0.14em 0.06em;
+  }
+
+  .e3-lead {
+    margin: 0; max-width: 60ch;
+    font-size: clamp(17px, 1.5vw, 20px); line-height: 1.55;
+    color: var(--e3-muted-strong); text-wrap: pretty;
+  }
+  .e3-num { font-family: Anton, sans-serif; font-weight: 400; font-variant-numeric: tabular-nums; }
+  .e3-hero-video {
+    position: absolute; inset: 0; z-index: 0;
+    width: 100%; height: 100%; object-fit: cover; pointer-events: none;
+  }
+  .e3-hero-copy { position: relative; z-index: 2; width: 100%; box-sizing: border-box; }
+  [data-css~="e3-reels"] [data-css~="e3-sec-head"] .e3-title { font-size: clamp(40px, 6.4vw, 96px); }
+@keyframes e3-hero-exit {
+  to { transform: translateY(-72px); opacity: 0.25; }
+}
+@keyframes e3-hero-drift {
+  to { transform: translateY(28px) scale(1.06); }
+}
+@keyframes e3-wipe {
+  from { clip-path: inset(100% 0 0 0); transform: translateY(24px); }
+  to   { clip-path: inset(-30% -6% -30% -6%); transform: translateY(0); }
+}
+@keyframes e3-slide-in {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { setHomepageOrder } from '../lib/adminApi';
-import { loadPublicHomepage } from '../lib/homepagePublic';
+import { loadPublicHomepage } from '../shared/lib/homepagePublic';
 import { useSesiuneAdmin } from './adminSession';
 import { GrupRadio } from './controale/GrupRadio';
 

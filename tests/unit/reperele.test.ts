@@ -7,7 +7,7 @@ import {
   candScurt,
   durataRo,
 } from '../../src/admin/reperele';
-import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/shared/content/eventConfig';
 
 /**
  * Reperele ediției: ordinea în care se întâmplă, ce înseamnă fiecare față de

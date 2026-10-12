@@ -1,4 +1,4 @@
-import { useNow } from '../hooks/useNow';
+import { useNow } from '../shared/lib/useNow';
 import { deRezolvat } from './acum';
 import { AdminCadru, type PropsCadru } from './AdminCadru';
 import { useSala } from './sala/useSala';

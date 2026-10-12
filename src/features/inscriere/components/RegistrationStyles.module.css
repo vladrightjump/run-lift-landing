@@ -1,0 +1,21 @@
+
+.e3-ghost { transition: border-color 0.2s ease, color 0.2s ease; }
+.e3-ghost:hover { border-color: var(--e3-accent); color: var(--e3-accent); }
+.e3-input { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.e3-input:focus { border-color: var(--e3-accent); box-shadow: 0 0 0 3px rgba(201,242,75,0.18); }
+.e3-input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+  .e3-reg-panel {
+    display: grid; gap: 16px; justify-items: center; text-align: center;
+    padding: clamp(32px, 6vw, 56px) clamp(20px, 5vw, 40px);
+    border: 1px solid var(--e3-border); background: var(--e3-surface);
+  }
+  .e3-reg-panel-loading { gap: 22px; padding-block: clamp(48px, 8vw, 80px); }
+  .e3-reg-panel-ok { border-color: var(--e3-accent); }
+  .e3-reg-panel-err { border-color: var(--e3-danger); }
+  .e3-reg-panel-title {
+    font-family: Anton, sans-serif; font-size: clamp(28px, 5vw, 40px); line-height: 1.05;
+    letter-spacing: 0.02em; text-transform: uppercase; text-wrap: balance;
+  }
+  .e3-reg-panel-err .e3-reg-panel-title { color: var(--e3-danger); }
+  .e3-reg-panel-wait { font-size: 22px; color: var(--e3-muted-strong); }
+  .e3-reg-panel-msg { margin: 0; max-width: 380px; font-size: 16px; line-height: 1.55; color: var(--e3-muted); }

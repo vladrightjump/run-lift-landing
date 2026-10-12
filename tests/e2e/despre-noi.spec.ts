@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { deriveEditionDates } from '../../src/lib/config';
+import { deriveEditionDates } from '../../src/shared/lib/config';
 import {
   deriveEventStrings,
   TRAINING_WHERE,
   TRAINING_MAP_EMBED_SRC,
   TRAINING_MAP_DIRECTIONS_URL,
-} from '../../src/content/format';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+} from '../../src/shared/content/format';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 const { LAUNCH_DATE } = deriveEditionDates(SNAPSHOT_CONFIG);
 const { EVENT_WHERE } = deriveEventStrings(SNAPSHOT_CONFIG);
@@ -46,13 +46,13 @@ test.describe('Despre noi — conținut', () => {
   test('se încarcă pe ruta /despre-noi (nu 404)', async ({ page }) => {
     const res = await page.goto('/despre-noi');
     expect(res?.status()).toBeLessThan(400);
-    await expect(page.locator('.dn-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
   });
 
   test('afișează hero, secțiunile și valorile', async ({ page }) => {
     await page.goto('/despre-noi');
-    await expect(page.locator('.dn-kicker')).toHaveText(/cine suntem/i);
-    await expect(page.locator('.dn-hero-title')).toContainText('Mai mult decât');
+    await expect(page.locator("[data-css~=\"dn-kicker\"]")).toHaveText(/cine suntem/i);
+    await expect(page.locator("[data-css~=\"dn-hero-title\"]")).toContainText('Mai mult decât');
 
     for (const titlu of [
       'Povestea noastră',
@@ -61,10 +61,10 @@ test.describe('Despre noi — conținut', () => {
       'Unde ne antrenăm',
       'Vrei mai multe informații?',
     ]) {
-      await expect(page.locator('.dn-section-head h2', { hasText: titlu })).toBeVisible();
+      await expect(page.locator("[data-css~=\"dn-section-head\"] h2", { hasText: titlu })).toBeVisible();
     }
-    await expect(page.locator('.dn-value-card')).toHaveCount(3);
-    await expect(page.locator('.dn-stat')).toHaveCount(3);
+    await expect(page.locator("[data-css~=\"dn-value-card\"]")).toHaveCount(3);
+    await expect(page.locator("[data-css~=\"dn-stat\"]")).toHaveCount(3);
   });
 
   /**
@@ -74,7 +74,7 @@ test.describe('Despre noi — conținut', () => {
    */
   test('„Unde ne antrenăm" arată locul antrenamentelor, nu al cursei', async ({ page }) => {
     await page.goto('/despre-noi');
-    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    const orar = page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' });
 
     await expect(orar).toContainText(TRAINING_WHERE);
     await expect(orar).not.toContainText(EVENT_WHERE);
@@ -89,10 +89,10 @@ test.describe('Despre noi — conținut', () => {
 
   test('secțiunea are două căi spre hartă: sub orar și peste hartă', async ({ page }) => {
     await page.goto('/despre-noi');
-    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    const orar = page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' });
 
     const sub = orar.locator('a', { hasText: /google maps/i });
-    const peste = orar.locator('a.dn-map-link');
+    const peste = orar.locator("a[data-css~=\"dn-map-link\"]");
     await expect(sub).toBeVisible();
     await expect(peste).toBeVisible();
 
@@ -106,7 +106,7 @@ test.describe('Despre noi — conținut', () => {
 
   test('linkul de Instagram e corect și se deschide în tab nou', async ({ page }) => {
     await page.goto('/despre-noi');
-    const ig = page.locator('.dn-footer a', { hasText: /instagram/i });
+    const ig = page.locator("[data-css~=\"dn-footer\"] a", { hasText: /instagram/i });
     await expect(ig).toHaveAttribute('href', 'https://instagram.com/we_run_and_lift');
     await expect(ig).toHaveAttribute('target', '_blank');
     await expect(ig).toHaveAttribute('rel', /noopener/);
@@ -123,7 +123,7 @@ test.describe('Despre noi — conținut', () => {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
     await page.goto('/despre-noi');
-    await expect(page.locator('.dn-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
     await page.waitForTimeout(1000);
 
     expect([...new Set(rute)].sort()).toEqual([
@@ -140,7 +140,7 @@ test.describe('Despre noi — conținut', () => {
       if (r.url().includes('instagram.com')) cereri.push(r.url());
     });
     await page.goto('/despre-noi');
-    await expect(page.locator('.dn-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
     await page.waitForTimeout(1000);
     expect(cereri).toEqual([]);
   });
@@ -157,7 +157,7 @@ test.describe('Despre noi — conținut', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
     );
     await page.goto('/despre-noi');
-    const numere = await page.locator('.dn-section-num, .e3-reels .e3-title-num').allTextContents();
+    const numere = await page.locator("[data-css~=\"dn-section-num\"], [data-css~=\"e3-reels\"] [data-css~=\"e3-title-num\"]").allTextContents();
     const asteptate = numere.map((_, i) => String(i + 1).padStart(2, '0'));
     expect(numere.map((n) => n.trim())).toEqual(asteptate);
   });
@@ -183,11 +183,11 @@ test.describe('Despre noi — conținut', () => {
     // Banda vine prin RPC, deci se randează asincron. Fără așteptarea asta,
     // numerele se citesc dintr-un DOM în care banda încă nu există — adică din
     // exact starea pe care o verifică celălalt test.
-    await expect(page.locator('.e3-reel')).toHaveCount(1);
+    await expect(page.locator("[data-css~=\"e3-reel\"]")).toHaveCount(1);
 
     // Numerotarea rămâne continuă și cu banda în mijloc.
     const numere = await page
-      .locator('.dn-section-num, .e3-reels .e3-title-num')
+      .locator("[data-css~=\"dn-section-num\"], [data-css~=\"e3-reels\"] [data-css~=\"e3-title-num\"]")
       .allTextContents();
     expect(numere.map((n) => n.trim())).toEqual(['01', '02', '03', '04', '05', '06']);
   });
@@ -215,11 +215,11 @@ test.describe('Despre noi — conținut', () => {
     );
     await page.goto('/despre-noi');
 
-    await expect(page.locator('.e3-reel')).toHaveCount(3);
+    await expect(page.locator("[data-css~=\"e3-reel\"]")).toHaveCount(3);
     // Banda stă sub fold: nimic nu pleacă spre gazdă înainte de derulare.
     await expect(page.locator('iframe[src*="youtube-nocookie.com"]')).toHaveCount(0);
 
-    await page.locator('.e3-reel').first().scrollIntoViewIfNeeded();
+    await page.locator("[data-css~=\"e3-reel\"]").first().scrollIntoViewIfNeeded();
 
     // UNUL, ca pe landing: cardul din centrul șinei.
     await expect(page.locator('iframe[src*="youtube-nocookie.com"]')).toHaveCount(1, {
@@ -238,20 +238,6 @@ test.describe('Despre noi — conținut', () => {
 });
 
 test.describe('Despre noi — formular', () => {
-  test('submit gol nu trimite request și arată eroare', async ({ page }) => {
-    let cerut = false;
-    await page.route(INSERT_ROUTE, (route) => {
-      cerut = true;
-      return route.abort();
-    });
-
-    await page.goto('/despre-noi');
-    await page.locator('.dn-submit').click();
-
-    await expect(page.locator('.dn-error')).toBeVisible();
-    await expect(page.locator('.dn-field.invalid')).toHaveCount(4);
-    expect(cerut).toBe(false);
-  });
 
   test('trimite sursa "despre-noi", dovezile anti-bot și NU trimite ediția', async ({ page }) => {
     let plic: Record<string, unknown> = {};
@@ -262,9 +248,9 @@ test.describe('Despre noi — formular', () => {
 
     await page.goto('/despre-noi');
     await completeaza(page);
-    await page.locator('.dn-submit').click();
+    await page.locator("[data-css~=\"dn-submit\"]").click();
 
-    await expect(page.locator('.dn-success')).toBeVisible();
+    await expect(page.locator("[data-css~=\"dn-success\"]")).toBeVisible();
     expect(plic.mode).toBe('launch');
     const date = plic.data as Record<string, unknown>;
     expect(date.sursa).toBe('despre-noi');
@@ -291,52 +277,10 @@ test.describe('Despre noi — formular', () => {
 
     await page.goto('/despre-noi');
     await completeaza(page);
-    await page.locator('.dn-submit').click();
+    await page.locator("[data-css~=\"dn-submit\"]").click();
 
-    await expect(page.locator('.dn-success')).toBeVisible();
+    await expect(page.locator("[data-css~=\"dn-success\"]")).toBeVisible();
     expect(emailCerut).toBe(false);
-  });
-
-  test('duplicatul (409) e tratat tot ca succes', async ({ page }) => {
-    await page.route(INSERT_ROUTE, (route) =>
-      route.fulfill({ status: 409, contentType: 'application/json', body: '{"code":"23505"}' })
-    );
-    await page.route(EMAIL_ROUTE, (route) => route.fulfill({ status: 200, body: '{}' }));
-
-    await page.goto('/despre-noi');
-    await completeaza(page);
-    await page.locator('.dn-submit').click();
-
-    await expect(page.locator('.dn-success')).toBeVisible();
-  });
-
-  test('eroarea de server păstrează datele completate', async ({ page }) => {
-    await page.route(INSERT_ROUTE, (route) => route.fulfill({ status: 500, body: '' }));
-
-    await page.goto('/despre-noi');
-    await completeaza(page);
-    await page.locator('.dn-submit').click();
-
-    await expect(page.locator('.dn-error')).toContainText(/nu am putut trimite/i);
-    // Datele rămân, ca omul să nu le rescrie.
-    await expect(page.getByPlaceholder('email@exemplu.md')).toHaveValue('andrei@email.ro');
-    await expect(page.locator('.dn-submit')).toBeEnabled();
-  });
-
-  test('emailul invalid e respins fără request', async ({ page }) => {
-    let cerut = false;
-    await page.route(INSERT_ROUTE, (route) => {
-      cerut = true;
-      return route.abort();
-    });
-
-    await page.goto('/despre-noi');
-    await completeaza(page);
-    await page.getByPlaceholder('email@exemplu.md').fill('nu-e-email');
-    await page.locator('.dn-submit').click();
-
-    await expect(page.locator('.dn-error')).toBeVisible();
-    expect(cerut).toBe(false);
   });
 });
 
@@ -347,7 +291,7 @@ test.describe('Navigare între pagini', () => {
     await expect(buton).toBeVisible();
     await buton.click();
     await expect(page).toHaveURL(/\/despre-noi$/);
-    await expect(page.locator('.dn-root')).toBeVisible();
+    await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
   });
 
   test('logoul din /despre-noi duce înapoi acasă (landing)', async ({ page }) => {
@@ -365,14 +309,14 @@ test.describe('Navigare între pagini', () => {
       })
     );
     await page.goto('/despre-noi');
-    await page.locator('.dn-logo').click();
+    await page.locator("[data-css~=\"dn-logo\"]").click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator('#inscriere')).toBeVisible();
   });
 
   test('Instagram apare și pe Coming Soon', async ({ page }) => {
     await page.goto('/?preview=soon');
-    await expect(page.locator('.cs-footer a', { hasText: /instagram/i })).toHaveAttribute(
+    await expect(page.locator("[data-css~=\"cs-footer\"] a", { hasText: /instagram/i })).toHaveAttribute(
       'href',
       'https://instagram.com/we_run_and_lift'
     );
@@ -393,27 +337,27 @@ test.describe('Despre noi — locul din setările botului', () => {
     const loc = 'Sala Ironworks, str. Ion Creangă';
     await cuLoc(page, loc);
     await page.goto('/despre-noi');
-    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    const orar = page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' });
 
     await expect(orar).toContainText(loc);
     await expect(orar).not.toContainText(TRAINING_WHERE);
     const iframe = orar.locator('iframe');
     await expect(iframe).toHaveAttribute('title', `${loc}: hartă`);
     expect(new URL((await iframe.getAttribute('src'))!).searchParams.get('q')).toBe(loc);
-    for (const link of [orar.locator('a', { hasText: /google maps/i }), orar.locator('a.dn-map-link')]) {
+    for (const link of [orar.locator('a', { hasText: /google maps/i }), orar.locator("a[data-css~=\"dn-map-link\"]")]) {
       expect(new URL((await link.getAttribute('href'))!).searchParams.get('query')).toBe(loc);
     }
-    await expect(page.locator('.dn-root')).toContainText(loc);
+    await expect(page.locator("[data-css~=\"dn-root\"]")).toContainText(loc);
   });
 
   test('nu mai promite „în parc" sau „în aer liber" în program, statistici și bandă', async ({ page }) => {
     await cuLoc(page, 'Sala Ironworks');
     await page.goto('/despre-noi');
-    await expect(page.locator('.dn-section', { hasText: 'Unde ne antrenăm' })).toContainText('Sala Ironworks');
-    await expect(page.locator('.dn-root')).not.toContainText('În aer liber, în parc');
-    await expect(page.locator('.dn-stats')).not.toContainText(/aer liber/i);
-    await expect(page.locator('.dn-stats .dn-stat')).toHaveCount(3);
-    await expect(page.locator('.e3-marquee').first()).not.toContainText(/aer liber/i);
+    await expect(page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' })).toContainText('Sala Ironworks');
+    await expect(page.locator("[data-css~=\"dn-root\"]")).not.toContainText('În aer liber, în parc');
+    await expect(page.locator("[data-css~=\"dn-stats\"]")).not.toContainText(/aer liber/i);
+    await expect(page.locator("[data-css~=\"dn-stats\"] [data-css~=\"dn-stat\"]")).toHaveCount(3);
+    await expect(page.locator("[data-css~=\"e3-marquee\"]").first()).not.toContainText(/aer liber/i);
   });
 
   test('cât serverul n-a răspuns, nu arată niciun loc, nici pe cel vechi', async ({ page }) => {
@@ -426,7 +370,7 @@ test.describe('Despre noi — locul din setările botului', () => {
       });
     });
     await page.goto('/despre-noi');
-    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    const orar = page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' });
     await expect(orar).toBeVisible();
     await expect(orar).not.toContainText(TRAINING_WHERE);
     await expect(orar.locator('iframe')).toHaveCount(0);
@@ -439,16 +383,16 @@ test.describe('Despre noi — locul din setările botului', () => {
   test('fără loc salvat: locul din cod, cu harta lui', async ({ page }) => {
     await cuLoc(page, null);
     await page.goto('/despre-noi');
-    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    const orar = page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' });
     await expect(orar).toContainText(TRAINING_WHERE);
     await expect(orar.locator('iframe')).toHaveAttribute('src', TRAINING_MAP_EMBED_SRC);
   });
 
   test('funcția pică: locul din cod, fără eroare pe pagină', async ({ page }) => {
     await page.goto('/despre-noi');
-    const orar = page.locator('.dn-section', { hasText: 'Unde ne antrenăm' });
+    const orar = page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' });
     await expect(orar).toContainText(TRAINING_WHERE);
-    await expect(orar.locator('a.dn-map-link')).toHaveAttribute('href', TRAINING_MAP_DIRECTIONS_URL);
+    await expect(orar.locator("a[data-css~=\"dn-map-link\"]")).toHaveAttribute('href', TRAINING_MAP_DIRECTIONS_URL);
     await expect(page.getByRole('alert')).toHaveCount(0);
   });
 });

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 /**
  * Secțiunea „Instagram" de pe landing.
@@ -144,7 +144,7 @@ test.describe('lista goală nu lasă gaură în numerotare', () => {
 
     await expect(page.getByRole('heading', { name: 'Formatul' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Instagram' })).toHaveCount(0);
-    await expect(page.locator('.e3-title-num')).toHaveText(['01']);
+    await expect(page.locator("[data-css~=\"e3-title-num\"]")).toHaveText(['01']);
   });
 
   test('ascunsă din layout, tot nu apare', async ({ page }) => {
@@ -155,7 +155,7 @@ test.describe('lista goală nu lasă gaură în numerotare', () => {
     await page.goto('/?preview=landing');
 
     await expect(page.getByRole('heading', { name: 'Instagram' })).toHaveCount(0);
-    await expect(page.locator('.e3-title-num')).toHaveText(['01']);
+    await expect(page.locator("[data-css~=\"e3-title-num\"]")).toHaveText(['01']);
   });
 });
 
@@ -165,7 +165,7 @@ test.describe('cu clipuri în bandă', () => {
     await page.goto('/?preview=landing');
 
     await expect(page.getByRole('heading', { name: 'Instagram' })).toBeVisible();
-    await expect(page.locator('.e3-title-num')).toHaveText(['01', '02']);
+    await expect(page.locator("[data-css~=\"e3-title-num\"]")).toHaveText(['01', '02']);
   });
 
   test('fiecare card poartă linkul spre postare, de la început', async ({ page }) => {
@@ -182,10 +182,10 @@ test.describe('cu clipuri în bandă', () => {
 
     // Clipurile vin prin RPC, deci banda se randează asincron: fără așteptarea
     // asta, verificarea ar prinde un DOM în care secțiunea încă nu există.
-    await expect(page.locator('.e3-reel')).toHaveCount(3);
+    await expect(page.locator("[data-css~=\"e3-reel\"]")).toHaveCount(3);
     await expect(page.locator(`iframe[src*="${GAZDA}"]`)).toHaveCount(0);
 
-    await page.locator('.e3-reel').first().scrollIntoViewIfNeeded();
+    await page.locator("[data-css~=\"e3-reel\"]").first().scrollIntoViewIfNeeded();
 
     // UNUL, nu trei. Ăsta e contractul care ține pagina în picioare pe telefon.
     await expect(page.locator(`iframe[src*="${GAZDA}"]`)).toHaveCount(1, { timeout: 5000 });
@@ -194,8 +194,8 @@ test.describe('cu clipuri în bandă', () => {
   test('playerul pornește mut și în buclă', async ({ page }) => {
     await mock(page, TREI);
     await page.goto('/?preview=landing');
-    await expect(page.locator('.e3-reel')).toHaveCount(3);
-    await page.locator('.e3-reel').first().scrollIntoViewIfNeeded();
+    await expect(page.locator("[data-css~=\"e3-reel\"]")).toHaveCount(3);
+    await page.locator("[data-css~=\"e3-reel\"]").first().scrollIntoViewIfNeeded();
 
     const player = page.locator(`iframe[src*="${GAZDA}"]`).first();
     await expect(player).toHaveCount(1, { timeout: 5000 });
@@ -210,27 +210,27 @@ test.describe('caruselul', () => {
   test('săgeata mută playerul pe cardul următor, tot unul singur', async ({ page }) => {
     await mock(page, TREI);
     await page.goto('/?preview=landing');
-    await expect(page.locator('.e3-reel')).toHaveCount(3);
-    await page.locator('.e3-reels-rail').scrollIntoViewIfNeeded();
+    await expect(page.locator("[data-css~=\"e3-reel\"]")).toHaveCount(3);
+    await page.locator("[data-css~=\"e3-reels-rail\"]").scrollIntoViewIfNeeded();
 
     // Pornește pe clipul din mijloc.
     const player = page.locator(`iframe[src*="${GAZDA}"]`);
     await expect(player).toHaveCount(1, { timeout: 5000 });
     await expect(player).toHaveAttribute('src', /_-Ab0123456/);
-    await expect(page.locator('.e3-reels-count-now')).toHaveText('02');
+    await expect(page.locator("[data-css~=\"e3-reels-count-now\"]")).toHaveText('02');
 
     await page.getByRole('button', { name: 'Clipul următor' }).click();
 
     await expect(player).toHaveAttribute('src', /ZZZZ9999888/);
     await expect(player).toHaveCount(1);
-    await expect(page.locator('.e3-reels-count-now')).toHaveText('03');
+    await expect(page.locator("[data-css~=\"e3-reels-count-now\"]")).toHaveText('03');
     await expect(page.getByRole('button', { name: 'Clipul următor' })).toBeDisabled();
   });
 
   test('fiecare card are poster; niciunul nu e casetă goală', async ({ page }) => {
     await mock(page, TREI);
     await page.goto('/?preview=landing');
-    await expect(page.locator('.e3-reel-poster')).toHaveCount(3);
+    await expect(page.locator("[data-css~=\"e3-reel-poster\"]")).toHaveCount(3);
   });
 });
 
@@ -246,7 +246,7 @@ test.describe('mobil', () => {
 
     // O secțiune care începe cu imagini fără titlu nu se citește.
     const yTitlu = (await titlu.boundingBox())!.y;
-    const yCard = (await page.locator('.e3-reel').first().boundingBox())!.y;
+    const yCard = (await page.locator("[data-css~=\"e3-reel\"]").first().boundingBox())!.y;
     expect(yTitlu).toBeLessThan(yCard);
 
     // Fantoma e lată cât banda; fără `overflow: hidden` ar împinge scroll pe body.
@@ -261,9 +261,9 @@ test.describe('mobil', () => {
     await mock(page, [UN_CLIP, { ...UN_CLIP, youtube: '_-Ab0123456', caption: 'Joi' }]);
     await page.goto('/?preview=landing');
 
-    await expect(page.locator('.e3-reels-item')).toHaveCount(2);
+    await expect(page.locator("[data-css~=\"e3-reels-item\"]")).toHaveCount(2);
     const cutii = await page
-      .locator('.e3-reels-item')
+      .locator("[data-css~=\"e3-reels-item\"]")
       .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().top));
     expect(Math.max(...cutii) - Math.min(...cutii)).toBeLessThan(2);
   });

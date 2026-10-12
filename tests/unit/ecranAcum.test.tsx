@@ -3,7 +3,7 @@ import { render, screen, cleanup, within, fireEvent, waitFor } from '@testing-li
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { EcranAcum } from '../../src/admin/EcranAcum';
 import { citesteFiltruUrmatorul } from '../../src/admin/sala/filtruUrmatorul';
-import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/shared/content/eventConfig';
 import { dateSala } from './helpers/salaFixtures';
 import type { SemnaleAdmin } from '../../src/admin/stareCurenta';
 

@@ -8,7 +8,7 @@ import {
   type SalaConfig,
   type SalaMembru,
 } from '../../lib/salaApi';
-import { ziLunaOra } from '../../lib/formatare';
+import { ziLunaOra } from '../../shared/lib/formatare';
 import { Dialog } from '../../shared/ui/Dialog';
 import {
   ETICHETE_COMENZI,

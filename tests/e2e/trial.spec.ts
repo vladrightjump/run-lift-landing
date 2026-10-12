@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 const config = { message_texts: {}, enabled: true, bot_username: 'ParkTrialBot', welcome_text: 'Bine ai venit!', trial_conditions: 'Vino cu 10 minute înainte.', trial_price: '100 MDL', bring_text: 'Apă și prosop.', continuation_conditions: 'Discutăm abonamentul.', duration_minutes: 60, organizer_telegram_id: 123, contact_text: 'Scrie-ne pe Instagram.', permissions_verified_at: new Date().toISOString() };
 for (const width of [375, 1280]) {
@@ -17,7 +17,7 @@ for (const width of [375, 1280]) {
       await expect(section).toBeVisible();
       await expect(section.getByRole('link', { name: /Vreau la un antrenament/ })).toHaveAttribute('href', 'https://t.me/ParkTrialBot?start=trial_home');
       await expect(page.locator('body')).not.toContainText('Gratuit');
-      if (phase === 'landing') await expect(page.locator('.e3-hero').getByRole('link', { name: 'Înscrie-te la eveniment' })).toBeVisible();
+      if (phase === 'landing') await expect(page.locator("[data-css~=\"e3-hero\"]").getByRole('link', { name: 'Înscrie-te la eveniment' })).toBeVisible();
       await section.scrollIntoViewIfNeeded();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       if (phase === 'landing') await section.screenshot({ path: `/tmp/trial-home-${width}.png` });

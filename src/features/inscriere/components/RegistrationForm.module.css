@@ -1,0 +1,28 @@
+
+  .e3-reg-panel-compact { padding: clamp(20px, 4vw, 32px); }
+
+.layout1.layout1.layout1.layout1 { display: grid; gap: 0; }
+.layout2.layout2.layout2.layout2 { border: 1px solid var(--e3-border); border-bottom: none; background: var(--e3-surface); padding: 16px 20px; display: grid; gap: 12px; }
+.text3.text3.text3.text3 { font-family: Anton, sans-serif; font-size: 22px; letter-spacing: 1px; }
+.text3On0.text3On0.text3On0.text3On0 { color: var(--e3-danger); }
+.text3Off0.text3Off0.text3Off0.text3Off0 { color: var(--e3-accent); }
+.copy4.copy4.copy4.copy4 { margin: 0; font-size: 14px; line-height: 1.5; color: var(--e3-accent); font-weight: 600; text-wrap: pretty; }
+.element5.element5.element5.element5 { border: 1px solid var(--e3-border); background: var(--e3-surface); padding: clamp(18px, 4vw, 32px); display: grid; gap: 18px; }
+.copy6.copy6.copy6.copy6 { margin: 0; font-size: 13px; line-height: 1.5; color: var(--e3-muted); text-align: center; }
+.layout7.layout7.layout7.layout7 { width: 100%; max-width: 400px; border: 1px dashed var(--e3-border); padding: 14px; display: grid; gap: 10px; justify-items: stretch; }
+.layout8.layout8.layout8.layout8 { font-size: 14px; color: var(--e3-muted-strong); text-align: center; }
+.layout9.layout9.layout9.layout9 { height: 6px; background: var(--e3-border); }
+.layout10.layout10.layout10.layout10 { height: 100%; background: var(--e3-accent); transition: width 1s linear; }
+.button11.button11.button11.button11 { background: transparent; border: none; color: var(--e3-muted); cursor: pointer; font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; text-decoration: underline; padding: 4px; }
+.link12 { composes: smallAction from './FormControls.module.css'; }
+.link12.link12.link12.link12 { text-decoration: none; display: inline-block; }
+
+.contact { composes: smallAction from './FormControls.module.css'; }
+
+.acord.acord.acord.acord { width: 20px; height: 20px; margin: 1px 0 0; }
+
+.trimite.trimite.trimite.trimite { margin-top: 2px; }
+
+.locuri.locuri.locuri.locuri { gap: 3px; }
+
+.reset.reset.reset.reset { margin-top: 0; }
