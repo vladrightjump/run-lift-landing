@@ -1,7 +1,7 @@
 import shared4 from '../../../shared/ui/PublicMotion.module.css';
 import shared3 from './LandingStyles.module.css';
-import styles from './ParticipantsSection.module.css';
 import shared1 from '../../../shared/ui/PublicLayout.module.css';
+import styles from './ParticipantsSection.module.css';
 import type { CSSProperties } from 'react';
 import { useEventConfig } from '../../../shared/lib/useEventConfig';
 import { getMySignups } from '../../../shared/lib/mySignups';

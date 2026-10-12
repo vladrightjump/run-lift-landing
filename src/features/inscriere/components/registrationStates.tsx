@@ -1,6 +1,6 @@
 import shared3 from '../../../shared/ui/PublicControls.module.css';
-import styles from './registrationStates.module.css';
 import shared1 from './RegistrationStyles.module.css';
+import styles from './registrationStates.module.css';
 import type { CSSProperties, ReactNode, Ref } from 'react';
 import { INSTAGRAM_URL } from '../../../shared/lib/config';
 import { downloadEventIcs, shareSignup } from '../../../shared/lib/calendar';

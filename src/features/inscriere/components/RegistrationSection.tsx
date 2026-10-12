@@ -1,7 +1,7 @@
 import shared4 from './RegistrationStyles.module.css';
 import shared3 from '../../../shared/ui/PublicSurface.module.css';
-import styles from './RegistrationSection.module.css';
 import shared1 from '../../../shared/ui/PublicLayout.module.css';
+import styles from './RegistrationSection.module.css';
 import { useEventConfig, useEditionStrings } from '../../../shared/lib/useEventConfig';
 import type { FieldName } from '../../../shared/lib/validation';
 import type { PublicStats } from '../data/api';

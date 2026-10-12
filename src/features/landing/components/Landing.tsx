@@ -1,6 +1,6 @@
-import styles from './Landing.module.css';
 import shared2 from '../../../shared/ui/PublicMotion.module.css';
 import shared1 from '../../../shared/ui/PublicSurface.module.css';
+import styles from './Landing.module.css';
 import { usePublicTrial } from '../../trial';
 import { TrialTraining } from '../../trial';
 import { trialLink } from '../../trial';

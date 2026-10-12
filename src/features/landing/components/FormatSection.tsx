@@ -1,5 +1,5 @@
-import styles from './FormatSection.module.css';
 import shared1 from '../../../shared/ui/PublicLayout.module.css';
+import styles from './FormatSection.module.css';
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { ETAPE } from '../../../shared/content/etape';

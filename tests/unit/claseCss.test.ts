@@ -163,6 +163,37 @@ describe('fiecare `styles.x` există în modulul lui', () => {
   });
 });
 
+/**
+ * Modulele comune importate după modulul propriu al componentei.
+ *
+ * În bundle, CSS-ul intră în ordinea primului import. Când `styles` vine
+ * înaintea unui modul comun, regulile comune pot ajunge după el și câștigă la
+ * specificitate egală: `.e3-reg` își pierdea padding-ul în fața lui `.e3-sec`,
+ * iar landing-ul ieșea cu 24px mai scurt, fără ca vreun test să observe.
+ */
+export const moduleDupaStyles = (sursa: string): string[] => {
+  const importuri = importuriModul(sursa);
+  const propriu = importuri.findIndex(({ nume }) => nume === 'styles');
+  return propriu < 0 ? [] : importuri.slice(propriu + 1).map(({ cale }) => cale);
+};
+
+describe('modulul propriu vine ultimul', () => {
+  it('`styles` e importat după modulele comune pe care le suprascrie', () => {
+    const gresite: Record<string, string[]> = {};
+    for (const fisier of fisiereTsx(resolve(root, 'src'))) {
+      const dupa = moduleDupaStyles(readFileSync(fisier, 'utf8'));
+      if (dupa.length) gresite[fisier.slice(root.length + 1)] = dupa;
+    }
+    expect(gresite, 'Mută `import styles` după celelalte importuri `*.module.css`').toEqual({});
+  });
+
+  it('prinde un modul comun importat după `styles`', () => {
+    const sursa = "import styles from './A.module.css';\nimport shared1 from '../shared/ui/B.module.css';";
+    expect(moduleDupaStyles(sursa)).toEqual(['../shared/ui/B.module.css']);
+    expect(moduleDupaStyles("import shared1 from '../B.module.css';\nimport styles from './A.module.css';")).toEqual([]);
+  });
+});
+
 /** Toate fișierele `*.module.css` din `src/`. */
 const fisiereModul = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((e) => {

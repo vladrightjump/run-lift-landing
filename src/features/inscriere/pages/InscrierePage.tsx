@@ -1,6 +1,6 @@
 import shared3 from '../../../shared/ui/PublicControls.module.css';
-import styles from './InscrierePage.module.css';
 import shared1 from '../../../shared/ui/PublicSurface.module.css';
+import styles from './InscrierePage.module.css';
 import { useEffect, useRef, useState } from 'react';
 import {
   useEventConfig,

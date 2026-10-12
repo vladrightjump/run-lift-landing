@@ -1,6 +1,6 @@
 import shared3 from '../../../shared/ui/PublicControls.module.css';
-import styles from './RegistrationForm.module.css';
 import shared1 from './RegistrationStyles.module.css';
+import styles from './RegistrationForm.module.css';
 import { useEffect, useRef } from 'react';
 import { useEventConfig, useEditionStrings } from '../../../shared/lib/useEventConfig';
 import type { FieldName } from '../../../shared/lib/validation';

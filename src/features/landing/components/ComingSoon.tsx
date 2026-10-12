@@ -1,5 +1,5 @@
-import styles from './ComingSoon.module.css';
 import shared1 from '../../../shared/ui/CadruScurt.module.css';
+import styles from './ComingSoon.module.css';
 import { useCallback, useEffect, useState } from 'react';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../../shared/lib/config';
 import { useEditionStrings, useEditionDates } from '../../../shared/lib/useEventConfig';
