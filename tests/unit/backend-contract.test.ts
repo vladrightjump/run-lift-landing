@@ -5,8 +5,8 @@ import {
   submitWaitlist,
   submitLaunchNotification,
   fetchStats,
-  confirmSignup,
 } from '../../src/lib/supabase';
+import { confirmSignup } from '../../src/features/confirmare/data/api';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fetchWeeklyWorkouts } from '../../src/features/antrenament/data/api';

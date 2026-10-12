@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../../lib/config';
 import type { WeeklyWorkout } from '../data/api';
 import { CardSaptamana } from '../components/CardSaptamana';
+import { CadruScurt, TitluScurt } from '../../../shared/ui/CadruScurt';
 import { useProgramAntrenament } from '../data/queries';
 import styles from '../styles/AntrenamentPage.module.css';
 
@@ -71,79 +72,68 @@ export const AntrenamentPage = () => {
   const saptamana = areProgram ? (program.find((s) => s.numar === ales) ?? null) : null;
 
   return (
-    <div className="cs-root">
-      <div className="cs-bg" aria-hidden="true" />
+    <CadruScurt meta="Run + Lift" subsol={false}>
+      <TitluScurt>Antrenamentul săptămânii</TitluScurt>
 
-      <header className="cs-topbar">
-        <a className="cs-logo" href="/">
-          R<span className="cs-accent">+</span>L
-        </a>
-        <span className="cs-brand-meta">Run + Lift</span>
-      </header>
+      {!isError && program === undefined && (
+        <p className="cs-sub" role="status">
+          Se încarcă…
+        </p>
+      )}
 
-      <main className="cs-main">
-        <h1 className="cf-title">Antrenamentul săptămânii</h1>
+      {saptamana && <CardSaptamana numar={saptamana.numar} titlu={saptamana.titlu} corp={saptamana.corp} />}
 
-        {!isError && program === undefined && (
-          <p className="cs-sub" role="status">
-            Se încarcă…
-          </p>
-        )}
+      {/*
+        Selectorul apare doar de la două săptămâni în sus — cu una singură ar
+        fi un control cu o singură alegere.
 
-        {saptamana && <CardSaptamana numar={saptamana.numar} titlu={saptamana.titlu} corp={saptamana.corp} />}
+        `<select>` nativ, nu meniu propriu: pe telefon deschide roata nativă,
+        cea mai bună țintă de atins cu degetul, accesibilă și rezistentă la
+        cincizeci de opțiuni, gratis. Un meniu scris de noi ar fi cerut capcană
+        de focus, navigare cu tastatura și derulare, pentru zero câștig.
+      */}
+      {areProgram && program.length > 1 && (
+        <div className={styles.selector}>
+          <label className={styles.selectorEticheta} htmlFor="an-saptamana">
+            Vrei să începi de la capăt? Alege o săptămână.
+          </label>
+          <select
+            id="an-saptamana"
+            className={styles.selectorCamp}
+            value={ales ?? undefined}
+            onChange={(e) => alege(Number(e.target.value))}
+          >
+            {program.map((s) => (
+              <option key={s.numar} value={s.numar}>
+                Săptămâna {s.numar}
+                {s.titlu ? `: ${s.titlu}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
-        {/*
-          Selectorul apare doar de la două săptămâni în sus — cu una singură ar
-          fi un control cu o singură alegere.
+      {/*
+        Oprit, inexistent, sau doar versiuni vechi — pentru vizitator e
+        aceeași situație, iar pagina răspunde în loc să dea 404: linkul
+        trimis săptămâna trecută trebuie să rămână bun.
+      */}
+      {!isError && program?.length === 0 && (
+        <p className="cs-sub">
+          Nu e publicat niciun antrenament acum. Revino peste câteva zile sau vezi ce mai
+          facem pe{' '}
+          <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
+            {INSTAGRAM_HANDLE}
+          </a>
+          .
+        </p>
+      )}
 
-          `<select>` nativ, nu meniu propriu: pe telefon deschide roata nativă,
-          cea mai bună țintă de atins cu degetul, accesibilă și rezistentă la
-          cincizeci de opțiuni, gratis. Un meniu scris de noi ar fi cerut capcană
-          de focus, navigare cu tastatura și derulare, pentru zero câștig.
-        */}
-        {areProgram && program.length > 1 && (
-          <div className={styles.selector}>
-            <label className={styles.selectorEticheta} htmlFor="an-saptamana">
-              Vrei să începi de la capăt? Alege o săptămână.
-            </label>
-            <select
-              id="an-saptamana"
-              className={styles.selectorCamp}
-              value={ales ?? undefined}
-              onChange={(e) => alege(Number(e.target.value))}
-            >
-              {program.map((s) => (
-                <option key={s.numar} value={s.numar}>
-                  Săptămâna {s.numar}
-                  {s.titlu ? `: ${s.titlu}` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/*
-          Oprit, inexistent, sau doar versiuni vechi — pentru vizitator e
-          aceeași situație, iar pagina răspunde în loc să dea 404: linkul
-          trimis săptămâna trecută trebuie să rămână bun.
-        */}
-        {!isError && program?.length === 0 && (
-          <p className="cs-sub">
-            Nu e publicat niciun antrenament acum. Revino peste câteva zile sau vezi ce mai
-            facem pe{' '}
-            <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
-              {INSTAGRAM_HANDLE}
-            </a>
-            .
-          </p>
-        )}
-
-        {isError && (
-          <p className="cs-sub" role="alert">
-            Nu am putut încărca antrenamentul. Reîncarcă pagina în câteva momente.
-          </p>
-        )}
-      </main>
-    </div>
+      {isError && (
+        <p className="cs-sub" role="alert">
+          Nu am putut încărca antrenamentul. Reîncarcă pagina în câteva momente.
+        </p>
+      )}
+    </CadruScurt>
   );
 };

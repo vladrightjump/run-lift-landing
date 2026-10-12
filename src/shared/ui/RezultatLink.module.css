@@ -1,0 +1,9 @@
+/* Iconița rezultatului: bifă pe lime, sau ✕ conturat cu roșu. Regulile kitului
+   sunt în `:where()`; varianta de eroare stă după cea de bază. */
+:where(.icon) {
+    width: 64px; height: 64px;
+    background: var(--e3-accent); color: var(--e3-bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; animation: global(pop-in) 0.35s ease-out both;
+  }
+:where(.icon.eroare) { background: transparent; border: 2px solid var(--e3-danger-strong); color: var(--e3-danger-strong); }

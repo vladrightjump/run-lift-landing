@@ -87,18 +87,17 @@ describe('rutele au rewrite în vercel.json', () => {
 });
 
 describe('legăturile interne duc spre rute reale', () => {
-  // Landing-ul e spart în secțiuni (`landing/`) care au și ele linkuri interne
-  // (tabul „Despre noi") — le scanăm pe toate, ca un href greșit să nu ajungă 404.
-  const landingFiles = readdirSync(resolve(root, 'src/components/landing'))
-    .filter((f) => f.endsWith('.tsx'))
-    .map((f) => `src/components/landing/${f}`);
-  const fisiere = [
-    'src/components/ComingSoon.tsx',
-    'src/components/DespreNoi.tsx',
-    'src/components/Confirmare.tsx',
-    'src/components/Landing.tsx',
-    ...landingFiles,
-  ];
+  // Toate componentele publice și ale funcționalităților, oriunde stau: o listă
+  // scrisă de mână ar fi rămas în urmă la prima mutare de fișier.
+  const tsxDin = (dir: string): string[] =>
+    readdirSync(resolve(root, dir), { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? tsxDin(`${dir}/${e.name}`)
+        : e.name.endsWith('.tsx') && !e.name.endsWith('.test.tsx')
+          ? [`${dir}/${e.name}`]
+          : []
+    );
+  const fisiere = ['src/components', 'src/features', 'src/shared/ui'].flatMap(tsxDin);
 
   it('fiecare href intern e o rută cunoscută sau o ancoră', () => {
     const cunoscute = new Set([...ruteDinCod(), '/']);

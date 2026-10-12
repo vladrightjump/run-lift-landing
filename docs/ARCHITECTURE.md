@@ -70,6 +70,17 @@ Stările paginii și ale cardurilor sunt teste de componentă lângă cod, pe ha
 comune; `tests/e2e/antrenament.spec.ts` păstrează doar drumul vizitatorului și ce se vede
 numai cu CSS-ul și shell-urile din build. Un modul care folosește o animație globală o
 numește `global(fade-up)`; altfel CSS Modules redenumește animația și ea dispare tăcut.
+
+U8 mută paginile din linkurile de email (`confirmare`, `unsubscribe`, `renunt`) și pagina
+`/inscriere` în funcționalitățile lor, după forma din U7. Ce aveau copiat între ele a
+trecut în `shared/`: `ui/CadruScurt` (fundalul, antetul, subsolul și titlul paginilor
+scurte, folosit și de `/antrenament`), `ui/RezultatLink` (iconița, titlul, textul și
+drumul înapoi), `lib/token` (forma tokenului din link) și `lib/useLinkDinEmail` (cererea
+o singură dată, la încărcare, cu `incarca`/`invalid`/`eroare`). Cele trei RPC-uri trec
+prin `rpcStrict`, care păstrează diferența dintre „serverul a zis nu" și un răspuns
+stricat. `/renunt` folosește o mutație: cererea pleacă doar la click. Clasele `.cs-*`
+ale cadrului rămân globale până se mută ecranul de așteptare (U9). Formularul de pe
+`/inscriere` și testele lui se mută cu landing-ul, în U9.
 Codul existent rămâne în `src/components/`, `src/admin/`,
 `src/hooks/`, `src/lib/`, `src/content/` și fișierele din rădăcina `src/`. Migrarea se face în
 unitățile planificate, câte o zonă; schimbarea unui fișier vechi nu îl mută automat.

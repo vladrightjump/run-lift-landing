@@ -3,67 +3,42 @@ import { HttpResponse } from 'msw';
 import { rpcHandler, functionHandler } from '../support/handlers';
 
 /**
- * Pagina /confirmare — double opt-in prin linkul din email.
- * RPC-ul confirm_signup e mock-uit: testele nu ating baza reală.
+ * Paginile din linkurile de email, în browser: drumul omului care apasă linkul.
+ * Stările fiecărei pagini (deja folosit, invalid, eroare, token malformat) sunt
+ * teste de componentă, lângă cod, în `src/features/{confirmare,unsubscribe,renunt}/`.
+ * RPC-urile sunt mock-uite: testele nu ating baza reală.
  */
 
 const TOKEN = '123e4567-e89b-42d3-a456-426614174000';
 
-test.describe('Confirmare înscriere', () => {
-  test('token valid → mesaj de succes', async ({ page, network }) => {
+test.describe('Linkurile din email', () => {
+  test('confirmarea: linkul confirmă, iar butonul duce înapoi acasă', async ({ page, network }) => {
     network.use(rpcHandler('confirm_signup', () => HttpResponse.json('confirmat')));
     await page.goto(`/confirmare?token=${TOKEN}`);
-    await expect(page.locator('.cf-title')).toHaveText(/înscriere confirmată/i);
-    await expect(page.locator('.cf-icon')).not.toHaveClass(/err/);
-  });
-
-  test('token deja folosit → mesaj distinct, tot pozitiv', async ({ page, network }) => {
-    network.use(rpcHandler('confirm_signup', () => HttpResponse.json('deja_confirmat')));
-    await page.goto(`/confirmare?token=${TOKEN}`);
-    await expect(page.locator('.cf-title')).toHaveText(/erai deja confirmat/i);
-    await expect(page.locator('.cf-icon')).not.toHaveClass(/err/);
-  });
-
-  test('token necunoscut de server → link invalid', async ({ page, network }) => {
-    network.use(rpcHandler('confirm_signup', () => HttpResponse.json('invalid')));
-    await page.goto(`/confirmare?token=${TOKEN}`);
-    await expect(page.locator('.cf-title')).toHaveText(/link invalid/i);
-    await expect(page.locator('.cf-icon')).toHaveClass(/err/);
-  });
-
-  test('token malformat NU lovește serverul', async ({ page, network }) => {
-    let cerut = false;
-    network.use(rpcHandler('confirm_signup', () => {
-      cerut = true;
-      return HttpResponse.error();
-    }));
-    await page.goto('/confirmare?token=nu-e-uuid');
-    await expect(page.locator('.cf-title')).toHaveText(/link invalid/i);
-    expect(cerut).toBe(false);
-  });
-
-  test('fără token → link invalid, fără request', async ({ page, network }) => {
-    let cerut = false;
-    network.use(rpcHandler('confirm_signup', () => {
-      cerut = true;
-      return HttpResponse.error();
-    }));
-    await page.goto('/confirmare');
-    await expect(page.locator('.cf-title')).toHaveText(/link invalid/i);
-    expect(cerut).toBe(false);
-  });
-
-  test('eroare de rețea → mesaj de reîncercare, nu crash', async ({ page, network }) => {
-    network.use(rpcHandler('confirm_signup', () => new HttpResponse('', { status: 500 })));
-    await page.goto(`/confirmare?token=${TOKEN}`);
-    await expect(page.locator('.cf-title')).toHaveText(/nu am putut verifica/i);
-  });
-
-  test('linkul de întoarcere duce la pagina principală', async ({ page, network }) => {
-    network.use(rpcHandler('confirm_signup', () => HttpResponse.json('confirmat')));
-    await page.goto(`/confirmare?token=${TOKEN}`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/înscriere confirmată/i);
     await page.getByRole('link', { name: /înapoi la pagina principală/i }).click();
     await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('dezabonarea: linkul dezabonează la deschidere', async ({ page, network }) => {
+    network.use(rpcHandler('unsubscribe', () => HttpResponse.json('dezabonat')));
+    await page.goto(`/unsubscribe?token=${TOKEN}`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/te-am dezabonat/i);
+  });
+
+  test('renunțarea: deschiderea nu atinge locul, abia click-ul îl eliberează', async ({ page, network }) => {
+    let cereri = 0;
+    network.use(rpcHandler('decline_spot', () => {
+      cereri += 1;
+      return HttpResponse.json('renuntat');
+    }));
+    await page.goto(`/renunt?token=${TOKEN}`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/nu mai poți veni/i);
+    expect(cereri).toBe(0);
+
+    await page.getByRole('button', { name: /eliberează-mi locul/i }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/locul e eliberat/i);
+    expect(cereri).toBe(1);
   });
 });
 
