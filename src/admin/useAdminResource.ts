@@ -75,13 +75,13 @@ export const useAdminResource = <T>(
   useEffect(() => {
     if (intervalMs === null) return;
     const tick = () => void reincarca();
-    const id = window.setInterval(tick, intervalMs);
+    const timer = window.setInterval(tick, intervalMs);
     const onVisible = () => {
       if (document.visibilityState === 'visible') tick();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      window.clearInterval(id);
+      window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [reincarca, intervalMs]);
