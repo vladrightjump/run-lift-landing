@@ -1,15 +1,22 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
+import { useRouter } from '@tanstack/react-router';
 import type { PublicStats } from '../../lib/supabase';
 import type { useRegistration } from '../../hooks/useRegistration';
 import { useEditionStrings } from '../../hooks/useEventConfig';
 import { RegistrationForm } from './RegistrationForm';
+
+declare module '@tanstack/history' {
+  interface HistoryState {
+    inscriere?: boolean;
+  }
+}
 
 /**
  * Formularul de înscriere ca overlay peste landing — pentru cine e deja pe site
  * și nu vrea să piardă pagina.
  *
  * Detalii care fac diferența:
- *  · URL propriu (`/inscriere`) prin `history.pushState`, deci butonul „back"
+ *  · URL propriu (`/inscriere`) prin masca routerului, deci butonul „back"
  *    închide overlay-ul, iar linkul e același ca cel din Instagram;
  *  · Esc / click pe fundal închid;
  *  · scroll-ul paginii de dedesubt e blocat cât timp overlay-ul e deschis;
@@ -30,18 +37,30 @@ const CLOSE_AFTER_SUCCESS_MS = 3000;
 export const RegistrationOverlay = ({ reg, stats, onClose }: Props) => {
   const { EVENT_META } = useEditionStrings();
   const boxRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const closeFromHistory = useEffectEvent(onClose);
 
-  // URL + istoric: /inscriere cât timp e deschis, back îl închide.
+  // URL + istoric: masca păstrează landing-ul montat, dar arată /inscriere.
+  // La reload se deschide pagina de sine stătătoare, ca la acces direct.
   useEffect(() => {
-    const prev = window.location.pathname + window.location.search;
-    window.history.pushState({ inscriere: true }, '', '/inscriere');
-    const onPop = () => onClose();
+    const prev = router.state.location;
+    const previousHref = window.location.pathname + window.location.search;
+    void router.navigate({
+      to: prev.pathname,
+      search: prev.search,
+      state: { inscriere: true },
+      mask: { to: '/inscriere', unmaskOnReload: true },
+      resetScroll: false,
+    });
+    const onPop = () => closeFromHistory();
     window.addEventListener('popstate', onPop);
     return () => {
       window.removeEventListener('popstate', onPop);
-      if (window.location.pathname === '/inscriere') window.history.replaceState({}, '', prev);
+      if (window.location.pathname === '/inscriere') {
+        router.history.replace(previousHref, prev.state);
+      }
     };
-  }, [onClose]);
+  }, [router]);
 
   // Esc + blocarea scrollului de fundal.
   useEffect(() => {

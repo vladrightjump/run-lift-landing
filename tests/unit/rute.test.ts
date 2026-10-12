@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { ROUTE_PATHS } from '../../src/app/routes';
 
 /**
- * Aplicația nu folosește router: `main.tsx` alege pagina după
- * `window.location.pathname`. Ca Vercel să servească acele rute pe refresh
+ * Routerul declară paginile aplicației. Ca Vercel să servească acele rute pe refresh
  * sau acces direct, fiecare are nevoie de un rewrite către un shell HTML.
  *
  * Testul ăsta există pentru că exact asta s-a rupt în producție: ruta
@@ -19,7 +19,6 @@ import { resolve } from 'node:path';
  */
 
 const root = resolve(__dirname, '../..');
-const mainTsx = readFileSync(resolve(root, 'src/main.tsx'), 'utf8');
 const vercelJson = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8'));
 
 /** Shell-urile HTML din rădăcina repo-ului — intrările de build. */
@@ -28,31 +27,37 @@ const shellsExistente = (): string[] =>
     .filter((f) => f.endsWith('.html'))
     .map((f) => `/${f}`);
 
-/** Extrage rutele comparate în main.tsx: path === '/ceva' */
-const ruteDinCod = (): string[] => {
-  const matches = mainTsx.matchAll(/path\s*===\s*['"](\/[^'"]*)['"]/g);
-  return [...new Set([...matches].map((m) => m[1]))];
+/** Rutele declarate de router; rădăcina nu cere rewrite. */
+const ruteDinCod = (): string[] => ROUTE_PATHS.filter((path) => path !== '/');
+
+type Rewrite = { source: string; destination: string };
+
+const assertRouteTargets = (rewrites: Rewrite[]) => {
+  const shells = shellsExistente();
+  for (const ruta of ruteDinCod()) {
+    const rw = rewrites.find((r: { source: string }) => r.source === ruta);
+    expect(rw, `Ruta ${ruta} nu are rewrite în vercel.json → va da 404 în producție`).toBeDefined();
+    expect(
+      shells,
+      `Rewrite-ul rutei ${ruta} duce spre ${rw?.destination}, care nu există în repo → 404 în producție`
+    ).toContain(rw?.destination);
+  }
 };
 
-const ruteDinVercel = (): string[] =>
-  (vercelJson.rewrites ?? []).map((r: { source: string }) => r.source);
+const assertRewriteSources = (rewrites: Rewrite[]) => {
+  const rute = ruteDinCod();
+  for (const { source } of rewrites) {
+    expect(rute, `Rewrite pentru ${source} dar ruta nu există în router`).toContain(source);
+  }
+};
 
 describe('rutele au rewrite în vercel.json', () => {
-  it('main.tsx declară cel puțin o rută', () => {
+  it('routerul declară cel puțin o rută', () => {
     expect(ruteDinCod().length).toBeGreaterThan(0);
   });
 
-  it('fiecare rută din main.tsx are rewrite către un shell care există', () => {
-    const rewrites = vercelJson.rewrites ?? [];
-    const shells = shellsExistente();
-    for (const ruta of ruteDinCod()) {
-      const rw = rewrites.find((r: { source: string }) => r.source === ruta);
-      expect(rw, `Ruta ${ruta} nu are rewrite în vercel.json → va da 404 în producție`).toBeDefined();
-      expect(
-        shells,
-        `Rewrite-ul rutei ${ruta} duce spre ${rw.destination}, care nu există în repo → 404 în producție`
-      ).toContain(rw.destination);
-    }
+  it('fiecare rută din router are rewrite către un shell care există', () => {
+    assertRouteTargets(vercelJson.rewrites ?? []);
   });
 
   it('/antrenament e rutat spre shell-ul lui, nu spre cel al ediției', () => {
@@ -68,11 +73,16 @@ describe('rutele au rewrite în vercel.json', () => {
     expect(rw?.destination).toBe('/antrenament.html');
   });
 
+  it('detectează și un rewrite lipsă, și unul orfan', () => {
+    const rewrites = vercelJson.rewrites ?? [];
+    expect(() => assertRouteTargets(rewrites.filter((r: Rewrite) => r.source !== '/admin')))
+      .toThrow('Ruta /admin nu are rewrite');
+    expect(() => assertRewriteSources([...rewrites, { source: '/ruta-inexistenta', destination: '/index.html' }]))
+      .toThrow('Rewrite pentru /ruta-inexistenta dar ruta nu există');
+  });
+
   it('nu există rewrite-uri orfane pentru rute inexistente', () => {
-    const rute = ruteDinCod();
-    for (const source of ruteDinVercel()) {
-      expect(rute, `Rewrite pentru ${source} dar ruta nu există în main.tsx`).toContain(source);
-    }
+    assertRewriteSources(vercelJson.rewrites ?? []);
   });
 });
 

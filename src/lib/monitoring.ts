@@ -5,7 +5,7 @@
  *
  * `logClientError` — log structurat, apelat din toate `catch`-urile relevante.
  * `installGlobalMonitoring` — prinde ce scapă: violări CSP, erori globale,
- * promisiuni respinse. Se instalează o singură dată, în `main.tsx`.
+ * promisiuni respinse. Se instalează o singură dată, în `app/main.tsx`.
  */
 import { SNAPSHOT_CONFIG } from '../content/eventConfig';
 

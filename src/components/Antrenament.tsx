@@ -19,7 +19,7 @@ import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
  *
  * Nu primește contextul ediției: nimic de pe ea nu derivă din ediție, iar un
  * provider pus peste tot ar fi însemnat un fetch fără consumator. De asta
- * `main.tsx` o trece pe lângă `EventConfigProvider`.
+ * `app/router.tsx` o trece pe lângă `EventConfigProvider`.
  */
 
 type Stare =

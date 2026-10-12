@@ -10,10 +10,10 @@ import { esteEcran } from './adminNavigatie';
  * `/admin` cu totul — pierdeai tot contextul fiindcă voiai să te întorci un
  * pas. Cu fragment, ecranul se poate și trimite prin link.
  *
- * De ce fragmentul și nu calea: `src/main.tsx` comută pe `pathname` exact, iar
- * `vercel.json` rescrie exact `/admin`. O cale a doua ar fi cerut o intrare în
- * amândouă și un router pe care proiectul nu-l are. Fragmentul nu ajunge nici
- * la server, nici la rutarea din `main.tsx`.
+ * De ce fragmentul și nu calea: routerul din `src/app/router.tsx` deține
+ * numai `/admin`, iar `vercel.json` rescrie exact această cale. O cale a doua
+ * ar fi cerut o intrare în amândouă. Fragmentul rămâne în grija navigării
+ * adminului și nu ajunge la server.
  *
  * Garda de ieșire stă aici, lângă navigare. Se navighează din trei locuri —
  * registrul de ecrane, acțiunile liniei de timp, semnalele de atenție — iar o

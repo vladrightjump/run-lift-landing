@@ -1,4 +1,4 @@
-import { rpc } from './adminApi';
+import { rpc } from '../shared/lib/rpc';
 
 export type PublicTrialConfig = { enabled: boolean; bot_username: string; contact_text: string };
 
