@@ -13,12 +13,15 @@ export const linkCuToken = (cale: string, token: string | null = TOKEN) =>
  * Răspunsul RPC-ului unei pagini din link și câte cereri a primit. `body` e
  * trimis ca JSON; `brut` trimite textul așa cum e (un răspuns stricat).
  */
-export const raspunde = (rpc: string, raspuns: { body?: unknown; status?: number; brut?: string }) => {
-  const cereri = { numar: 0, corpuri: [] as unknown[] };
+export const raspunde = (rpc: string, raspuns: { body?: unknown; status?: number; brut?: string; retea?: boolean; asteapta?: Promise<void> }) => {
+  const cereri = { numar: 0, corpuri: [] as unknown[], semnale: [] as AbortSignal[] };
   server.use(
     rpcHandler(rpc, async ({ request }) => {
       cereri.numar += 1;
+      cereri.semnale.push(request.signal);
       cereri.corpuri.push(await request.json().catch(() => null));
+      if (raspuns.asteapta) await raspuns.asteapta;
+      if (raspuns.retea) return HttpResponse.error();
       return new HttpResponse(raspuns.brut ?? JSON.stringify(raspuns.body ?? null), {
         status: raspuns.status ?? 200,
         headers: { 'Content-Type': 'application/json' },

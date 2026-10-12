@@ -57,7 +57,7 @@ export const RenuntPage = () => {
   // nu depinde de URL după primul cadru.
   const [token] = useState(tokenDinAdresa);
   // O mutație, nu un query: cererea pleacă doar la click, niciodată la încărcare.
-  const renuntare = useMutation({ mutationFn: () => declineSpot(token) });
+  const renuntare = useMutation({ mutationFn: () => declineSpot(token), networkMode: 'always' });
   // Starea mutației se actualizează după click, nu în el; un dublu-click rapid ar
   // fi trimis două cereri. Indicatorul local blochează al doilea click pe loc.
   const [trimis, setTrimis] = useState(false);
@@ -68,13 +68,10 @@ export const RenuntPage = () => {
     renuntare.mutate();
   };
 
-  const rezultat = !esteTokenValid(token)
-    ? REZULTATE.invalid
-    : renuntare.isError
-      ? REZULTATE.eroare
-      : renuntare.data
-        ? REZULTATE[renuntare.data]
-        : null;
+  let rezultat: Rezultat | null = null;
+  if (!esteTokenValid(token)) rezultat = REZULTATE.invalid;
+  else if (renuntare.isError) rezultat = REZULTATE.eroare;
+  else if (renuntare.data) rezultat = REZULTATE[renuntare.data];
   const trimite = trimis && rezultat === null;
 
   return (

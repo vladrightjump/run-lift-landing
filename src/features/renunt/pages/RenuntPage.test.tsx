@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { onlineManager } from '@tanstack/react-query';
 import { linkCuToken, raspunde, TOKEN } from '../../../../tests/support/linkEmail';
 import { RenuntPage } from './RenuntPage';
 
@@ -59,6 +60,24 @@ describe('Renunțarea la loc', () => {
     fireEvent.click(elibereaza());
     expect((await screen.findByText('Nu am putut procesa')).tagName).toBe('H1');
     expect(screen.getByText(/locul tău a rămas neatins/)).toBeTruthy();
+  });
+
+  it('offline arată eroarea imediat și nu păstrează renunțarea pentru reconectare', async () => {
+    const cereri = raspunde('decline_spot', { retea: true });
+    linkCuToken('/renunt');
+    const { unmount, rerender } = render(<RenuntPage />);
+    onlineManager.setOnline(false);
+    try {
+      fireEvent.click(elibereaza());
+      expect((await screen.findByText('Nu am putut procesa')).tagName).toBe('H1');
+      expect(cereri.numar).toBe(1);
+      rerender(<></>);
+      await act(async () => { onlineManager.setOnline(true); });
+      expect(cereri.numar).toBe(1);
+    } finally {
+      await act(async () => { onlineManager.setOnline(true); });
+      unmount();
+    }
   });
 
   it('fără un token valid → link invalid direct, fără buton și fără cerere', () => {

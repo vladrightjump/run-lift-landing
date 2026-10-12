@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { linkCuToken, raspunde, TOKEN } from '../../../../tests/support/linkEmail';
 import { ConfirmarePage } from './ConfirmarePage';
 
@@ -32,6 +32,23 @@ describe('Confirmarea înscrierii', () => {
     linkCuToken('/confirmare');
     render(<ConfirmarePage />);
     expect(screen.getByText('Verificăm linkul…')).toBeTruthy();
+  });
+
+  it('demontarea anulează cererea de confirmare rămasă în zbor', async () => {
+    let termina!: () => void;
+    const asteapta = new Promise<void>(resolve => { termina = resolve; });
+    const cereri = raspunde('confirm_signup', { body: 'confirmat', asteapta });
+    linkCuToken('/confirmare');
+    const { unmount } = render(<ConfirmarePage />);
+    try {
+      await waitFor(() => expect(cereri.semnale).toHaveLength(1));
+      expect(cereri.semnale[0].aborted).toBe(false);
+      unmount();
+      await waitFor(() => expect(cereri.semnale[0].aborted).toBe(true));
+    } finally {
+      unmount();
+      termina();
+    }
   });
 
   it.each([
