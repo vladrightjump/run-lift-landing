@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { AdminLogin } from './AdminLogin';
+import { AdminLogin } from '../features/admin/index';
 import { AdminDashboard } from './AdminDashboard';
 import {
   adminLogout,

@@ -201,3 +201,14 @@ Validarea înscrierii și stările formularelor sunt acoperite lângă proprieta
 pe handler-ele MSW comune. Playwright păstrează înscrierea completă, plicul trimis,
 rutarea, CSS-ul calculat, CSP-ul și metadatele din build; scenariile de validare și
 stare deja acoperite de componente au fost eliminate din parcursurile duplicate.
+
+U10 mută în `features/admin/` cadrul adminului și zonele Acum și Site: `pages/` login-ul,
+`components/` cadrul cu navigarea, linia de timp și învelișul de editare (folosit de mai
+multe zone), `navigatie/` registrul și `useEcranCurent` (care rămâne proprietarul
+fragmentului `#cheie`, cu garda de ieșire), `data/` sesiunea, `useAdminResource`,
+poll-ul și datele grupului și ale probelor, citite și de Acum, și de Antrenamente.
+`zones/acum/` și `zones/site/` țin ecranele lor; Site are `api.ts` cu RPC-urile proprii,
+iar login-ul are `data/api.ts`. `GrupRadio`, folosit de Site și de Evenimente, trece în
+`shared/ui/`. `AdminApp` și `AdminDashboard` rămân în `src/admin/` până la U11: compun
+ecranele încă nemutate, care importă sesiunea din `features/admin`, iar o rută exportată
+din `index.ts` care ar ajunge la ele ar închide un ciclu.

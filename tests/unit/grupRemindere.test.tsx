@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, within } from '@testing-library/react';
 import { GrupRemindere } from '../../src/admin/eventTab/grupuri/GrupRemindere';
-import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
+import { FurnizorSesiuneAdmin } from '../../src/features/admin/data/adminSession';
 import type { LivrareReminder } from '../../src/admin/remindere';
 import {
   SNAPSHOT_CONFIG,

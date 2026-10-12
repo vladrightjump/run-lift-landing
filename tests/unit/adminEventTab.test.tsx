@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
-import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
+import { FurnizorSesiuneAdmin } from '../../src/features/admin/data/adminSession';
 import { AdminEventTab } from '../../src/admin/AdminEventTab';
 import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 import { formatRoDate } from '../../src/shared/content/format';

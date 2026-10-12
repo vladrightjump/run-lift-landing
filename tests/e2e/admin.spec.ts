@@ -54,6 +54,23 @@ const deschideAdminul = async (page: Page, ecran = '', raspunsuri: Record<string
   await page.goto(`/admin${ecran}`);
 };
 
+test.describe('autentificarea', () => {
+  // Refuzul (`admin_login` → null) și eroarea lui sunt în `admin-controale.spec.ts`.
+  test('datele bune deschid Acum', async ({ page }) => {
+    await page.route(RPC, async (ruta) => {
+      const nume = /\/rpc\/([a-z_]+)/.exec(ruta.request().url())?.[1] ?? '';
+      const raspuns = nume === 'admin_login' ? 'token-e2e' : (RASPUNSURI[nume] ?? null);
+      await ruta.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(raspuns) });
+    });
+    await page.goto('/admin');
+    await page.locator('input[name="utilizator"]').fill('vlad');
+    await page.locator('input[name="parola"]').fill('corect');
+    await page.getByRole('button', { name: 'Intră în cont' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Acum', exact: true })).toBeVisible();
+  });
+});
+
 test.describe('navigarea între ecrane', () => {
   test('aterizarea e pe Acum, cu navigarea pe zone', async ({ page }) => {
     await deschideAdminul(page);

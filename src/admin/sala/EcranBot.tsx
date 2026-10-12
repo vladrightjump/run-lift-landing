@@ -24,7 +24,7 @@ import { StareComanda } from './StareComanda';
 import { dataLunga, numeZi, plusZile, urmatorulSondaj } from './sondaj';
 import { zileAnulate } from './model';
 import { stareBot } from './stareBot';
-import { useSala } from './useSala';
+import { useSala } from '../../features/admin/index';
 
 const CLASA_STARE_BOT = {
   normal: 'admin-sala-stare-bot admin-sala-stare-bot--normal',

@@ -13,7 +13,6 @@ vi.mock('../../src/lib/adminApi', () => ({
   clearStoredToken: vi.fn(),
   checkToken: vi.fn(),
   adminLogout: vi.fn(() => Promise.resolve()),
-  adminLogin: vi.fn(),
 }));
 
 afterEach(cleanup);

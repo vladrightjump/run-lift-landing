@@ -16,8 +16,8 @@ import {
 } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
 import { ziLunaOra } from '../shared/lib/formatare';
-import { GrupRadio } from './controale/GrupRadio';
-import { useSesiuneAdmin } from './adminSession';
+import { GrupRadio } from '../shared/ui/GrupRadio';
+import { useSesiuneAdmin } from '../features/admin/index';
 
 type Props = {
   editie: number;

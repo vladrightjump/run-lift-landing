@@ -90,7 +90,7 @@ describe('niciun formular din src/ nu scapă fără capcană', () => {
    * ajunge la ele, deci capcana n-ar prinde nimic.
    */
   const EXCEPTII = new Set([
-    'src/admin/AdminLogin.tsx',
+    'src/features/admin/pages/AdminLogin.tsx',
     'src/admin/sala/EcranPrezente.tsx',
     'src/admin/sala/EcranMembri.tsx',
     'src/admin/sala/EcranBot.tsx',

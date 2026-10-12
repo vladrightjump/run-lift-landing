@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import type { adminApiMock } from './helpers/adminHarness';
 import { cheieDifuzare } from '../../src/admin/sendLock';
-import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
+import { FurnizorSesiuneAdmin } from '../../src/features/admin/data/adminSession';
 
 /**
  * Zăvorul pe difuzările manuale. Înainte, butonul de trimitere n-avea memorie:

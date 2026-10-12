@@ -6,9 +6,7 @@ import {
   saveEmailTemplate,
 } from '../lib/adminApi';
 import type { AdminEmailTemplate, EmailPreview } from '../lib/adminApi';
-import { InvelisEditare } from './continut/InvelisEditare';
-import { useSesiuneAdmin } from './adminSession';
-import { useAdminResource } from './useAdminResource';
+import { InvelisEditare, useSesiuneAdmin, useAdminResource } from '../features/admin/index';
 import {
   REMINDER_TEMPLATE_KEYS,
   type ReminderTemplateKey,

@@ -31,7 +31,18 @@ import type {
 import { AdminEmailTab } from './AdminEmailTab';
 import { AdminLaunchTab } from './AdminLaunchTab';
 import { AdminEventTab } from './AdminEventTab';
-import { AdminComingSoonTab } from './AdminComingSoonTab';
+import {
+  AdminComingSoonTab,
+  AdminClipuriTab,
+  EcranAcum,
+  FurnizorSala,
+  useEcranCurent,
+  useAdminPolling,
+  ECRAN_IMPLICIT,
+  estePeEditie,
+  LiniaDeTimp,
+  FurnizorSesiuneAdmin,
+} from '../features/admin/index';
 import { AdminAntrenamentTab } from './AdminAntrenamentTab';
 import { EcranPrezente } from './sala/EcranPrezente';
 import { EcranMembri } from './sala/EcranMembri';
@@ -39,17 +50,12 @@ import { EcranAnaliza } from './sala/EcranAnaliza';
 import { EcranGhidBot } from './sala/EcranGhidBot';
 import { EcranProbe } from './sala/EcranProbe';
 import { EcranBot } from './sala/EcranBot';
-import { AdminClipuriTab } from './AdminClipuriTab';
-import { EcranAcum } from './EcranAcum';
 import { CadruCuSemnale } from './CadruCuSemnale';
-import { FurnizorSala } from './sala/useSala';
-import { useEcranCurent } from './useEcranCurent';
 import { AdminTemplatesTab } from './AdminTemplatesTab';
 import { AdminEditionTabs } from './AdminEditionTabs';
 import { AdminDeliveryTab } from './AdminDeliveryTab';
 import { emailuriNelivrate, acoperire } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
-import { useAdminPolling } from './useAdminPolling';
 import { isDuplicateError, sendConfirmationEmail } from '../features/inscriere';
 import { EMAIL_RE, PHONE_RE, normalizePhone } from '../shared/lib/validation';
 import { useCountdown } from '../shared/lib/useCountdown';
@@ -62,12 +68,9 @@ import { AdminCifre } from './AdminCifre';
 import { AdminRandAdaugare } from './AdminRandAdaugare';
 import { DialogPrezenta } from './DialogPrezenta';
 import { fazaSite, type EcranAdmin } from './stareCurenta';
-import { ECRAN_IMPLICIT, estePeEditie } from './adminNavigatie';
-import { LiniaDeTimp } from './LiniaDeTimp';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
 import { parseEventConfig } from '../shared/content/eventConfig';
 import { ziSiLuna } from '../shared/lib/formatare';
-import { FurnizorSesiuneAdmin } from './adminSession';
 import { Toast, useToast } from './controale/Toast';
 import { rezumaAcoperire, motivUndoEsuat } from './dashboardRezumate';
 import { Dialog } from '../shared/ui/Dialog';

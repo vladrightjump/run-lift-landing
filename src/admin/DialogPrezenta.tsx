@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { AdminRegistration, Prezenta } from '../lib/adminApi';
-import { GrupRadio } from './controale/GrupRadio';
+import { GrupRadio } from '../shared/ui/GrupRadio';
 import { Dialog } from '../shared/ui/Dialog';
 
 /**

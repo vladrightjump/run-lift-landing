@@ -25,7 +25,7 @@ vi.mock('../../src/lib/adminApi', async (importOriginal) => {
 });
 
 const { AnuntIstoric } = await import('../../src/admin/AnuntIstoric');
-const { FurnizorSesiuneAdmin } = await import('../../src/admin/adminSession');
+const { FurnizorSesiuneAdmin } = await import('../../src/features/admin/data/adminSession');
 const { AnuntError } = await import('../../src/lib/adminApi');
 const { cheieDifuzare } = await import('../../src/admin/sendLock');
 
