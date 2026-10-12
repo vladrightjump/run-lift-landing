@@ -1,5 +1,6 @@
 import { lazyRouteComponent } from '@tanstack/react-router';
 import { App } from '../App';
+import { rutaAntrenament } from '../features/antrenament';
 
 type LandingSearch = { preview?: 'landing' | 'soon' | 'leaderboard' | 'next' };
 
@@ -25,7 +26,7 @@ export const editionPages = [
 
 export const independentPages = [
   { path: '/despre-noi', component: lazyRouteComponent(() => import('../components/DespreNoi'), 'DespreNoi') },
-  { path: '/antrenament', component: lazyRouteComponent(() => import('../components/Antrenament'), 'Antrenament') },
+  rutaAntrenament,
 ] as const;
 
 /** Același registru compune arborele și păzește paritatea cu rewrites explicite. */

@@ -8,7 +8,7 @@ import { momentComplet, ziLunaLunga } from '../lib/formatare';
 import { usePublicTrialStare } from '../hooks/usePublicTrial';
 import { usePublicHomepage } from '../hooks/usePublicHomepage';
 import { TrialTraining } from './TrialTraining';
-import { CardAntrenament } from './CardAntrenament';
+import { CardAntrenament } from '../features/antrenament';
 
 type Props = {
   showToast: (kind: ToastKind, msg: string) => void;

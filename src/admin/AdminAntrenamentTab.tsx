@@ -10,6 +10,7 @@ import {
 } from '../lib/adminApi';
 import { InvelisEditare } from './continut/InvelisEditare';
 import { useSesiuneAdmin } from './adminSession';
+import { CardSaptamana } from '../features/antrenament';
 import { Dialog } from '../shared/ui/Dialog';
 
 /**
@@ -517,7 +518,7 @@ export const AdminAntrenamentTab = () => {
           </div>
         </fieldset>
 
-        {/* Previzualizarea e vie, în editor: textul nesalvat, cu aceleași clase
+        {/* Previzualizarea e vie, în editor: textul nesalvat, în același card
             ca pe `/antrenament`. Pe o săptămână vizibilă e singurul loc în care
             vezi editarea înainte de „Publică", fiindcă n-are o ciornă separată. */}
         {(titlu.trim() !== '' || corp.trim() !== '') && (
@@ -525,13 +526,7 @@ export const AdminAntrenamentTab = () => {
             <span className="admin-previz-eticheta" aria-hidden="true">
               Așa se va vedea pe pagină
             </span>
-            <article className="an-card">
-              <p className="an-eticheta">
-                Săptămâna {numarDeschis}
-              </p>
-              <h3 className="an-titlu">{titlu}</h3>
-              <p className="an-corp">{corp}</p>
-            </article>
+            <CardSaptamana numar={numarDeschis} titlu={titlu} corp={corp} nivelTitlu="h3" />
           </section>
         )}
 

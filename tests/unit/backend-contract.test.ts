@@ -6,10 +6,10 @@ import {
   submitLaunchNotification,
   fetchStats,
   confirmSignup,
-  fetchWeeklyWorkouts,
 } from '../../src/lib/supabase';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fetchWeeklyWorkouts } from '../../src/features/antrenament/data/api';
 import { listWeeklyWorkout, mesajRefuzAntrenament, InvalidTokenError } from '../../src/lib/adminApi';
 import * as sala from '../../src/lib/salaApi';
 import { SUPABASE } from '../../src/lib/config';

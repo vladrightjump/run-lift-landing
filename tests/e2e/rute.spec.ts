@@ -25,7 +25,7 @@ test('toate paginile existente răspund la acces direct pe build', async ({ page
     ['/inscriere?preview=landing', '.e3-page-title'],
     ['/unsubscribe', '.cf-title'],
     ['/renunt', '.cf-title'],
-    ['/antrenament', '.an-titlu'],
+    ['/antrenament', '.cf-title'],
   ];
   for (const [path, selector] of pages) {
     const response = await page.goto(path);

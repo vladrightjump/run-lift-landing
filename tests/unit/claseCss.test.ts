@@ -166,7 +166,53 @@ describe('fiecare `styles.x` există în modulul lui', () => {
   });
 });
 
+/** Toate fișierele `*.module.css` din `src/`. */
+const fisiereModul = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const cale = join(dir, e.name);
+    if (e.isDirectory()) return fisiereModul(cale);
+    return e.name.endsWith('.module.css') ? [cale] : [];
+  });
+
+/**
+ * Animațiile pe care un modul le cere fără să le aibă. CSS Modules redenumește
+ * și numele din `animation`, deci un keyframe global scris simplu (`fade-up`)
+ * ar căuta un nume local inexistent, iar animația ar dispărea fără nicio eroare.
+ * Un keyframe global se cere cu `global(fade-up)` și trebuie să existe în CSS-ul
+ * global.
+ */
+export const animatiiLipsa = (modul: string, global: string): string[] => {
+  const text = faraComentarii(modul);
+  const locale = new Set([...text.matchAll(/@keyframes\s+([\w-]+)/g)].map((m) => m[1]));
+  const globale = new Set([...global.matchAll(/@keyframes\s+([\w-]+)/g)].map((m) => m[1]));
+  return [...text.matchAll(/animation(?:-name)?\s*:\s*(global\(([\w-]+)\)|[\w-]+)/g)].flatMap((m) => {
+    if (m[2]) return globale.has(m[2]) ? [] : [m[1]];
+    const nume = m[1];
+    return nume === 'none' || locale.has(nume) ? [] : [nume];
+  });
+};
+
+describe('animațiile din module există', () => {
+  it('fiecare `animation` dintr-un modul are keyframe-ul lui', () => {
+    const lipsa: Record<string, string[]> = {};
+    for (const fisier of fisiereModul(resolve(root, 'src'))) {
+      const gasite = animatiiLipsa(readFileSync(fisier, 'utf8'), css);
+      if (gasite.length) lipsa[fisier.slice(root.length + 1)] = gasite;
+    }
+    expect(lipsa, 'Scrie `global(nume)` pentru un keyframe global').toEqual({});
+  });
+});
+
 describe('garda însăși', () => {
+  it('prinde un keyframe global cerut fără `global()`', () => {
+    const global = '@keyframes fade-up { from { opacity: 0; } }';
+    expect(animatiiLipsa('.a { animation: fade-up 1s both; }', global)).toEqual(['fade-up']);
+    expect(animatiiLipsa('.a { animation: global(fade-up) 1s; }', global)).toEqual([]);
+    expect(animatiiLipsa('.a { animation: global(nu-exista) 1s; }', global)).toEqual(['global(nu-exista)']);
+    expect(animatiiLipsa('@keyframes in { } .a { animation: in 1s; } .b { animation: none; }', global)).toEqual([]);
+  });
+
+
   it('prinde un `styles.x` care nu există în modul', () => {
     const sursa = "import styles from './Card.module.css';\nexport const C = () => <div className={styles.nuExista} />;";
     expect(claseModulLipsa(sursa, () => '.exista { color: red; }')).toEqual(['nuExista']);

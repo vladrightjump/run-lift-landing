@@ -59,6 +59,17 @@ formular de pe landing rămân la funcționalitățile lor până la valurile U9
 toast-uri au comportamente diferite, iar piesele de formular trec din stil inline în clase
 odată cu stilul formularului, ca prioritatea lor față de `.e3-*` să fie verificată într-un
 singur loc.
+
+U7 mută `/antrenament` în `features/antrenament/`, exemplul de referință pentru restul
+valurilor: `route.tsx` declară ruta cu pagina încărcată la cerere, `pages/` ține pagina,
+`components/` cardul săptămânii și cardul „Până atunci", `styles/` modulele CSS,
+`data/` cererea și query-ul. `index.ts` exportă ruta și cele două carduri; editorul
+adminului și ecranul de așteptare le importă de acolo, iar regula `legacy-via-index` din
+`.dependency-cruiser.cjs` respinge orice import mai adânc, și din codul încă nemutat.
+Stările paginii și ale cardurilor sunt teste de componentă lângă cod, pe handler-ele MSW
+comune; `tests/e2e/antrenament.spec.ts` păstrează doar drumul vizitatorului și ce se vede
+numai cu CSS-ul și shell-urile din build. Un modul care folosește o animație globală o
+numește `global(fade-up)`; altfel CSS Modules redenumește animația și ea dispare tăcut.
 Codul existent rămâne în `src/components/`, `src/admin/`,
 `src/hooks/`, `src/lib/`, `src/content/` și fișierele din rădăcina `src/`. Migrarea se face în
 unitățile planificate, câte o zonă; schimbarea unui fișier vechi nu îl mută automat.
