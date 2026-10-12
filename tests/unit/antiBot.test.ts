@@ -11,13 +11,13 @@ import { renderHook, act } from '@testing-library/react';
 const getTurnstileToken = vi.fn(async () => 'tok-proaspat');
 const isTurnstileError = vi.fn((err: unknown) => (err as Error)?.name === 'TurnstileError');
 
-vi.mock('../../src/lib/turnstile', () => ({
+vi.mock('../../src/shared/lib/turnstile', () => ({
   getTurnstileToken: () => getTurnstileToken(),
   isTurnstileError: (err: unknown) => isTurnstileError(err),
 }));
 
 const { useAntiBot, antiBotErrorMessage, ANTIBOT_MESSAGES, HONEYPOT_NAME } = await import(
-  '../../src/lib/antiBot'
+  '../../src/features/inscriere/lib/antiBot'
 );
 
 beforeEach(() => {

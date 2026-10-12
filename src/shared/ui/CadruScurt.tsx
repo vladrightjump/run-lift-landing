@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../lib/config';
+import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
 import styles from './CadruScurt.module.css';
 
 /**

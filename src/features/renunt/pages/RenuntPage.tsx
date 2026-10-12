@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useEditionStrings, useEventConfig } from '../../../hooks/useEventConfig';
+import { useEditionStrings, useEventConfig } from '../../../shared/lib/useEventConfig';
 import { CadruScurt, TitluScurt } from '../../../shared/ui/CadruScurt';
 import { RezultatLink, type Rezultat } from '../../../shared/ui/RezultatLink';
 import { esteTokenValid, tokenDinAdresa } from '../../../shared/lib/token';

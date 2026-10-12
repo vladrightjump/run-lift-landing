@@ -1,5 +1,5 @@
-import { dayMonth, timeOf, weekdayRo } from '../content/format';
-import type { EventConfig } from '../content/eventConfig';
+import { dayMonth, timeOf, weekdayRo } from '../shared/content/format';
+import type { EventConfig } from '../shared/content/eventConfig';
 
 /**
  * Reperele unei ediții, ca linie de timp — și mutarea lor în bloc.

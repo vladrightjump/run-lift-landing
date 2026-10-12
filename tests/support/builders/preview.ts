@@ -1,4 +1,4 @@
-import { SNAPSHOT_CONFIG } from '../../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../../src/shared/content/eventConfig';
 import type { AdminReelRow } from '../../../src/lib/adminApi';
 
 /** Existing preview dataset; the clock is injectable for repeatable screenshots. */

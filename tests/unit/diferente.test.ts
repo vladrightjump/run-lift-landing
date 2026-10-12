@@ -4,7 +4,7 @@ import {
   esteComparabil,
   type Diferenta,
 } from '../../src/admin/eventTab/diferente';
-import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/shared/content/eventConfig';
 
 /**
  * Ce se schimbă pe site la publicare.

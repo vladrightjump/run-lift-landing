@@ -1,4 +1,4 @@
-import { useEditionStrings } from '../../../hooks/useEventConfig';
+import { useEditionStrings } from '../../../shared/lib/useEventConfig';
 import { CadruScurt } from '../../../shared/ui/CadruScurt';
 import { RezultatLink, type Rezultat } from '../../../shared/ui/RezultatLink';
 import { useLinkDinEmail } from '../../../shared/lib/useLinkDinEmail';

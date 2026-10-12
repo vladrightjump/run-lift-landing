@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 /**
  * Secțiunea „Instagram" de pe landing.

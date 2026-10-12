@@ -8,7 +8,7 @@ import {
   Outlet,
   type RouterHistory,
 } from '@tanstack/react-router';
-import { EventConfigProvider } from '../hooks/useEventConfig';
+import { EventConfigProvider } from '../shared/lib/useEventConfig';
 import { editionPages, independentPages, landingPage } from './routes';
 
 /**

@@ -1,4 +1,4 @@
-import { SUPABASE } from '../../../lib/config';
+import { SUPABASE } from '../../../shared/lib/config';
 import { SubmitHttpError } from '../../../lib/supabase';
 
 /** O săptămână din programul de antrenamente, așa cum o vede pagina publică. */

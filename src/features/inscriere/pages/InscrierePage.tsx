@@ -5,15 +5,15 @@ import {
   useEditionStrings,
   useEditionDates,
   useEventConfigSettled,
-} from '../../../hooks/useEventConfig';
-import { useCountdown } from '../../../hooks/useCountdown';
-import { usePagePhase } from '../../../hooks/usePagePhase';
-import { useStats } from '../../../hooks/useStats';
-import { useNow } from '../../../hooks/useNow';
-import { useRegistration } from '../../../hooks/useRegistration';
-import type { ToastKind } from '../../../hooks/useToast';
+} from '../../../shared/lib/useEventConfig';
+import { useCountdown } from '../../../shared/lib/useCountdown';
+import { usePagePhase } from '../../../shared/lib/usePagePhase';
+import { useStats } from '../hooks/useStats';
+import { useNow } from '../../../shared/lib/useNow';
+import { useRegistration } from '../hooks/useRegistration';
+import type { ToastKind } from '../../../shared/lib/useToast';
 
-import { RegistrationForm } from '../../../components/landing/RegistrationForm';
+import { RegistrationForm } from '../components/RegistrationForm';
 
 /**
  * `/inscriere` — pagina „un singur link": doar formularul, cu strictul necesar de

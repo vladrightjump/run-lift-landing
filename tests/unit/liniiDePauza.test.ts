@@ -24,7 +24,7 @@ const fisiere = (dir: string): string[] =>
   readdirSync(resolve(root, dir), { withFileTypes: true }).flatMap((e) => {
     const cale = join(dir, e.name);
     if (e.isDirectory()) return fisiere(cale);
-    return /\.(tsx?)$/.test(e.name) ? [cale] : [];
+    return /\.(tsx?)$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) ? [cale] : [];
   });
 
 /** Scoate comentariile de bloc, de linie și cele JSX, păstrând restul. */
@@ -38,11 +38,9 @@ const faraComentarii = (sursa: string): string =>
 const PAUZA = /—|\s–\s/;
 
 const SURSE = [
-  ...fisiere('src/components/landing'),
-  ...readdirSync(resolve(root, 'src/components'))
-    .filter((f) => f.endsWith('.tsx'))
-    .map((f) => join('src/components', f)),
-  'src/content/etape.ts',
+  ...['landing', 'inscriere', 'despre-noi', 'reels', 'trial'].flatMap(nume => fisiere(`src/features/${nume}`)),
+  ...fisiere('src/shared/ui'),
+  'src/shared/content/etape.ts',
 ];
 
 describe('liniile de pauză din textele publice scrise în cod', () => {

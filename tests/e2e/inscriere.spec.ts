@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
-import { EDITION } from '../../src/content/edition';
+import { EDITION } from '../../src/shared/content/edition';
 
 /**
  * Formularul de înscriere la eveniment — landing-ul Ediției a treia.

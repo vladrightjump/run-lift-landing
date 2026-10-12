@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import type { EventConfig } from '../../../content/eventConfig';
+import type { EventConfig } from '../../../shared/content/eventConfig';
 import { Grup, Camp, Blocat } from '../primitive';
 import { mutaSectiune, comutaVizibilitatea } from '../../eventConfigForm';
 import { ETICHETE_SECTIUNI } from '../ajutoare';

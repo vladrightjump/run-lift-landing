@@ -1,4 +1,4 @@
-import { EDITION } from '../content/edition';
+import { EDITION } from '../shared/content/edition';
 
 /**
  * Ținerea vizitatorilor pe domeniul de producție.

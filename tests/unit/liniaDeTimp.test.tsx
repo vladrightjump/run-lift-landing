@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { LiniaDeTimp } from '../../src/admin/LiniaDeTimp';
-import { EventConfigProvider } from '../../src/hooks/useEventConfig';
-import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig';
+import { EventConfigProvider } from '../../src/shared/lib/useEventConfig';
+import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/shared/content/eventConfig';
 import type { SemnaleAdmin } from '../../src/admin/stareCurenta';
 
 /**

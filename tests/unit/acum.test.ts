@@ -7,7 +7,7 @@ import {
   ultimulRaspuns,
 } from '../../src/admin/acum';
 import type { SalaDate, SalaMembru } from '../../src/lib/salaApi';
-import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG, type EventConfig } from '../../src/shared/content/eventConfig';
 
 /**
  * Ecranul Acum (U8), partea de calcul: ce stă în fiecare zi a săptămânii, ce

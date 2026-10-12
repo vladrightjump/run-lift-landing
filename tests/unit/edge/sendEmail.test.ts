@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { REMINDER_TEMPLATE_KEYS } from '../../../src/content/eventConfig';
+import { REMINDER_TEMPLATE_KEYS } from '../../../src/shared/content/eventConfig';
 import {
   incarcaFunctieEdge,
   raspunde,

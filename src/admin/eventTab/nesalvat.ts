@@ -1,4 +1,4 @@
-import type { EventConfig } from '../../content/eventConfig';
+import type { EventConfig } from '../../shared/content/eventConfig';
 
 /**
  * Are ciorna de pe ecran diferențe față de ultimul document scris pe server?

@@ -138,7 +138,7 @@ describe('emailAudience', () => {
 
 describe('fillTemplate leagă și variabilele evenimentului', () => {
   it('rezolvă într-un singur pas și persoana, și evenimentul', async () => {
-    const { SNAPSHOT_CONFIG } = await import('../../src/content/eventConfig');
+    const { SNAPSHOT_CONFIG } = await import('../../src/shared/content/eventConfig');
     const out = fillTemplate(
       'Salut, {prenume}! Ne vedem {data_cursei}, ora {ora_start}, la {locul}.',
       rec({ nume: 'Ana Pop', prenume: 'Ana' }),

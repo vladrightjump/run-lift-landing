@@ -1,4 +1,4 @@
-import type { EventConfig } from '../../../content/eventConfig';
+import type { EventConfig } from '../../../shared/content/eventConfig';
 import { Grup, Camp } from '../primitive';
 
 type Props = {

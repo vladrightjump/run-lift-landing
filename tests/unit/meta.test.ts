@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { EDITION } from '../../src/content/edition';
-import { META, META_ANTRENAMENT, META_PER_SHELL } from '../../src/content/meta';
-import { formatRoDate } from '../../src/content/format';
+import { EDITION } from '../../src/shared/content/edition';
+import { META, META_ANTRENAMENT, META_PER_SHELL } from '../../src/shared/content/meta';
+import { formatRoDate } from '../../src/shared/content/format';
 
 /**
  * Meta de share/SEO derivă din EDITION și se injectează în index.html la build

@@ -5,8 +5,8 @@ import { test, expect } from '../support/playwright';
 import { createHandlers, rpcHandler } from '../support/handlers';
 import { workout } from '../support/builders/workouts';
 import { configRow } from '../support/builders/config';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
-import { deriveEditionDates } from '../../src/lib/config';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
+import { deriveEditionDates } from '../../src/shared/lib/config';
 
 const TOKEN = '123e4567-e89b-42d3-a456-426614174000';
 const BEFORE_LAUNCH = deriveEditionDates(SNAPSHOT_CONFIG).LAUNCH_DATE.getTime() - 60_000;

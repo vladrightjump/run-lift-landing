@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { SUPABASE } from '../../src/lib/config';
+import { SUPABASE } from '../../src/shared/lib/config';
 import {
   checkDeployConfig,
   checkTurnstileCsp,

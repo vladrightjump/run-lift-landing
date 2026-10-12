@@ -1,9 +1,9 @@
-import { SUPABASE } from './config';
-import { parseEventConfig, type EventConfig } from '../content/eventConfig';
+import { SUPABASE } from '../shared/lib/config';
+import { parseEventConfig, type EventConfig } from '../shared/content/eventConfig';
 import { logClientError } from './monitoring';
-import { normalizePhone, numeComplet } from './validation';
-import type { FormData } from './validation';
-import { esteIdYouTube } from './youtube';
+import { normalizePhone, numeComplet } from '../shared/lib/validation';
+import type { FormData } from '../shared/lib/validation';
+import { esteIdYouTube } from '../shared/lib/youtube';
 
 export const SUBMIT_TIMEOUT_MS = 15_000;
 

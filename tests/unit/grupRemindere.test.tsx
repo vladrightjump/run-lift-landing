@@ -8,7 +8,7 @@ import {
   REMINDER_GRACE_HOURS,
   type EventConfig,
   type ReminderEntry,
-} from '../../src/content/eventConfig';
+} from '../../src/shared/content/eventConfig';
 
 /**
  * Ce vede organizatorul, nu ce calculează funcția.

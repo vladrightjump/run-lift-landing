@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { HttpResponse } from 'msw';
 import { rpcHandler } from '../support/handlers';
 import { programDe, saptamanaPublica } from '../support/builders/workouts';
-import { META_ANTRENAMENT } from '../../src/content/meta';
+import { META_ANTRENAMENT } from '../../src/shared/content/meta';
 
 /**
  * `/antrenament` și cardul „Până atunci", în browser: drumul vizitatorului și

@@ -1,4 +1,4 @@
-import type { EventConfig } from '../content/eventConfig';
+import type { EventConfig } from '../shared/content/eventConfig';
 
 /**
  * Compararea build-ului deployat cu configul publicat.

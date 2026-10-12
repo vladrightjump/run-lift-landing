@@ -37,8 +37,8 @@ vi.mock('../../src/lib/supabase', async (orig) => ({
 }));
 
 const { AdminDashboard } = await import('../../src/admin/AdminDashboard');
-const { SNAPSHOT_CONFIG } = await import('../../src/content/eventConfig');
-const { EventConfigProvider } = await import('../../src/hooks/useEventConfig');
+const { SNAPSHOT_CONFIG } = await import('../../src/shared/content/eventConfig');
+const { EventConfigProvider } = await import('../../src/shared/lib/useEventConfig');
 
 afterEach(() => {
   cleanup();

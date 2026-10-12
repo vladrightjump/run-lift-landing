@@ -1,18 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { EDITION } from '../../src/content/edition';
+import { EDITION } from '../../src/shared/content/edition';
 import {
   deriveEventStrings,
   TRAINING_WHERE,
   TRAINING_MAP_EMBED_SRC,
   TRAINING_MAP_DIRECTIONS_URL,
   trainingPlace,
-} from '../../src/content/format';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+} from '../../src/shared/content/format';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 const { EVENT_WHERE, EVENT_META, HERO_KICKER, MAP_EMBED_SRC, MAP_DIRECTIONS_URL } =
   deriveEventStrings(SNAPSHOT_CONFIG);
-import { META } from '../../src/content/meta';
-import { buildEventIcs } from '../../src/lib/calendar';
+import { META } from '../../src/shared/content/meta';
+import { buildEventIcs } from '../../src/shared/lib/calendar';
 
 /**
  * Gardă anti-cuplare între cele două locuri ale proiectului.

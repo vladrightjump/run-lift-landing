@@ -1,4 +1,4 @@
-import { FUS } from '../../lib/formatare';
+import { FUS } from '../../shared/lib/formatare';
 import { escHtml as esc } from './mesaj';
 
 /**

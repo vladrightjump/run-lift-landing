@@ -1,4 +1,4 @@
-import { SUPABASE } from '../../lib/config';
+import { SUPABASE } from './config';
 import { SubmitHttpError } from '../../lib/supabase';
 
 /** Sesiune invalidă/expirată — semnal pentru revenirea la login. */

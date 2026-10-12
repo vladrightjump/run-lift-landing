@@ -8,7 +8,7 @@ import {
   type AdminEventConfigRow,
 } from '../lib/adminApi';
 import type { LivrareReminder } from './remindere';
-import { parseEventConfig, type EventConfig } from '../content/eventConfig';
+import { parseEventConfig, type EventConfig } from '../shared/content/eventConfig';
 import {
   validateEventConfig,
   avertismenteEventConfig,
@@ -37,7 +37,7 @@ import {
   mutaReperele,
   reperiiCareSeMuta,
 } from './reperele';
-import { useNow } from '../hooks/useNow';
+import { useNow } from '../shared/lib/useNow';
 
 type Props = {
   /**

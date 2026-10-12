@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { esteNesalvat } from '../../src/admin/eventTab/nesalvat';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 /**
  * Diferențele nesalvate — singura stare din care pleacă toate gărzile tabului

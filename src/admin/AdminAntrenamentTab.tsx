@@ -10,7 +10,7 @@ import {
 } from '../lib/adminApi';
 import { InvelisEditare } from './continut/InvelisEditare';
 import { useSesiuneAdmin } from './adminSession';
-import { CardSaptamana } from '../features/antrenament';
+import { CardSaptamana } from '../features/antrenament/index';
 import { Dialog } from '../shared/ui/Dialog';
 
 /**

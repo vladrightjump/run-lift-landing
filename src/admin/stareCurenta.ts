@@ -1,5 +1,5 @@
-import type { EventConfig } from '../content/eventConfig';
-import type { EditionDates } from '../lib/config';
+import type { EventConfig } from '../shared/content/eventConfig';
+import type { EditionDates } from '../shared/lib/config';
 import { reperele, type Reper } from './reperele';
 
 /**

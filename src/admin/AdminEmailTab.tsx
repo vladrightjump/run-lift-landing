@@ -16,8 +16,8 @@ import { cheieDifuzare, ultimaDifuzare, audienteAmbigue } from './sendLock';
 import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
 import { GrupRadio } from './controale/GrupRadio';
 import type { Audience, Recipient } from './emailAudience';
-import { useEventConfig } from '../hooks/useEventConfig';
-import { ziLunaOra, ziSiLuna } from '../lib/formatare';
+import { useEventConfig } from '../shared/lib/useEventConfig';
+import { ziLunaOra, ziSiLuna } from '../shared/lib/formatare';
 import { useSesiuneAdmin } from './adminSession';
 import { AnuntIstoric } from './AnuntIstoric';
 

@@ -12,7 +12,7 @@ import { resolve } from 'node:path';
 import { fetchWeeklyWorkouts } from '../../src/features/antrenament/data/api';
 import { listWeeklyWorkout, mesajRefuzAntrenament, InvalidTokenError } from '../../src/lib/adminApi';
 import * as sala from '../../src/lib/salaApi';
-import { SUPABASE } from '../../src/lib/config';
+import { SUPABASE } from '../../src/shared/lib/config';
 
 /**
  * Contractul cererilor către Supabase — păzește exact regresiile care au picat

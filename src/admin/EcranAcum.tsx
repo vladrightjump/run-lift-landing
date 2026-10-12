@@ -1,9 +1,9 @@
 import { useTrials } from './sala/useTrials';
 import { trialNeedsAttention } from '../lib/trialApi';
 import { useId } from 'react';
-import type { EventConfig } from '../content/eventConfig';
+import type { EventConfig } from '../shared/content/eventConfig';
 import { trimiteComanda, marcheazaComandaVerificata } from '../lib/salaApi';
-import { useNow } from '../hooks/useNow';
+import { useNow } from '../shared/lib/useNow';
 import {
   cardAntrenament,
   deRezolvat,

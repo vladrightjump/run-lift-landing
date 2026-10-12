@@ -3,8 +3,8 @@
  * Pură și testabilă — `AdminEmailTab` doar o consumă. Vezi `emailAudience.test.ts`.
  */
 import type { AdminRegistration, AdminLaunchSignup, AdminWaitlistEntry } from '../lib/adminApi';
-import { fillEventVars } from '../content/format';
-import type { EventConfig } from '../content/eventConfig';
+import { fillEventVars } from '../shared/content/format';
+import type { EventConfig } from '../shared/content/eventConfig';
 
 /**
  * `istoric` = toți participanții de până acum. Singura audiență a cărei listă NU

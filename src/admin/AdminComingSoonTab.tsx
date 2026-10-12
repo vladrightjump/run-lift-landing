@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listEventConfig, setComingSoon } from '../lib/adminApi';
 import type { AdminEventConfigRow } from '../lib/adminApi';
-import { parseEventConfig, type EventConfig } from '../content/eventConfig';
-import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
-import { useNow } from '../hooks/useNow';
+import { parseEventConfig, type EventConfig } from '../shared/content/eventConfig';
+import { useEventConfig, useEditionDates } from '../shared/lib/useEventConfig';
+import { useNow } from '../shared/lib/useNow';
 import { useSesiuneAdmin } from './adminSession';
 import { fazaSite } from './stareCurenta';
 import { laDatetimeLocal, dinDatetimeLocal, descrieMoment } from './eventConfigFields';

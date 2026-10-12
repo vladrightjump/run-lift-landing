@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { eventVars } from '../../src/content/format';
+import { eventVars } from '../../src/shared/content/format';
 import { eventVarsDinConfig } from '../../supabase/functions/send-email/eventVars';
-import { SNAPSHOT_CONFIG, parseEventConfig } from '../../src/content/eventConfig';
-import type { EventConfig } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG, parseEventConfig } from '../../src/shared/content/eventConfig';
+import type { EventConfig } from '../../src/shared/content/eventConfig';
 
 /**
  * Contractul dintre cele două derivări ale variabilelor de eveniment.

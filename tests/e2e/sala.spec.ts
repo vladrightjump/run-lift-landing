@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Locator, Page, Request } from '@playwright/test';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 /**
  * Grupul din parc în backoffice, în browser: cardul de pe pornire, ecranele și

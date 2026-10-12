@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { TrialTraining } from '../../src/components/TrialTraining';
-import { trialLink } from '../../src/lib/trialPublic';
+import { TrialTraining } from '../../src/features/trial/components/TrialTraining';
+import { trialLink } from '../../src/features/trial/data/api';
 import { EcranProbe } from '../../src/admin/sala/EcranProbe';
 import { TrialSettings } from '../../src/admin/sala/TrialSettings';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';

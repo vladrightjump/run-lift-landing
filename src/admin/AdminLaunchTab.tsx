@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { toCsv } from '../lib/csv';
 import { listLaunchNotifications } from '../lib/adminApi';
-import { useEventConfig } from '../hooks/useEventConfig';
+import { useEventConfig } from '../shared/lib/useEventConfig';
 import { useAdminResource } from './useAdminResource';
-import { ziSiLuna } from '../lib/formatare';
+import { ziSiLuna } from '../shared/lib/formatare';
 
 export const AdminLaunchTab = () => {
   // Din configul publicat, nu din bundle — vezi nota din AdminDashboard.

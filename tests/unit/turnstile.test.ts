@@ -35,7 +35,7 @@ const fakeApi = () => {
 const importCu = async (siteKey: string) => {
   vi.stubEnv('VITE_TURNSTILE_SITE_KEY', siteKey);
   vi.resetModules();
-  return await import('../../src/lib/turnstile');
+  return await import('../../src/shared/lib/turnstile');
 };
 
 beforeEach(() => {

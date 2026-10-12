@@ -3,7 +3,7 @@ import { toCsv } from '../lib/csv';
 import { sendBulkEmail, listEmailTemplates, replayEmail, InvalidTokenError } from '../lib/adminApi';
 import type { AdminEmailLogEntry, AdminRegistration, ReplayRefuz } from '../lib/adminApi';
 import { normalizeParticipant, fillTemplate } from './emailAudience';
-import { useEventConfig } from '../hooks/useEventConfig';
+import { useEventConfig } from '../shared/lib/useEventConfig';
 import {
   motivEsec as motiv,
   ultimaIncercarePerCheie,
@@ -15,7 +15,7 @@ import {
   COMUNICARI_EDITIE,
 } from './deliveryLog';
 import type { StareCelula } from './deliveryLog';
-import { ziLunaOra } from '../lib/formatare';
+import { ziLunaOra } from '../shared/lib/formatare';
 import { GrupRadio } from './controale/GrupRadio';
 import { useSesiuneAdmin } from './adminSession';
 

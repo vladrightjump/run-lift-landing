@@ -1,4 +1,4 @@
-import { SUPABASE } from './config';
+import { SUPABASE } from '../shared/lib/config';
 import { SubmitHttpError } from './supabase';
 import { InvalidTokenError, rpc } from '../shared/lib/rpc';
 

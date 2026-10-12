@@ -1,5 +1,5 @@
-import { useEventConfig, useEditionDates } from '../hooks/useEventConfig';
-import { useNow } from '../hooks/useNow';
+import { useEventConfig, useEditionDates } from '../shared/lib/useEventConfig';
+import { useNow } from '../shared/lib/useNow';
 import {
   fazaSite,
   semnaleDeAtentie,

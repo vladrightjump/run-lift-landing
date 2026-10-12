@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { formatMask, toISO, fromISO } from '../../src/components/landing/BirthDateField';
-import { dataNasteriiError } from '../../src/lib/validation';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { formatMask, toISO, fromISO } from '../../src/features/inscriere/components/BirthDateField';
+import { dataNasteriiError } from '../../src/shared/lib/validation';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 /** Startul ediției — validarea de vârstă îl primește ca argument. */
 const START = SNAPSHOT_CONFIG.start;

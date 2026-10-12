@@ -4,7 +4,7 @@ import {
   campuriVechiInBuild,
   type BuildInfo,
 } from '../../src/admin/buildFingerprint';
-import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 /**
  * Share preview-ul rămâne pe datele build-ului până la următorul deploy, pentru

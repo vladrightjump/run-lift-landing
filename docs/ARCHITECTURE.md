@@ -179,3 +179,5 @@ existente; nu redistribuie încă acoperirea dintre straturi.
   `tests/support/`; mutarea helper-elor vechi aparține unităților de migrare.
 - TypeScript pentru teste și lint-ul includ deja `src/`, `tests/` și `scripts/`; mutarea
   parcursurilor și colocarea testelor nu cer excepții noi.
+
+Pagini publice: `features/landing`, `features/inscriere`, `features/despre-noi`, `features/reels` și `features/trial` dețin compoziția, componentele și testele lor. Contextul ediției, conținutul comun și efectele refolosite sunt în `shared/`; paginile consumă alte funcționalități numai prin `index.ts`.

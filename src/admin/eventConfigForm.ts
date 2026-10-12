@@ -7,7 +7,7 @@ import {
   type ReminderEntry,
   type SectionKey,
   type SectionLayoutEntry,
-} from '../content/eventConfig';
+} from '../shared/content/eventConfig';
 import { candScurt, durataRo, mutaReperele } from './reperele';
 
 /**

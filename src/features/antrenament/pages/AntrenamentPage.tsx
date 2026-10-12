@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../../lib/config';
+import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../../shared/lib/config';
 import type { WeeklyWorkout } from '../data/api';
 import { CardSaptamana } from '../components/CardSaptamana';
 import { CadruScurt, TitluScurt } from '../../../shared/ui/CadruScurt';

@@ -1,4 +1,4 @@
-import type { EventConfig } from '../content/eventConfig';
+import type { EventConfig } from '../shared/content/eventConfig';
 import type { ComandaAcum, SalaComanda, SalaDate } from '../lib/salaApi';
 import { reperele, type Reper } from './reperele';
 import { antrenamentulUrmator, cineVine, zileAnulate } from './sala/model';
