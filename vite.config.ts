@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { msw } from 'msw/vite';
 import { META_PLACEHOLDERS, META_PER_SHELL } from './src/content/meta';
 
 // Injectează meta (title/description/Open Graph) în shell-urile HTML la build ȘI
@@ -25,7 +26,12 @@ const injectEditionMeta = (): Plugin => ({
 });
 
 export default defineConfig({
-  plugins: [react(), injectEditionMeta()],
+  plugins: [
+    react(),
+    injectEditionMeta(),
+    // The worker-only plugin emits a build asset unless it is restricted to dev.
+    { ...msw({ mode: 'worker-only' }), apply: 'serve' },
+  ],
   define: {
     // Ștampilează mediul Vercel în bundle, ca pagina să știe dacă e producție.
     // O folosește `lib/canonicalHost.ts`: doar producția mută vizitatorii de pe

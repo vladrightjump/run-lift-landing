@@ -1,0 +1,310 @@
+import { SNAPSHOT_CONFIG } from '../../../src/content/eventConfig';
+import type { AdminReelRow } from '../../../src/lib/adminApi';
+
+/** Existing preview dataset; the clock is injectable for repeatable screenshots. */
+export function adminPreviewData(now = Date.now()): Record<string, unknown> {
+  const ACUM = now;
+  const cuOreInUrma = (h: number) => new Date(ACUM - h * 3_600_000).toISOString();
+  const cuZileInUrma = (z: number) => new Date(ACUM - z * 86_400_000).toISOString();
+
+  const NUME: [string, string][] = [
+    ['Cernei', 'Andrei'], ['Rusu', 'Maria'], ['Vlah', 'Dumitru'], ['Postică', 'Ana'],
+    ['Groza', 'Igor'], ['Ceban', 'Elena'], ['Munteanu', 'Vasile'], ['Lungu', 'Cristina'],
+    ['Bejan', 'Radu'], ['Ursu', 'Tatiana'], ['Zaharia', 'Mihai'], ['Cojocaru', 'Diana'],
+    ['Grosu', 'Sergiu'], ['Balan', 'Irina'], ['Pînzaru', 'Victor'], ['Sîrbu', 'Olga'],
+    ['Damian', 'Nicolae'], ['Frunze', 'Alina'], ['Melnic', 'Pavel'], ['Ostafi', 'Natalia'],
+  ];
+
+  const inscrieri = NUME.map(([nume, prenume], i) => ({
+    id: `reg-${i}`,
+    created_at: cuOreInUrma(i * 7 + 2),
+    nume,
+    prenume,
+    telefon: `069${String(100000 + i * 4137).slice(0, 6)}`,
+    email: `${prenume.toLowerCase()}.${nume.toLowerCase().replace(/[^a-z]/g, '')}@gmail.com`,
+    echipa: '',
+    editie: 5,
+    dezabonat_la: i === 11 ? cuZileInUrma(2) : null,
+  }));
+
+  const asteptare = NUME.slice(0, 3).map(([nume, prenume], i) => ({
+    id: `wl-${i}`,
+    created_at: cuOreInUrma(i * 5 + 1),
+    nume: `${nume} (listă)`,
+    prenume,
+    telefon: `069${String(700000 + i * 311).slice(0, 6)}`,
+    email: `lista${i}@gmail.com`,
+    editie: 5,
+  }));
+
+  const jurnal = inscrieri.slice(0, 14).map((r, i) => ({
+    id: `log-${i}`,
+    created_at: cuOreInUrma(i * 3 + 1),
+    email: r.email,
+    nume: `${r.prenume} ${r.nume}`,
+    subiect: i % 3 === 0 ? 'Reminder: mâine la 07:00' : 'Confirmare înscriere Run + Lift',
+    text_email: 'Ne vedem la Scările de Granit.',
+    mod: 'admin',
+    audienta: 'participanti',
+    status: i === 4 ? 'esuat' : 'trimis',
+    provider_status: i === 4 ? 422 : 200,
+    eroare: i === 4 ? 'Adresă respinsă de provider' : null,
+    editie: 5,
+  }));
+
+  const evenimente = [
+    { id: 'ev-1', created_at: cuOreInUrma(1), tip: 'inscriere', detaliu: { nume: 'Ana Postică' } },
+    { id: 'ev-2', created_at: cuOreInUrma(4), tip: 'waitlist_promote', detaliu: { nume: 'Radu Bejan' } },
+    { id: 'ev-3', created_at: cuOreInUrma(9), tip: 'config_publish', detaliu: { editie: 5 } },
+    { id: 'ev-4', created_at: cuOreInUrma(26), tip: 'email_bulk', detaliu: { count: 18 } },
+  ];
+
+  const editii = [
+    { editie: 5, participanti: 20, asteptare: 3, lansare: 41, prima: cuZileInUrma(21), ultima: cuOreInUrma(2), este_curenta: true },
+    { editie: 4, participanti: 34, asteptare: 6, lansare: 52, prima: cuZileInUrma(70), ultima: cuZileInUrma(41), este_curenta: false },
+    { editie: 3, participanti: 28, asteptare: 2, lansare: 37, prima: cuZileInUrma(120), ultima: cuZileInUrma(96), este_curenta: false },
+  ];
+
+  const lansare = NUME.slice(0, 9).map(([nume, prenume], i) => ({
+    id: `l-${i}`,
+    created_at: cuOreInUrma(i * 11 + 3),
+    nume,
+    prenume,
+    email: `${prenume.toLowerCase()}@mail.com`,
+    telefon: `069${String(200000 + i * 733).slice(0, 6)}`,
+    editie: 5,
+    sursa: i % 3 === 0 ? 'despre-noi' : 'lansare',
+    confirmat_la: i % 2 === 0 ? cuOreInUrma(i * 11 + 1) : null,
+  }));
+
+  const sabloane = [
+    { cheie: 'confirmare', subiect: 'Te-ai înscris la Run + Lift', text_email: 'Ne vedem pe 22 august.', actualizat_la: cuZileInUrma(9) },
+    { cheie: 'reminder', subiect: 'Mâine alergăm', text_email: 'Check-in de la 06:30.', actualizat_la: cuZileInUrma(9) },
+    { cheie: 'anunt', subiect: 'Ediție nouă Run + Lift', text_email: 'S-au deschis înscrierile.', actualizat_la: cuZileInUrma(30) },
+    { cheie: 'badge', subiect: 'Numărul tău de concurs', text_email: 'Ai numărul 14.', actualizat_la: cuZileInUrma(30) },
+  ];
+
+  const configPublicat = {
+    id: 'cfg-pub',
+    editie: 5,
+    config: SNAPSHOT_CONFIG,
+    status: 'published',
+    created_at: cuZileInUrma(20),
+    published_at: cuZileInUrma(20),
+  };
+
+  /** Banda cu clipuri, cât să se vadă ordinea și un clip ascuns. */
+  const clipuri: AdminReelRow[] = [
+    {
+      id: 'c1',
+      numar: 1,
+      youtube: 'dQw4w9WgXcQ',
+      caption: 'Marți seara, în parc',
+      url: 'https://www.instagram.com/reel/AAAAA11111/',
+      vizibil: true,
+    },
+    {
+      id: 'c2',
+      numar: 2,
+      youtube: '_-Ab0123456',
+      caption: 'Circuit funcțional',
+      url: 'https://www.instagram.com/reel/BBBBB22222/',
+      vizibil: true,
+    },
+    {
+      id: 'c3',
+      numar: 3,
+      youtube: 'ZZZZ9999888',
+      caption: 'Ultimul tur',
+      url: 'https://www.instagram.com/p/CCCCC33333/',
+      vizibil: false,
+    },
+  ];
+
+  /**
+   * Programul săptămânal.
+   *
+   * Trei săptămâni publicate, una dintre ele ascunsă, plus o versiune înlocuită
+   * — ca ecranul să arate și istoricul, nu doar lista curată.
+   */
+  const antrenamente = [
+    {
+      id: 'w1',
+      numar: 1,
+      status: 'published' as const,
+      titlu: 'Bază aerobă',
+      corp: '3 × 8 min alergare ușoară\nPauză 2 min între blocuri',
+      vizibil: true,
+      creat_la: cuZileInUrma(21),
+    },
+    {
+      id: 'w2',
+      numar: 2,
+      status: 'published' as const,
+      titlu: 'Forță și tempo',
+      corp: '5 × 3 min tempo\nGenuflexiuni 4 × 12\nPlank 3 × 45s',
+      vizibil: true,
+      creat_la: cuZileInUrma(14),
+    },
+    {
+      id: 'w2-vechi',
+      numar: 2,
+      status: 'superseded' as const,
+      titlu: 'Forță și tempo',
+      corp: '4 × 3 min tempo\nGenuflexiuni 3 × 12',
+      vizibil: true,
+      creat_la: cuZileInUrma(16),
+    },
+    {
+      id: 'w3',
+      numar: 3,
+      status: 'published' as const,
+      titlu: 'Săptămâna cursei',
+      corp: 'Doar alergare ușoară\nOdihnă cu o zi înainte',
+      vizibil: false,
+      creat_la: cuZileInUrma(3),
+    },
+  ];
+
+  /* ---- Grupul din parc: membri, antrenamente marți și joi, voturi ---- */
+
+  const zi = (z: number) => new Date(ACUM + z * 86_400_000).toISOString().slice(0, 10);
+  const membriGrup = NUME.slice(0, 14).map(([nume, prenume], i) => ({
+    id: `m-${i}`,
+    full_name: `${prenume} ${nume}`,
+    status: i === 12 ? ('paused' as const) : i === 13 ? ('cancelled' as const) : ('active' as const),
+    is_admin: i === 0,
+    telegram_user_id: i === 11 ? null : 5_000_000 + i,
+    telegram_username: i % 3 === 0 ? `${prenume.toLowerCase()}_${i}` : null,
+    bot_dm_enabled: i < 3,
+    join_date: cuZileInUrma(120 - i).slice(0, 10),
+  }));
+  // Antrenamentul de mâine (sondajul a plecat) și opt trecute, câte două pe săptămână.
+  const antrenamenteGrup = [1, -2, -5, -9, -12, -16, -19, -23, -26].map((z, i) => ({
+    id: `s-${i}`,
+    session_date: zi(z),
+    starts_at: '06:30',
+    location: 'Parcul Dumitru Râșcanu',
+    status: z < 0 ? ('done' as const) : ('scheduled' as const),
+    poll_sent: true,
+  }));
+  const raspunsuriGrup = antrenamenteGrup.flatMap((a, i) =>
+    membriGrup
+      .filter((m, j) => m.telegram_user_id !== null && (i + j) % 4 !== 0)
+      .map((m, j) => ({
+        session_id: a.id,
+        member_id: m.id,
+        response: (i + j) % 5 === 0 ? ('no' as const) : ('yes' as const),
+        is_first_training: false,
+        responded_at: cuOreInUrma(24 * (i * 3 + 1) + j),
+      }))
+  );
+  const configGrup = {
+    enabled: true,
+    poll_days: [1, 3],
+    poll_time: '12:00',
+    summary_days: [2, 4],
+    summary_time: '06:00',
+    training_time: '06:30',
+    location: 'Parcul Dumitru Râșcanu',
+    auto_reminder_enabled: true,
+    reminder_threshold: 6,
+    poll_title: null,
+    poll_yes_label: null,
+    poll_no_label: null,
+  };
+  const sala = {
+    azi: zi(0),
+    config: configGrup,
+    membri: membriGrup,
+    antrenamente: antrenamenteGrup,
+    raspunsuri: raspunsuriGrup,
+    necunoscuti: [
+      { telegram_user_id: 909_001, username: 'alergator_nou', first_name: 'Dan', last_name: null, created_at: cuOreInUrma(30) },
+    ],
+    comenzi: [
+      { id: 'c1', action: 'kick_member', member_id: 'm-13', status: 'done', result: 'kicked', created_at: cuZileInUrma(4), processed_at: cuZileInUrma(4) },
+      { id: 'c2', action: 'send_poll', member_id: null, status: 'done', result: null, created_at: cuZileInUrma(2), processed_at: cuZileInUrma(2) },
+      { id: 'c3', action: 'send_message', member_id: null, status: 'failed', result: 'Bad Request: can\'t parse entities', created_at: cuZileInUrma(1), processed_at: cuZileInUrma(1) },
+      { id: 'c4', action: 'move_session', member_id: null, status: 'done', result: 'ok', created_at: cuOreInUrma(5), processed_at: cuOreInUrma(5), sursa: 'telegram', organizator: 'Vlad', data: zi(1) },
+      { id: 'c5', action: 'cancel_session', member_id: null, status: 'done', result: 'anunțat', created_at: cuOreInUrma(2), processed_at: cuOreInUrma(2), sursa: 'admin', organizator: 'roma', data: zi(8) },
+    ].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    scoateri: [
+      { id: 'c1', action: 'kick_member', member_id: 'm-13', status: 'done', result: 'kicked', created_at: cuZileInUrma(4), processed_at: cuZileInUrma(4) },
+    ],
+  };
+  const urmatorulGrup = antrenamenteGrup[0];
+  const rezumatSala = {
+    azi: sala.azi,
+    pornit: true,
+    poll_days: configGrup.poll_days,
+    poll_time: configGrup.poll_time,
+    urmatorul: {
+      session_date: urmatorulGrup.session_date,
+      starts_at: urmatorulGrup.starts_at,
+      location: urmatorulGrup.location,
+      status: urmatorulGrup.status,
+      poll_sent: urmatorulGrup.poll_sent,
+      vin: raspunsuriGrup.filter((r) => r.session_id === urmatorulGrup.id && r.response === 'yes').length,
+      nu_vin: raspunsuriGrup.filter((r) => r.session_id === urmatorulGrup.id && r.response === 'no').length,
+    },
+  };
+
+  return {
+    admin_check_token: true,
+    admin_list_registrations: inscrieri,
+    admin_list_waitlist: asteptare,
+    admin_list_email_log: jurnal,
+    admin_list_events: evenimente,
+    admin_list_editions: editii,
+    admin_list_launch_notifications: lansare,
+    admin_list_email_templates: sabloane,
+    admin_get_event_config: [configPublicat],
+    admin_list_training_reels: clipuri,
+    admin_list_weekly_workout: antrenamente,
+    admin_sala_date: sala,
+    admin_sala_rezumat: rezumatSala,
+    admin_login: 'token-preview',
+    admin_logout: null,
+    // The old preview returned null for existing RPCs without seeded data.
+    admin_add_registration: null,
+    admin_create_edition: null,
+    admin_delete_registration: null,
+    admin_delete_training_reel: null,
+    admin_delete_waitlist: null,
+    admin_delete_weekly_workout: null,
+    admin_move_training_reel: null,
+    admin_move_weekly_workout: null,
+    admin_promote_waitlist: null,
+    admin_publish_event_config: null,
+    admin_restore_event_config: null,
+    admin_restore_weekly_workout: null,
+    admin_sala_comanda: null,
+    admin_sala_leaga_cont: null,
+    admin_sala_marcheaza_verificat: null,
+    admin_sala_membru_din_cont: null,
+    admin_sala_porneste_bot: null,
+    admin_sala_salveaza_config: null,
+    admin_sala_salveaza_membru: null,
+    admin_sala_scoate_din_grup: null,
+    admin_sala_set_prezenta: null,
+    admin_sala_seteaza_antrenament: null,
+    admin_sala_uneste: null,
+    admin_sala_verifica_membri: null,
+    admin_save_email_template: null,
+    admin_save_event_config_draft: null,
+    admin_save_training_reel: null,
+    admin_save_weekly_workout: null,
+    admin_set_coming_soon: null,
+    admin_set_homepage_order: null,
+    admin_set_prezenta: null,
+    admin_trial_attendance: null,
+    admin_trial_config: null,
+    admin_trial_data: null,
+    admin_trial_reply: null,
+    admin_trial_retry: null,
+    admin_undelete_registration: null,
+    admin_undelete_waitlist: null,
+    admin_update_registration: null,
+  };
+}

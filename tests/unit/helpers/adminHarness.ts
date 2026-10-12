@@ -20,43 +20,8 @@ import type {
   AdminEventConfigRow,
 } from '../../../src/lib/adminApi';
 
-export const participant = (
-  over: Partial<AdminRegistration> & Pick<AdminRegistration, 'id' | 'nume' | 'email'>
-): AdminRegistration => ({
-  created_at: '2026-08-20T10:00:00Z',
-  telefon: '069000000',
-  echipa: '',
-  editie: 5,
-  dezabonat_la: null,
-  ...over,
-});
-
-export const logEntry = (
-  over: Partial<AdminEmailLogEntry> & Pick<AdminEmailLogEntry, 'id' | 'email' | 'subiect'>
-): AdminEmailLogEntry => ({
-  created_at: '2026-08-20T12:00:00Z',
-  nume: '',
-  text_email: '',
-  mod: 'admin',
-  audienta: 'participanti',
-  sablon: null,
-  status: 'trimis',
-  provider_status: 200,
-  eroare: null,
-  editie: 5,
-  ...over,
-});
-
-const editie = (over: Partial<AdminEdition> = {}): AdminEdition => ({
-  editie: 5,
-  participanti: 2,
-  asteptare: 0,
-  lansare: 0,
-  prima: '2026-08-01T10:00:00Z',
-  ultima: '2026-08-20T10:00:00Z',
-  este_curenta: true,
-  ...over,
-});
+export { participant, logEntry } from '../../support/builders/registrations';
+import { editie } from '../../support/builders/edition';
 
 export type AdminApiSeed = {
   registrations?: AdminRegistration[];

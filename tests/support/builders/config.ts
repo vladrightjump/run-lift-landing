@@ -1,0 +1,9 @@
+import { SNAPSHOT_CONFIG, type EventConfig } from '../../../src/content/eventConfig';
+import type { AdminEventConfigRow } from '../../../src/lib/adminApi';
+
+const eventConfig = (): EventConfig => structuredClone(SNAPSHOT_CONFIG);
+
+export const configRow = (over: Partial<AdminEventConfigRow> = {}): AdminEventConfigRow => ({
+  id: 'cfg-pub', editie: 5, config: eventConfig(), status: 'published',
+  created_at: '2026-08-01T10:00:00Z', published_at: '2026-08-01T10:00:00Z', ...over,
+});

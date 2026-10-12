@@ -9,6 +9,7 @@ export default defineConfig({
   test: {
     globals: false,
     restoreMocks: true,
+    setupFiles: ['./tests/support/vitest.setup.ts'],
     // Două proiecte, după extensie. jsdom costă: se construiește pentru fiecare
     // fișier și mânca jumătate din timpul suitei, deși majoritatea testelor `.ts`
     // sunt logică pură. Deci:
