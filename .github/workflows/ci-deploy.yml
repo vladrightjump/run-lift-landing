@@ -38,9 +38,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Linter + cod mort
+      - name: Linter + arhitectură + cod mort
         run: |
           npm run lint
+          npm run lint:arch
           npm run deadcode
       - name: Typecheck (app + teste)
         run: |

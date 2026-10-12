@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -6,6 +7,9 @@ import { defineConfig } from 'vitest/config';
  * Testele e2e rulează separat, cu Playwright: `npm run test:e2e`.
  */
 export default defineConfig({
+  resolve: {
+    alias: { '@': resolve(__dirname, 'src') },
+  },
   test: {
     globals: false,
     restoreMocks: true,
