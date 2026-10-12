@@ -1,0 +1,15 @@
+  /* Un cimp: eticheta legata, ajutor vizibil, problema in cuvinte.
+     Formularul de clipuri cerea un link de Instagram obligatoriu sub eticheta
+     „Linkul postarii", iar DE CE aflai abia cind validarea refuza salvarea. */
+  .admin-camp { display: grid; gap: 6px; }
+  .admin-camp-eticheta {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 11px; font-weight: 700; color: var(--pa-muted-2);
+  }
+  .admin-camp-obligatoriu {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: none; color: var(--pa-text-2);
+    border: 1px solid var(--pa-line); padding: 1px 6px;
+  }
+  .admin-camp-ajutor { font-size: 12px; line-height: 1.45; color: var(--pa-muted-2); }
+  .admin-camp-problema { font-size: 12px; line-height: 1.45; color: var(--pa-danger); }

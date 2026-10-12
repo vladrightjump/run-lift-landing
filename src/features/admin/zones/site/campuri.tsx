@@ -1,3 +1,4 @@
+import styles from './campuri.module.css';
 import { useId, cloneElement, type ReactElement, type ReactNode } from 'react';
 
 type Props = {
@@ -34,10 +35,10 @@ export const CampEditare = ({ eticheta, ajutor, obligatoriu, problema, children 
     .join(' ');
 
   return (
-    <div className="admin-camp">
-      <label className="admin-camp-eticheta" htmlFor={id}>
+    <div className={styles['admin-camp']} data-css={"admin-camp"}>
+      <label className={styles['admin-camp-eticheta']} data-css={"admin-camp-eticheta"} htmlFor={id}>
         {eticheta}
-        {obligatoriu && <span className="admin-camp-obligatoriu">obligatoriu</span>}
+        {obligatoriu && <span className={styles['admin-camp-obligatoriu']} data-css={"admin-camp-obligatoriu"}>obligatoriu</span>}
       </label>
 
       {cloneElement(children, {
@@ -47,13 +48,13 @@ export const CampEditare = ({ eticheta, ajutor, obligatoriu, problema, children 
       })}
 
       {ajutor && (
-        <small id={idAjutor} className="admin-camp-ajutor">
+        <small id={idAjutor} className={styles['admin-camp-ajutor']} data-css={"admin-camp-ajutor"}>
           {ajutor}
         </small>
       )}
 
       {problema && (
-        <small id={idProblema} className="admin-camp-problema" role="alert">
+        <small id={idProblema} className={styles['admin-camp-problema']} data-css={"admin-camp-problema"} role="alert">
           {problema}
         </small>
       )}

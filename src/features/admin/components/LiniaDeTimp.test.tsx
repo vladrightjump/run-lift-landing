@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
 import { LiniaDeTimp } from './LiniaDeTimp';
 import { EventConfigProvider } from '../../../shared/lib/useEventConfig';
 import { SNAPSHOT_CONFIG, type EventConfig } from '../../../shared/content/eventConfig';
@@ -67,7 +67,12 @@ const randeaza = (o: { config?: EventConfig; semnale?: SemnaleAdmin; arhiva?: bo
     </EventConfigProvider>
   );
 
-const noduri = (): HTMLElement[] => Array.from(document.querySelectorAll('.admin-linie-nod'));
+const noduri = (): HTMLElement[] =>
+  within(screen.getByRole('region', { name: 'Desfășurarea ediției' })).queryAllByRole('listitem');
+/** Numele și semnalul nodului n-au rol propriu; `data-css` ține numele claselor. */
+const numele = (n: HTMLElement) => n.querySelector('[data-css~="admin-linie-nume"]')?.textContent;
+/** Starea e scrisă în cuvinte, deci se găsește după text. */
+const starea = (n: HTMLElement) => within(n).queryByText(/^(a trecut|urmează|mai târziu)$/)?.textContent;
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
@@ -75,7 +80,7 @@ afterEach(cleanup);
 describe('nodurile', () => {
   it('apar în ordine cronologică, nu în ordinea câmpurilor', () => {
     randeaza();
-    const etichete = noduri().map((n) => n.querySelector('.admin-linie-nume')?.textContent);
+    const etichete = noduri().map(numele);
     expect(etichete).toContain('Startul cursei');
     expect(etichete.indexOf('Se închid înscrierile')).toBeLessThan(
       etichete.indexOf('Startul cursei')
@@ -84,7 +89,7 @@ describe('nodurile', () => {
 
   it('include reperele pe care formularul nu le arată — „cine vine" și reminderele', () => {
     const etichete = () =>
-      noduri().map((n) => n.querySelector('.admin-linie-nume')?.textContent ?? '');
+      noduri().map((n) => numele(n) ?? '');
     randeaza({
       config: {
         ...EDITIE,
@@ -99,7 +104,7 @@ describe('nodurile', () => {
     // R11: „spune starea în cuvinte". Un punct colorat satisface cerința doar
     // pentru cine vede culoarea.
     randeaza();
-    const stari = noduri().map((n) => n.querySelector('.admin-linie-stare')?.textContent);
+    const stari = noduri().map(starea);
     expect(stari.every((s) => typeof s === 'string' && s.length > 0)).toBe(true);
     expect(stari).toContain('a trecut');
   });
@@ -107,7 +112,7 @@ describe('nodurile', () => {
   it('exact un nod e marcat drept următorul', () => {
     randeaza();
     const urmeaza = noduri()
-      .map((n) => n.querySelector('.admin-linie-stare')?.textContent)
+      .map(starea)
       .filter((s) => s === 'urmează');
     expect(urmeaza).toHaveLength(1);
   });
@@ -116,7 +121,7 @@ describe('nodurile', () => {
     randeaza({
       config: { ...EDITIE, checkinFrom: '09:00' },
     });
-    const cuSemnal = noduri().filter((n) => n.querySelector('.admin-linie-semnal'));
+    const cuSemnal = noduri().filter((n) => n.querySelector('[data-css~="admin-linie-semnal"]'));
     expect(cuSemnal.length).toBeGreaterThan(0);
   });
 });

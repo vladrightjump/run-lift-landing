@@ -1,3 +1,4 @@
+import styles from './GrupRadio.module.css';
 import { useId } from 'react';
 
 type Optiune<T extends string> = {
@@ -35,13 +36,13 @@ export const GrupRadio = <T extends string>({
   const nume = useId();
 
   return (
-    <fieldset className="admin-control admin-radio" disabled={dezactivat}>
+    <fieldset className={'admin-control ' + styles['admin-radio']} data-css={"admin-control admin-radio"} disabled={dezactivat}>
       <legend className="admin-control-eticheta">{eticheta}</legend>
 
       {optiuni.map((o) => {
         const id = `${nume}-${o.valoare}`;
         return (
-          <label key={o.valoare} className="admin-radio-optiune" htmlFor={id}>
+          <label key={o.valoare} className={styles['admin-radio-optiune']} data-css={"admin-radio-optiune"} htmlFor={id}>
             <input
               id={id}
               type="radio"
@@ -51,9 +52,9 @@ export const GrupRadio = <T extends string>({
               disabled={dezactivat}
               onChange={() => onSchimba(o.valoare)}
             />
-            <span className="admin-radio-text">
-              <span className="admin-radio-nume">{o.eticheta}</span>
-              {o.descriere && <span className="admin-radio-descriere">{o.descriere}</span>}
+            <span className={styles['admin-radio-text']} data-css={"admin-radio-text"}>
+              <span className={styles['admin-radio-nume']} data-css={"admin-radio-nume"}>{o.eticheta}</span>
+              {o.descriere && <span className={styles['admin-radio-descriere']} data-css={"admin-radio-descriere"}>{o.descriere}</span>}
             </span>
           </label>
         );

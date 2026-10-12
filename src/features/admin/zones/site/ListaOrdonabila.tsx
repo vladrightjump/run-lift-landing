@@ -1,3 +1,4 @@
+import styles from './ListaOrdonabila.module.css';
 import { useId, type ReactNode } from 'react';
 
 type Element = {
@@ -37,18 +38,18 @@ export const ListaOrdonabila = ({ eticheta, elemente, onMuta, dezactivat }: Prop
   const reordonabil = elemente.length > 1;
 
   return (
-    <ol className="admin-ordonabila" aria-label={eticheta}>
+    <ol className={styles['admin-ordonabila']} data-css={"admin-ordonabila"} aria-label={eticheta}>
       {elemente.map((e, i) => (
-        <li key={e.id} className="admin-ordonabila-rand">
-          <span className="admin-ordonabila-nr" aria-hidden="true">
+        <li key={e.id} className={styles['admin-ordonabila-rand']} data-css={"admin-ordonabila-rand"}>
+          <span className={styles['admin-ordonabila-nr']} data-css={"admin-ordonabila-nr"} aria-hidden="true">
             {String(i + 1).padStart(2, '0')}
           </span>
 
-          <div className="admin-ordonabila-continut">{e.continut}</div>
+          <div className={styles['admin-ordonabila-continut']} data-css={"admin-ordonabila-continut"}>{e.continut}</div>
 
           {reordonabil && (
-            <div className="admin-ordonabila-pozitie">
-              <label className="admin-ordonabila-eticheta" htmlFor={`${id}-${e.id}`}>
+            <div className={styles['admin-ordonabila-pozitie']} data-css={"admin-ordonabila-pozitie"}>
+              <label className={styles['admin-ordonabila-eticheta']} data-css={"admin-ordonabila-eticheta"} htmlFor={`${id}-${e.id}`}>
                 Poziția pentru „{e.nume}”
               </label>
               <select

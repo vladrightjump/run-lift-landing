@@ -1,3 +1,4 @@
+import styles from './InelOcupare.module.css';
 /**
  * Locurile ocupate, ca inel (R8, R18): se citește dintr-o privire, iar umplerea
  * se mișcă atunci când se schimbă numărul de înscriși.
@@ -17,16 +18,16 @@ export const InelOcupare = ({
   const centru = marime / 2;
   return (
     <svg
-      className="admin-inel"
+      className={styles['admin-inel']} data-css={"admin-inel"}
       width={marime}
       height={marime}
       viewBox={`0 0 ${marime} ${marime}`}
       role="img"
       aria-label={`${ocupate} din ${total} locuri ocupate`}
     >
-      <circle className="admin-inel-fond" cx={centru} cy={centru} r={raza} strokeWidth={7} />
+      <circle className={styles['admin-inel-fond']} data-css={"admin-inel-fond"} cx={centru} cy={centru} r={raza} strokeWidth={7} />
       <circle
-        className="admin-inel-plin"
+        className={styles['admin-inel-plin']} data-css={"admin-inel-plin"}
         cx={centru}
         cy={centru}
         r={raza}
@@ -36,7 +37,7 @@ export const InelOcupare = ({
         transform={`rotate(-90 ${centru} ${centru})`}
       />
       {marime >= 56 && (
-        <text className="admin-inel-text" x="50%" y="50%" textAnchor="middle" dominantBaseline="central">
+        <text className={styles['admin-inel-text']} data-css={"admin-inel-text"} x="50%" y="50%" textAnchor="middle" dominantBaseline="central">
           {ocupate}
         </text>
       )}

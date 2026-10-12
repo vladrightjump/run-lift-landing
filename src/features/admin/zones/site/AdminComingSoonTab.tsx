@@ -1,3 +1,5 @@
+import shared1 from '../../components/AdminStyles.module.css';
+import styles from './AdminComingSoonTab.module.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listEventConfig } from '../../../../lib/adminApi';
 import { setComingSoon } from './api';
@@ -188,7 +190,7 @@ export const AdminComingSoonTab = () => {
       )}
 
       <div className="admin-table-head">
-        <div className="admin-invelis-titlu">
+        <div className={shared1['admin-invelis-titlu']} data-css={"admin-invelis-titlu"}>
           <h2>Coming Soon</h2>
           {/* Excepția se SCRIE, nu se deduce din lipsa unui buton „Publică".
               Celelalte ecrane de conținut au ciornă și publicare; ăsta e o
@@ -258,7 +260,7 @@ export const AdminComingSoonTab = () => {
             <span className="admin-config-ecou">
               {descrieMoment(launchAt, publicat.tz, acum) || 'Alege un moment.'}
             </span>
-            <div className="admin-cs-presetari">
+            <div className={styles['admin-cs-presetari']} data-css={"admin-cs-presetari"}>
               {PRESETARI.map((p) => (
                 <button
                   key={p.eticheta}

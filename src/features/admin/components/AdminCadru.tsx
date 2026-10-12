@@ -1,3 +1,5 @@
+import shared1 from './AdminStyles.module.css';
+import styles from './AdminCadru.module.css';
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { EcranAdmin, FazaSite } from '../../../admin/stareCurenta';
 import { ETICHETA_FAZA } from '../../../admin/stareCurenta';
@@ -26,6 +28,13 @@ export type PropsCadru = {
   selectorEditie?: ReactNode;
   onLogout: () => void;
   children: ReactNode;
+};
+
+/** Fazele cu culoare proprie pe chip; „după cursă" rămâne pe culoarea de bază. */
+const CLASA_FAZA: Partial<Record<FazaSite, string>> = {
+  landing: styles['faza-landing'],
+  'cine-vine': styles['faza-cine-vine'],
+  'coming-soon': styles['faza-coming-soon'],
 };
 
 const ICON_ZONA: Record<ZonaAdmin, NumeIcon> = {
@@ -84,70 +93,74 @@ export const AdminCadru = ({
           ai deschis ecranul. Buton, nu ancoră: fragmentul ține ecranul curent. */}
       <button
         type="button"
-        className="admin-sari"
+        className={styles['admin-sari']} data-css={"admin-sari"}
         onClick={() => document.getElementById('ecran')?.focus()}
       >
         Sari la ecran
       </button>
 
-      <div className={`admin-cadru${telefon ? ' admin-cadru--telefon' : ''}`}>
-        <header className="admin-antet">
-          <span className="admin-logo">
-            Run <span className="accent">+</span> Lift
+      <div
+        className={styles['admin-cadru'] + (telefon ? ' ' + styles['admin-cadru--telefon'] : '')}
+        data-css={`admin-cadru${telefon ? ' admin-cadru--telefon' : ''}`}
+      >
+        <header className={styles['admin-antet']} data-css={"admin-antet"}>
+          <span className={shared1['admin-logo']} data-css={"admin-logo"}>
+            Run <span className={shared1['accent']} data-css={"accent"}>+</span> Lift
           </span>
-          <div className="admin-antet-dreapta">
+          <div className={styles['admin-antet-dreapta']} data-css={"admin-antet-dreapta"}>
             {/* Ce vede un vizitator ACUM. Pe telefon nu încape lângă cont fără
                 să rupă antetul pe două rânduri. */}
             {!telefon && (
               <a
-                className={`admin-faza faza-${faza}`}
+                className={styles['admin-faza'] + (CLASA_FAZA[faza] ? ' ' + CLASA_FAZA[faza] : '')}
+                data-css={`admin-faza faza-${faza}`}
                 href="/"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Deschide site-ul public într-un tab nou"
               >
-                <span className="admin-faza-punct" aria-hidden="true" />
-                <span className="admin-faza-eticheta">Pe site</span>
-                <span className="admin-faza-valoare">{ETICHETA_FAZA[faza]}</span>
+                <span className={styles['admin-faza-punct']} data-css={"admin-faza-punct"} aria-hidden="true" />
+                <span className={styles['admin-faza-eticheta']} data-css={"admin-faza-eticheta"}>Pe site</span>
+                <span className={styles['admin-faza-valoare']} data-css={"admin-faza-valoare"}>{ETICHETA_FAZA[faza]}</span>
               </a>
             )}
-            <button type="button" className="admin-logout" onClick={onLogout}>
+            <button type="button" className={styles['admin-logout']} data-css={"admin-logout"} onClick={onLogout}>
               Ieși din cont
             </button>
           </div>
         </header>
 
         {!telefon && (
-          <nav className="admin-sina" aria-label="Zone și ecrane">
+          <nav className={styles['admin-sina']} data-css={"admin-sina"} aria-label="Zone și ecrane">
             {ZONE.map((z) => {
               const activa = z.cheie === zonaActiva;
               const faraFile = z.file.length === 1 && z.file[0].ecrane.length === 1;
               return (
-                <div key={z.cheie} className="admin-sina-zona">
+                <div key={z.cheie} className={styles['admin-sina-zona']} data-css={"admin-sina-zona"}>
                   <button
                     type="button"
-                    className="admin-sina-zona-buton"
+                    className={styles['admin-sina-zona-buton']} data-css={"admin-sina-zona-buton"}
                     aria-current={activa && faraFile ? 'page' : undefined}
                     onClick={() => mergiLaZona(z)}
                   >
                     <Icon nume={ICON_ZONA[z.cheie]} marime={18} />
                     {z.eticheta}
-                    {numar(z) !== null && <span className="admin-numar">{numar(z)}</span>}
+                    {numar(z) !== null && <span className={shared1['admin-numar']} data-css={"admin-numar"}>{numar(z)}</span>}
                   </button>
                   {!faraFile && (
-                    <ul className="admin-sina-file">
+                    <ul className={styles['admin-sina-file']} data-css={"admin-sina-file"}>
                       {z.file.map((f) => {
                         const n = contorFila(f, contorEcran);
                         return (
                           <li key={f.cheie}>
                             <button
                               type="button"
-                              className="admin-sina-fila"
+                              className={styles['admin-sina-fila']} data-css={"admin-sina-fila"}
                               aria-current={f === fila ? 'page' : undefined}
                               onClick={() => onEcran(f.ecrane[0].cheie)}
                             >
                               {f.eticheta}
-                              {n !== null && <span className="admin-sina-contor">{n}</span>}
+                              {n !== null && <span className={styles['admin-sina-contor']} data-css={"admin-sina-contor"}>{n}</span>}
                             </button>
                           </li>
                         );
@@ -157,20 +170,20 @@ export const AdminCadru = ({
                 </div>
               );
             })}
-            <p className="admin-sina-nota">
+            <p className={styles['admin-sina-nota']} data-css={"admin-sina-nota"}>
               Ediția aleasă contează doar în Evenimente. Antrenamentele și site-ul nu depind de ea.
             </p>
           </nav>
         )}
 
-        <main className="admin-main" id="ecran" tabIndex={-1}>
-          <header className="admin-zona-cap">
-            <h1 className="admin-zona-titlu">{zona.eticheta}</h1>
+        <main className={styles['admin-main']} data-css={"admin-main"} id="ecran" tabIndex={-1}>
+          <header className={styles['admin-zona-cap']} data-css={"admin-zona-cap"}>
+            <h1 className={styles['admin-zona-titlu']} data-css={"admin-zona-titlu"}>{zona.eticheta}</h1>
             {zonaActiva !== 'acum' && (
-              <p className="admin-zona-sub">{ecranulDinRegistru(ecran)?.descriere}</p>
+              <p className={styles['admin-zona-sub']} data-css={"admin-zona-sub"}>{ecranulDinRegistru(ecran)?.descriere}</p>
             )}
             {zonaActiva === 'evenimente' && countdown && (
-              <p className="admin-cd">
+              <p className={styles['admin-cd']} data-css={"admin-cd"}>
                 <span className="countdown-dot" />
                 {countdown}
               </p>
@@ -180,12 +193,12 @@ export const AdminCadru = ({
           {selectorEditie}
 
           {telefon && zona.file.length > 1 && (
-            <nav className="admin-file" aria-label={`Ecrane din ${zona.eticheta}`}>
+            <nav className={styles['admin-file']} data-css={"admin-file"} aria-label={`Ecrane din ${zona.eticheta}`}>
               {zona.file.map((f) => (
                 <button
                   key={f.cheie}
                   type="button"
-                  className="admin-fila"
+                  className={styles['admin-fila']} data-css={"admin-fila"}
                   aria-current={f === fila ? 'page' : undefined}
                   onClick={() => onEcran(f.ecrane[0].cheie)}
                 >
@@ -196,12 +209,12 @@ export const AdminCadru = ({
           )}
 
           {fila.ecrane.length > 1 && (
-            <nav className="admin-subfile" aria-label={fila.eticheta}>
+            <nav className={styles['admin-subfile']} data-css={"admin-subfile"} aria-label={fila.eticheta}>
               {fila.ecrane.map((e) => (
                 <button
                   key={e.cheie}
                   type="button"
-                  className="admin-subfila"
+                  className={styles['admin-subfila']} data-css={"admin-subfila"}
                   aria-current={e.cheie === ecran ? 'page' : undefined}
                   onClick={() => onEcran(e.cheie)}
                 >
@@ -215,20 +228,20 @@ export const AdminCadru = ({
         </main>
 
         {telefon && (
-          <nav className="admin-bara-jos" aria-label="Zone">
+          <nav className={styles['admin-bara-jos']} data-css={"admin-bara-jos"} aria-label="Zone">
             {ZONE.map((z) => (
               <button
                 key={z.cheie}
                 type="button"
-                className="admin-bara-jos-zona"
+                className={styles['admin-bara-jos-zona']} data-css={"admin-bara-jos-zona"}
                 aria-current={z.cheie === zonaActiva ? 'page' : undefined}
                 onClick={() => mergiLaZona(z)}
               >
-                <span className="admin-bara-jos-icon">
+                <span className={styles['admin-bara-jos-icon']} data-css={"admin-bara-jos-icon"}>
                   <Icon nume={ICON_ZONA[z.cheie]} marime={22} />
                 </span>
                 {z.eticheta}
-                {numar(z) !== null && <span className="admin-numar admin-numar--bara">{numar(z)}</span>}
+                {numar(z) !== null && <span className={shared1['admin-numar'] + ' ' + styles['admin-numar--bara']} data-css={"admin-numar admin-numar--bara"}>{numar(z)}</span>}
               </button>
             ))}
           </nav>

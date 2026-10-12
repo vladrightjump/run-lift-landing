@@ -212,3 +212,11 @@ iar login-ul are `data/api.ts`. `GrupRadio`, folosit de Site și de Evenimente, 
 `shared/ui/`. `AdminApp` și `AdminDashboard` rămân în `src/admin/` până la U11: compun
 ecranele încă nemutate, care importă sesiunea din `features/admin`, iar o rută exportată
 din `index.ts` care ar ajunge la ele ar închide un ciclu.
+
+Stilurile acestor componente au plecat din `index.css` în CSS Modules lângă ele, cu
+valorile neschimbate. Piesele folosite de mai multe componente ale adminului (logo-ul,
+numărul de atenție, titlul învelișului) stau în `components/AdminStyles.module.css`,
+importat înaintea modulului propriu. Clasele pe care le poartă și ecranele încă nemutate
+(`admin-btn-*`, `admin-config-*`, `admin-table-*`, `admin-stat*`, `admin-banner`,
+`admin-control`, `admin-confirm-*` și celelalte) rămân globale în `index.css` până la
+U11 și U12, iar componentele mutate le folosesc ca șiruri simple, lângă clasele de modul.

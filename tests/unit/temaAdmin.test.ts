@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 /**
  * Tema „Panoul" a adminului (R31, R32, R36; KTD2 din planul
@@ -18,10 +18,17 @@ import { resolve } from 'node:path';
 
 const css = readFileSync(resolve(__dirname, '../../src/index.css'), 'utf8');
 const MARCA = '/* ==== Admin backoffice (/admin) ==== */';
-// Suprapunerea comună se randează în rădăcina adminului și îi citește jetoanele.
-const kitAdmin = ['../../src/shared/ui/Suprapunere.module.css'].map((f) =>
-  readFileSync(resolve(__dirname, f), 'utf8')
-);
+// Suprapunerea și grupul radio din kitul comun se randează în rădăcina
+// adminului și îi citesc jetoanele, la fel ca modulele din `features/admin`.
+const dirAdmin = resolve(__dirname, '../../src/features/admin');
+const moduleAdmin = (readdirSync(dirAdmin, { recursive: true }) as string[])
+  .filter((f) => f.endsWith('.module.css'))
+  .map((f) => join(dirAdmin, f));
+const kitAdmin = [
+  resolve(__dirname, '../../src/shared/ui/Suprapunere.module.css'),
+  resolve(__dirname, '../../src/shared/ui/GrupRadio.module.css'),
+  ...moduleAdmin,
+].map((f) => readFileSync(f, 'utf8'));
 const admin = [css.slice(css.indexOf(MARCA)), ...kitAdmin].join('\n');
 
 const blocTema = /\.admin-pagina,\s*\.admin-app\s*\{([^}]*)\}/.exec(admin)?.[1] ?? '';

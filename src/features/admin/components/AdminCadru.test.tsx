@@ -81,7 +81,7 @@ describe('cadrul pe desktop: șina', () => {
     expect(screen.getByRole('button', { name: /^Acum/ }).textContent).toContain('2');
     cleanup();
     cadru('clipuri', { atentie: 0 });
-    expect(screen.getByRole('button', { name: /^Acum/ }).querySelector('.admin-numar')).toBeNull();
+    expect(screen.getByRole('button', { name: /^Acum/ }).textContent).toBe('Acum');
   });
 
   it('titlul e zona, iar sub el stă descrierea ecranului', () => {

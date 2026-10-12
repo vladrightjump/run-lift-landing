@@ -129,7 +129,7 @@ const citesteCampurile = (page: Page) =>
             !camp.readOnly &&
             el.getAttribute('aria-invalid') !== 'true' &&
             !el.closest('.invalid, .atentie'),
-          compact: !!el.closest('.admin-ordonabila-pozitie'),
+          compact: !!el.closest('[data-css~="admin-ordonabila-pozitie"]'),
           multilinie: el.tagName === 'TEXTAREA',
         };
       });

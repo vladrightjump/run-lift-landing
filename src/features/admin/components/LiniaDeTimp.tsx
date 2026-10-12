@@ -1,3 +1,4 @@
+import styles from './LiniaDeTimp.module.css';
 import { useEventConfig, useEditionDates } from '../../../shared/lib/useEventConfig';
 import { useNow } from '../../../shared/lib/useNow';
 import {
@@ -6,9 +7,16 @@ import {
   NODURI_DESFASURARE,
   type SemnaleAdmin,
   type EcranAdmin,
+  type FazaSite,
 } from '../../../admin/stareCurenta';
 import { reperele, type Reper } from '../../../admin/reperele';
 import { descrieMoment } from '../../../admin/eventConfigFields';
+
+/** Fazele în care punctul de lângă numele ediției se aprinde. */
+const CLASA_FAZA: Partial<Record<FazaSite, string>> = {
+  landing: styles['faza-landing'],
+  'cine-vine': styles['faza-cine-vine'],
+};
 
 type Props = {
   semnale: SemnaleAdmin;
@@ -75,11 +83,14 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
   const urmatorulId = noduri.find((r) => !r.trecut)?.id ?? null;
 
   return (
-    <section className="admin-linie" aria-label="Desfășurarea ediției">
-      <div className="admin-linie-antet">
-        <span className="admin-linie-eticheta">Acum pe site</span>
-        <span className={`admin-linie-faza faza-${faza}`}>
-          <span className="admin-linie-punct-faza" aria-hidden="true" />
+    <section className={styles['admin-linie']} data-css={"admin-linie"} aria-label="Desfășurarea ediției">
+      <div className={styles['admin-linie-antet']} data-css={"admin-linie-antet"}>
+        <span className={styles['admin-linie-eticheta']} data-css={"admin-linie-eticheta"}>Acum pe site</span>
+        <span
+          className={styles['admin-linie-faza'] + (CLASA_FAZA[faza] ? ' ' + CLASA_FAZA[faza] : '')}
+          data-css={`admin-linie-faza faza-${faza}`}
+        >
+          <span className={styles['admin-linie-punct-faza']} data-css={"admin-linie-punct-faza"} aria-hidden="true" />
           {config.eventName}
         </span>
       </div>
@@ -87,12 +98,12 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
       {noduri.length === 0 ? (
         // Un document cu formate stricate n-are ce desena, iar o ordine
         // calculată din NaN ar fi mai rea decât nimic: ar arăta încrezătoare.
-        <p className="admin-linie-gol" role="status">
+        <p className={styles['admin-linie-gol']} data-css={"admin-linie-gol"} role="status">
           Desfășurarea <strong>nu se poate desena</strong>: un moment din document e scris greșit.
           Deschide „Evenimentul" — validarea spune care câmp.
         </p>
       ) : (
-        <ol className="admin-linie-noduri">
+        <ol className={styles['admin-linie-noduri']} data-css={"admin-linie-noduri"}>
           {noduri.map((r) => {
             const actiune = ACTIUNI[r.cheie];
             const oferaActiune = actiune && !(arhiva && actiune.scrie);
@@ -100,6 +111,14 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
               <li
                 key={r.id}
                 className={[
+                  styles['admin-linie-nod'],
+                  r.trecut ? styles.trecut : '',
+                  r.id === urmatorulId ? styles.urmatorul : '',
+                  r.semnal ? styles.problema : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                data-css={[
                   'admin-linie-nod',
                   r.trecut ? 'trecut' : '',
                   r.id === urmatorulId ? 'urmatorul' : '',
@@ -108,17 +127,17 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
                   .filter(Boolean)
                   .join(' ')}
               >
-                <span className="admin-linie-punct" aria-hidden="true" />
-                <span className="admin-linie-nume">{r.eticheta}</span>
-                <span className="admin-linie-cand">
+                <span className={styles['admin-linie-punct']} data-css={"admin-linie-punct"} aria-hidden="true" />
+                <span className={styles['admin-linie-nume']} data-css={"admin-linie-nume"}>{r.eticheta}</span>
+                <span className={styles['admin-linie-cand']} data-css={"admin-linie-cand"}>
                   {descrieMoment(r.moment, config.tz, acum) || r.cand}
                 </span>
-                <span className="admin-linie-stare">{stareaNodului(r, urmatorulId)}</span>
-                {r.semnal && <span className="admin-linie-semnal">{r.semnal}</span>}
+                <span className={styles['admin-linie-stare']} data-css={"admin-linie-stare"}>{stareaNodului(r, urmatorulId)}</span>
+                {r.semnal && <span className={styles['admin-linie-semnal']} data-css={"admin-linie-semnal"}>{r.semnal}</span>}
                 {oferaActiune && (
                   <button
                     type="button"
-                    className="admin-btn-ghost admin-linie-actiune"
+                    className={'admin-btn-ghost ' + styles['admin-linie-actiune']} data-css={"admin-btn-ghost admin-linie-actiune"}
                     onClick={() => onTab(actiune.ecran)}
                   >
                     {actiune.eticheta}
@@ -133,15 +152,15 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
             ediția s-a consumat. Calea scurtă de creare stă AICI, la capătul
             liniei, fiindcă acolo o caută organizatorul: după cursă.
           */}
-          <li className="admin-linie-nod viitor">
-            <span className="admin-linie-punct" aria-hidden="true" />
-            <span className="admin-linie-nume">Ediția {config.number + 1}</span>
-            <span className="admin-linie-cand">încă nu există</span>
-            <span className="admin-linie-stare">mai târziu</span>
+          <li className={styles['admin-linie-nod'] + ' viitor'} data-css={"admin-linie-nod viitor"}>
+            <span className={styles['admin-linie-punct']} data-css={"admin-linie-punct"} aria-hidden="true" />
+            <span className={styles['admin-linie-nume']} data-css={"admin-linie-nume"}>Ediția {config.number + 1}</span>
+            <span className={styles['admin-linie-cand']} data-css={"admin-linie-cand"}>încă nu există</span>
+            <span className={styles['admin-linie-stare']} data-css={"admin-linie-stare"}>mai târziu</span>
             {!arhiva && (
               <button
                 type="button"
-                className="admin-btn-ghost admin-linie-actiune"
+                className={'admin-btn-ghost ' + styles['admin-linie-actiune']} data-css={"admin-btn-ghost admin-linie-actiune"}
                 onClick={onEditieNoua}
               >
                 Pornește ediția următoare
@@ -153,18 +172,19 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
 
       {/* Semnalele apar și dispar pe măsură ce sosesc datele — un cititor de
           ecran trebuie să afle, dar nu întrerupt din ce citea. */}
-      <div className="admin-linie-atentie" aria-live="polite">
+      <div className={styles['admin-linie-atentie']} data-css={"admin-linie-atentie"} aria-live="polite">
         {atentie.length === 0 ? (
           // Un panou care tace când totul e bine se citește ca „n-a apucat să
           // încarce". Spunem explicit că am verificat.
-          <span className="admin-linie-ok">Nimic care să ceară atenție.</span>
+          <span className={styles['admin-linie-ok']} data-css={"admin-linie-ok"}>Nimic care să ceară atenție.</span>
         ) : (
           atentie.map(({ cheie, text, ecran, urgent }) =>
             ecran ? (
               <button
                 key={cheie}
                 type="button"
-                className={`admin-linie-atentie-semnal${urgent ? ' urgent' : ''}`}
+                className={styles['admin-linie-atentie-semnal'] + (urgent ? ' ' + styles.urgent : '')}
+                data-css={`admin-linie-atentie-semnal${urgent ? ' urgent' : ''}`}
                 onClick={() => onTab(ecran)}
               >
                 {text}
@@ -173,7 +193,10 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
             ) : (
               <span
                 key={cheie}
-                className={`admin-linie-atentie-semnal static${urgent ? ' urgent' : ''}`}
+                className={
+                  styles['admin-linie-atentie-semnal'] + ' ' + styles.static + (urgent ? ' ' + styles.urgent : '')
+                }
+                data-css={`admin-linie-atentie-semnal static${urgent ? ' urgent' : ''}`}
               >
                 {text}
               </span>

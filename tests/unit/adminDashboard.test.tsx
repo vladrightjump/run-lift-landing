@@ -122,6 +122,10 @@ describe('AdminDashboard', () => {
 });
 
 describe('AdminDashboard — semnalele de atenție (R6)', () => {
+  /** Numărul de pe butonul zonei Acum, ca text: „Acum3" → „3"; fără număr, null. */
+  const numarPe = (buton: HTMLElement): string | null =>
+    /^Acum(\d+)$/.exec(buton.textContent ?? '')?.[1] ?? null;
+
   it('numărul de pe zona Acum te găsește pe orice ecran', async () => {
     // Semnalele nu mai stau ca bandă în antet: apar pe Acum și ca număr pe
     // zona Acum, care se vede din orice zonă.
@@ -129,10 +133,10 @@ describe('AdminDashboard — semnalele de atenție (R6)', () => {
     await screen.findByText('Șabloane de email');
     const acum = await waitFor(() => {
       const buton = within(sina()).getByRole('button', { name: /^Acum/ });
-      expect(buton.querySelector('.admin-numar')).not.toBeNull();
+      expect(numarPe(buton)).not.toBeNull();
       return buton;
     });
-    expect(Number(acum.querySelector('.admin-numar')?.textContent)).toBeGreaterThan(0);
+    expect(Number(numarPe(acum))).toBeGreaterThan(0);
   });
 
   it('un clic pe semnalul de livrare duce la ecranul unde se rezolvă', async () => {
@@ -165,8 +169,7 @@ describe('AdminDashboard — semnalele de atenție (R6)', () => {
     );
     randeaza();
     await screen.findByText('Ana Popescu');
-    const numarAcum = () =>
-      within(sina()).getByRole('button', { name: /^Acum/ }).querySelector('.admin-numar');
+    const numarAcum = () => numarPe(within(sina()).getByRole('button', { name: /^Acum/ }));
     expect(numarAcum()).toBeNull();
 
     fireEvent.change(screen.getByLabelText('Ediția'), { target: { value: String(curenta - 1) } });
@@ -178,7 +181,7 @@ describe('AdminDashboard — semnalele de atenție (R6)', () => {
     ];
     document.dispatchEvent(new Event('visibilitychange'));
 
-    await waitFor(() => expect(numarAcum()?.textContent).toBe('1'));
+    await waitFor(() => expect(numarAcum()).toBe('1'));
   });
 });
 

@@ -1,3 +1,5 @@
+import shared1 from '../components/AdminStyles.module.css';
+import styles from './AdminLogin.module.css';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { adminLogin } from '../data/api';
@@ -42,16 +44,20 @@ export const AdminLogin = ({ onLogin }: Props) => {
 
   return (
     <main className="admin-auth">
-      <div className="admin-auth-box">
-        <div className="admin-auth-brand">
-          <span className="admin-logo">
-            Run <span className="accent">+</span> Lift
+      <div className={styles['admin-auth-box']} data-css={"admin-auth-box"}>
+        <div className={styles['admin-auth-brand']} data-css={"admin-auth-brand"}>
+          <span className={shared1['admin-logo']} data-css={"admin-logo"}>
+            Run <span className={shared1['accent']} data-css={"accent"}>+</span> Lift
           </span>
-          <span className="admin-badge">Backoffice</span>
+          <span className={styles['admin-badge']} data-css={"admin-badge"}>Backoffice</span>
         </div>
 
-        <form className={`admin-auth-form${shake ? ' shake' : ''}`} onSubmit={handleSubmit}>
-          <div className="admin-auth-head">
+        <form
+          className={styles['admin-auth-form'] + (shake ? ' ' + styles.shake : '')}
+          data-css={`admin-auth-form${shake ? ' shake' : ''}`}
+          onSubmit={handleSubmit}
+        >
+          <div className={styles['admin-auth-head']} data-css={"admin-auth-head"}>
             <h1>Autentificare</h1>
             <p>Acces doar pentru organizatori.</p>
           </div>
@@ -70,7 +76,7 @@ export const AdminLogin = ({ onLogin }: Props) => {
 
           <label className={`field${error ? ' invalid' : ''}`}>
             <span className="label">Parolă</span>
-            <div className="admin-password-wrap">
+            <div className={styles['admin-password-wrap']} data-css={"admin-password-wrap"}>
               <input
                 name="parola"
                 type={showPassword ? 'text' : 'password'}
@@ -80,7 +86,7 @@ export const AdminLogin = ({ onLogin }: Props) => {
               />
               <button
                 type="button"
-                className="admin-password-toggle"
+                className={styles['admin-password-toggle']} data-css={"admin-password-toggle"}
                 onClick={() => setShowPassword((v) => !v)}
               >
                 {showPassword ? 'Ascunde' : 'Arată'}
@@ -89,18 +95,18 @@ export const AdminLogin = ({ onLogin }: Props) => {
           </label>
 
           {error && (
-            <p className="admin-auth-error" role="alert">
-              <span className="dot" />
+            <p className={styles['admin-auth-error']} data-css={"admin-auth-error"} role="alert">
+              <span className={styles['dot']} data-css={"dot"} />
               {error}
             </p>
           )}
 
-          <button type="submit" className="btn-submit admin-auth-submit" disabled={checking}>
+          <button type="submit" className={'btn-submit ' + styles['admin-auth-submit']} data-css={"btn-submit admin-auth-submit"} disabled={checking}>
             {checking ? 'Se verifică…' : 'Intră în cont'}
           </button>
         </form>
 
-        <p className="admin-auth-countdown">
+        <p className={styles['admin-auth-countdown']} data-css={"admin-auth-countdown"}>
           <span className="countdown-dot" />
           {cd.done
             ? 'Anunțul e live'

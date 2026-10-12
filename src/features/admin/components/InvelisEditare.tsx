@@ -1,3 +1,5 @@
+import shared1 from './AdminStyles.module.css';
+import styles from './InvelisEditare.module.css';
 import type { ReactNode } from 'react';
 
 /**
@@ -74,7 +76,7 @@ export const InvelisEditare = ({
 }: Props) => (
   <section className="admin-table-section">
     <div className="admin-table-head">
-      <div className="admin-invelis-titlu">
+      <div className={shared1['admin-invelis-titlu']} data-css={"admin-invelis-titlu"}>
         <h2>{titlu}</h2>
         {descriere && <p className="admin-config-hint">{descriere}</p>}
       </div>
@@ -91,15 +93,15 @@ export const InvelisEditare = ({
         publici trebuia să derulezi înapoi, iar starea documentului nu se vedea
         deloc de jos. */}
     {bara && (
-      <div className="admin-bara-actiuni" role="status">
-        <span className="admin-bara-stare">
+      <div className={styles['admin-bara-actiuni']} data-css={"admin-bara-actiuni"} role="status">
+        <span className={styles['admin-bara-stare']} data-css={"admin-bara-stare"}>
           {/* Problemele de validare au întâietate: ele dezactivează „Publică",
               deci un refuz vechi n-are ce concura cu ele. */}
           {bara.probleme.length > 0 ? (
             // Buton, nu text: numărul spunea CÂTE, niciodată CARE.
             <button
               type="button"
-              className="admin-bara-problema admin-bara-problema--link"
+              className={styles['admin-bara-problema'] + ' ' + styles['admin-bara-problema--link']} data-css={"admin-bara-problema admin-bara-problema--link"}
               onClick={bara.onPrimaProblema}
             >
               {bara.probleme.length === 1
@@ -109,21 +111,21 @@ export const InvelisEditare = ({
           ) : bara.refuz ? (
             // `alert`, nu doar `status`: un refuz al serverului e o eroare, nu
             // o schimbare de stare pe care o afli când ajungi la ea.
-            <span className="admin-bara-problema" role="alert">
+            <span className={styles['admin-bara-problema']} data-css={"admin-bara-problema"} role="alert">
               {bara.refuz}
             </span>
           ) : (
             <>
               {bara.identitate}
-              {bara.detaliu && <span className="admin-bara-detaliu">{bara.detaliu}</span>}
+              {bara.detaliu && <span className={styles['admin-bara-detaliu']} data-css={"admin-bara-detaliu"}>{bara.detaliu}</span>}
               {/* După detaliu, nu în locul lui: „nesalvat" e o stare a
                   documentului, nu o problemă a lui. */}
-              {bara.nesalvat && <span className="admin-bara-nesalvat">Nesalvat</span>}
+              {bara.nesalvat && <span className={styles['admin-bara-nesalvat']} data-css={"admin-bara-nesalvat"}>Nesalvat</span>}
             </>
           )}
         </span>
 
-        <div className="admin-bara-butoane">
+        <div className={styles['admin-bara-butoane']} data-css={"admin-bara-butoane"}>
           {/* Cu diferențe nesalvate previzualizarea SCRIE întâi, deci e un
               buton; fără ele rămâne ce era, o ancoră — cu Cmd-click și click
               de mijloc cu tot. */}

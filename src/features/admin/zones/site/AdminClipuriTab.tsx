@@ -1,3 +1,4 @@
+import styles from './AdminClipuriTab.module.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   listTrainingReels,
@@ -429,7 +430,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
         {esteIdYouTube(camp.youtube) && (
           <div className="admin-previz">
             <span className="admin-previz-eticheta">Așa se va vedea pe pagină</span>
-            <div className="admin-previz-card">
+            <div className={styles['admin-previz-card']} data-css={"admin-previz-card"}>
               <iframe
                 src={sursaIncorporare(camp.youtube)}
                 title={camp.caption || 'Previzualizare clip'}
@@ -446,7 +447,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
                 sandbox="allow-scripts allow-same-origin allow-presentation"
                 referrerPolicy="strict-origin-when-cross-origin"
               />
-              <span className="admin-previz-legenda">{camp.caption || '(fără legendă)'}</span>
+              <span className={styles['admin-previz-legenda']} data-css={"admin-previz-legenda"}>{camp.caption || '(fără legendă)'}</span>
             </div>
           </div>
         )}
