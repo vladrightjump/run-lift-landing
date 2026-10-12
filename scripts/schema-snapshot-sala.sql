@@ -64,10 +64,10 @@ with obiecte as (
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname in (select nume from functii_grup)
 ), triggere as (
-  -- Azi (3 octombrie 2026) tabelele grupului n-au niciun trigger, deci partea asta
-  -- iese goală. Un trigger adăugat de gym-app sau de bot intră de la sine în
-  -- instantaneu; dacă funcția lui nu e în `functii_grup`, încărcarea în PGlite
-  -- pică zgomotos, nu trece pe lângă teste.
+  -- Din 12 octombrie 2026, triggerele istoricului probelor (`trial_events_*`, cu
+  -- funcțiile `trial_event_*`). Un trigger nou intră de la sine în instantaneu;
+  -- dacă funcția lui nu e în `functii_grup`, încărcarea în PGlite pică zgomotos,
+  -- nu trece pe lângă teste.
   select coalesce(string_agg(pg_get_triggerdef(t.oid) || E';\n', '' order by t.tgname), '') t
     from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'public' and not t.tgisinternal and c.relname in (select nume from obiecte)

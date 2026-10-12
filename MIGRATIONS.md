@@ -3,7 +3,7 @@
 Catalog al migrărilor care ating Run + Lift, cu granița clară față de aplicația vecină
 (gym-app + botul de Telegram) care împarte același proiect Supabase.
 
-Ultima actualizare: 8 octombrie 2026.
+Ultima actualizare: 12 octombrie 2026.
 
 ---
 
@@ -28,6 +28,17 @@ Proiectul Supabase **`ironworks-gym`** (`whyndrjcezmtajbykeil`, eu-central-1) e 
 Rutarea către `runlift` se face prin headerele PostgREST `Accept-Profile` (GET) /
 `Content-Profile` (scriere). Schema trebuie **expusă** în Supabase → Project Settings → API →
 Exposed schemas (`public, graphql_public, runlift`).
+
+---
+
+## Migrări aplicate — alerta de inactivitate și istoricul probelor (12 octombrie 2026)
+
+Planul `docs/plans/2026-10-11-2142-feat-alerta-inactivitate-si-istoric-probe-plan.md`. Ambele doar adaugă (tabele, coloane nullabile, funcții, triggere), deci au fost aplicate înaintea botului nou, fără efect asupra botului vechi:
+
+1. `supabase/sql/supabase-migration-sala-inactivitate.sql` (`sala_07_inactivitate`) — `public.inactivity_reviews` (un ciclu de alertă pe membru, cel mult unul activ) și funcțiile `public.inactivity_*`: candidații zilei (3 săptămâni cu antrenamente fără „Da"), decizia atomică (prima câștigă), întreținerea zilnică și rezultatul scoaterii. Doar `service_role`.
+2. `supabase/sql/supabase-migration-sala-istoric-probe.sql` (`sala_08_istoric_probe`) — `public.trial_events` scris de triggere AFTER pe `trial_prospects`, `trial_bookings`, `trial_questions`, `trial_messages`; coloanele `telegram_first_name` / `telegram_last_name` pe `trial_prospects`; cheia `events` în `runlift.admin_trial_data`. Cele 3 persoane existente au primit câte un eveniment „a pornit botul", marcat reconstituit.
+
+Aplicate în producție pe 12 octombrie 2026 prin MCP `apply_migration`. Verificat după aplicare: `anon` nu citește tabelele și nu cheamă funcțiile, `service_role` da; 4 triggere active; un test într-o tranzacție anulată (mesaje oprite + repornite) a scris exact 2 evenimente și n-a lăsat nimic; 3 candidați la alertă în ziua aplicării. Corpul live al `admin_trial_data` era identic cu instantaneul înainte de înlocuire. Instantaneele `sala.sql` și `runlift.sql` regenerate (diferența e exact migrarea; `scripts/schema-snapshot-sala.sql` include acum tabelele noi, funcțiile `inactivity_*` și coloanele identity); `MIGRARI_NEAPLICATE` golită.
 
 ---
 

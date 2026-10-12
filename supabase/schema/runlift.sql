@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 11 octombrie 2026 (ordinea homepage-ului și locul antrenamentelor).
+-- Ultima regenerare: 12 octombrie 2026 (cronologia probelor în `admin_trial_data`).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -1645,7 +1645,8 @@ begin
  'questions',coalesce((select jsonb_agg(q order by q.created_at desc) from public.trial_questions q),'[]'),
  'messages',coalesce((select jsonb_agg(m order by m.created_at desc) from public.trial_messages m),'[]'),
  'invitations',coalesce((select jsonb_agg(jsonb_build_object('id',i.id,'booking_id',i.booking_id,'expires_at',i.expires_at,'revoked_at',i.revoked_at)) from public.trial_invitations i),'[]'),
- 'organizers',coalesce((select jsonb_agg(jsonb_build_object('id',id,'full_name',full_name,'telegram_user_id',telegram_user_id)) from public.members where is_admin and telegram_user_id is not null),'[]'));
+ 'organizers',coalesce((select jsonb_agg(jsonb_build_object('id',id,'full_name',full_name,'telegram_user_id',telegram_user_id)) from public.members where is_admin and telegram_user_id is not null),'[]'),
+ 'events',coalesce((select jsonb_agg(jsonb_build_object('id',e.id,'prospect_id',e.prospect_id,'kind',e.kind,'occurred_at',e.occurred_at,'detail',e.detail,'backfilled',e.backfilled) order by e.occurred_at, e.seq) from public.trial_events e),'[]'));
 end $function$
 ;
 

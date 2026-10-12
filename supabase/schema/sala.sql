@@ -9,7 +9,7 @@
 -- NU se aplică nicăieri: nu e o migrare. Ăsta e „ce e acum în producție",
 -- regenerat după fiecare migrare care atinge tabelele grupului — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 8 octombrie 2026 (activarea infrastructurii pentru probe).
+-- Ultima regenerare: 12 octombrie 2026 (alerta de inactivitate și istoricul probelor).
 
 create table public.attendance (
   id uuid default gen_random_uuid() not null,
@@ -58,6 +58,23 @@ create table public.bot_config (
   poll_title text,
   poll_yes_label text,
   poll_no_label text
+);
+
+create table public.inactivity_reviews (
+  id uuid default gen_random_uuid() not null,
+  member_id uuid not null,
+  anchor_date date not null,
+  weeks_missed integer not null,
+  status text default 'open'::text not null,
+  snooze_until timestamp with time zone,
+  decided_by bigint,
+  decided_by_name text,
+  decided_at timestamp with time zone,
+  result text,
+  bot_action_id uuid,
+  messages jsonb default '[]'::jsonb not null,
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() not null
 );
 
 create table public.members (
@@ -151,6 +168,16 @@ create table public.trial_config (
   message_texts jsonb default '{}'::jsonb not null
 );
 
+create table public.trial_events (
+  id uuid default gen_random_uuid() not null,
+  seq bigint generated always as identity not null,
+  prospect_id uuid not null,
+  kind text not null,
+  occurred_at timestamp with time zone default clock_timestamp() not null,
+  detail jsonb default '{}'::jsonb not null,
+  backfilled boolean default false not null
+);
+
 create table public.trial_invitations (
   id uuid default gen_random_uuid() not null,
   booking_id uuid not null,
@@ -192,7 +219,9 @@ create table public.trial_prospects (
   dm_enabled boolean default true not null,
   member_id uuid,
   created_at timestamp with time zone default now() not null,
-  updated_at timestamp with time zone default now() not null
+  updated_at timestamp with time zone default now() not null,
+  telegram_first_name text,
+  telegram_last_name text
 );
 
 create table public.trial_questions (
@@ -219,6 +248,7 @@ alter table public.attendance add constraint attendance_session_id_member_id_key
 alter table public.attendance_log add constraint attendance_log_pkey PRIMARY KEY (id);
 alter table public.bot_actions add constraint bot_actions_pkey PRIMARY KEY (id);
 alter table public.bot_config add constraint bot_config_pkey PRIMARY KEY (id);
+alter table public.inactivity_reviews add constraint inactivity_reviews_pkey PRIMARY KEY (id);
 alter table public.members add constraint members_pkey PRIMARY KEY (id);
 alter table public.members add constraint members_telegram_user_id_key UNIQUE (telegram_user_id);
 alter table public.payments add constraint payments_pkey PRIMARY KEY (id);
@@ -228,6 +258,7 @@ alter table public.training_sessions add constraint training_sessions_pkey PRIMA
 alter table public.training_sessions add constraint training_sessions_session_date_key UNIQUE (session_date);
 alter table public.trial_bookings add constraint trial_bookings_pkey PRIMARY KEY (id);
 alter table public.trial_config add constraint trial_config_pkey PRIMARY KEY (id);
+alter table public.trial_events add constraint trial_events_pkey PRIMARY KEY (id);
 alter table public.trial_invitations add constraint trial_invitations_invite_link_key UNIQUE (invite_link);
 alter table public.trial_invitations add constraint trial_invitations_pkey PRIMARY KEY (id);
 alter table public.trial_messages add constraint trial_messages_dedupe_key_key UNIQUE (dedupe_key);
@@ -246,6 +277,9 @@ alter table public.bot_actions add constraint bot_actions_action_check CHECK ((a
 alter table public.bot_actions add constraint bot_actions_member_id_fkey FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL;
 alter table public.bot_actions add constraint bot_actions_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'done'::text, 'failed'::text])));
 alter table public.bot_config add constraint bot_config_singleton CHECK ((id = 1));
+alter table public.inactivity_reviews add constraint inactivity_reviews_bot_action_id_fkey FOREIGN KEY (bot_action_id) REFERENCES bot_actions(id);
+alter table public.inactivity_reviews add constraint inactivity_reviews_member_id_fkey FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE;
+alter table public.inactivity_reviews add constraint inactivity_reviews_status_check CHECK ((status = ANY (ARRAY['open'::text, 'postponed'::text, 'kick_queued'::text, 'kicked'::text, 'kick_failed'::text, 'kept'::text, 'returned'::text, 'left'::text, 'refused'::text])));
 alter table public.members add constraint members_membership_type_check CHECK ((membership_type = ANY (ARRAY['Lunar'::text, 'Anual'::text, 'O zi'::text])));
 alter table public.members add constraint members_status_check CHECK ((status = ANY (ARRAY['active'::text, 'paused'::text, 'cancelled'::text])));
 alter table public.payments add constraint payments_amount_check CHECK ((amount > (0)::numeric));
@@ -261,6 +295,7 @@ alter table public.trial_bookings add constraint trial_bookings_session_id_fkey 
 alter table public.trial_bookings add constraint trial_bookings_status_check CHECK ((status = ANY (ARRAY['scheduled'::text, 'awaiting_attendance'::text, 'attended'::text, 'absent'::text, 'cancelled'::text, 'closed'::text])));
 alter table public.trial_config add constraint trial_config_duration_minutes_check CHECK (((duration_minutes >= 15) AND (duration_minutes <= 480)));
 alter table public.trial_config add constraint trial_config_id_check CHECK ((id = 1));
+alter table public.trial_events add constraint trial_events_prospect_id_fkey FOREIGN KEY (prospect_id) REFERENCES trial_prospects(id) ON DELETE CASCADE;
 alter table public.trial_invitations add constraint trial_invitations_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES trial_bookings(id);
 alter table public.trial_invitations add constraint trial_invitations_prospect_id_fkey FOREIGN KEY (prospect_id) REFERENCES trial_prospects(id);
 alter table public.trial_messages add constraint trial_messages_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES trial_bookings(id);
@@ -278,6 +313,8 @@ CREATE INDEX attendance_session_idx ON public.attendance USING btree (session_id
 CREATE INDEX bot_actions_pending_idx ON public.bot_actions USING btree (created_at) WHERE (status = 'pending'::text);
 CREATE INDEX idx_payments_date ON public.payments USING btree (payment_date);
 CREATE INDEX idx_payments_member ON public.payments USING btree (member_id);
+CREATE UNIQUE INDEX inactivity_reviews_active ON public.inactivity_reviews USING btree (member_id) WHERE (status = ANY (ARRAY['open'::text, 'postponed'::text, 'kick_queued'::text]));
+CREATE INDEX trial_events_prospect ON public.trial_events USING btree (prospect_id, occurred_at, seq);
 CREATE INDEX trial_messages_due ON public.trial_messages USING btree (due_at) WHERE (status = 'pending'::text);
 CREATE UNIQUE INDEX trial_one_open_booking ON public.trial_bookings USING btree (prospect_id) WHERE (status = ANY (ARRAY['scheduled'::text, 'awaiting_attendance'::text, 'attended'::text]));
 CREATE UNIQUE INDEX trial_question_message_unique ON public.trial_questions USING btree (prospect_id, telegram_message_id);
@@ -340,6 +377,260 @@ create view public.telegram_training_stats as
     s.last_attended
    FROM member_attendance_stats s
      JOIN telegram_training_members m ON m.id = s.id;
+
+CREATE OR REPLACE FUNCTION public.inactivity_anchor(p_member uuid)
+ RETURNS date
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select greatest(
+    s.last_attended,
+    s.join_date,
+    (select max((coalesce(r.decided_at, r.updated_at) at time zone 'Europe/Chisinau')::date)
+       from public.inactivity_reviews r
+      where r.member_id = s.id and r.status in ('kept', 'kicked', 'left', 'refused'))
+  )
+  from public.member_attendance_stats s
+  where s.id = p_member;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.inactivity_candidates(p_today date)
+ RETURNS TABLE(member_id uuid, full_name text, telegram_user_id bigint, telegram_username text, last_yes date, join_date date, anchor_date date, weeks_missed integer)
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select c.id, c.full_name, c.telegram_user_id, c.telegram_username, c.last_attended, c.join_date, c.anchor, w.weeks
+    from (
+      select s.*, public.inactivity_anchor(s.id) as anchor
+        from public.telegram_training_stats s
+       where not s.is_admin
+         and not exists (
+           select 1 from public.inactivity_reviews r
+            where r.member_id = s.id and r.status in ('open', 'postponed', 'kick_queued'))
+    ) c
+    cross join lateral (select public.inactivity_weeks(c.anchor, p_today) as weeks) w
+   where w.weeks >= 3
+   order by c.full_name;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.inactivity_decide(p_review uuid, p_action text, p_actor bigint, p_name text, p_chat_id text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  r public.inactivity_reviews;
+  v_last date;
+  v_in_group boolean;
+  v_action uuid;
+begin
+  if p_action not in ('kick', 'postpone', 'keep') then
+    raise exception 'inactivity_bad_action';
+  end if;
+
+  select * into r from public.inactivity_reviews where id = p_review for update;
+  if not found then raise exception 'inactivity_review_missing'; end if;
+
+  if r.status <> 'open' then
+    return jsonb_build_object('outcome', 'already', 'review', public.inactivity_json(r.id));
+  end if;
+
+  if p_action = 'kick' then
+    select s.last_attended into v_last from public.member_attendance_stats s where s.id = r.member_id;
+    v_in_group := exists (select 1 from public.telegram_training_stats s where s.id = r.member_id);
+
+    if v_last is not null and v_last > r.anchor_date then
+      update public.inactivity_reviews
+         set status = 'refused', result = 'returned', decided_by = p_actor, decided_by_name = p_name,
+             decided_at = now(), updated_at = now()
+       where id = r.id;
+      return jsonb_build_object('outcome', 'refused', 'review', public.inactivity_json(r.id));
+    end if;
+
+    if not v_in_group then
+      update public.inactivity_reviews
+         set status = 'refused', result = 'left', decided_by = p_actor, decided_by_name = p_name,
+             decided_at = now(), updated_at = now()
+       where id = r.id;
+      return jsonb_build_object('outcome', 'refused', 'review', public.inactivity_json(r.id));
+    end if;
+
+    begin
+      v_action := public.queue_telegram_kick(r.member_id, null, p_chat_id, p_actor, p_name);
+    exception when raise_exception then
+      update public.inactivity_reviews
+         set status = 'refused', result = sqlerrm, decided_by = p_actor, decided_by_name = p_name,
+             decided_at = now(), updated_at = now()
+       where id = r.id;
+      return jsonb_build_object('outcome', 'refused', 'review', public.inactivity_json(r.id));
+    end;
+    update public.inactivity_reviews
+       set status = 'kick_queued', bot_action_id = v_action, decided_by = p_actor, decided_by_name = p_name,
+           decided_at = now(), updated_at = now()
+     where id = r.id;
+  elsif p_action = 'postpone' then
+    update public.inactivity_reviews
+       set status = 'postponed', snooze_until = now() + interval '7 days', decided_by = p_actor,
+           decided_by_name = p_name, decided_at = now(), updated_at = now()
+     where id = r.id;
+  else
+    update public.inactivity_reviews
+       set status = 'kept', decided_by = p_actor, decided_by_name = p_name, decided_at = now(), updated_at = now()
+     where id = r.id;
+  end if;
+
+  return jsonb_build_object('outcome', 'decided', 'review', public.inactivity_json(r.id));
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.inactivity_discard(p_review uuid)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  delete from public.inactivity_reviews
+   where id = p_review and status = 'open' and messages = '[]'::jsonb;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.inactivity_json(p_review uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select to_jsonb(r) || jsonb_build_object(
+    'full_name', s.full_name,
+    'telegram_user_id', s.telegram_user_id,
+    'telegram_username', s.telegram_username,
+    'last_yes', s.last_attended,
+    'join_date', s.join_date
+  )
+  from public.inactivity_reviews r
+  join public.member_attendance_stats s on s.id = r.member_id
+  where r.id = p_review;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.inactivity_kick_result(p_action uuid, p_ok boolean, p_result text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_id uuid;
+begin
+  update public.inactivity_reviews
+     set status = case when p_ok then 'kicked' else 'kick_failed' end, result = p_result, updated_at = now()
+   where bot_action_id = p_action and status = 'kick_queued'
+  returning id into v_id;
+  if v_id is null then return null; end if;
+  return public.inactivity_json(v_id);
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.inactivity_maintain(p_today date)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  r public.inactivity_reviews;
+  v_last date;
+  v_change text;
+  v_out jsonb := '[]'::jsonb;
+begin
+  for r in
+    select * from public.inactivity_reviews
+     where status in ('open', 'postponed')
+     order by created_at
+       for update
+  loop
+    select s.last_attended into v_last from public.member_attendance_stats s where s.id = r.member_id;
+    v_change := null;
+
+    if v_last is not null and v_last > r.anchor_date then
+      update public.inactivity_reviews set status = 'returned', updated_at = now() where id = r.id;
+      v_change := 'returned';
+    elsif not exists (select 1 from public.telegram_training_stats s where s.id = r.member_id) then
+      update public.inactivity_reviews set status = 'left', updated_at = now() where id = r.id;
+      v_change := 'left';
+    elsif r.status = 'postponed' and (r.snooze_until at time zone 'Europe/Chisinau')::date <= p_today then
+      update public.inactivity_reviews
+         set status = 'open', snooze_until = null, weeks_missed = public.inactivity_weeks(r.anchor_date, p_today),
+             decided_by = null, decided_by_name = null, decided_at = null, messages = '[]'::jsonb, updated_at = now()
+       where id = r.id;
+      v_change := 'reopened';
+    end if;
+
+    if v_change is not null then
+      v_out := v_out || jsonb_build_array(jsonb_build_object('change', v_change, 'review', public.inactivity_json(r.id)));
+    end if;
+  end loop;
+
+  for r in
+    update public.inactivity_reviews ir
+       set status = case when a.status = 'done' then 'kicked' else 'kick_failed' end,
+           result = coalesce(a.result, ir.result), updated_at = now()
+      from public.bot_actions a
+     where ir.status = 'kick_queued' and a.id = ir.bot_action_id and a.status <> 'pending'
+    returning ir.*
+  loop
+    v_out := v_out || jsonb_build_array(jsonb_build_object('change', 'settled', 'review', public.inactivity_json(r.id)));
+  end loop;
+  return v_out;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.inactivity_open(p_member uuid, p_anchor date, p_weeks integer)
+ RETURNS uuid
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  insert into public.inactivity_reviews (member_id, anchor_date, weeks_missed)
+  values (p_member, p_anchor, p_weeks)
+  on conflict (member_id) where status in ('open', 'postponed', 'kick_queued') do nothing
+  returning id;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.inactivity_set_messages(p_review uuid, p_messages jsonb)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  update public.inactivity_reviews
+     set messages = p_messages, updated_at = now()
+   where id = p_review;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.inactivity_weeks(p_anchor date, p_today date)
+ RETURNS integer
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select count(distinct date_trunc('week', t.session_date))::integer
+    from public.training_sessions t
+   where t.status <> 'cancelled'
+     and t.session_date < p_today
+     and date_trunc('week', t.session_date) > date_trunc('week', p_anchor);
+$function$
+;
 
 CREATE OR REPLACE FUNCTION public.merge_members(keep uuid, remove uuid)
  RETURNS void
@@ -664,6 +955,112 @@ begin
 end $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.trial_event_add(p_prospect uuid, p_kind text, p_detail jsonb DEFAULT '{}'::jsonb)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  insert into public.trial_events (prospect_id, kind, detail) values (p_prospect, p_kind, coalesce(p_detail, '{}'::jsonb));
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.trial_event_booking()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  if tg_op = 'INSERT' then
+    perform public.trial_event_add(new.prospect_id, 'booked',
+      jsonb_build_object('session_start', new.session_start, 'location', new.session_location));
+    return null;
+  end if;
+
+  if new.status = 'cancelled' and old.status <> 'cancelled' then
+    perform public.trial_event_add(new.prospect_id, 'cancelled',
+      jsonb_build_object('session_start', old.session_start));
+  elsif new.status <> 'cancelled'
+    and (new.session_start is distinct from old.session_start or new.session_location is distinct from old.session_location) then
+    perform public.trial_event_add(new.prospect_id, 'session_changed',
+      jsonb_build_object('session_start', new.session_start, 'location', new.session_location));
+  end if;
+
+  if new.attendance_at is not null and new.attendance_at is distinct from old.attendance_at then
+    perform public.trial_event_add(new.prospect_id,
+      case when old.attendance_at is not null then 'attendance_corrected'
+           when new.status = 'attended' then 'attended'
+           else 'absent' end,
+      jsonb_build_object('attended', new.status = 'attended', 'actor', new.attendance_actor));
+  end if;
+
+  if new.continuation is not null and new.continuation is distinct from old.continuation then
+    perform public.trial_event_add(new.prospect_id,
+      case when new.continuation = 'yes' then 'continuation_yes' else 'continuation_no' end);
+  end if;
+  return null;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.trial_event_message()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  if new.kind = 'invite' and new.status = 'sent' and old.status is distinct from 'sent' then
+    perform public.trial_event_add(new.prospect_id, 'invite_sent');
+  end if;
+  return null;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.trial_event_prospect()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  if tg_op = 'INSERT' then
+    perform public.trial_event_add(new.id, 'started', jsonb_build_object('source', new.source));
+    if new.full_name is not null then
+      perform public.trial_event_add(new.id, 'name_set', jsonb_build_object('name', new.full_name));
+    end if;
+    return null;
+  end if;
+
+  if new.full_name is not null and new.full_name is distinct from old.full_name then
+    perform public.trial_event_add(new.id, 'name_set', jsonb_build_object('name', new.full_name));
+  end if;
+  if new.dm_enabled is distinct from old.dm_enabled then
+    perform public.trial_event_add(new.id, case when new.dm_enabled then 'dm_on' else 'dm_off' end);
+  end if;
+  if new.stage is distinct from old.stage and new.stage in ('in_group', 'closed') then
+    perform public.trial_event_add(new.id, case when new.stage = 'in_group' then 'joined_group' else 'closed' end);
+  end if;
+  return null;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.trial_event_question()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  perform public.trial_event_add(new.prospect_id, 'question', jsonb_build_object('body', left(new.body, 200)));
+  return null;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.trial_question(p_telegram_id bigint, p_body text, p_message_id bigint DEFAULT NULL::bigint)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -807,7 +1204,31 @@ begin
  end loop;
 end $function$
 ;
+CREATE TRIGGER trial_events_booking AFTER INSERT OR UPDATE ON public.trial_bookings FOR EACH ROW EXECUTE FUNCTION trial_event_booking();
+CREATE TRIGGER trial_events_message AFTER UPDATE ON public.trial_messages FOR EACH ROW EXECUTE FUNCTION trial_event_message();
+CREATE TRIGGER trial_events_prospect AFTER INSERT OR UPDATE ON public.trial_prospects FOR EACH ROW EXECUTE FUNCTION trial_event_prospect();
+CREATE TRIGGER trial_events_question AFTER INSERT ON public.trial_questions FOR EACH ROW EXECUTE FUNCTION trial_event_question();
 
+revoke all on function public.inactivity_anchor(p_member uuid) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_anchor(p_member uuid) to service_role;
+revoke all on function public.inactivity_candidates(p_today date) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_candidates(p_today date) to service_role;
+revoke all on function public.inactivity_decide(p_review uuid, p_action text, p_actor bigint, p_name text, p_chat_id text) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_decide(p_review uuid, p_action text, p_actor bigint, p_name text, p_chat_id text) to service_role;
+revoke all on function public.inactivity_discard(p_review uuid) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_discard(p_review uuid) to service_role;
+revoke all on function public.inactivity_json(p_review uuid) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_json(p_review uuid) to service_role;
+revoke all on function public.inactivity_kick_result(p_action uuid, p_ok boolean, p_result text) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_kick_result(p_action uuid, p_ok boolean, p_result text) to service_role;
+revoke all on function public.inactivity_maintain(p_today date) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_maintain(p_today date) to service_role;
+revoke all on function public.inactivity_open(p_member uuid, p_anchor date, p_weeks integer) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_open(p_member uuid, p_anchor date, p_weeks integer) to service_role;
+revoke all on function public.inactivity_set_messages(p_review uuid, p_messages jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_set_messages(p_review uuid, p_messages jsonb) to service_role;
+revoke all on function public.inactivity_weeks(p_anchor date, p_today date) from public, anon, authenticated, service_role;
+grant execute on function public.inactivity_weeks(p_anchor date, p_today date) to service_role;
 revoke all on function public.merge_members(keep uuid, remove uuid) from public, anon, authenticated, service_role;
 grant execute on function public.merge_members(keep uuid, remove uuid) to service_role;
 revoke all on function public.queue_telegram_kick(p_member uuid, p_expected_id bigint, p_chat_id text, p_actor bigint, p_name text) from public, anon, authenticated, service_role;
@@ -836,6 +1257,16 @@ revoke all on function public.trial_convert(p_telegram_id bigint) from public, a
 grant execute on function public.trial_convert(p_telegram_id bigint) to service_role;
 revoke all on function public.trial_enqueue(p_booking uuid, p_kind text, p_recipient bigint, p_due timestamp with time zone) from public, anon, authenticated, service_role;
 grant execute on function public.trial_enqueue(p_booking uuid, p_kind text, p_recipient bigint, p_due timestamp with time zone) to service_role;
+revoke all on function public.trial_event_add(p_prospect uuid, p_kind text, p_detail jsonb) from public, anon, authenticated, service_role;
+grant execute on function public.trial_event_add(p_prospect uuid, p_kind text, p_detail jsonb) to service_role;
+revoke all on function public.trial_event_booking() from public, anon, authenticated, service_role;
+grant execute on function public.trial_event_booking() to service_role;
+revoke all on function public.trial_event_message() from public, anon, authenticated, service_role;
+grant execute on function public.trial_event_message() to service_role;
+revoke all on function public.trial_event_prospect() from public, anon, authenticated, service_role;
+grant execute on function public.trial_event_prospect() to service_role;
+revoke all on function public.trial_event_question() from public, anon, authenticated, service_role;
+grant execute on function public.trial_event_question() to service_role;
 revoke all on function public.trial_question(p_telegram_id bigint, p_body text, p_message_id bigint) from public, anon, authenticated, service_role;
 grant execute on function public.trial_question(p_telegram_id bigint, p_body text, p_message_id bigint) to service_role;
 revoke all on function public.trial_queue_reply(p_question uuid, p_response text) from public, anon, authenticated, service_role;
@@ -907,6 +1338,12 @@ grant insert on table public.bot_config to service_role;
 grant update on table public.bot_config to service_role;
 grant delete on table public.bot_config to service_role;
 alter table public.bot_config enable row level security;
+revoke all on table public.inactivity_reviews from public, anon, authenticated, service_role;
+grant select on table public.inactivity_reviews to service_role;
+grant insert on table public.inactivity_reviews to service_role;
+grant update on table public.inactivity_reviews to service_role;
+grant delete on table public.inactivity_reviews to service_role;
+alter table public.inactivity_reviews enable row level security;
 revoke all on table public.member_attendance_stats from public, anon, authenticated, service_role;
 grant select on table public.member_attendance_stats to service_role;
 grant insert on table public.member_attendance_stats to service_role;
@@ -1009,6 +1446,12 @@ grant insert on table public.trial_config to service_role;
 grant update on table public.trial_config to service_role;
 grant delete on table public.trial_config to service_role;
 alter table public.trial_config enable row level security;
+revoke all on table public.trial_events from public, anon, authenticated, service_role;
+grant select on table public.trial_events to service_role;
+grant insert on table public.trial_events to service_role;
+grant update on table public.trial_events to service_role;
+grant delete on table public.trial_events to service_role;
+alter table public.trial_events enable row level security;
 revoke all on table public.trial_invitations from public, anon, authenticated, service_role;
 grant select on table public.trial_invitations to service_role;
 grant insert on table public.trial_invitations to service_role;
