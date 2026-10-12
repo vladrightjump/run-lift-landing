@@ -246,6 +246,13 @@ celălalt organizator a schimbat ceva, primești previzualizarea nouă în loc d
 **Rezumatul de la 06:00** are butoanele **Cine vine**, **Anulează** și **Mută** pentru antrenamentul
 zilei (sau **Reactivează**, dacă e anulat): o anulare pe ploaie e o apăsare.
 
+**Alerta de inactivitate.** Dimineața, după 09:00, botul îți scrie despre fiecare membru care n-a dat
+„Da" în 3 săptămâni în care au fost antrenamente (săptămânile de pauză nu se numără). Alege una:
+**Scoate din grup** (rezultatul apare în alertă după un minut; istoricul rămâne și persoana poate fi
+invitată din nou), **Amână 1 săptămână** (alerta revine dacă tot nu vine) sau **Nu scoate**
+(numărătoarea pornește din nou). Celălalt organizator primește aceeași alertă; prima apăsare
+decide și apare la amândoi.
+
 Dacă Telegram refuză o postare, botul îți spune în privat ce n-a mers. Antrenamentul rămâne cum l-ai
 schimbat, iar comanda apare „eșuată" în „Ultimele comenzi" și pe ecranul **Acum**.
 

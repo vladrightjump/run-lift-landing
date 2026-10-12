@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { retryTrialMessage, trialAttendance, trialReply, type TrialProspect } from '../../lib/trialApi';
+import { retryTrialMessage, trialAttendance, trialReply, type TrialEvent, type TrialProspect } from '../../lib/trialApi';
 import { ziLunaOra } from '../../lib/formatare';
 import { Dialog } from '../eventTab/Dialog';
 import { useTrials } from './useTrials';
@@ -12,6 +12,44 @@ const TRIAL_STAGE: Record<string, string> = {
 const MESSAGE_KIND: Record<string, string> = { booking_confirmed: 'Confirmarea probei', organizer_booking: 'Rezervare nouă', reminder: 'Reminder', attendance_request: 'Confirmarea prezenței', cancelled: 'Anularea sesiunii', self_cancelled: 'Anularea rezervării', organizer_cancelled: 'Anulare către organizator', continuation: 'Continuarea antrenamentelor', rebook: 'Reprogramare', invite: 'Invitație în grup', question: 'Întrebare', answer: 'Răspuns', session_changed: 'Program modificat' };
 const MESSAGE_STATUS: Record<string, string> = { pending: 'În așteptare', processing: 'Se trimite', sent: 'Trimis', failed: 'Nelivrat', ambiguous: 'Livrare neconfirmată', cancelled: 'Anulat' };
 const nameOf = (p: TrialProspect) => p.full_name || p.telegram_username || String(p.telegram_user_id);
+const SOURCE: Record<string, string> = { direct: 'link direct', trial_home: 'site', trial_share: 'link distribuit', trial_instagram: 'Instagram' };
+const EVENT: Record<string, string> = {
+  started: 'A pornit botul', name_set: 'Și-a scris numele', question: 'A pus o întrebare', booked: 'A ales proba',
+  session_changed: 'Proba s-a mutat', cancelled: 'Probă anulată', attended: 'A venit', absent: 'Nu a venit',
+  attendance_corrected: 'Prezență corectată', continuation_yes: 'Vrea să continue', continuation_no: 'Nu vrea să continue',
+  invite_sent: 'A primit invitația în grup', joined_group: 'A intrat în grup', closed: 'Închis',
+  dm_off: 'A oprit mesajele botului', dm_on: 'A repornit mesajele botului',
+};
+const text = (v: unknown) => (typeof v === 'string' ? v : '');
+/** Detaliul unui pas: sursa, numele, proba aleasă, întrebarea. */
+function eventDetail(e: TrialEvent): string {
+  const d = e.detail ?? {};
+  if (e.kind === 'started') return SOURCE[text(d.source)] ?? text(d.source);
+  if (e.kind === 'name_set') return text(d.name);
+  if (e.kind === 'question') return text(d.body);
+  if (e.kind === 'booked' || e.kind === 'session_changed') return [text(d.session_start) && ziLunaOra(text(d.session_start)), text(d.location)].filter(Boolean).join(' · ');
+  if (e.kind === 'attendance_corrected') return d.attended ? 'a venit' : 'nu a venit';
+  return '';
+}
+const telegramLine = (p: TrialProspect) => [
+  p.telegram_username ? `@${p.telegram_username}` : `Telegram ${p.telegram_user_id}`,
+  [p.telegram_first_name, p.telegram_last_name].filter(Boolean).join(' '),
+].filter(Boolean).join(' · ');
+
+/** Drumul persoanei de la /start, pas cu pas, cu data și ora (R12, R14). */
+function Cronologie({ events }: { events: TrialEvent[] }) {
+  if (events.length === 0) return null;
+  return <>
+    <h4>Cronologie</h4>
+    {events.some(e => e.backfilled) && <p className="admin-config-hint">Persoană venită înainte de istoric: vedem doar când a pornit botul. Istoricul complet începe de la lansarea lui.</p>}
+    <ol className="admin-probe-timeline">
+      {events.map(e => <li key={e.id}>
+        <time dateTime={e.occurred_at}>{ziLunaOra(e.occurred_at)}</time>
+        <span><strong>{EVENT[e.kind] ?? e.kind}</strong>{eventDetail(e) && <> · {eventDetail(e)}</>}</span>
+      </li>)}
+    </ol>
+  </>;
+}
 
 export function EcranProbe() {
   const { date, eroare, busy, act, reincarca } = useTrials();
@@ -37,7 +75,9 @@ export function EcranProbe() {
       </div>
       <section className="admin-config-grup admin-probe-detail" aria-label="Detaliile persoanei">
         {!person ? <p>Alege o persoană pentru a vedea proba, întrebările și istoricul.</p> : <>
-          <h3>{nameOf(person)}</h3><p className="admin-config-hint">{TRIAL_STAGE[person.stage] ?? person.stage} · Sursă: {person.source}</p>
+          <h3>{nameOf(person)}</h3><p className="admin-config-hint">{TRIAL_STAGE[person.stage] ?? person.stage} · Sursă: {SOURCE[person.source] ?? person.source}</p>
+          <p className="admin-config-hint">Telegram: {telegramLine(person)}</p>
+          <Cronologie events={(date.events ?? []).filter(e => e.prospect_id === person.id)} />
           <h4>Antrenamente de probă</h4>
           {date.bookings.filter(b => b.prospect_id === person.id).map(b => <article className="admin-probe-item" key={b.id}>
             <strong>{ziLunaOra(b.session_start)}</strong><p>{b.session_location} · {TRIAL_STAGE[b.status] ?? b.status}</p>

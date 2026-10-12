@@ -14,7 +14,7 @@ export interface TrialConfig {
   trial_price: string; bring_text: string; continuation_conditions: string; duration_minutes: number;
   organizer_telegram_id: number | null; contact_text: string; permissions_verified_at: string | null;
 }
-export interface Prospect { id: string; telegram_user_id: number; full_name: string | null; conversation_step: string; dm_enabled: boolean; stage: string }
+export interface Prospect { id: string; telegram_user_id: number; full_name: string | null; conversation_step: string; dm_enabled: boolean; stage: string; telegram_username?: string | null; telegram_first_name?: string | null; telegram_last_name?: string | null }
 export interface Booking { id: string; prospect_id: string; version: number; status: string; session_start: string; session_location: string; duration_minutes: number; conditions_snapshot: Record<string,string>; attendance_at: string | null; continuation: string | null; session_id: string }
 export interface TrialUser { id: number; username?: string; first_name?: string; last_name?: string }
 export const button = (text: string, callback_data: string) => ({ text, callback_data });
@@ -90,6 +90,17 @@ async function prospect(db: TrialDb, id: number): Promise<Prospect | null> {
   if (error) throw error;
   return data as Prospect | null;
 }
+// Keeps the Telegram @username and profile name current on every private
+// interaction (R13). Written only when something changed; never blocks the
+// conversation (the profile is informational).
+export async function syncProfile(db: TrialDb, p: Prospect, from: TrialUser): Promise<void> {
+  const next = { telegram_username: from.username ?? null, telegram_first_name: from.first_name ?? null, telegram_last_name: from.last_name ?? null };
+  if (next.telegram_username === (p.telegram_username ?? null) && next.telegram_first_name === (p.telegram_first_name ?? null)
+    && next.telegram_last_name === (p.telegram_last_name ?? null)) return;
+  const { error } = await db.from('trial_prospects').update(next).eq('id', p.id);
+  if (error) console.error('[trial] profile update:', error.message);
+  else Object.assign(p, next);
+}
 async function organizer(db: TrialDb, id: number): Promise<boolean> {
   const { data, error } = await db.from('members').select('id').eq('telegram_user_id', id).eq('is_admin', true).maybeSingle();
   if (error) throw error;
@@ -107,6 +118,7 @@ export async function trialPrivateMessage(from: TrialUser, text: string, message
   if (!c.enabled) { await send(from.id, `Înscrierea la proba de antrenament nu este disponibilă momentan.\n${c.contact_text}`); return; }
   let p = await prospect(db, from.id);
   const start = /^\/start(?:@\w+)?(?:\s|$)/i.test(text);
+  if (p) await syncProfile(db, p, from);
   if (!p) {
     if (!intakeReady(c)) return send(from.id, `Înscrierile sunt suspendate temporar. ${c.contact_text}`);
     const source = /^\/start(?:@\w+)?\s+(trial_home|trial_share|trial_instagram)$/.exec(text)?.[1] ?? 'direct';
@@ -114,6 +126,7 @@ export async function trialPrivateMessage(from: TrialUser, text: string, message
     if (error) throw error;
     p = await prospect(db, from.id);
     if (!p) throw new Error('Nu s-a putut crea înscrierea');
+    await syncProfile(db, p, from);
     await send(from.id, `${c.welcome_text}\n\n${conditionsText(trialConditions(c))}\n\n${trialCopy(c, 'name_prompt')}\nPoți opri mesajele cu /stop.`); return;
   }
   if (start) {
@@ -160,6 +173,7 @@ export async function trialCallback(cb: { id: string; from: TrialUser; data: str
   if (action === 'reply' || action === 'sendanswer' || action === 'discardanswer') return organizerReplyCallback(db, cb.from.id, action, id);
   const p = await prospect(db, cb.from.id);
   if (!p || !p.dm_enabled) return send(cb.from.id, 'Scrie /start pentru a începe sau relua.');
+  await syncProfile(db, p, cb.from);
   if (action === 'question') { await step(db, p, 'question'); return send(cb.from.id, trialCopy(c, 'question_prompt')); }
   if (action === 'dates') return showDates(db, p, c);
   if (action === 'date') {

@@ -9,9 +9,9 @@ import { sendPoll } from "./jobs/send-poll.js";
 import { morningSummary } from "./jobs/morning-summary.js";
 import { processCommands } from "./jobs/process-commands.js";
 import { inactivityAlert } from "./jobs/inactivity-alert.js";
-import { GYM_TZ, localWeekdayAndTime } from "./lib/tz.js";
+import { GYM_TZ, localWeekdayAndTime, todayInTz } from "./lib/tz.js";
 import { getBotConfig } from "./lib/config.js";
-import { isDue, reminderDue, schedulerEnabled, summaryDue } from "./lib/schedule.js";
+import { inactivityDue, isDue, reminderDue, schedulerEnabled, summaryDue } from "./lib/schedule.js";
 import { alertAdmins } from "./lib/notify.js";
 import { autoReminder, todaysSession } from "./jobs/auto-reminder.js";
 import { getWebhookInfo } from "./lib/telegram.js";
@@ -66,6 +66,10 @@ const firedThisMinute = new Set<string>();
 let lastMinute = "";
 // Trainings already auto-reminded while this process runs (KTD12).
 const remindedSessions = new Set<string>();
+// The local day the inactivity check last ran in this process.
+let lastInactivityRun: string | null = null;
+let inactivityRetryAt = 0;
+let inactivityAlertedOn: string | null = null;
 
 if (schedulerEnabled()) cron.schedule(
   "* * * * *",
@@ -121,16 +125,25 @@ if (schedulerEnabled()) cron.schedule(
           });
       }
 
-      // Weekly digest of inactive / never-attended members — Monday 09:00 local.
-      if (
-        weekday === 1 &&
-        hhmm === "09:00" &&
-        !firedThisMinute.has("inactivity")
-      ) {
-        firedThisMinute.add("inactivity");
-        void inactivityAlert().catch((err) =>
-          console.error("[cron/inactivity-alert]", err),
-        );
+      // Inactivity alerts with action buttons — once a day from 09:00 local.
+      // A failed run retries every 15 minutes the same day; the organizers hear
+      // about it once a day.
+      const localToday = todayInTz();
+      if (inactivityDue(hhmm, localToday, lastInactivityRun) && Date.now() >= inactivityRetryAt) {
+        lastInactivityRun = localToday;
+        void inactivityAlert()
+          .then((r) => {
+            if (!r.ok) console.error(`[cron/inactivity-alert] ${r.detail}`);
+          })
+          .catch((err) => {
+            console.error("[cron/inactivity-alert]", err);
+            lastInactivityRun = null;
+            inactivityRetryAt = Date.now() + 15 * 60_000;
+            if (inactivityAlertedOn !== localToday) {
+              inactivityAlertedOn = localToday;
+              void alertAdmins(`⚠️ Eroare la alertele de inactivitate (reîncerc la 15 minute): ${err}`);
+            }
+          });
       }
 
       // Auto-reminder 2h before today's training, if confirmations are still

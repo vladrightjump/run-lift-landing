@@ -348,3 +348,55 @@ test('poll reselects the session created by a competing trial booking', async ()
   else {assert.equal(sent.length,0);assert.equal(result.detail,scenario);}
  }
 });
+
+// ── Telegram profile on the prospect (R13) ──────────────────────────────────
+const profilePatches = (calls: { url: URL; body: Record<string, unknown>; method: string }[]) =>
+  calls.filter(x => x.url.pathname.endsWith('/trial_prospects') && x.method === 'PATCH' && 'telegram_username' in x.body).map(x => x.body);
+
+test('a new person at /start gets the @username and profile name saved', async () => {
+  let person: Prospect | null = null;
+  const calls = mock((url, _body, method) => {
+    if (url.hostname === 'api.telegram.org') return telegram;
+    if (url.pathname.endsWith('/trial_config')) return config;
+    if (url.pathname.endsWith('/trial_prospects')) {
+      if (method === 'POST') { person = { ...p, full_name: null, conversation_step: 'name' }; return null; }
+      if (method === 'PATCH') return null;
+      return person;
+    }
+    return null;
+  });
+  await trialPrivateMessage({ id: 11, username: 'ana_run', first_name: 'Ana', last_name: 'Rusu' }, '/start trial_instagram');
+  assert.deepEqual(profilePatches(calls), [{ telegram_username: 'ana_run', telegram_first_name: 'Ana', telegram_last_name: 'Rusu' }]);
+});
+
+test('an existing person with a changed @username is updated; an unchanged profile writes nothing', async () => {
+  const known: Prospect = { ...p, telegram_username: 'ana_old', telegram_first_name: 'Ana', telegram_last_name: null };
+  const handler = (url: URL) => url.hostname === 'api.telegram.org' ? telegram : url.pathname.endsWith('/trial_config') ? config
+    : url.pathname.endsWith('/trial_prospects') ? { ...known } : url.pathname.endsWith('/trial_bookings') ? null : null;
+  const changed = mock(handler);
+  await trialPrivateMessage({ id: 11, username: 'ana_new', first_name: 'Ana' }, 'salut');
+  assert.deepEqual(profilePatches(changed), [{ telegram_username: 'ana_new', telegram_first_name: 'Ana', telegram_last_name: null }]);
+
+  const same = mock(handler);
+  await trialPrivateMessage({ id: 11, username: 'ana_old', first_name: 'Ana' }, 'salut');
+  assert.deepEqual(profilePatches(same), []);
+});
+
+test('no @username is saved as null; a failing profile write does not stop the conversation', async () => {
+  const calls = mock((url, _body, method) => {
+    if (url.hostname === 'api.telegram.org') return telegram;
+    if (url.pathname.endsWith('/trial_config')) return config;
+    if (url.pathname.endsWith('/trial_prospects')) { if (method === 'PATCH') throw new Error('column missing'); return { ...p, telegram_username: 'x' }; }
+    return null;
+  });
+  await trialPrivateMessage({ id: 11, first_name: 'Ana' }, 'salut');
+  assert.deepEqual(profilePatches(calls)[0], { telegram_username: null, telegram_first_name: 'Ana', telegram_last_name: null });
+  assert.ok(calls.some(x => x.url.hostname === 'api.telegram.org' && x.url.pathname.endsWith('/sendMessage')));
+});
+
+test('a callback from the person also refreshes the profile', async () => {
+  const calls = mock(url => url.hostname === 'api.telegram.org' ? telegram : url.pathname.endsWith('/trial_config') ? config
+    : url.pathname.endsWith('/trial_prospects') ? { ...p } : null);
+  await trialCallback({ ...cb('t:question'), from: { id: 11, username: 'ana_cb' } });
+  assert.equal(profilePatches(calls)[0]?.telegram_username, 'ana_cb');
+});

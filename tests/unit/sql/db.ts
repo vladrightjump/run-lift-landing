@@ -85,7 +85,7 @@ const TABELE = [
 
 /** Tabelele grupului de antrenament, din `public`. */
 const TABELE_SALA = [
-  'trial_reply_drafts', 'trial_invitations', 'trial_messages', 'trial_questions', 'trial_bookings', 'trial_prospects', 'trial_config',
+  'trial_events', 'trial_reply_drafts', 'trial_invitations', 'trial_messages', 'trial_questions', 'trial_bookings', 'trial_prospects', 'trial_config',
   'members',
   'payments',
   'training_sessions',
@@ -95,6 +95,7 @@ const TABELE_SALA = [
   'bot_actions',
   'telegram_unmatched',
   'telegram_group_memberships',
+  'inactivity_reviews',
 ];
 
 export const ADMIN_TOKEN = '11111111-1111-1111-1111-111111111111';

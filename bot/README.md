@@ -32,7 +32,8 @@ din admin → „Botul de Telegram" — și:
 - trimite rezumatul de dimineață adminilor, în privat;
 - trimite reminderul automat cu două ore înainte de antrenament, dacă au confirmat mai puțini
   decât pragul;
-- trimite lunea la 09:00 lista celor inactivi și verifică webhook-ul la 09:05;
+- caută zilnic, de la 09:00, membrii fără niciun „Da” în 3 săptămâni cu antrenamente și trimite
+  organizatorilor câte o alertă cu butoane (vezi „Alerta de inactivitate”); lunea la 09:05 verifică webhook-ul;
 - golește coada de comenzi (`public.bot_actions`) venite din admin.
 
 Reminderul automat și rezumatul urmează antrenamentul zilei (ora lui, chiar mutat; și un extra),
@@ -159,6 +160,23 @@ npm run dev       # tsx watch: webhook pe :3000 + planificatorul
 ```
 
 Pe baza reală, pornește-l doar cu `BOT_SCHEDULER=off` (vezi „Lansarea", pasul 2).
+
+## Alerta de inactivitate
+
+Zilnic, la primul tic de după 09:00 (ora sălii, sub comutatorul botului), botul caută membrii activi
+din grup fără niciun „Da” în ultimele **3 săptămâni care au avut antrenamente** — o pauză nu se
+numără. Referința e cea mai recentă dintre ultimul „Da”, intrarea în grup și ultima decizie
+„Nu scoate”. Fiecare persoană primește un mesaj propriu, trimis fiecărui organizator, cu trei butoane:
+
+- **Scoate din grup** — trece prin coada obișnuită de scoatere (`kick_member`); rezultatul real apare
+  în alertă după executare. Refuzat dacă persoana a confirmat între timp un antrenament sau a ieșit.
+- **Amână 1 săptămână** — alerta revine peste 7 zile dacă persoana tot n-a confirmat nimic.
+- **Nu scoate** — numărătoarea pornește din nou de la decizie.
+
+Prima decizie câștigă: ambele copii se editează cu decizia și cine a luat-o, iar butoanele dispar.
+Administratorii Telegram ai grupului (verificați live) și organizatorii nu primesc alertă. Ciclurile
+stau în `public.inactivity_reviews` (migrarea `sala_07_inactivitate`); raportul de luni a dispărut.
+Planul: `docs/plans/2026-10-11-2142-feat-alerta-inactivitate-si-istoric-probe-plan.md`.
 
 ## Apartenența la grup și scoaterea din chatul privat
 

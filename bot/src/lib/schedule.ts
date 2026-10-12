@@ -58,3 +58,11 @@ export function summaryDue(
 export function schedulerEnabled(env: Record<string, string | undefined> = process.env): boolean {
   return env.BOT_SCHEDULER !== "off";
 }
+
+// The inactivity check runs once a day, on the first tick from 09:00 on
+// (KTD5): a restart later in the morning still runs it, a second tick the same
+// day does not. Duplicate cycles are prevented in the database anyway.
+export const INACTIVITY_TIME = "09:00";
+export function inactivityDue(hhmm: string, today: string, lastRun: string | null): boolean {
+  return hhmm >= INACTIVITY_TIME && lastRun !== today;
+}

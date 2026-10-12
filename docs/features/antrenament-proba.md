@@ -20,6 +20,7 @@ Persoana rămâne la **Antrenamente → Persoane noi**, separat de membri. Botul
 - **Mesaje nelivrate:** inspectează rezultatul și reîncearcă din detaliul persoanei. „Livrare neconfirmată” înseamnă că mesajul poate să fi ajuns deja; reîncercarea explicită îl poate dubla.
 - **Mesaje oprite:** `/stop` oprește mesajele proactive pentru persoană; `/start` permite reluarea. Rezervarea nu este anulată de oprirea mesajelor.
 - **Invitație expirată:** după prezență și acord, persoana poate cere din bot o invitație nouă. Linkul folosește cerere de aderare; botul validează contul și eligibilitatea, astfel încât redirecționarea lui nu acordă acces altcuiva.
+- **Cronologie:** detaliul persoanei arată @username-ul și numele din profilul Telegram, ținute la zi de bot, și fiecare pas cu data și ora: pornirea botului (cu sursa linkului), numele, întrebările, proba aleasă, mutată sau anulată, prezența și corecțiile ei, răspunsul despre continuare, invitația, intrarea în grup, închiderea, oprirea sau repornirea mesajelor. Pașii se scriu în baza de date (`public.trial_events`, migrarea `sala_08_istoric_probe`), deci prind și acțiunile din admin. Persoanele de dinainte au doar pornirea botului, cu o notă.
 - **Oprire:** dezactivează înscrierile din setări. CTA-ul dispare la următoarea încărcare, iar trimiterile automate sunt suspendate. Istoricul rămâne disponibil. Nu șterge tabelele pentru rollback.
 
 ## Limite

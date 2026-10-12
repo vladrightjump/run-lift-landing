@@ -129,3 +129,63 @@ it('retains the saved settings draft when post-save reload fails', async () => {
  fireEvent.click(screen.getByRole('button',{name:'Salvează setările probei'}));
  await waitFor(()=>expect(api.saveTrialConfig).toHaveBeenLastCalledWith('token',expect.objectContaining({trial_price:'150 MDL',bring_text:'Prosop'})));
 });
+
+describe('cronologia persoanei', () => {
+  const cu = (over: Partial<TrialData>) => api.loadTrials.mockResolvedValue({ ...fixture(), ...over });
+  const deschide = async () => {
+    admin(<EcranProbe />);
+    fireEvent.click(await screen.findByRole('button', { name: /Ana Rusu/ }));
+  };
+  const ev = (id: string, kind: string, occurred_at: string, detail: Record<string, unknown> = {}, backfilled = false) =>
+    ({ id, prospect_id: 'p1', kind, occurred_at, detail, backfilled });
+
+  it('arata pasii in ordine, cu ora, eticheta si detaliul', async () => {
+    cu({ events: [
+      ev('e1', 'started', '2026-10-05T18:40:00Z', { source: 'trial_instagram' }),
+      ev('e2', 'name_set', '2026-10-05T18:41:00Z', { name: 'Ana Rusu' }),
+      ev('e3', 'booked', '2026-10-05T18:43:00Z', { session_start: '2026-10-08T03:30:00Z', location: 'Parc' }),
+      ev('e4', 'attended', '2026-10-08T05:00:00Z'),
+      ev('e5', 'joined_group', '2026-10-08T09:00:00Z'),
+    ] });
+    await deschide();
+    const lista = screen.getByRole('heading', { name: 'Cronologie' }).nextElementSibling as HTMLElement;
+    const pasi = within(lista).getAllByRole('listitem').map(li => li.textContent);
+    expect(pasi).toHaveLength(5);
+    expect(pasi[0]).toMatch(/A pornit botul · Instagram/);
+    expect(pasi[1]).toMatch(/Și-a scris numele · Ana Rusu/);
+    expect(pasi[2]).toMatch(/A ales proba · .*Parc/);
+    expect(pasi[4]).toMatch(/A intrat în grup/);
+    expect(within(lista).getAllByRole('listitem')[0].querySelector('time')?.getAttribute('dateTime')).toBe('2026-10-05T18:40:00Z');
+  });
+
+  it('un tip necunoscut apare cu numele brut, fara sa strice ecranul', async () => {
+    cu({ events: [ev('e1', 'ceva_nou', '2026-10-05T18:40:00Z')] });
+    await deschide();
+    expect(screen.getByText('ceva_nou')).toBeDefined();
+  });
+
+  it('o persoana reconstituita primeste nota despre istoricul de la lansare', async () => {
+    cu({ events: [ev('e1', 'started', '2026-09-20T10:00:00Z', { source: 'direct' }, true)] });
+    await deschide();
+    expect(screen.getByText(/Istoricul complet începe de la lansarea lui/)).toBeDefined();
+  });
+
+  it('fara cheia events (inainte de migrare) ecranul se incarca, fara cronologie', async () => {
+    const vechi = fixture();
+    expect('events' in vechi).toBe(false);
+    api.loadTrials.mockResolvedValue(vechi);
+    await deschide();
+    expect(screen.queryByRole('heading', { name: 'Cronologie' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Antrenamente de probă' })).toBeDefined();
+  });
+
+  it('arata @username-ul si numele din profilul Telegram; fara @ arata ID-ul', async () => {
+    cu({ prospects: [{ ...fixture().prospects[0], telegram_first_name: 'Ana', telegram_last_name: 'R.' }] });
+    await deschide();
+    expect(screen.getByText('Telegram: @ana · Ana R.')).toBeDefined();
+    cleanup();
+    cu({ prospects: [{ ...fixture().prospects[0], telegram_username: null }] });
+    await deschide();
+    expect(screen.getByText('Telegram: Telegram 456')).toBeDefined();
+  });
+});

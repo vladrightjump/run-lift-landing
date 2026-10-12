@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { porneste, reseteaza, caRol, ADMIN_TOKEN, type BazaTest } from './db';
 let db: BazaTest;
 beforeAll(async () => { db = await porneste(); }, 60_000);
@@ -228,4 +230,86 @@ it('uses distinct participant cancellation copy and restricts new helpers to ser
   await expect(caRol(db,role,()=>db.query("select public.trial_release_messages('[]')"))).rejects.toThrow('permission denied');
   await expect(caRol(db,role,()=>db.query('select public.trial_confirm_reply(900,$1,true)',[b.id]))).rejects.toThrow('permission denied');
  }
+});
+
+describe('istoricul pe persoană (trial_events)', () => {
+ const evenimente = async () => (await db.query<{kind:string;detail:Record<string,unknown>;backfilled:boolean}>(
+  `select e.kind, e.detail, e.backfilled from public.trial_events e join public.trial_prospects p on p.id=e.prospect_id where p.telegram_user_id=100 order by e.occurred_at, e.seq`)).rows;
+ const tipuri = async () => (await evenimente()).map(e => e.kind);
+
+ it('fluxul complet produce evenimentele în ordine', async () => {
+  const b=await book(); await finish(b.id);
+  await db.query(`select public.trial_attendance($1,1,true,900)`,[b.id]);
+  await db.query(`select public.trial_continue(100,$1,2,true)`,[b.id]);
+  const invite=(await db.query<{id:string}>(`select id from public.trial_messages where kind='invite'`)).rows[0];
+  await db.query(`update public.trial_messages set status='processing' where id=$1`,[invite.id]);
+  await db.query(`select public.trial_complete_message($1,'sent',null)`,[invite.id]);
+  await db.exec(`insert into public.telegram_group_memberships(telegram_user_id,chat_id,state) values(100,'-1','in_group')`);
+  await db.query(`select public.trial_convert(100)`);
+  // `finish` mută ora probei ca să simuleze trecerea timpului: în test apare și ca „schimbat".
+  expect((await tipuri()).filter(k=>k!=='session_changed')).toEqual(['started','name_set','booked','attended','continuation_yes','invite_sent','joined_group']);
+  const [start]=await evenimente();
+  expect(start.detail).toEqual({source:'direct'});
+ });
+
+ it('o corectare a prezenței produce „corectat", nu un al doilea „prezent"', async () => {
+  const b=await book(); await finish(b.id);
+  await db.query(`select public.trial_attendance($1,1,true,900)`,[b.id]);
+  await db.query(`select runlift.admin_trial_attendance($1,$2,false,2,true)`,[ADMIN_TOKEN,b.id]);
+  const k=await tipuri();
+  expect(k.filter(x=>x==='attended')).toHaveLength(1);
+  expect(k.at(-1)).toBe('attendance_corrected');
+ });
+
+ it('anularea urmată de o nouă rezervare: „anulat", apoi „a ales proba"', async () => {
+  const b=await book(); await db.query('select public.trial_cancel(100,$1,1)',[b.id]); await book();
+  expect((await tipuri()).slice(-3)).toEqual(['booked','cancelled','booked']);
+ });
+
+ it('o probă mutată de program produce „schimbat"', async () => {
+  await book();
+  await db.exec(`update public.training_sessions set location='Alt parc'; select public.trial_sync_sessions();`);
+  const ultim=(await evenimente()).at(-1)!;
+  expect(ultim).toMatchObject({kind:'session_changed',detail:{location:'Alt parc'}});
+ });
+
+ it('răspunsul „nu" la continuare: „nu vrea să continue" și „închis"', async () => {
+  const b=await book(); await finish(b.id);
+  await db.query(`select public.trial_attendance($1,1,true,900)`,[b.id]);
+  await db.query(`select public.trial_continue(100,$1,2,false)`,[b.id]);
+  expect((await tipuri()).slice(-2)).toEqual(['continuation_no','closed']);
+ });
+
+ it('mesajele oprite/repornite apar; o actualizare doar de profil nu produce nimic', async () => {
+  await db.exec(`update public.trial_prospects set dm_enabled=false; update public.trial_prospects set dm_enabled=true;`);
+  const inainte=(await tipuri()).length;
+  await db.exec(`update public.trial_prospects set telegram_username='maria_new', telegram_first_name='Maria', telegram_last_name='Rusu'`);
+  expect(await tipuri()).toHaveLength(inainte);
+  expect((await tipuri()).slice(-2)).toEqual(['dm_off','dm_on']);
+ });
+
+ it('o întrebare produce un eveniment; un mesaj trimis care nu e invitație, nu', async () => {
+  await db.query(`select public.trial_question(100,'Unde ne vedem?')`);
+  await book();
+  const m=(await db.query<{id:string}>(`select id from public.trial_messages where kind<>'invite' limit 1`)).rows[0];
+  await db.query(`update public.trial_messages set status='processing' where id=$1`,[m.id]);
+  await db.query(`select public.trial_complete_message($1,'sent',null)`,[m.id]);
+  const k=await tipuri();
+  expect(k).toContain('question');
+  expect(k).not.toContain('invite_sent');
+ });
+
+ it('admin_trial_data întoarce evenimentele; anon nu citește tabelul', async () => {
+  const data=(await db.query<{d:{events:{kind:string}[]}}>(`select runlift.admin_trial_data($1) d`,[ADMIN_TOKEN])).rows[0].d;
+  expect(data.events.map(e=>e.kind)).toEqual(['started','name_set']);
+  await expect(caRol(db,'anon',()=>db.query('select * from public.trial_events'))).rejects.toThrow('permission denied');
+  await expect(caRol(db,'anon',()=>db.query(`select public.trial_event_add(gen_random_uuid(),'x')`))).rejects.toThrow('permission denied');
+ });
+
+ it('reconstituirea: o persoană fără evenimente primește un singur „a pornit botul", marcat; a doua rulare nu-l dublează', async () => {
+  await db.exec(`delete from public.trial_events`);
+  const sql=readFileSync(resolve(__dirname,'../../../supabase/sql/supabase-migration-sala-istoric-probe.sql'),'utf8');
+  await db.exec(sql); await db.exec(sql);
+  expect(await evenimente()).toEqual([{kind:'started',detail:{source:'direct'},backfilled:true}]);
+ });
 });

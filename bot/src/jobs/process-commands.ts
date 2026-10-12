@@ -7,6 +7,50 @@ import { alertAdmins } from "../lib/notify.js";
 import { sendPoll } from "./send-poll.js";
 import { morningSummary } from "./morning-summary.js";
 import { realPorts, runQueuedNotice } from "./day-ops.js";
+import { editAll, editOrThrow } from "./inactivity-alert.js";
+import type { ReviewView } from "../lib/inactivity-text.js";
+
+// The inactivity cycle that asked for this kick, now settled — or null for a
+// kick from the admin or /scoate. Never fails the command: on error the
+// organizer still gets the usual DM.
+async function inactivityKickResult(actionId: string, ok: boolean, result: string): Promise<ReviewView | null> {
+  const { data, error } = await createAdminClient().rpc("inactivity_kick_result", {
+    p_action: actionId, p_ok: ok, p_result: result,
+  });
+  if (error) {
+    console.error("[commands] inactivity_kick_result:", error.message);
+    return null;
+  }
+  return (data as ReviewView | null) ?? null;
+}
+
+export interface KickReportPorts {
+  organizers: number[];
+  kickResult(actionId: string, ok: boolean, result: string): Promise<ReviewView | null>;
+  edit(chatId: number, messageId: number, text: string): Promise<void>;
+  dm(chatId: number, text: string): Promise<unknown>;
+}
+// A kick asked from an inactivity alert reports in the alert itself (R8);
+// any other kick DMs the organizer who asked, as before.
+export async function reportKick(
+  cmd: Pick<ActionRow, "id" | "telegram_user_id" | "payload">, ok: boolean, result: string, ports: KickReportPorts,
+): Promise<void> {
+  const review = await ports.kickResult(cmd.id, ok, result);
+  if (review) {
+    await editAll(review, ports.edit);
+    return;
+  }
+  const actor = Number(cmd.payload?.organizator_id);
+  if (ports.organizers.includes(actor)) {
+    await ports.dm(actor, `${ok ? '✅' : '⚠️'} Scoatere Telegram ID ${cmd.telegram_user_id}: ${result}`).catch(() => {});
+  }
+}
+const kickReportPorts = (): KickReportPorts => ({
+  organizers: organizerIds(),
+  kickResult: inactivityKickResult,
+  edit: editOrThrow,
+  dm: (chatId, text) => sendMessage(chatId, text),
+});
 
 interface ActionRow {
   id: string;
@@ -118,10 +162,7 @@ async function drainCommands(): Promise<void> {
       })
       .eq("id", cmd.id);
     if (saveError) throw saveError;
-    const actor = Number(cmd.payload?.organizator_id);
-    if (cmd.action === 'kick_member' && organizerIds().includes(actor)) {
-      await sendMessage(actor, `${ok ? '✅' : '⚠️'} Scoatere Telegram ID ${cmd.telegram_user_id}: ${result}`).catch(() => {});
-    }
+    if (cmd.action === 'kick_member') await reportKick(cmd, ok, result, kickReportPorts());
 
     console.log(`[commands] ${cmd.action} #${cmd.id} → ${ok ? "done" : "failed"} (${result})`);
     if (!ok) {

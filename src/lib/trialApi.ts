@@ -10,6 +10,13 @@ export type TrialConfig = {
 export type TrialProspect = {
   id: string; telegram_user_id: number; telegram_username: string | null;
   full_name: string | null; source: string; stage: string; dm_enabled: boolean;
+  /** Numele din profilul Telegram, ținut la zi de bot (lipsește înainte de migrare). */
+  telegram_first_name?: string | null; telegram_last_name?: string | null;
+};
+/** Un pas din drumul persoanei, scris de baza de date (`trial_events`). */
+export type TrialEvent = {
+  id: string; prospect_id: string; kind: string; occurred_at: string;
+  detail: Record<string, unknown>; backfilled: boolean;
 };
 type TrialBooking = {
   id: string; prospect_id: string; status: string; version: number;
@@ -21,6 +28,8 @@ type TrialMessage = { id: string; prospect_id: string; kind: string; status: str
 export type TrialData = {
   config: TrialConfig; prospects: TrialProspect[]; bookings: TrialBooking[];
   questions: TrialQuestion[]; messages: TrialMessage[];
+  /** Lipsește înainte de migrarea istoricului: ecranul o tratează ca listă goală. */
+  events?: TrialEvent[];
   organizers: { id: string; full_name: string; telegram_user_id: number }[];
 };
 export const loadTrials = async (token: string, signal?: AbortSignal): Promise<TrialData> => {

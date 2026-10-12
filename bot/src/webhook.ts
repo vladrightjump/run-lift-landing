@@ -2,6 +2,7 @@ import { broadcastControl } from './broadcast-control.js';
 import { trialCallback, trialJoinRequest, trialPrivateMessage, trialOrganizerText, missingTrialSchema } from './lib/trial.js';
 import { recordMembership } from "./lib/membership.js";
 import { memberControl, memberControlDeps } from "./member-control.js";
+import { inactivityCallback, inactivityControlDeps } from "./inactivity-control.js";
 import type { TelegramMember } from "./lib/telegram.js";
 import { createAdminClient } from "./lib/supabase.js";
 import {
@@ -156,6 +157,15 @@ export async function handleUpdate(update: TgUpdate): Promise<boolean> {
         chatId: cb.message?.chat.id ?? cb.from.id, chatType: cb.message?.chat.type ?? 'private',
         messageId: cb.message?.message_id ?? null, data: cb.data!,
       }, memberControlDeps()));
+      return true;
+    }
+    if (cb?.data?.startsWith("i:")) {
+      // The inactivity alert's buttons (Scoate / Amână / Nu scoate).
+      await organizerSafely(cb.message?.chat.id ?? cb.from.id, () => inactivityCallback({
+        id: cb.id, fromId: cb.from.id, fromName: cb.from.first_name ?? cb.from.username ?? String(cb.from.id),
+        chatId: cb.message?.chat.id ?? cb.from.id, chatType: cb.message?.chat.type ?? 'unknown',
+        messageId: cb.message?.message_id ?? null, data: cb.data!,
+      }, inactivityControlDeps()));
       return true;
     }
     if (cb?.data?.startsWith("c:")) {
