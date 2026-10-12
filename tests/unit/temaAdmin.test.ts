@@ -18,7 +18,11 @@ import { resolve } from 'node:path';
 
 const css = readFileSync(resolve(__dirname, '../../src/index.css'), 'utf8');
 const MARCA = '/* ==== Admin backoffice (/admin) ==== */';
-const admin = css.slice(css.indexOf(MARCA));
+// Suprapunerea comună se randează în rădăcina adminului și îi citește jetoanele.
+const kitAdmin = ['../../src/shared/ui/Suprapunere.module.css'].map((f) =>
+  readFileSync(resolve(__dirname, f), 'utf8')
+);
+const admin = [css.slice(css.indexOf(MARCA)), ...kitAdmin].join('\n');
 
 const blocTema = /\.admin-pagina,\s*\.admin-app\s*\{([^}]*)\}/.exec(admin)?.[1] ?? '';
 const jetoane = new Map<string, string[]>();

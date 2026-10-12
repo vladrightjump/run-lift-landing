@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { scoateDinGrup, type SalaComanda, type SalaMembru } from '../../lib/salaApi';
-import { Dialog } from '../eventTab/Dialog';
+import { Dialog } from '../../shared/ui/Dialog';
 
 /**
  * Scoaterea cuiva din grupul de Telegram, cu confirmare (R9, F2).

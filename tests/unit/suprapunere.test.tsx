@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { useState } from 'react';
-import { Suprapunere, pozitiePopover } from '../../src/admin/controale/Suprapunere';
+import { Suprapunere, pozitiePopover } from '../../src/shared/ui/Suprapunere';
 import { MeniuActiuni } from '../../src/admin/controale/MeniuActiuni';
 import { Toast, useToast } from '../../src/admin/controale/Toast';
 import { GrupRadio } from '../../src/admin/controale/GrupRadio';
@@ -66,29 +66,28 @@ describe('Suprapunere', () => {
     render(<Deschizator tip="popover" />);
     deschide();
     const cutie = screen.getByRole('dialog', { name: 'Alege ediția' });
-    expect(cutie.className).toContain('admin-popover');
-    expect(cutie.className).not.toContain('admin-foaie');
+    expect(cutie.dataset.prezentare).toBe('popover');
   });
 
   it('sub 760 px, același popover se deschide ca foaie de jos', () => {
     setLatime(true);
     render(<Deschizator tip="popover" />);
     deschide();
-    expect(screen.getByRole('dialog', { name: 'Alege ediția' }).className).toContain('admin-foaie');
+    expect(screen.getByRole('dialog', { name: 'Alege ediția' }).dataset.prezentare).toBe('foaie');
   });
 
   it('sub 760 px, panoul lateral devine tot foaie de jos', () => {
     setLatime(true);
     render(<Deschizator tip="panou" />);
     deschide();
-    expect(screen.getByRole('dialog', { name: 'Alege ediția' }).className).toContain('admin-foaie');
+    expect(screen.getByRole('dialog', { name: 'Alege ediția' }).dataset.prezentare).toBe('foaie');
   });
 
   it('dialogul rămâne dialog central la orice lățime', () => {
     setLatime(true);
     render(<Deschizator tip="dialog" />);
     deschide();
-    expect(screen.getByRole('dialog', { name: 'Alege ediția' }).className).toContain('admin-dialog');
+    expect(screen.getByRole('dialog', { name: 'Alege ediția' }).dataset.prezentare).toBe('dialog');
   });
 
   it('la deschidere, focusul cade pe opțiunea aleasă', () => {
@@ -193,7 +192,8 @@ describe('Suprapunere', () => {
     const onInchis = vi.fn();
     render(<Deschizator tip="panou" onInchis={onInchis} />);
     deschide();
-    fireEvent.click(document.querySelector('.admin-supr-fundal') as HTMLElement);
+    // Fundalul e fratele dinaintea cutiei.
+    fireEvent.click(screen.getByRole('dialog', { name: 'Alege ediția' }).previousElementSibling as HTMLElement);
     expect(onInchis).toHaveBeenCalledTimes(1);
   });
 

@@ -1,4 +1,5 @@
-import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { relative, resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { msw } from 'msw/vite';
@@ -25,9 +26,22 @@ const injectEditionMeta = (): Plugin => ({
   },
 });
 
-export default defineConfig({
+// Numele claselor din `*.module.css`: lizibile în dev (`Suprapunere__dialog`),
+// scurte în build. Hash-ul e hex cu prefix de literă, deci e mereu un
+// identificator CSS valid; depinde doar de fișier și clasă, deci e stabil
+// între build-uri.
+const numeClasaModul = (command: 'serve' | 'build') =>
+  command === 'serve'
+    ? '[name]__[local]'
+    : (local: string, fisier: string) =>
+        `k${createHash('sha256').update(`${relative(__dirname, fisier)}:${local}`).digest('hex').slice(0, 6)}`;
+
+export default defineConfig(({ command }) => ({
   resolve: {
     alias: { '@': resolve(__dirname, 'src') },
+  },
+  css: {
+    modules: { generateScopedName: numeClasaModul(command) },
   },
   plugins: [
     react(),
@@ -54,4 +68,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

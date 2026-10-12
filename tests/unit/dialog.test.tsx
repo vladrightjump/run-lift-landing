@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
-import { Dialog } from '../../src/admin/eventTab/Dialog';
+import { Dialog } from '../../src/shared/ui/Dialog';
 
 /**
  * Dialogul modal al tabului „Eveniment".
@@ -48,7 +48,8 @@ describe('Dialog', () => {
     fireEvent.click(screen.getByRole('dialog'));
     expect(onInchide).not.toHaveBeenCalled();
 
-    fireEvent.click(document.querySelector('.admin-confirm-overlay') as HTMLElement);
+    // Fundalul e fratele dinaintea cutiei.
+    fireEvent.click(screen.getByRole('dialog').previousElementSibling as HTMLElement);
     expect(onInchide).toHaveBeenCalledTimes(1);
   });
 

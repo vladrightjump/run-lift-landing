@@ -18,7 +18,7 @@ import {
 import { useSesiuneAdmin } from './adminSession';
 import { Blocat } from './eventTab/primitive';
 import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
-import { Dialog } from './eventTab/Dialog';
+import { Dialog } from '../shared/ui/Dialog';
 import { refuzCuPas, ETICHETE_SECTIUNI, type Pas } from './eventTab/ajutoare';
 import { esteNesalvat } from './eventTab/nesalvat';
 import { diferenteFataDePublicat, esteComparabil } from './eventTab/diferente';

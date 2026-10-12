@@ -7,7 +7,7 @@ import { useNow } from '../hooks/useNow';
 import { useSesiuneAdmin } from './adminSession';
 import { fazaSite } from './stareCurenta';
 import { laDatetimeLocal, dinDatetimeLocal, descrieMoment } from './eventConfigFields';
-import { Dialog } from './eventTab/Dialog';
+import { Dialog } from '../shared/ui/Dialog';
 import { AdminOrdineHomepage } from './AdminOrdineHomepage';
 
 /** „2026-08-19T12:00:00" — local, fără fus. Aceeași formă ca în document. */

@@ -9,7 +9,7 @@ import {
   type SalaMembru,
 } from '../../lib/salaApi';
 import { ziLunaOra } from '../../lib/formatare';
-import { Dialog } from '../eventTab/Dialog';
+import { Dialog } from '../../shared/ui/Dialog';
 import {
   ETICHETE_COMENZI,
   ETICHETE_STARE_COMANDA,

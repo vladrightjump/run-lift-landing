@@ -1,0 +1,29 @@
+/*
+ * Baza globală: resetul, tipografia de bază și focusul vizibil. Restul
+ * stilului stă lângă componenta lui (`*.module.css`), vezi docs/ARCHITECTURE.md.
+ */
+  html, body { margin: 0; padding: 0; background: var(--e3-bg); }
+  html { scroll-behavior: smooth; }
+  /* Ancorele (#inscriere) nu intră sub topbar-ul sticky */
+  section[id] { scroll-margin-top: 90px; }
+  @media (max-width: 720px) {
+    /* Pe mobil topbar-ul are două rânduri — ancora coboară mai mult */
+    section[id] { scroll-margin-top: 116px; }
+  }
+  body { color: var(--e3-text); font-family: Archivo, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100dvh; }
+  ::selection { background: var(--e3-accent); color: var(--e3-bg); }
+  a { text-decoration: none; }
+  [hidden] { display: none !important; }
+
+  /* Focus vizibil, pe toate paginile. Doar inputurile aveau inel — restul se
+     navigau cu tastatura pe nevăzute. `:focus-visible`, deci mouse-ul nu-l vede.
+     Panourile cu focus programatic (tabindex=-1) și-l scot explicit mai jos. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 2px solid var(--e3-accent);
+    outline-offset: 2px;
+  }

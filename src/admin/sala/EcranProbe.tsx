@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { retryTrialMessage, trialAttendance, trialReply, type TrialEvent, type TrialProspect } from '../../lib/trialApi';
 import { ziLunaOra } from '../../lib/formatare';
-import { Dialog } from '../eventTab/Dialog';
+import { Dialog } from '../../shared/ui/Dialog';
 import { useTrials } from './useTrials';
 import './probe.css';
 

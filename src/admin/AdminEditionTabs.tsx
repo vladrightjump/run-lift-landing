@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import type { AdminEdition } from '../lib/adminApi';
-import { Dialog } from './eventTab/Dialog';
+import { Dialog } from '../shared/ui/Dialog';
 
 type Props = {
   editions: AdminEdition[] | null;
