@@ -14,8 +14,9 @@ adăugare/eliminare sunt în **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. S
 folosește `src/app/`, `src/features/<nume-românesc>/` și `src/shared/`, cu aliasul `@/` către
 `src/` și `npm run lint:arch` în verificările locale și CI.
 
-Arborele de mai jos descrie **structura actuală, în tranziție**. Cele trei foldere noi sunt
-deocamdată schelet; codul existent se mută pe zone, în unitățile planificate.
+Arborele de mai jos descrie **structura actuală, în tranziție**. `app/` compune routerul;
+`shared/lib/` conține transportul RPC comun, iar `features/` este deocamdată schelet.
+Codul existent se mută pe zone, în unitățile planificate.
 
 ```
 run-lift-landing/
@@ -25,9 +26,9 @@ run-lift-landing/
 ├── scripts/
 │   └── write-version.ts  # ștampilează dist/version.json (commit + amprenta meta)
 ├── src/
-│   ├── app/              # schelet: viitoarele entry/router/providers
+│   ├── app/              # entry, router tipizat și layout cu config
 │   ├── features/         # schelet: viitoarele funcționalități cu API public index.ts
-│   ├── shared/           # schelet: viitoarele UI/lib/content/styles comune
+│   ├── shared/           # transport RPC; urmează UI/content/styles comune
 │   ├── content/          # instantaneul de build (sursa de adevăr e în DB)
 │   │   ├── edition.ts    #   instantaneu: primul cadru + meta de share. NU-l edita per ediție
 │   │   ├── eventConfig.ts#   forma documentului de config + parsarea lui

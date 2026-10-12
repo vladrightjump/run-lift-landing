@@ -38,7 +38,7 @@ export default defineConfig({
       exclude: [
         'src/**/*.test.{ts,tsx}',
         // Puncte de intrare: montează arborele, n-au logică proprie.
-        'src/main.tsx',
+        'src/app/main.tsx',
         'src/admin-preview.tsx',
         'src/vite-env.d.ts',
       ],

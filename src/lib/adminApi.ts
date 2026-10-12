@@ -1,5 +1,8 @@
 import { SUPABASE } from './config';
 import { SubmitHttpError } from './supabase';
+import { InvalidTokenError, rpc } from '../shared/lib/rpc';
+
+export { InvalidTokenError, rpc } from '../shared/lib/rpc';
 
 /**
  * API-ul backoffice-ului — totul trece prin RPC-uri SECURITY DEFINER care
@@ -83,32 +86,6 @@ export const clearStoredToken = (): void => {
   } catch {
     // idem
   }
-};
-
-/** Sesiune invalidă/expirată — semnal pentru revenirea la login. */
-export class InvalidTokenError extends Error {
-  constructor() {
-    super('invalid_token');
-  }
-}
-
-export const rpc = async <T>(fn: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<T> => {
-  const res = await fetch(`${SUPABASE.url}/rest/v1/rpc/${fn}`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE.publishableKey,
-      'Content-Type': 'application/json',
-      'Content-Profile': SUPABASE.schema,
-    },
-    body: JSON.stringify(args),
-    signal,
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    if (body.includes('invalid_token')) throw new InvalidTokenError();
-    throw new SubmitHttpError(res.status, body);
-  }
-  return (await res.json().catch(() => undefined)) as T;
 };
 
 /** Autentificare — întoarce token-ul de sesiune sau null la credențiale greșite. */

@@ -11,7 +11,6 @@ import { SNAPSHOT_CONFIG, parseEventConfig, type EventConfig } from '../content/
 import { deriveEventStrings, type EventStrings } from '../content/format';
 import { deriveEditionDates, type EditionDates } from '../lib/config';
 import { fetchPublicConfig, isAbortError } from '../lib/supabase';
-import { getStoredToken, listEventConfig } from '../lib/adminApi';
 import { logClientError, setMonitoringEdition } from '../lib/monitoring';
 
 /**
@@ -65,6 +64,7 @@ type Props = {
 const sursaConfig = async (signal: AbortSignal): Promise<EventConfig | null> => {
   if (configParam() !== 'draft') return fetchPublicConfig(signal);
 
+  const { getStoredToken, listEventConfig } = await import('../lib/adminApi');
   const token = getStoredToken();
   if (!token) return fetchPublicConfig(signal);
 

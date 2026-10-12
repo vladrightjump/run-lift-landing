@@ -151,7 +151,7 @@ test.describe('grupul din parc, pe telefon', () => {
     ['#grup-prezente', (p) => p.getByText('Antrenamentul următor', { exact: true }), (p) => p.getByRole('button', { name: 'Anulează antrenamentul' })],
     ['#grup-membri', (p) => p.getByRole('heading', { name: 'Membrii' }), (p) => p.getByRole('button', { name: 'Editează' }).first()],
     ['#grup-analiza', (p) => p.getByRole('heading', { name: 'Fiecare antrenament' }), (p) => p.getByRole('button', { name: 'Istoric' }).first()],
-    ['#grup-bot', (p) => p.getByText('Textul sondajului'), (p) => p.getByRole('button', { name: 'Trimite sondajul acum' })],
+    ['#grup-bot', (p) => p.getByText('Textul sondajului', { exact: true }), (p) => p.getByRole('button', { name: 'Trimite sondajul acum' })],
   ];
 
   for (const [ecran, gata, principal] of ecrane) {

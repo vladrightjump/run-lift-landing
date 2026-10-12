@@ -1,4 +1,4 @@
-import { rpc } from './adminApi';
+import { rpc } from '../shared/lib/rpc';
 
 /**
  * Ce citește site-ul din `public_homepage()`: ordinea blocurilor de pe ecranul

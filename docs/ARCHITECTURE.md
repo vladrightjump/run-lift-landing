@@ -32,14 +32,18 @@ funcționalitate rămâne în `components/` al ei; o primitivă folosită de mai
 aparține `shared/ui/`. Stilurile locale rămân cu proprietarul lor, iar valorile comune aparțin
 `shared/styles/tokens.css`. Nu creăm subfoldere sau exporturi fără un consumator real.
 
-În U3 există numai scheletul `app/`, `features/` și `shared/`, plus regulile de dependență și
-aliasul `@/` către `src/`. Codul existent rămâne în `src/components/`, `src/admin/`,
+U3 a adăugat scheletul `app/`, `features/` și `shared/`, regulile de dependență și
+aliasul `@/` către `src/`. U4 compune entry-ul și routerul tipizat în `app/` și mută
+transportul RPC în `shared/lib/rpc.ts`, pentru a separa API-ul admin de entry-ul public.
+Codul existent rămâne în `src/components/`, `src/admin/`,
 `src/hooks/`, `src/lib/`, `src/content/` și fișierele din rădăcina `src/`. Migrarea se face în
 unitățile planificate, câte o zonă; schimbarea unui fișier vechi nu îl mută automat.
 
-În prezent, [`src/main.tsx`](../src/main.tsx) alege pagina prin comparații ale căii și montează
-provider-ul de config. Routerul și provider-ele din `app/` sunt ținta U4, nu o implementare deja
-livrată. [`/antrenament`](../src/components/Antrenament.tsx) va fi exemplul complet de
+În prezent, [`src/app/main.tsx`](../src/app/main.tsx) montează routerul TanStack declarat în
+cod în [`src/app/router.tsx`](../src/app/router.tsx). Registrul din `app/routes.ts` compune
+paginile și lista canonică de căi. Landing-ul este eager, celelalte pagini sunt lazy; layout-ul
+fără cale montează provider-ul de config numai pentru paginile dependente de ediție.
+[`/antrenament`](../src/components/Antrenament.tsx) va fi exemplul complet de
 funcționalitate în U7; pagina actuală nu a fost încă mutată în `features/antrenament/`.
 
 ## Granițele de dependență
@@ -71,12 +75,13 @@ stilurile, datele și testele acolo. API-ul public expune doar ce trebuie folosi
    și colectată de routerul din `app/`.
 2. Rewrite-ul explicit din [`vercel.json`](../vercel.json), către shell-ul HTML potrivit.
 
-Până la U4, primul punct rămâne selecția din `src/main.tsx`; nu există încă declarații de rută
-în funcționalități. Un shell separat pentru meta de share cere și intrarea HTML/configurația
-de build aferentă, fără a deveni un al treilea registru de rute. Păstrăm rewrites explicite,
-inclusiv `/antrenament` → `/antrenament.html`, și verificarea parității rutelor. Testul existent
-[`rute.test.ts`](../tests/unit/rute.test.ts) citește acum `main.tsx`; adaptarea lui la router
-aparține U4. Playwright pe build verifică în continuare accesul direct și metadatele.
+Până la migrarea funcționalităților, primul punct este registrul din `src/app/routes.ts`;
+declarațiile nu sunt încă în funcționalități. Un shell separat pentru meta de share cere și intrarea
+HTML/configurația de build aferentă, fără a deveni un al treilea registru de rute. Păstrăm rewrites explicite,
+inclusiv `/antrenament` → `/antrenament.html`, și verificarea parității rutelor. Testul
+[`rute.test.ts`](../tests/unit/rute.test.ts) citește lista canonică a routerului și păzește
+paritatea în ambele direcții. Playwright pe build verifică în continuare accesul
+direct și metadatele.
 
 La schimbarea unei componente sau a unui element, edităm codul și testul comportamentului
 în funcționalitatea care le deține. Alegem stratul din tabelul de mai jos și evităm să repetăm

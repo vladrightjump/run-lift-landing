@@ -43,6 +43,8 @@ for (const { nume, url } of INTRARI) {
     await mockStats(page);
     await page.goto(url);
 
+    await expect(page.locator('form input:not([type=hidden]):not([type=checkbox])').first()).toBeVisible();
+
     const campuri = await page
       .locator('form input:not([type=hidden]):not([type=checkbox])')
       .evaluateAll((els) =>
@@ -64,6 +66,8 @@ for (const { nume, url } of INTRARI) {
     await fixClock(page);
     await mockStats(page);
     await page.goto(url);
+
+    await expect(page.locator('form input:not([type=hidden]):not([type=checkbox])').first()).toBeVisible();
 
     const depasire = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth
