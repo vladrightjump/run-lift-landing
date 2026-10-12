@@ -14,13 +14,14 @@
     "typecheck": "tsc -b --noEmit",
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
     "lint": "oxlint --max-warnings=25",
+    "lint:arch": "depcruise --config .dependency-cruiser.cjs src",
     "deadcode": "knip",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:preview": "E2E_PREVIEW=1 playwright test",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "verify": "npm run lint && npm run deadcode && npm run typecheck && npm run typecheck:tests && npm run test:coverage && npm run build && npm run test:e2e:preview",
+    "verify": "npm run lint && npm run lint:arch && npm run deadcode && npm run typecheck && npm run typecheck:tests && npm run test:coverage && npm run build && npm run test:e2e:preview",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
@@ -39,6 +40,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/coverage-v8": "^4.1.10",
+    "dependency-cruiser": "18.6.0",
     "jsdom": "^25.0.1",
     "knip": "^6.34.0",
     "msw": "3.0.3",
