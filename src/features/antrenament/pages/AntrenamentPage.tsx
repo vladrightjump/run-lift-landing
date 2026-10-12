@@ -45,8 +45,11 @@ const dinFragment = (hash: string, program: WeeklyWorkout[]): number | null => {
 const curenta = (program: WeeklyWorkout[]): number =>
   program.reduce((max, s) => (s.numar > max ? s.numar : max), program[0].numar);
 
-export const Antrenament = () => {
-  const { data: program, isError } = useProgramAntrenament();
+export const AntrenamentPage = () => {
+  const { data: program, isError: cerereEsuata } = useProgramAntrenament();
+  // Eroarea contează doar cât timp n-avem program: un refresh picat n-are voie
+  // să înlocuiască o săptămână deja afișată cu banda de eroare.
+  const isError = cerereEsuata && program === undefined;
   // Fragmentul cu care a venit vizitatorul. După o alegere, fragmentul e al
   // nostru (`replaceState` de mai jos), deci nu se mai citește.
   const [fragment] = useState(() => window.location.hash);

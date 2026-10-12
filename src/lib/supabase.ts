@@ -271,7 +271,7 @@ export type Reel = { youtube: string; caption: string; url: string };
 /**
  * Clipurile vizibile, în ordinea din bandă.
  *
- * Aceeași formă ca `fetchWeeklyWorkouts` (`features/antrenament/api.ts`): RPC stabil peste un tabel închis, cu
+ * Aceeași formă ca `fetchWeeklyWorkouts` (`features/antrenament/data/api.ts`): RPC stabil peste un tabel închis, cu
  * cheia publicabilă. Clipurile nu aparțin niciunei ediții — antrenamentele nu se
  * mută odată cu cursa — deci nu trec prin documentul de configurare.
  *

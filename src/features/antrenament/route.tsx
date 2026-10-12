@@ -6,5 +6,5 @@ import { lazyRouteComponent } from '@tanstack/react-router';
  */
 export const rutaAntrenament = {
   path: '/antrenament',
-  component: lazyRouteComponent(() => import('./pages/AntrenamentPage'), 'Antrenament'),
+  component: lazyRouteComponent(() => import('./pages/AntrenamentPage'), 'AntrenamentPage'),
 } as const;

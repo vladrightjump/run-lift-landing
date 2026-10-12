@@ -1,10 +1,13 @@
 /*
  * Cardul unei săptămâni: pe `/antrenament` și în previzualizarea din editorul
  * adminului. Editorul își ajustează lățimea și animația din `index.css`
- * (`.admin-previz > article`), cu specificitate mai mare decât regulile de aici.
+ * (`.admin-previz .admin-previz-saptamana`, prin `className`), cu specificitate mai mare decât regulile de aici.
  */
   .card {
-    width: min(680px, 100%);
+    /* Lățimea conținutului; padding-ul și bordura se adaugă (content-box). Pe
+       telefon, `100%` singur făcea cardul cu 22px mai lat decât ecranul, iar
+       `.cs-root` îi tăia marginea dreaptă. Pe desktop rămâne 680px. */
+    width: min(680px, 100% - 2 * clamp(20px, 4vw, 32px) - 2px);
     margin: 8px auto 0;
     padding: clamp(20px, 4vw, 32px);
     background: var(--e3-surface);

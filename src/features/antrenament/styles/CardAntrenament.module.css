@@ -1,7 +1,8 @@
 /*
  * Cardul „Până atunci" de pe ecranul de așteptare. Pagina îl poate pune sub
- * secțiunea de probă; acolo `.cs-dupa-proba > a` din `public.css` îi scoate
- * marginea de sus, cu specificitate mai mare decât regulile de aici.
+ * secțiunea de probă și îi trece `className`; `.cs-dupa-proba .cs-dupa-proba-card`
+ * din `public.css` îi scoate marginea de sus, cu specificitate mai mare decât
+ * regulile de aici.
  */
   /* ---- „Până atunci": antrenamentul săptămânii, sub countdown ---- */
   .antren {

@@ -653,7 +653,7 @@
     box-sizing: border-box;
     padding: 0 20px 48px;
   }
-  .cs-dupa-proba > a { margin-top: 0; }
+  .cs-dupa-proba .cs-dupa-proba-card { margin-top: 0; }
 
   .cs-cta-secondary {
     margin-top: 6px; background: transparent; color: var(--e3-text);

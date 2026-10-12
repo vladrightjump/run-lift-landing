@@ -4,7 +4,7 @@ import { HttpResponse } from 'msw';
 import { server } from '../../../../tests/support/vitest.setup';
 import { rpcHandler } from '../../../../tests/support/handlers';
 import { programDe, saptamanaPublica } from '../../../../tests/support/builders/workouts';
-import { Antrenament } from './AntrenamentPage';
+import { AntrenamentPage } from './AntrenamentPage';
 
 /**
  * Pagina `/antrenament`: linkul de trimis în story sau în grupul de Telegram,
@@ -27,7 +27,7 @@ const program = (body: unknown, status = 200) =>
 
 const deschide = (fragment = '') => {
   window.history.replaceState(null, '', `/antrenament${fragment}`);
-  return render(<Antrenament />);
+  return render(<AntrenamentPage />);
 };
 
 const card = () => screen.getByRole('article');

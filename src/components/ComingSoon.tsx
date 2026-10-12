@@ -192,7 +192,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
       */}
       {cardJos && (
         <div className="cs-dupa-proba">
-          <CardAntrenament />
+          <CardAntrenament className="cs-dupa-proba-card" />
         </div>
       )}
       <footer className="cs-footer">

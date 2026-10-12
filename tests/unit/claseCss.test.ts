@@ -181,15 +181,37 @@ const fisiereModul = (dir: string): string[] =>
  * Un keyframe global se cere cu `global(fade-up)` și trebuie să existe în CSS-ul
  * global.
  */
+/** Cuvintele unei declarații `animation` care nu sunt nume de animație. */
+const CUVINTE_ANIMATIE = new Set([
+  'none', 'infinite', 'normal', 'reverse', 'alternate', 'alternate-reverse', 'forwards', 'backwards',
+  'both', 'running', 'paused', 'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'step-start',
+  'step-end', 'initial', 'inherit', 'unset',
+]);
+
+/** Numele de animație dintr-o valoare `animation`/`animation-name`, pe fiecare element al listei. */
+const numeAnimatii = (valoare: string): string[] =>
+  valoare
+    // Funcțiile de timing (`cubic-bezier(...)`, `steps(...)`) și `var(...)` nu sunt nume.
+    .replace(/(?<!global)\([^)]*\)/g, '')
+    .split(',')
+    .flatMap((parte) => {
+      const nume = parte
+        .trim()
+        .split(/\s+/)
+        .find((t) => t !== '' && !CUVINTE_ANIMATIE.has(t) && !/^[\d.-]/.test(t) && !/^(cubic-bezier|steps|var)$/.test(t));
+      return nume ? [nume] : [];
+    });
+
 export const animatiiLipsa = (modul: string, global: string): string[] => {
   const text = faraComentarii(modul);
   const locale = new Set([...text.matchAll(/@keyframes\s+([\w-]+)/g)].map((m) => m[1]));
   const globale = new Set([...global.matchAll(/@keyframes\s+([\w-]+)/g)].map((m) => m[1]));
-  return [...text.matchAll(/animation(?:-name)?\s*:\s*(global\(([\w-]+)\)|[\w-]+)/g)].flatMap((m) => {
-    if (m[2]) return globale.has(m[2]) ? [] : [m[1]];
-    const nume = m[1];
-    return nume === 'none' || locale.has(nume) ? [] : [nume];
-  });
+  return [...text.matchAll(/animation(?:-name)?\s*:\s*([^;}]+)/g)].flatMap((m) =>
+    numeAnimatii(m[1]).filter((nume) => {
+      const g = /^global\(([\w-]+)\)$/.exec(nume);
+      return g ? !globale.has(g[1]) : !locale.has(nume);
+    })
+  );
 };
 
 describe('animațiile din module există', () => {
@@ -210,6 +232,10 @@ describe('garda însăși', () => {
     expect(animatiiLipsa('.a { animation: global(fade-up) 1s; }', global)).toEqual([]);
     expect(animatiiLipsa('.a { animation: global(nu-exista) 1s; }', global)).toEqual(['global(nu-exista)']);
     expect(animatiiLipsa('@keyframes in { } .a { animation: in 1s; } .b { animation: none; }', global)).toEqual([]);
+    // Durata înainte de nume și liste separate prin virgulă.
+    expect(animatiiLipsa('.a { animation: 1s ease-out fade-up; }', global)).toEqual(['fade-up']);
+    expect(animatiiLipsa('.a { animation: global(fade-up) 1s, fade-up 2s; }', global)).toEqual(['fade-up']);
+    expect(animatiiLipsa('.a { animation: 0.3s cubic-bezier(0.2, 0, 0, 1) both global(fade-up); }', global)).toEqual([]);
   });
 
 

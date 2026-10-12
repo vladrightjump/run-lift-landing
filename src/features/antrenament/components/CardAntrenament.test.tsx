@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createAppQueryClient } from '../../../app/providers';
 import { HttpResponse } from 'msw';
 import { server } from '../../../../tests/support/vitest.setup';
 import { rpcHandler } from '../../../../tests/support/handlers';
@@ -27,8 +29,20 @@ const program = (body: unknown, status = 200) => {
   );
 };
 
-/** Așteaptă răspunsul, ca un card absent să însemne „a tăcut", nu „încă n-a venit". */
-const dupaRaspuns = async () => waitFor(() => expect(cereri).toBe(1));
+/**
+ * Randează cu un client propriu și așteaptă ca cererea să se fi încheiat, ca un
+ * card absent să însemne „a tăcut", nu „încă n-a venit răspunsul".
+ */
+const randeazaPanaLaRaspuns = async () => {
+  const client = createAppQueryClient();
+  const vedere = render(
+    <QueryClientProvider client={client}>
+      <CardAntrenament />
+    </QueryClientProvider>
+  );
+  await waitFor(() => expect(client.getQueryState(['antrenament', 'program'])?.status).not.toBe('pending'));
+  return vedere;
+};
 
 describe('Cardul „Până atunci"', () => {
   it('arată săptămâna curentă — numărul, titlul și primele rânduri — ca link spre pagină', async () => {
@@ -56,8 +70,8 @@ describe('Cardul „Până atunci"', () => {
     ['la un răspuns stricat', { nu: 'e un array' }, 200],
   ])('tace %s', async (_caz, body, status) => {
     program(body, status);
-    const { container } = render(<CardAntrenament />);
-    await dupaRaspuns();
+    const { container } = await randeazaPanaLaRaspuns();
+    expect(cereri).toBe(1);
     expect(container.innerHTML).toBe('');
     expect(screen.queryByRole('alert')).toBeNull();
   });

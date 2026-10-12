@@ -19,7 +19,12 @@ import styles from '../styles/CardAntrenament.module.css';
  * bandă de eroare aici ar strica pagina pentru o piesă secundară. Aceeași
  * regulă ca la banda de clipuri, care nici ea nu se randează fără clipuri.
  */
-export const CardAntrenament = () => {
+export const CardAntrenament = ({
+  className,
+}: {
+  /** Clasa locului în care stă cardul (sub secțiunea de probă pierde marginea de sus). */
+  className?: string;
+} = {}) => {
   const { data: program } = useProgramAntrenament();
   // Cea curentă: numărul cel mai mare vizibil, ca pe `/antrenament`. O eroare
   // lasă `program` nedefinit, deci cardul tace.
@@ -58,7 +63,7 @@ export const CardAntrenament = () => {
      * linkului, fără nicio cale de a-l survola.
      */
     <a
-      className={styles.antren}
+      className={className ? `${styles.antren} ${className}` : styles.antren}
       href="/antrenament"
       aria-label={`Antrenamentul săptămânii ${saptamana.numar}: ${saptamana.titlu}`}
     >

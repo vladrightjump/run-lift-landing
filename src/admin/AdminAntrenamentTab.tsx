@@ -526,7 +526,7 @@ export const AdminAntrenamentTab = () => {
             <span className="admin-previz-eticheta" aria-hidden="true">
               Așa se va vedea pe pagină
             </span>
-            <CardSaptamana numar={numarDeschis} titlu={titlu} corp={corp} nivelTitlu="h3" />
+            <CardSaptamana numar={numarDeschis} titlu={titlu} corp={corp} nivelTitlu="h3" className="admin-previz-saptamana" />
           </section>
         )}
 

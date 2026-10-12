@@ -15,9 +15,16 @@ import { META_ANTRENAMENT } from '../../src/content/meta';
 const program = (network: { use: (...h: ReturnType<typeof rpcHandler>[]) => void }, body: object) =>
   network.use(rpcHandler('public_weekly_workouts', () => HttpResponse.json(body)));
 
-/** Lățimea pe care o depășește pagina; zero înseamnă fără scroll orizontal. */
-const depasire = (page: Page) =>
-  page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+/**
+ * Elementul încape în ecranul de 375px. Se măsoară ELEMENTUL, nu documentul:
+ * `.cs-root` e `overflow: hidden`, deci o depășire e tăiată înainte să ajungă
+ * la document, iar `scrollWidth` ar citi zero chiar pe bug.
+ */
+const incapePeTelefon = async (page: Page, element: ReturnType<Page['locator']>) => {
+  const cutie = (await element.boundingBox())!;
+  expect(cutie.x).toBeGreaterThanOrEqual(0);
+  expect(cutie.x + cutie.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+};
 
 test.describe('Pagina /antrenament', () => {
   test('linkul din story arată antrenamentul săptămânii, cu rândurile organizatorului', async ({
@@ -59,8 +66,8 @@ test.describe('Pagina /antrenament', () => {
     await page.goto('/antrenament#s1');
 
     await expect(page.getByRole('article')).toBeVisible();
-    await expect(page.getByLabel(/Alege o săptămână/)).toBeVisible();
-    expect(await depasire(page)).toBeLessThanOrEqual(1);
+    await incapePeTelefon(page, page.getByRole('article'));
+    await incapePeTelefon(page, page.getByLabel(/Alege o săptămână/));
   });
 
   test('shell-ul construit poartă cardul de share al antrenamentului, nu al ediției', async ({ page }) => {
@@ -107,6 +114,16 @@ test.describe('Cardul „Până atunci"', () => {
     await expect(page.getByRole('link', { name: /Antrenamentul săptămânii/ })).toHaveCount(0);
   });
 
+  test('o eroare de server lasă ecranul de așteptare întreg', async ({ page, network }) => {
+    network.use(rpcHandler('public_weekly_workouts', () => HttpResponse.json({ message: 'down' }, { status: 500 })));
+    await page.goto('/?preview=next');
+
+    await expect(page.getByRole('button', { name: /Anunță-mă la lansare/i })).toBeVisible();
+    await expect(page.locator('.cs-countdown')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Antrenamentul săptămânii/ })).toHaveCount(0);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  });
+
   test('pe mobil încape în ecran, iar fade-ul apare doar când textul e tăiat', async ({ page, network }) => {
     await page.setViewportSize({ width: 375, height: 800 });
     program(network, [
@@ -118,14 +135,8 @@ test.describe('Cardul „Până atunci"', () => {
     ]);
     await page.goto('/?preview=next');
 
-    /**
-     * Se măsoară CARDUL, nu documentul: `.cs-root` e `overflow: hidden`, deci o
-     * depășire a cardului e tăiată înainte să ajungă la document.
-     */
     const card = page.getByRole('link', { name: /Antrenamentul săptămânii 2/ });
-    const cutie = (await card.boundingBox())!;
-    expect(cutie.x).toBeGreaterThanOrEqual(0);
-    expect(cutie.x + cutie.width).toBeLessThanOrEqual(375);
+    await incapePeTelefon(page, card);
 
     const masca = (text: string) =>
       card.getByText(text).evaluate((el) => getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage);
@@ -138,6 +149,7 @@ test.describe('Cardul „Până atunci"', () => {
 
     const corp = page.getByRole('link', { name: /Antrenamentul săptămânii 1/ }).getByText('Alergare ușoară 30 min.');
     await expect(corp).toBeVisible();
+    await expect(corp).toHaveCSS('white-space', 'pre-wrap');
     expect(await corp.evaluate((el) => getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage)).toBe('none');
   });
 });
