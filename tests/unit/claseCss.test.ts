@@ -76,6 +76,13 @@ const importuriModul = (sursa: string): { nume: string; cale: string }[] =>
     cale: m[2],
   }));
 
+/**
+ * Mențiunile de `.module.css` pe care `importuriModul` nu le poate citi (alt fel
+ * de import, alias `@/`, ghilimele duble). Garda pică pe ele în loc să le sară.
+ */
+export const importuriModulNecitite = (sursa: string): number =>
+  (faraComentarii(sursa).match(/\.module\.css/g) ?? []).length - importuriModul(sursa).length;
+
 /** `styles.x` și `styles['x']` pentru un nume legat. */
 const referinte = (sursa: string, nume: string): string[] => [
   ...[...faraComentarii(sursa).matchAll(new RegExp(`\\b${nume}\\.([A-Za-z_]\\w*)`, 'g'))].map((m) => m[1]),
@@ -132,6 +139,13 @@ describe('fiecare `styles.x` există în modulul lui', () => {
     expect(lipsa, 'Clase de modul folosite în TSX dar nedefinite în `*.module.css`').toEqual({});
   });
 
+  it('citește fiecare import de modul CSS', () => {
+    const necitite = fisiereTsx(resolve(root, 'src'))
+      .filter((f) => importuriModulNecitite(readFileSync(f, 'utf8')) !== 0)
+      .map((f) => f.slice(root.length + 1));
+    expect(necitite, "Importă modulul ca `import styles from './X.module.css'`").toEqual([]);
+  });
+
   it('nu există clase de modul fără purtător', () => {
     const folosite = new Map<string, Set<string>>();
     for (const fisier of fisiereTsx(resolve(root, 'src'))) {
@@ -156,6 +170,11 @@ describe('garda însăși', () => {
   it('prinde un `styles.x` care nu există în modul', () => {
     const sursa = "import styles from './Card.module.css';\nexport const C = () => <div className={styles.nuExista} />;";
     expect(claseModulLipsa(sursa, () => '.exista { color: red; }')).toEqual(['nuExista']);
+  });
+
+  it('nu sare peste un import de modul pe care nu-l poate citi', () => {
+    expect(importuriModulNecitite('import * as s from "@/shared/ui/X.module.css";')).toBe(1);
+    expect(importuriModulNecitite("import styles from './X.module.css';")).toBe(0);
   });
 
   it('prinde o clasă globală inventată cu un prefix cunoscut', () => {
