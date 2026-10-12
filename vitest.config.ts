@@ -19,13 +19,20 @@ export default defineConfig({
     //    („document is not defined"), nu trece pe alt drum;
     //  - `.test.tsx` (componente) rulează în jsdom.
     projects: [
-      { extends: true, test: { name: 'node', environment: 'node', include: ['tests/unit/**/*.test.ts'] } },
-      { extends: true, test: { name: 'dom', environment: 'jsdom', include: ['tests/unit/**/*.test.tsx'] } },
+      {
+        extends: true,
+        test: { name: 'node', environment: 'node', include: ['src/**/*.test.ts', 'tests/unit/**/*.test.ts'] },
+      },
+      {
+        extends: true,
+        test: { name: 'dom', environment: 'jsdom', include: ['src/**/*.test.tsx', 'tests/unit/**/*.test.tsx'] },
+      },
     ],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
+        'src/**/*.test.{ts,tsx}',
         // Puncte de intrare: montează arborele, n-au logică proprie.
         'src/main.tsx',
         'src/admin-preview.tsx',

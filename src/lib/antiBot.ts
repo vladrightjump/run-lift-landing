@@ -73,7 +73,7 @@ export const useAntiBot = () => {
       height: 1,
       opacity: 0,
       pointerEvents: 'none' as const,
-      // 16px deși câmpul e invizibil: garda de pe mobil (`tests/mobil.spec.ts`)
+      // 16px deși câmpul e invizibil: garda de pe mobil (`tests/e2e/mobil.spec.ts`)
       // se uită la TOATE `input`-urile din `<form>`, fără excepții — și e bine
       // că e așa, fiindcă o excepție ar lăsa un câmp real să treacă pe sub ea.
       // Capcana n-are cum să primească focus (tabIndex -1, off-screen), deci

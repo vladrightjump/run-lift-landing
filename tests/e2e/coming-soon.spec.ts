@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-import { META } from '../src/content/meta';
-import { deriveEditionDates } from '../src/lib/config';
-import { deriveEventStrings } from '../src/content/format';
-import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
+import { META } from '../../src/content/meta';
+import { deriveEditionDates } from '../../src/lib/config';
+import { deriveEventStrings } from '../../src/content/format';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 
 // E2e verifică BUILD-ul deployat, deci reperele vin din instantaneu — aceleași
 // valori pe care le randează pagina cât timp configul publicat nu s-a schimbat.

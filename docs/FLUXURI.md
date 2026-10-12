@@ -819,7 +819,7 @@ rezumatul urmează antrenamentul zilei (`reminderDue`, `summaryDue` în `bot/src
 | Logica fără React | `src/admin/sala/*.ts` (`model`, `statistici`, `analiza`, `sondaj`, `textCard`, `stareBot`, `configBot`, `mesaj`) |
 | Clientul | `src/lib/salaApi.ts` (refolosește `rpc` din `adminApi.ts`) |
 | Funcțiile SQL | `supabase/sql/supabase-migration-sala-*.sql`; instantaneele `supabase/schema/runlift.sql` + `sala.sql` |
-| Teste | `tests/unit/sala*.test.ts(x)`, `tests/unit/sql/sala.test.ts` (PGlite, pe instantaneu), `tests/sala.spec.ts` (e2e) |
+| Teste | `tests/unit/sala*.test.ts(x)`, `tests/unit/sql/sala.test.ts` (PGlite, pe instantaneu), `tests/e2e/sala.spec.ts` (e2e) |
 | Botul | `bot/` (cod), `.railway/railway.ts` (serviciul Railway), job-ul `bot` din `ci-deploy.yml` |
 | Ziua de antrenament din Telegram | `bot/src/control.ts`, `bot/src/lib/{sessions,command-parse,day-actions,drafts,organizers}.ts`, `bot/src/jobs/day-ops.ts`; teste în `bot/test/` |
 

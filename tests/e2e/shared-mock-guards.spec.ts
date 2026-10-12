@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { SUPABASE } from '../src/lib/backend';
-import { createMockNetwork } from './support/playwright';
+import { SUPABASE } from '../../src/lib/backend';
+import { createMockNetwork } from '../support/playwright';
 
 test('an unmatched RPC aborts before reaching the backend route', async ({ context, page }) => {
   const url = `${SUPABASE.url}/rest/v1/rpc/unmocked_guard_probe`;

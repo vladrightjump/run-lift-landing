@@ -1,6 +1,6 @@
-import { test, expect } from './support/playwright';
+import { test, expect } from '../support/playwright';
 import { HttpResponse } from 'msw';
-import { rpcHandler, functionHandler } from './support/handlers';
+import { rpcHandler, functionHandler } from '../support/handlers';
 
 /**
  * Pagina /confirmare — double opt-in prin linkul din email.
