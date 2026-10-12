@@ -10,8 +10,8 @@ import {
   type ZonaAdmin,
   type ZonaRegistru,
 } from './adminNavigatie';
-import { Icon, type NumeIcon } from './controale/Icon';
-import { useEsteTelefon } from './controale/useEsteTelefon';
+import { Icon, type NumeIcon } from '../shared/ui/Icon';
+import { useEsteTelefon } from '../shared/ui/useEsteTelefon';
 
 export type PropsCadru = {
   ecran: EcranAdmin;

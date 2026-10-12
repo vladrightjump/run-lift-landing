@@ -10,7 +10,7 @@ import {
 } from '../lib/adminApi';
 import { InvelisEditare } from './continut/InvelisEditare';
 import { useSesiuneAdmin } from './adminSession';
-import { Dialog } from './eventTab/Dialog';
+import { Dialog } from '../shared/ui/Dialog';
 
 /**
  * Programul antrenamentelor — scrii săptămâna următoare, o pornești, copiezi linkul.

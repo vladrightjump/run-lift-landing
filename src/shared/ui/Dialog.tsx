@@ -1,15 +1,15 @@
 import type { ReactNode } from 'react';
-import { Suprapunere } from '../controale/Suprapunere';
+import { Suprapunere } from './Suprapunere';
 
 /**
  * Un dialog modal cu tastatură: confirmări (publicarea, ștergerea) și
  * formulare scurte (ediția nouă, prezența).
  *
- * E prezentarea „dialog" a suprapunerii comune (`controale/Suprapunere`): același
+ * E prezentarea „dialog" a suprapunerii comune (`./Suprapunere`): același
  * focus la deschidere, aceeași capcană de Tab, același Escape și aceeași
- * întoarcere a focusului ca popoverele și foile. Clasele `.admin-confirm*` rămân
- * pe marcaj, ca variantele de culoare existente (`admin-confirm--neutru`) să
- * meargă mai departe.
+ * întoarcere a focusului ca popoverele și foile. Variantele de culoare
+ * (`admin-confirm--neutru`) vin prin `clasa`; conținutul se stilează din
+ * funcționalitate, prin `[data-prezentare="dialog"]`.
  */
 export const Dialog = ({
   titlu,

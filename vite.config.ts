@@ -1,4 +1,5 @@
-import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { basename, relative, resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { msw } from 'msw/vite';
@@ -25,9 +26,24 @@ const injectEditionMeta = (): Plugin => ({
   },
 });
 
-export default defineConfig({
+// Numele claselor din `*.module.css`: lizibile în dev
+// (`Suprapunere__dialog__3f2a`), scurte în build (`k3f2a1c`). Hash-ul e hex,
+// deci numele e mereu un identificator CSS valid, și ține cont de cale: două
+// module cu același nume în foldere diferite nu-și împart clasele.
+const hashClasa = (local: string, fisier: string) =>
+  createHash('sha256').update(`${relative(__dirname, fisier)}:${local}`).digest('hex');
+const numeClasaModul = (command: 'serve' | 'build') =>
+  command === 'serve'
+    ? (local: string, fisier: string) =>
+        `${basename(fisier).replace(/\.module\.css$/, '')}__${local}__${hashClasa(local, fisier).slice(0, 4)}`
+    : (local: string, fisier: string) => `k${hashClasa(local, fisier).slice(0, 6)}`;
+
+export default defineConfig(({ command }) => ({
   resolve: {
     alias: { '@': resolve(__dirname, 'src') },
+  },
+  css: {
+    modules: { generateScopedName: numeClasaModul(command) },
   },
   plugins: [
     react(),
@@ -54,4 +70,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

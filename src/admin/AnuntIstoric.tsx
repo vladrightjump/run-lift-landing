@@ -23,7 +23,7 @@ import {
   ultimulAnunt,
   variabileNesuportate,
 } from './anunt';
-import { Dialog } from './eventTab/Dialog';
+import { Dialog } from '../shared/ui/Dialog';
 
 /**
  * Anunțul unei ediții noi către toți participanții de până acum.

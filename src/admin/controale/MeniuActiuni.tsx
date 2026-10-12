@@ -1,6 +1,6 @@
 import { Fragment, useState, type KeyboardEvent } from 'react';
-import { Icon, type NumeIcon } from './Icon';
-import { Suprapunere } from './Suprapunere';
+import { Icon, type NumeIcon } from '../../shared/ui/Icon';
+import { Suprapunere } from '../../shared/ui/Suprapunere';
 
 /**
  * Meniul „⋯" al unui rând (R26).

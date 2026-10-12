@@ -8,7 +8,7 @@ import {
 } from '../eventConfigForm';
 import { timeOf } from '../../content/format';
 import { Camp } from './primitive';
-import { Dialog } from './Dialog';
+import { Dialog } from '../../shared/ui/Dialog';
 
 /**
  * Ediția următoare, din trei câmpuri.

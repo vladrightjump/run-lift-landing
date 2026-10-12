@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { AdminRegistration, Prezenta } from '../lib/adminApi';
 import { GrupRadio } from './controale/GrupRadio';
-import { Dialog } from './eventTab/Dialog';
+import { Dialog } from '../shared/ui/Dialog';
 
 /**
  * Prezența, numărul și timpul final ale unui rând.

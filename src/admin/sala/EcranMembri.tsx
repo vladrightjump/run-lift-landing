@@ -10,7 +10,7 @@ import {
   type SalaDate,
   type SalaMembru,
 } from '../../lib/salaApi';
-import { Dialog } from '../eventTab/Dialog';
+import { Dialog } from '../../shared/ui/Dialog';
 import { StareComanda } from './StareComanda';
 import { MotivScoatere, ScoateDinGrup, ultimeleScoateri } from './DialogScoatere';
 import { prezentePeMembru } from './analiza';

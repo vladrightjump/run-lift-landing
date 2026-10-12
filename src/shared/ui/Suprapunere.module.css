@@ -1,0 +1,63 @@
+/*
+ * Suprapunerea comună: fundal, cutie, antet și cele patru prezentări.
+ *
+ * Fiecare regulă e în `:where()`, deci are specificitate zero. Stilul unei
+ * funcționalități care trece o clasă proprie (`clasa="admin-meniu"`) câștigă
+ * mereu, indiferent în ce ordine se încarcă fișierele: CSS-ul unui chunk lazy
+ * ajunge după `index.css`, iar fără `:where()` ordinea ar decide în locul
+ * autorului. Între ele, regulile de aici se ordonează după sursă, deci variantele
+ * stau după regula de bază pe care o modifică.
+ *
+ * Culorile vin din jetoanele `--pa-*` ale rădăcinii adminului, unde se și
+ * randează suprapunerea (vezi `Suprapunere.tsx`).
+ */
+
+:where(.fundal) {
+    position: fixed; inset: 0; z-index: 60; background: var(--pa-scrim);
+    overscroll-behavior: contain; animation: admin-fade-in var(--pa-dur) ease both;
+  }
+:where(.fundalClar) { background: transparent; animation: none; }
+:where(.fundalDialog) { backdrop-filter: blur(2px); }
+:where(.cutie) { outline: none; }
+:where(.antet) { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+:where(.titlu) { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.25; color: var(--pa-text); }
+
+:where(.popover) {
+    position: fixed; z-index: 61; top: 0; left: 0;
+    min-width: 260px; max-width: min(400px, calc(100vw - 24px));
+    max-height: min(520px, calc(100dvh - 32px)); overflow: auto; padding: 6px;
+    background: var(--pa-pop); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+    box-shadow: var(--pa-shadow); animation: admin-pop-in var(--pa-dur-fast) ease-out both;
+  }
+:where(.foaie) {
+    position: fixed; z-index: 61; left: 0; right: 0; bottom: 0;
+    max-height: 88dvh; overflow: auto; padding: 6px 16px calc(18px + env(safe-area-inset-bottom));
+    background: var(--pa-pop); border-radius: var(--pa-r-sheet) var(--pa-r-sheet) 0 0;
+    box-shadow: var(--pa-shadow); animation: admin-sheet-in var(--pa-dur-slow) var(--pa-ease) both;
+  }
+:where(.maner) { width: 40px; height: 4px; border-radius: 2px; background: var(--pa-line-strong); margin: 6px auto 10px; }
+:where(.panou) {
+    position: fixed; z-index: 61; top: 0; right: 0; bottom: 0;
+    width: min(440px, 100vw); overflow: auto; padding: 18px 24px 32px;
+    background: var(--pa-pop); border-left: 1px solid var(--pa-line);
+    box-shadow: var(--pa-shadow); animation: admin-panel-in var(--pa-dur-slow) var(--pa-ease) both;
+  }
+
+/* Dialogul central. Antetul și titlul lui suprascriu regulile de bază de mai
+   sus, deci stau după ele. */
+:where(.dialog) {
+    position: fixed; z-index: 61; left: 50%; top: 50%;
+    width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto;
+    transform: translate(-50%, -50%);
+    background: var(--pa-pop); border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+    box-shadow: var(--pa-shadow); padding: 22px; display: grid; gap: 14px;
+    animation: admin-dialog-in var(--pa-dur) var(--pa-ease) both;
+  }
+:where(.dialog .antet) { margin: 0; }
+:where(.dialog .titlu) { font-size: 19px; }
+
+@keyframes admin-dialog-in { from { opacity: 0; transform: translate(-50%, -46%); } }
+@keyframes admin-fade-in { from { opacity: 0; } }
+@keyframes admin-pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+@keyframes admin-sheet-in { from { transform: translateY(100%); } }
+@keyframes admin-panel-in { from { transform: translateX(100%); } }

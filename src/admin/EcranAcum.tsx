@@ -18,9 +18,9 @@ import {
   type TipEveniment,
   type ZiCuEvenimente,
 } from './acum';
-import { Icon, type NumeIcon } from './controale/Icon';
+import { Icon, type NumeIcon } from '../shared/ui/Icon';
 import { InelOcupare } from './controale/InelOcupare';
-import { useEsteTelefon } from './controale/useEsteTelefon';
+import { useEsteTelefon } from '../shared/ui/useEsteTelefon';
 import { useNumarAnimat } from './controale/useNumarAnimat';
 import { cereFiltruUrmatorul, type FiltruUrmatorul } from './sala/filtruUrmatorul';
 import { RO_DOW } from './sala/sondaj';

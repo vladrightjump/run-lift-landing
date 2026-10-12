@@ -44,6 +44,21 @@ sesiune pentru fiecare query eșuat. Datele deja încărcate rămân vizibile du
 picat. Testele izolate primesc provider-ul comun din setup-ul Vitest.
 `AdminDashboard` încă folosește programarea veche; hook-urile publice și mutațiile se mută
 la Query odată cu funcționalitățile lor. Transportul RPC și config-ul public nu se schimbă.
+
+U6 mută jetoanele `--e3-*` în `shared/styles/tokens.css` și resetul, tipografia de bază
+și focusul vizibil în `shared/styles/base.css`; `index.css` le importă primele, deci ordinea
+regulilor nu se schimbă. Prima primitivă din `shared/ui/` e suprapunerea (`Suprapunere`,
+`Dialog`, capcana de focus, pragul de telefon, iconițele). Stilul ei stă în
+`Suprapunere.module.css`, cu fiecare regulă în `:where()`: specificitate zero, deci clasa
+pe care o trece o funcționalitate (`clasa="admin-meniu"`) câștigă indiferent în ce ordine
+se încarcă CSS-ul chunk-urilor. Conținutul unei suprapuneri se stilează din
+funcționalitate prin `data-prezentare` (`popover`, `panou`, `dialog`, `foaie`), nu prin
+clasele kitului. Garda `claseCss` verifică și modulele: fiecare `styles.x` există în
+modulul importat și fiecare clasă de modul are un purtător. Toast-urile și piesele de
+formular de pe landing rămân la funcționalitățile lor până la valurile U9 și U10: cele două
+toast-uri au comportamente diferite, iar piesele de formular trec din stil inline în clase
+odată cu stilul formularului, ca prioritatea lor față de `.e3-*` să fie verificată într-un
+singur loc.
 Codul existent rămâne în `src/components/`, `src/admin/`,
 `src/hooks/`, `src/lib/`, `src/content/` și fișierele din rădăcina `src/`. Migrarea se face în
 unitățile planificate, câte o zonă; schimbarea unui fișier vechi nu îl mută automat.

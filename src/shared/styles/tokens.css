@@ -1,0 +1,28 @@
+/*
+ * Tokeni de temă (paletă de brand). Rebrand = editezi AICI, nu prin tot CSS-ul.
+ * Nucleul paletei; câteva nuanțe rare (gradienți/umbre) rămân literale.
+ */
+:root {
+  --e3-accent: #C9F24B;
+  --e3-accent-hover: #DDFF66;
+  --e3-accent-dim: #3A4230;
+  --e3-bg: #121410;
+  --e3-surface: #1A1D17;
+  --e3-border: #2A2E25;
+  --e3-text: #F1EFE6;
+  --e3-muted: #9BA08F;
+  --e3-muted-strong: #C9CCBE;
+  --e3-muted-dim: #5E6355;
+  --e3-danger: #F26D6D;
+  /* Chihlimbar pentru „atenție": valoarea trece, dar consecința ei nu e cea
+     așteptată. Coralul de deasupra înseamnă „reparat înainte de publicare" și
+     nu poate însemna și altceva fără să înceteze să însemne ceva. */
+  --e3-warn: #F2B84B;
+  --e3-danger-strong: #E5484D;
+  --e3-danger-bg: #3A1A1A;
+  --e3-hairline: #232620;
+  --e3-text-bright: #F2F3EC;
+  --e3-surface-hover: #1E2119;
+  --e3-bg-deep: #0C0E0A;
+  --e3-surface-tint: #262C1B;
+}

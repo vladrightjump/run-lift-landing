@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { useCapcanaFocus } from './useCapcanaFocus';
 import { useEsteTelefon } from './useEsteTelefon';
+import styles from './Suprapunere.module.css';
 
 /**
  * Tot ce se deschide peste un ecran trece pe aici (KTD5).
@@ -25,12 +26,12 @@ import { useEsteTelefon } from './useEsteTelefon';
 type TipSuprapunere = 'popover' | 'panou' | 'dialog';
 type Prezentare = 'popover' | 'panou' | 'dialog' | 'foaie';
 
-/** Scrise întregi, nu compuse: garda de clase (`claseCss.test.ts`) le caută literal. */
+/** Garda de clase (`claseCss.test.ts`) verifică fiecare `styles.x` în modul. */
 const CLASA: Record<Prezentare, string> = {
-  popover: 'admin-popover',
-  panou: 'admin-panou',
-  dialog: 'admin-dialog admin-confirm',
-  foaie: 'admin-foaie',
+  popover: styles.popover,
+  panou: styles.panou,
+  dialog: styles.dialog,
+  foaie: styles.foaie,
 };
 
 const SPATIU = 6;
@@ -117,19 +118,26 @@ export const Suprapunere = ({
   }, [prezentare, ancora]);
 
   const cuAntet = prezentare !== 'popover';
-  const clase = ['admin-supr', CLASA[prezentare], clasa ?? ''].filter(Boolean).join(' ');
+  const clase = [styles.cutie, CLASA[prezentare], clasa ?? ''].filter(Boolean).join(' ');
 
   const continut = (
     <>
       <div
-        className={`admin-supr-fundal${prezentare === 'popover' ? ' admin-supr-fundal--clar' : ''}${
-          prezentare === 'dialog' ? ' admin-confirm-overlay' : ''
-        }`}
+        className={[
+          styles.fundal,
+          prezentare === 'popover' ? styles.fundalClar : '',
+          prezentare === 'dialog' ? styles.fundalDialog : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={onInchide}
       />
       <div
         ref={cutie}
         className={clase}
+        // Prezentarea aleasă, pentru stilul conținutului din funcționalități
+        // (`[data-prezentare="dialog"] p`) și pentru teste.
+        data-prezentare={prezentare}
         role={rol}
         aria-modal="true"
         aria-labelledby={cuAntet ? idTitlu : undefined}
@@ -140,10 +148,10 @@ export const Suprapunere = ({
           if (!e.defaultPrevented) capcana(e);
         }}
       >
-        {prezentare === 'foaie' && <div className="admin-foaie-maner" aria-hidden="true" />}
+        {prezentare === 'foaie' && <div className={styles.maner} aria-hidden="true" />}
         {cuAntet && (
-          <div className="admin-supr-antet">
-            <h2 id={idTitlu} className="admin-supr-titlu">
+          <div className={styles.antet}>
+            <h2 id={idTitlu} className={styles.titlu}>
               {titlu}
             </h2>
             {prezentare !== 'dialog' && (

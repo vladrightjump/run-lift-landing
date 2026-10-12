@@ -6,7 +6,7 @@ import {
   type SalaDate,
   type SalaMembru,
 } from '../../lib/salaApi';
-import { Dialog } from '../eventTab/Dialog';
+import { Dialog } from '../../shared/ui/Dialog';
 import { antrenamentulUrmator, cineVine, deMarcatDeMana, raspunsul, zileAnulate } from './model';
 import { dataLunga, frazaSondaj, urmatorulSondaj } from './sondaj';
 import { useSala } from './useSala';

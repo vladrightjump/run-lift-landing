@@ -70,7 +70,7 @@ import { ziSiLuna } from '../lib/formatare';
 import { FurnizorSesiuneAdmin } from './adminSession';
 import { Toast, useToast } from './controale/Toast';
 import { rezumaAcoperire, motivUndoEsuat } from './dashboardRezumate';
-import { Dialog } from './eventTab/Dialog';
+import { Dialog } from '../shared/ui/Dialog';
 
 type Props = {
   token: string;
