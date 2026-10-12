@@ -1,5 +1,7 @@
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext, useMemo, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { registerQueryAuthHandler } from '../app/providers';
 
 /**
  * Sesiunea de backoffice: tokenul, ce se întâmplă când el nu mai e valid, și
@@ -41,6 +43,8 @@ export const FurnizorSesiuneAdmin = ({
   showToast,
   children,
 }: SesiuneAdmin & { children: ReactNode }) => {
+  const client = useQueryClient();
+  useEffect(() => registerQueryAuthHandler(client, onAuthError), [client, onAuthError]);
   const valoare = useMemo(
     () => ({ token, onAuthError, showToast }),
     [token, onAuthError, showToast]

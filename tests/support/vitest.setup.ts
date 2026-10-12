@@ -1,8 +1,33 @@
 import { setImmediate } from 'node:timers/promises';
-import { afterAll, afterEach, beforeAll } from 'vitest';
+import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { handlers } from './handlers';
+import type { QueryClient } from '@tanstack/react-query';
+
+const queryClients = vi.hoisted(() => new Set<QueryClient>());
+const testingLibraryCleanup = vi.hoisted(() => ({ run: () => {} }));
+
+// Legacy component tests mount the session directly. Supply the same app
+// provider without changing their render calls or their characterization.
+vi.mock('@testing-library/react', async importOriginal => {
+  const actual = await importOriginal<typeof import('@testing-library/react')>();
+  testingLibraryCleanup.run = actual.cleanup;
+  const { createElement } = await import('react');
+  const { QueryClientProvider } = await import('@tanstack/react-query');
+  const { createAppQueryClient } = await import('../../src/app/providers');
+  const withProvider = (wrapper?: import('react').ComponentType<{ children: import('react').ReactNode }>) => {
+    const client = createAppQueryClient();
+    queryClients.add(client);
+    return ({ children }: { children: import('react').ReactNode }) =>
+      createElement(QueryClientProvider, { client }, wrapper ? createElement(wrapper, null, children) : children);
+  };
+  return {
+    ...actual,
+    render: ((ui: import('react').ReactNode, options?: import('@testing-library/react').RenderOptions) => actual.render(ui, { ...options, wrapper: withProvider(options?.wrapper) })) as typeof actual.render,
+    renderHook: ((hook, options) => actual.renderHook(hook, { ...options, wrapper: withProvider(options?.wrapper) })) as typeof actual.renderHook,
+  };
+});
 
 export const server = setupServer(...handlers,
   // jsdom's development origin has no deployed build fingerprint.
@@ -36,6 +61,9 @@ beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
 });
 afterEach(() => {
+  testingLibraryCleanup.run();
+  for (const client of queryClients) client.clear();
+  queryClients.clear();
   server.resetHandlers();
   const unexpected = unhandled.splice(0);
   if (unexpected.length) throw new Error(`Unhandled requests:\n${unexpected.join('\n')}`);
