@@ -230,7 +230,7 @@ describe('setările', () => {
     expect(inchide()).toBe(false);
     fireEvent.change(screen.getByLabelText('Titlu'), { target: { value: 'Alergăm!' } });
     expect(inchide()).toBe(true);
-    fireEvent.click(buton('Renunță la modificări'));
+    fireEvent.click(within(screen.getByLabelText('Titlu').closest('form')!).getByRole('button', { name: 'Renunță la modificări' }));
     expect(inchide()).toBe(false);
   });
 

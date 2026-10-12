@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@msw/playwright": "0.7.0",
     "@playwright/test": "^1.61.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.1.0",
@@ -40,6 +41,7 @@
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^25.0.1",
     "knip": "^6.34.0",
+    "msw": "3.0.3",
     "oxlint": "^1.81.0",
     "tsx": "^4.19.2",
     "typescript": "^5.9.0",
