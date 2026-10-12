@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { participant } from './unit/helpers/adminHarness';
-import { dateSala } from './unit/helpers/salaFixtures';
-import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
+import { participant } from '../unit/helpers/adminHarness';
+import { dateSala } from '../unit/helpers/salaFixtures';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 
 /**
  * Garda pentru limbajul comun al controalelor din admin (planul

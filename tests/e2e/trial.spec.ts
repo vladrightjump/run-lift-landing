@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 
 const config = { message_texts: {}, enabled: true, bot_username: 'ParkTrialBot', welcome_text: 'Bine ai venit!', trial_conditions: 'Vino cu 10 minute înainte.', trial_price: '100 MDL', bring_text: 'Apă și prosop.', continuation_conditions: 'Discutăm abonamentul.', duration_minutes: 60, organizer_telegram_id: 123, contact_text: 'Scrie-ne pe Instagram.', permissions_verified_at: new Date().toISOString() };
 for (const width of [375, 1280]) {

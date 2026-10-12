@@ -31,9 +31,8 @@ if (PE_BUILD && !existsSync('dist/index.html')) {
 }
 
 export default defineConfig({
-  testDir: './tests',
-  // Doar fișierele .spec.ts sunt e2e; tests/unit/*.test.ts aparțin vitest
-  // și nu pot fi încărcate de Playwright (import din 'vitest' => crash).
+  testDir: './tests/e2e',
+  // Parcursurile de browser stau separat; testele .test.ts(x) aparțin Vitest.
   testMatch: /.*\.spec\.ts/,
   fullyParallel: true,
   // Implicit, Playwright folosește jumătate din nuclee: 2 din cele 4 ale

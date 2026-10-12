@@ -3,12 +3,17 @@
   "entry": [
     "src/admin-preview.tsx",
     "scripts/*.{ts,mjs}",
-    "tests/**/*.spec.ts",
-    "tests/**/*.test.{ts,tsx}"
+    "tests/e2e/**/*.spec.ts",
+    "{src,tests}/**/*.test.{ts,tsx}"
   ],
   "project": [
     "src/**/*.{ts,tsx}",
     "scripts/**/*.{ts,mjs}",
     "tests/**/*.{ts,tsx}"
-  ]
+  ],
+  "vitest": {
+    "entry": [
+      "{src,tests}/**/*.test.{ts,tsx}"
+    ]
+  }
 }

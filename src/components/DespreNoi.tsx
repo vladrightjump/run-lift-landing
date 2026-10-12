@@ -71,7 +71,7 @@ const orar = (unde: string | null) => [
  *
  * Pagina cere de la server exact două lucruri: `public_training_reels()` (banda
  * cu clipuri, administrată din `/admin`) și `public_homepage()` (locul).
- * `tests/despre-noi.spec.ts` păzește granița asta.
+ * `tests/e2e/despre-noi.spec.ts` păzește granița asta.
  */
 const marquee = (unde: string | null) => [
   'Alergare',

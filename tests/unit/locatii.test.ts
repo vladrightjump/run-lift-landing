@@ -22,7 +22,7 @@ import { buildEventIcs } from '../../src/lib/calendar';
  * așa că schimbarea locului cursei a mutat și antrenamentele — pagina a trimis
  * oameni la Scările de Granit pentru un antrenament de marți.
  *
- * `tests/despre-noi.spec.ts` verifică DOM-ul, dar compară componenta cu aceleași
+ * `tests/e2e/despre-noi.spec.ts` verifică DOM-ul, dar compară componenta cu aceleași
  * constante: dacă `TRAINING_*` ar fi legate din nou de `venue`, s-ar muta amândouă
  * și testul ar trece în continuare. Aici păzim derivarea însăși.
  */

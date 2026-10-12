@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { deriveEventStrings } from '../src/content/format';
-import { deriveEditionDates } from '../src/lib/config';
-import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
-import { ETAPE } from '../src/content/etape';
+import { deriveEventStrings } from '../../src/content/format';
+import { deriveEditionDates } from '../../src/lib/config';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
+import { ETAPE } from '../../src/content/etape';
 
 const { HERO_KICKER, EVENT_WHEN, EVENT_WHERE, EVENT_START_TIME } =
   deriveEventStrings(SNAPSHOT_CONFIG);

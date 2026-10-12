@@ -253,7 +253,7 @@ funcțiune.
 | `tests/unit/supabase.test.ts` | plicul spre `submit-form`, absența ediției, propagarea erorilor |
 | `tests/unit/deploy-config.test.ts` | cele trei directive CSP pentru Turnstile |
 | `tests/unit/antiBotSurfaces.test.tsx` | **fiecare formular public are capcana** — garda împotriva unui formular nou fără honeypot |
-| `tests/*.spec.ts` (e2e) | fluxurile reale prin `submit-form` |
+| `tests/e2e/*.spec.ts` (e2e) | fluxurile reale prin `submit-form` |
 | `tests/integration/backend.live.test.ts` | **lockdown-ul pe backendul real** + honeypot/too_fast |
 
 `antiBotSurfaces.test.tsx` există fiindcă exact asta s-a rupt o dată deja:

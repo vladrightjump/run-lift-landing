@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { SNAPSHOT_CONFIG } from '../src/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../../src/content/eventConfig';
 
 /**
  * Mișcarea de pe landing — efectele legate de scroll, hover și reduced-motion.
