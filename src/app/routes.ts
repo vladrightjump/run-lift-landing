@@ -1,6 +1,10 @@
 import { lazyRouteComponent } from '@tanstack/react-router';
 import { App } from '../App';
 import { rutaAntrenament } from '../features/antrenament';
+import { rutaConfirmare } from '../features/confirmare';
+import { rutaInscriere } from '../features/inscriere';
+import { rutaRenunt } from '../features/renunt';
+import { rutaUnsubscribe } from '../features/unsubscribe';
 
 type LandingSearch = { preview?: 'landing' | 'soon' | 'leaderboard' | 'next' };
 
@@ -18,10 +22,10 @@ export const landingPage = {
 
 export const editionPages = [
   { path: '/admin', component: lazyRouteComponent(() => import('../admin/AdminApp'), 'AdminApp') },
-  { path: '/confirmare', component: lazyRouteComponent(() => import('../components/Confirmare'), 'Confirmare') },
-  { path: '/inscriere', component: lazyRouteComponent(() => import('../components/Inscriere'), 'Inscriere') },
-  { path: '/unsubscribe', component: lazyRouteComponent(() => import('../components/Unsubscribe'), 'Unsubscribe') },
-  { path: '/renunt', component: lazyRouteComponent(() => import('../components/Renunt'), 'Renunt') },
+  rutaConfirmare,
+  rutaInscriere,
+  rutaUnsubscribe,
+  rutaRenunt,
 ] as const;
 
 export const independentPages = [

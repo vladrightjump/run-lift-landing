@@ -1,19 +1,19 @@
-import '../edition3.css';
+import '../../../edition3.css';
 import { useEffect, useRef, useState } from 'react';
 import {
   useEventConfig,
   useEditionStrings,
   useEditionDates,
   useEventConfigSettled,
-} from '../hooks/useEventConfig';
-import { useCountdown } from '../hooks/useCountdown';
-import { usePagePhase } from '../hooks/usePagePhase';
-import { useStats } from '../hooks/useStats';
-import { useNow } from '../hooks/useNow';
-import { useRegistration } from '../hooks/useRegistration';
-import type { ToastKind } from '../hooks/useToast';
+} from '../../../hooks/useEventConfig';
+import { useCountdown } from '../../../hooks/useCountdown';
+import { usePagePhase } from '../../../hooks/usePagePhase';
+import { useStats } from '../../../hooks/useStats';
+import { useNow } from '../../../hooks/useNow';
+import { useRegistration } from '../../../hooks/useRegistration';
+import type { ToastKind } from '../../../hooks/useToast';
 
-import { RegistrationForm } from './landing/RegistrationForm';
+import { RegistrationForm } from '../../../components/landing/RegistrationForm';
 
 /**
  * `/inscriere` — pagina „un singur link": doar formularul, cu strictul necesar de
@@ -32,7 +32,7 @@ const SUMMARY_ITEMS = [
   'Adu cu tine: apă pentru hidratare și bună dispoziție',
 ];
 
-export const Inscriere = () => {
+export const InscrierePage = () => {
   const { showComingSoon: SHOW_COMING_SOON } = useEventConfig();
   const { EVENT_META, EVENT_START_TIME } = useEditionStrings();
   const { EVENT_DATE, LAUNCH_DATE } = useEditionDates();

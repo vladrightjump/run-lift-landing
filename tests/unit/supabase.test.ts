@@ -6,7 +6,6 @@ import {
   submitWaitlist,
   sendConfirmationEmail,
   fetchStats,
-  confirmSignup,
   isDuplicateError,
   isTimeoutError,
   isAbortError,
@@ -15,6 +14,7 @@ import {
   SubmitHttpError,
   SUBMIT_TIMEOUT_MS,
 } from '../../src/lib/supabase';
+import { confirmSignup } from '../../src/features/confirmare/data/api';
 import { HttpResponse } from 'msw';
 import { server, withExpectedUnhandledRequest } from '../support/vitest.setup';
 import { functionHandler, responseHandler } from '../support/handlers';

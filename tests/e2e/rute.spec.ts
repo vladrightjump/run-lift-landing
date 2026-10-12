@@ -21,11 +21,11 @@ test('toate paginile existente răspund la acces direct pe build', async ({ page
     ['/?preview=landing', '.e3-root'],
     ['/admin', '.admin-auth'],
     ['/despre-noi', '.dn-root'],
-    ['/confirmare', '.cf-title'],
+    ['/confirmare', 'h1'],
     ['/inscriere?preview=landing', '.e3-page-title'],
-    ['/unsubscribe', '.cf-title'],
-    ['/renunt', '.cf-title'],
-    ['/antrenament', '.cf-title'],
+    ['/unsubscribe', 'h1'],
+    ['/renunt', 'h1'],
+    ['/antrenament', 'h1'],
   ];
   for (const [path, selector] of pages) {
     const response = await page.goto(path);

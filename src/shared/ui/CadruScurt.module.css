@@ -1,0 +1,13 @@
+/*
+ * Titlul paginilor scurte (confirmare, dezabonare, renunțare, antrenament).
+ * Regula e în `:where()`, ca în restul kitului: o pagină care vrea alt titlu îl
+ * suprascrie cu o clasă proprie, indiferent de ordinea fișierelor. Cadrul
+ * (`.cs-*`) rămâne în `public.css` cât timp ecranul de așteptare îl împarte.
+ */
+:where(.titlu) {
+    margin: 0; font-family: 'Anton', sans-serif; font-weight: 400;
+    padding-top: 0.12em;
+    font-size: clamp(48px, 10vw, 104px); line-height: 0.92; letter-spacing: -0.005em;
+    text-transform: uppercase; color: var(--e3-text); text-align: center; text-wrap: balance;
+    animation: global(fade-up) 0.6s ease-out 0.1s both;
+  }

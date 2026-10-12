@@ -1,7 +1,6 @@
 /*
- * Pagina `/antrenament`. Cadrul (`.cs-*`, `.cf-title`) e împrumutat de la
- * paginile scurte din `public.css` până la mutarea lor (U8); cardul săptămânii
- * are modulul lui.
+ * Pagina `/antrenament`. Cadrul și titlul vin din `shared/ui/CadruScurt`;
+ * cardul săptămânii are modulul lui.
  */
 
   /* Selectorul programului. `width: 100%` pe un `select` cu opțiuni lungi
