@@ -8,7 +8,7 @@ import type { PublicStats } from '../data/api';
 import type { useRegistration } from '../hooks/useRegistration';
 import { useCountUp } from '../../../shared/lib/useCountUp';
 import { BirthDateField } from './BirthDateField';
-import { SectionHead } from '../../landing';
+import { SectionHead } from '../../../shared/ui/SectionHead';
 import {
   AntetLocuri,
   BaraLocuri,

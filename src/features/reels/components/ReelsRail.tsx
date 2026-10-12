@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from '../../../shared/lib/config';
 import type { Reel } from '../data/api';
 import { posterClip, posterClipRezerva, sursaIncorporare } from '../../../shared/lib/youtube';
-import { SectionHead } from '../../landing';
+import { SectionHead } from '../../../shared/ui/SectionHead';
 
 type Props = {
   /** Clipurile de randat. Lista goală nu randează nimic. */

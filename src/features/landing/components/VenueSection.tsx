@@ -3,7 +3,7 @@ import shared3 from './LandingStyles.module.css';
 import styles from './VenueSection.module.css';
 import shared1 from '../../../shared/ui/PublicLayout.module.css';
 import { useEditionStrings } from '../../../shared/lib/useEventConfig';
-import { SectionHead } from './SectionHead';
+import { SectionHead } from '../../../shared/ui/SectionHead';
 
 type Props = {
   /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */

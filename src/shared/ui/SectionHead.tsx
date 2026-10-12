@@ -1,4 +1,4 @@
-import shared2 from '../../../shared/ui/PublicLayout.module.css';
+import shared2 from './PublicLayout.module.css';
 import styles from './SectionHead.module.css';
 import type { ReactNode } from 'react';
 
@@ -9,7 +9,7 @@ type Props = {
 };
 
 /**
- * Antetul de secțiune al landing-ului: numărul, o linie până la margine și
+ * Antetul de secțiune al paginilor publice: numărul, o linie până la margine și
  * titlul la scară de afiș. Clasele `.e3-title-num` și `.e3-title` poartă și
  * dezvăluirea legată de scroll din `edition3.css`.
  */

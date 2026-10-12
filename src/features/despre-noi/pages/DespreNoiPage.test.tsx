@@ -51,11 +51,12 @@ describe('pagina Despre noi', () => {
   });
 
   it('un eșec păstrează datele completate și permite reîncercarea', async () => {
-    formResponse({ status: 500, text: 'failed' });
+    const requests = formResponse({ status: 500, text: 'failed' });
     render(<DespreNoi />);
     fill();
     fireEvent.click(screen.getByRole('button', { name: 'Ține-mă la curent' }));
-    await screen.findByRole('alert');
+    expect((await screen.findByRole('alert')).textContent).toMatch(/nu am putut trimite/i);
+    expect(requests.count).toBe(1);
     expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('ana@example.com');
     await waitFor(() => expect((screen.getByRole('button', { name: 'Ține-mă la curent' }) as HTMLButtonElement).disabled).toBe(false));
   });

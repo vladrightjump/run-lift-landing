@@ -26,6 +26,13 @@ module.exports = {
       from: { path: '^src/shared/' },
       to: { path: '^src/features/' },
     },
+    {
+      name: 'no-circular',
+      severity: 'error',
+      comment: 'Fără cicluri de import, nici între funcționalități prin index.ts.',
+      from: {},
+      to: { circular: true },
+    },
   ],
   options: {
     // Tot `src/`: regulile constrâng doar structura nouă, dar și codul vechi

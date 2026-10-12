@@ -7,7 +7,7 @@ import { useEventConfig } from '../../../shared/lib/useEventConfig';
 import { getMySignups } from '../../../shared/lib/mySignups';
 import type { PublicStats } from '../../inscriere';
 import { useCountUp } from '../../../shared/lib/useCountUp';
-import { SectionHead } from './SectionHead';
+import { SectionHead } from '../../../shared/ui/SectionHead';
 
 type Props = {
   stats: PublicStats | null;

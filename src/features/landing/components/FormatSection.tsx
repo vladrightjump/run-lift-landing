@@ -3,7 +3,7 @@ import shared1 from '../../../shared/ui/PublicLayout.module.css';
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { ETAPE } from '../../../shared/content/etape';
-import { SectionHead } from './SectionHead';
+import { SectionHead } from '../../../shared/ui/SectionHead';
 
 type Props = {
   /** Numărul afișat al secțiunii — se schimbă când ordinea secțiunilor se schimbă. */
