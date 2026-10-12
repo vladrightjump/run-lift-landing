@@ -8,7 +8,7 @@ import { momentComplet, ziLunaLunga } from '../lib/formatare';
 import { usePublicTrialStare } from '../hooks/usePublicTrial';
 import { usePublicHomepage } from '../hooks/usePublicHomepage';
 import { TrialTraining } from './TrialTraining';
-import { CardAntrenament } from './CardAntrenament';
+import { CardAntrenament } from '../features/antrenament';
 
 type Props = {
   showToast: (kind: ToastKind, msg: string) => void;
@@ -192,7 +192,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
       */}
       {cardJos && (
         <div className="cs-dupa-proba">
-          <CardAntrenament />
+          <CardAntrenament className="cs-dupa-proba-card" />
         </div>
       )}
       <footer className="cs-footer">

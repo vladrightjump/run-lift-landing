@@ -15,7 +15,7 @@ import { StrictMode } from 'react';
 import { AppProviders } from './app/providers';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-// Pentru cardul `.an-card`, pe care tabul de antrenament îl randează ca previzualizare.
+// Ca în producție, unde `app/main.tsx` le importă pe amândouă.
 import './public.css';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { RadacinaAdmin } from './admin/AdminApp';

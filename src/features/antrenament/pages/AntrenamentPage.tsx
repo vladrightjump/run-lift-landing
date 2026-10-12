@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
-import { fetchWeeklyWorkouts, type WeeklyWorkout } from '../lib/supabase';
-import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
+import { useState } from 'react';
+import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../../lib/config';
+import type { WeeklyWorkout } from '../data/api';
+import { CardSaptamana } from '../components/CardSaptamana';
+import { useProgramAntrenament } from '../data/queries';
+import styles from '../styles/AntrenamentPage.module.css';
 
 /**
  * „Antrenamentul săptămânii" — pagina care există ca să ai ce link trimite.
@@ -22,12 +25,6 @@ import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
  * `app/router.tsx` o trece pe lângă `EventConfigProvider`.
  */
 
-type Stare =
-  | { fel: 'incarca' }
-  | { fel: 'are'; program: WeeklyWorkout[]; ales: number }
-  | { fel: 'nimic' }
-  | { fel: 'eroare' };
-
 /**
  * Săptămâna cerută prin fragment (`/antrenament#s1`), dacă e una reală.
  *
@@ -48,30 +45,21 @@ const dinFragment = (hash: string, program: WeeklyWorkout[]): number | null => {
 const curenta = (program: WeeklyWorkout[]): number =>
   program.reduce((max, s) => (s.numar > max ? s.numar : max), program[0].numar);
 
-export const Antrenament = () => {
-  const [stare, setStare] = useState<Stare>({ fel: 'incarca' });
+export const AntrenamentPage = () => {
+  const { data: program, isError: cerereEsuata } = useProgramAntrenament();
+  // Eroarea contează doar cât timp n-avem program: un refresh picat n-are voie
+  // să înlocuiască o săptămână deja afișată cu banda de eroare.
+  const isError = cerereEsuata && program === undefined;
+  // Fragmentul cu care a venit vizitatorul. După o alegere, fragmentul e al
+  // nostru (`replaceState` de mai jos), deci nu se mai citește.
+  const [fragment] = useState(() => window.location.hash);
+  const [alesManual, setAlesManual] = useState<number | null>(null);
 
-  useEffect(() => {
-    const control = new AbortController();
-    fetchWeeklyWorkouts(control.signal)
-      .then((program) => {
-        if (program.length === 0) return setStare({ fel: 'nimic' });
-        setStare({
-          fel: 'are',
-          program,
-          ales: dinFragment(window.location.hash, program) ?? curenta(program),
-        });
-      })
-      .catch((err: unknown) => {
-        // Anularea la demontare nu e o eroare de arătat cuiva.
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-        setStare({ fel: 'eroare' });
-      });
-    return () => control.abort();
-  }, []);
+  const areProgram = !isError && program !== undefined && program.length > 0;
+  const ales = areProgram ? (alesManual ?? dinFragment(fragment, program) ?? curenta(program)) : null;
 
   const alege = (numar: number) => {
-    setStare((s) => (s.fel === 'are' ? { ...s, ales: numar } : s));
+    setAlesManual(numar);
     /**
      * `replaceState`, nu `pushState`: butonul „înapoi" trebuie să ducă înapoi
      * de unde a venit vizitatorul, nu să-l plimbe prin săptămânile pe care
@@ -80,8 +68,7 @@ export const Antrenament = () => {
     window.history.replaceState(null, '', `#s${numar}`);
   };
 
-  const saptamana =
-    stare.fel === 'are' ? (stare.program.find((s) => s.numar === stare.ales) ?? null) : null;
+  const saptamana = areProgram ? (program.find((s) => s.numar === ales) ?? null) : null;
 
   return (
     <div className="cs-root">
@@ -97,25 +84,13 @@ export const Antrenament = () => {
       <main className="cs-main">
         <h1 className="cf-title">Antrenamentul săptămânii</h1>
 
-        {stare.fel === 'incarca' && (
+        {!isError && program === undefined && (
           <p className="cs-sub" role="status">
             Se încarcă…
           </p>
         )}
 
-        {saptamana && (
-          <article className="an-card">
-            <p className="an-eticheta">Săptămâna {saptamana.numar}</p>
-            <h2 className="an-titlu">{saptamana.titlu}</h2>
-            {/*
-              `pre-wrap`, nu markdown: organizatorul scrie antrenamentul cum l-ar
-              fi scris în story, iar rândurile lui sunt tot formatul de care are
-              nevoie. React scapă textul, deci nimic din ce se tastează în
-              backoffice nu poate deveni marcaj pe pagina publică.
-            */}
-            <p className="an-corp">{saptamana.corp}</p>
-          </article>
-        )}
+        {saptamana && <CardSaptamana numar={saptamana.numar} titlu={saptamana.titlu} corp={saptamana.corp} />}
 
         {/*
           Selectorul apare doar de la două săptămâni în sus — cu una singură ar
@@ -126,18 +101,18 @@ export const Antrenament = () => {
           cincizeci de opțiuni, gratis. Un meniu scris de noi ar fi cerut capcană
           de focus, navigare cu tastatura și derulare, pentru zero câștig.
         */}
-        {stare.fel === 'are' && stare.program.length > 1 && (
-          <div className="an-selector">
-            <label className="an-selector-eticheta" htmlFor="an-saptamana">
+        {areProgram && program.length > 1 && (
+          <div className={styles.selector}>
+            <label className={styles.selectorEticheta} htmlFor="an-saptamana">
               Vrei să începi de la capăt? Alege o săptămână.
             </label>
             <select
               id="an-saptamana"
-              className="an-selector-camp"
-              value={stare.ales}
+              className={styles.selectorCamp}
+              value={ales ?? undefined}
               onChange={(e) => alege(Number(e.target.value))}
             >
-              {stare.program.map((s) => (
+              {program.map((s) => (
                 <option key={s.numar} value={s.numar}>
                   Săptămâna {s.numar}
                   {s.titlu ? `: ${s.titlu}` : ''}
@@ -152,7 +127,7 @@ export const Antrenament = () => {
           aceeași situație, iar pagina răspunde în loc să dea 404: linkul
           trimis săptămâna trecută trebuie să rămână bun.
         */}
-        {stare.fel === 'nimic' && (
+        {!isError && program?.length === 0 && (
           <p className="cs-sub">
             Nu e publicat niciun antrenament acum. Revino peste câteva zile sau vezi ce mai
             facem pe{' '}
@@ -163,7 +138,7 @@ export const Antrenament = () => {
           </p>
         )}
 
-        {stare.fel === 'eroare' && (
+        {isError && (
           <p className="cs-sub" role="alert">
             Nu am putut încărca antrenamentul. Reîncarcă pagina în câteva momente.
           </p>

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { fetchWeeklyWorkouts, type WeeklyWorkout } from '../lib/supabase';
+import { useCallback, useState } from 'react';
+import { useProgramAntrenament } from '../data/queries';
+import styles from '../styles/CardAntrenament.module.css';
 
 /**
  * „Până atunci" — antrenamentul săptămânii, pe ecranul de așteptare.
@@ -18,8 +19,16 @@ import { fetchWeeklyWorkouts, type WeeklyWorkout } from '../lib/supabase';
  * bandă de eroare aici ar strica pagina pentru o piesă secundară. Aceeași
  * regulă ca la banda de clipuri, care nici ea nu se randează fără clipuri.
  */
-export const CardAntrenament = () => {
-  const [saptamana, setSaptamana] = useState<WeeklyWorkout | null>(null);
+export const CardAntrenament = ({
+  className,
+}: {
+  /** Clasa locului în care stă cardul (sub secțiunea de probă pierde marginea de sus). */
+  className?: string;
+} = {}) => {
+  const { data: program } = useProgramAntrenament();
+  // Cea curentă: numărul cel mai mare vizibil, ca pe `/antrenament`. O eroare
+  // lasă `program` nedefinit, deci cardul tace.
+  const saptamana = program && program.length > 0 ? program[program.length - 1] : null;
   /**
    * Corpul chiar a fost tăiat de `max-height`?
    *
@@ -45,19 +54,6 @@ export const CardAntrenament = () => {
     setTaiat(el.scrollHeight > el.clientHeight + 1);
   }, []);
 
-  useEffect(() => {
-    const control = new AbortController();
-    fetchWeeklyWorkouts(control.signal)
-      .then((program) => {
-        if (program.length === 0) return;
-        // Cea curentă: numărul cel mai mare vizibil, ca pe `/antrenament`.
-        setSaptamana(program[program.length - 1]);
-      })
-      // Tăcere intenționată, inclusiv pe AbortError: n-avem ce spune aici.
-      .catch(() => {});
-    return () => control.abort();
-  }, []);
-
   if (saptamana === null) return null;
 
   return (
@@ -67,26 +63,26 @@ export const CardAntrenament = () => {
      * linkului, fără nicio cale de a-l survola.
      */
     <a
-      className="cs-antren"
+      className={className ? `${styles.antren} ${className}` : styles.antren}
       href="/antrenament"
       aria-label={`Antrenamentul săptămânii ${saptamana.numar}: ${saptamana.titlu}`}
     >
-      <span className="cs-antren-eticheta">Până atunci</span>
+      <span className={styles.eticheta}>Până atunci</span>
 
-      <span className="cs-antren-cap">
-        <span className="cs-antren-nr">Săptămâna {saptamana.numar}</span>
-        <span className="cs-antren-titlu">{saptamana.titlu}</span>
+      <span className={styles.cap}>
+        <span className={styles.nr}>Săptămâna {saptamana.numar}</span>
+        <span className={styles.titlu}>{saptamana.titlu}</span>
       </span>
 
       {/*
         Primele rânduri. `pre-wrap` ca pe pagina întreagă — rândurile scrise de
         organizator sunt formatul, și aici la fel.
       */}
-      <span ref={masoaraCorpul} className={`cs-antren-corp${taiat ? ' taiat' : ''}`}>
+      <span ref={masoaraCorpul} className={taiat ? `${styles.corp} ${styles.taiat}` : styles.corp}>
         {saptamana.corp}
       </span>
 
-      <span className="cs-antren-cta">Vezi antrenamentul →</span>
+      <span className={styles.cta}>Vezi antrenamentul →</span>
     </a>
   );
 };

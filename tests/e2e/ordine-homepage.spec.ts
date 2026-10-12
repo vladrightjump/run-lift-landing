@@ -34,7 +34,9 @@ const mock = async (page: Page, r: Raspunsuri, apelate: string[] = []) =>
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) });
   });
 
-const card = (page: Page) => page.locator('.cs-antren');
+/** Cardul „Până atunci", după numele lui accesibil (clasa e a modulului, cu hash). */
+const CARD = 'a[aria-label^="Antrenamentul săptămânii"]';
+const card = (page: Page) => page.locator(CARD);
 const proba = (page: Page) => page.getByRole('region', { name: 'Primul tău antrenament cu noi.' });
 
 /** `true` când `a` stă înaintea lui `b` în document. */
@@ -54,7 +56,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible();
     await expect(proba(page)).toBeVisible();
-    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
   });
 
   test('„Proba primul": secțiunea de probă urcă deasupra cardului', async ({ page }) => {
@@ -62,7 +64,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible();
     await expect(proba(page)).toBeVisible();
-    expect(await inainte(page, '.trial-training', '.cs-antren')).toBe(true);
+    expect(await inainte(page, '.trial-training', CARD)).toBe(true);
   });
 
   test('funcția pică: ordinea implicită, fără eroare pe ecran', async ({ page }) => {
@@ -70,7 +72,7 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible();
     await expect(proba(page)).toBeVisible();
-    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
     await expect(page.getByRole('alert')).toHaveCount(0);
   });
 
@@ -80,21 +82,21 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     await page.route('**/rest/v1/rpc/public_homepage', () => {});
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible({ timeout: 5000 });
-    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
   });
 
   test('„Proba primul" cu configul probei întârziat: cardul nu apare înaintea probei', async ({ page }) => {
     // Ordinea în care blocurile APAR, nu doar unde ajung: un card montat sub
     // butoane și împins apoi în jos de secțiunea de probă e exact saltul de evitat.
-    await page.addInitScript(() => {
+    await page.addInitScript((selectorCard) => {
       const w = window as unknown as { aparitiiTest: string[] };
       w.aparitiiTest = [];
       new MutationObserver(() => {
-        for (const [sel, nume] of [['.trial-training', 'proba'], ['.cs-antren', 'card']] as const) {
+        for (const [sel, nume] of [['.trial-training', 'proba'], [selectorCard, 'card']] as const) {
           if (document.querySelector(sel) && !w.aparitiiTest.includes(nume)) w.aparitiiTest.push(nume);
         }
       }).observe(document, { childList: true, subtree: true });
-    });
+    }, CARD);
     await mock(page, { homepage: { trial_first: true, training_location: null } });
     await page.route('**/rest/v1/rpc/public_trial_config', async (route) => {
       await new Promise((r) => setTimeout(r, 800));
@@ -121,10 +123,10 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     });
     await page.goto('/?preview=next');
     await expect(card(page)).toBeVisible({ timeout: 5000 });
-    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
     // Răspunsul întârziat sosește; cardul rămâne unde l-a văzut vizitatorul.
     await page.waitForTimeout(3000);
-    expect(await inainte(page, '.cs-antren', '.trial-training')).toBe(true);
+    expect(await inainte(page, CARD, '.trial-training')).toBe(true);
   });
 
   test('„Proba primul" cu botul de probă oprit: rămâne doar cardul', async ({ page }) => {
