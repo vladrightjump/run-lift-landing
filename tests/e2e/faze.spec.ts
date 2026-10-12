@@ -258,7 +258,7 @@ test.describe('previzualizarea ciornei se compune cu fazele zilei', () => {
 
     // Pagina randează normal (pe instantaneu), iar ciorna nu e cerută nicăieri.
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    expect(cerutPublic).toBe(true);
+    await expect.poll(() => cerutPublic).toBe(true);
   });
 
   test('?config=draft nu schimbă faza cerută de ?preview=', async ({ page }) => {

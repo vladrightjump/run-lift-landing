@@ -35,6 +35,15 @@ aparține `shared/ui/`. Stilurile locale rămân cu proprietarul lor, iar valori
 U3 a adăugat scheletul `app/`, `features/` și `shared/`, regulile de dependență și
 aliasul `@/` către `src/`. U4 compune entry-ul și routerul tipizat în `app/` și mută
 transportul RPC în `shared/lib/rpc.ts`, pentru a separa API-ul admin de entry-ul public.
+U5 montează un singur QueryClient în `app/providers.tsx`, cu retry și refetch la focus
+oprite. `useAdminResource` păstrează contractul (`date`, `eroare`, `reincarca`) și folosește
+Query pentru încărcare și anulare. Poll-ul rămâne cel vechi: la 15 secunde și la revenirea
+în tab anulează cererea în zbor și pornește alta, prin API-ul Query (nu `refetchInterval`,
+care ar refolosi cererea în zbor). Cache-ul apelează o singură dată callback-ul de
+sesiune pentru fiecare query eșuat. Datele deja încărcate rămân vizibile după un refresh
+picat. Testele izolate primesc provider-ul comun din setup-ul Vitest.
+`AdminDashboard` încă folosește programarea veche; hook-urile publice și mutațiile se mută
+la Query odată cu funcționalitățile lor. Transportul RPC și config-ul public nu se schimbă.
 Codul existent rămâne în `src/components/`, `src/admin/`,
 `src/hooks/`, `src/lib/`, `src/content/` și fișierele din rădăcina `src/`. Migrarea se face în
 unitățile planificate, câte o zonă; schimbarea unui fișier vechi nu îl mută automat.

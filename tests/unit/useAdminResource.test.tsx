@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useEffect } from 'react';
-import { render, cleanup, act } from '@testing-library/react';
+import { useEffect, useState } from 'react';
+import { QueryClientProvider, useQuery, focusManager, onlineManager } from '@tanstack/react-query';
+import { render, cleanup, act, waitFor } from '@testing-library/react';
+import { createAppQueryClient } from '../../src/app/providers';
 import { useAdminResource } from '../../src/admin/useAdminResource';
 import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
 import { InvalidTokenError } from '../../src/lib/adminApi';
+import { rpc } from '../../src/shared/lib/rpc';
+import { server } from '../support/vitest.setup';
+import { rpcHandler } from '../support/handlers';
+import { HttpResponse } from 'msw';
 
 /**
  * Ciclul de încărcare pe care fiecare tab de backoffice și-l scria singur.
@@ -16,7 +22,7 @@ import { InvalidTokenError } from '../../src/lib/adminApi';
  *  3. un eșec după ce datele au sosit o dată NU golește ecranul.
  */
 
-const onAuthError = vi.fn(() => false);
+const onAuthError = vi.fn((_error: unknown) => false);
 const showToast = vi.fn();
 
 type Prins = { date: unknown; eroare: boolean; reincarca: () => Promise<boolean> };
@@ -56,6 +62,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
   captura.r = null;
   vi.useRealTimers();
   vi.clearAllMocks();
@@ -101,6 +108,41 @@ describe('useAdminResource — încărcarea', () => {
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(15_000);
+    });
+
+    expect(incarca).toHaveBeenCalledTimes(2);
+  });
+
+  it('la fiecare interval anulează cererea rămasă în zbor și pornește alta', async () => {
+    const signals: AbortSignal[] = [];
+    const incarca = vi.fn((_token: string, signal: AbortSignal) => {
+      signals.push(signal);
+      return new Promise(() => {});
+    });
+    randeaza(incarca);
+    await lasaSaSeAseze();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+
+    expect(incarca).toHaveBeenCalledTimes(2);
+    expect(signals[0].aborted).toBe(true);
+    expect(signals[1].aborted).toBe(false);
+  });
+
+  it('revenirea în tab cere imediat, când poll-ul e pornit', async () => {
+    const incarca = vi.fn().mockResolvedValue([]);
+    randeaza(incarca);
+    await lasaSaSeAseze();
+
+    await act(async () => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(incarca).toHaveBeenCalledTimes(2);
@@ -279,5 +321,177 @@ describe('useAdminResource — încărcare o singură dată', () => {
     });
 
     expect(incarca).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useAdminResource — contractul Query', () => {
+  it('încărcarea offline încearcă cererea și arată eroarea fără să aștepte reconectarea', async () => {
+    onlineManager.setOnline(false);
+    const incarca = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    randeaza(incarca, null);
+    await lasaSaSeAseze();
+    expect(incarca).toHaveBeenCalledTimes(1);
+    expect(res().eroare).toBe(true);
+    expect(res().date).toBeNull();
+    await act(async () => {
+      onlineManager.setOnline(true);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(incarca).toHaveBeenCalledTimes(1);
+  });
+
+  it('reîncărcarea offline se încheie cu false și nu păstrează o cerere pentru reconectare', async () => {
+    const incarca = vi.fn().mockResolvedValueOnce(['bun']).mockRejectedValue(new TypeError('Failed to fetch'));
+    randeaza(incarca, null);
+    await lasaSaSeAseze();
+    onlineManager.setOnline(false);
+    let rezultat: boolean | undefined;
+    await act(async () => {
+      void res().reincarca().then(value => { rezultat = value; });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(rezultat).toBe(false);
+    expect(incarca).toHaveBeenCalledTimes(2);
+    expect(res().date).toEqual(['bun']);
+    expect(res().eroare).toBe(false);
+    await act(async () => {
+      onlineManager.setOnline(true);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(incarca).toHaveBeenCalledTimes(2);
+  });
+
+  it('reîncărcarea manuală anulează și prima cerere, înainte de orice date', async () => {
+    const signals: AbortSignal[] = [];
+    const incarca = vi.fn((_token: string, signal: AbortSignal) => {
+      signals.push(signal);
+      return signals.length === 1 ? new Promise(() => {}) : Promise.resolve(['nou']);
+    });
+    randeaza(incarca, null);
+    let rezultat: boolean | undefined;
+    await act(async () => {
+      void res().reincarca().then(value => { rezultat = value; });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(signals).toHaveLength(2);
+    expect(signals[0].aborted).toBe(true);
+    expect(rezultat).toBe(true);
+    expect(res().date).toEqual(['nou']);
+  });
+
+  it('reîncărcarea manuală întoarce false când cererea eșuează', async () => {
+    randeaza(vi.fn().mockResolvedValueOnce(['bun']).mockRejectedValue(new Error('cade')), null);
+    await lasaSaSeAseze();
+    let rezultat: boolean | undefined;
+    await act(async () => {
+      void res().reincarca().then(value => { rezultat = value; });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(rezultat).toBe(false);
+    expect(res().date).toEqual(['bun']);
+  });
+
+  it('Query nu reîncarcă la revenirea focusului', async () => {
+    const incarca = vi.fn().mockResolvedValue([]);
+    randeaza(incarca);
+    await lasaSaSeAseze();
+    await act(async () => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(incarca).toHaveBeenCalledTimes(1);
+    focusManager.setFocused(undefined);
+  });
+
+  it('demontarea anulează cererea și oprește poll-ul Query', async () => {
+    const signals: AbortSignal[] = [];
+    const incarca = vi.fn((_token: string, signal: AbortSignal) => {
+      signals.push(signal);
+      return new Promise(() => {});
+    });
+    const { unmount } = randeaza(incarca);
+    unmount();
+    expect(signals[0].aborted).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(45_000); });
+    expect(incarca).toHaveBeenCalledTimes(1);
+  });
+
+  it('orice query cu doi observatori tratează sesiunea expirată o singură dată și arată loginul', async () => {
+    vi.useRealTimers();
+    const client = createAppQueryClient();
+    const response = vi.fn(() => HttpResponse.text('invalid_token', { status: 401 }));
+    server.use(rpcHandler('admin_check_token', response));
+    const incarca = ({ signal }: { signal: AbortSignal }) => rpc('admin_check_token', { p_token: 'jeton' }, signal);
+    const Citeste = () => {
+      useQuery({ queryKey: ['auth-test'], queryFn: incarca });
+      return null;
+    };
+    const Sesiune = () => {
+      const [login, setLogin] = useState(false);
+      return login ? <p>Login</p> : (
+        <FurnizorSesiuneAdmin token="jeton" showToast={showToast} onAuthError={err => {
+          onAuthError(err);
+          setLogin(true);
+          return true;
+        }}>
+          <Citeste /><Citeste />
+        </FurnizorSesiuneAdmin>
+      );
+    };
+    const view = render(<QueryClientProvider client={client}><Sesiune /></QueryClientProvider>);
+    await waitFor(() => expect(view.getByText('Login')).toBeTruthy());
+    expect(response).toHaveBeenCalledTimes(1);
+    expect(onAuthError).toHaveBeenCalledExactlyOnceWith(expect.any(InvalidTokenError));
+    view.unmount();
+    client.clear();
+  });
+});
+
+
+describe('useAdminResource — păstrează valorile la schimbarea query-ului', () => {
+  it('un corp RPC gol rămâne succes cu undefined, fără eroare Query nouă', async () => {
+    vi.useRealTimers();
+    server.use(rpcHandler('admin_check_token', () => new HttpResponse('', { status: 200 })));
+    const incarca = (token: string, signal: AbortSignal) => rpc('admin_check_token', { p_token: token }, signal);
+    randeaza(incarca, null);
+    await waitFor(() => expect(res().date).toBeUndefined());
+    expect(res().eroare).toBe(false);
+    let rezultat: boolean | undefined;
+    await act(async () => { rezultat = await res().reincarca(); });
+    expect(rezultat).toBe(true);
+    expect(res().eroare).toBe(false);
+  });
+
+  it('un callback nou cere din nou și păstrează datele bune după eșec', async () => {
+    const primul = vi.fn().mockResolvedValue(['bun']);
+    const urmatorul = vi.fn().mockRejectedValue(new Error('cade'));
+    const view = randeaza(primul, null);
+    await lasaSaSeAseze();
+    view.rerender(
+      <FurnizorSesiuneAdmin token="jeton" onAuthError={onAuthError} showToast={showToast}>
+        <Sonda incarca={urmatorul} intervalMs={null} />
+      </FurnizorSesiuneAdmin>
+    );
+    await lasaSaSeAseze();
+    expect(urmatorul).toHaveBeenCalledTimes(1);
+    expect(res().date).toEqual(['bun']);
+    expect(res().eroare).toBe(false);
+  });
+
+  it('un token nou cere cu tokenul nou și păstrează datele bune după eșec', async () => {
+    const incarca = vi.fn().mockResolvedValueOnce(['bun']).mockRejectedValue(new Error('cade'));
+    const view = randeaza(incarca, null);
+    await lasaSaSeAseze();
+    view.rerender(
+      <FurnizorSesiuneAdmin token="nou" onAuthError={onAuthError} showToast={showToast}>
+        <Sonda incarca={incarca} intervalMs={null} />
+      </FurnizorSesiuneAdmin>
+    );
+    await lasaSaSeAseze();
+    expect(incarca).toHaveBeenCalledTimes(2);
+    expect(incarca.mock.calls[1][0]).toBe('nou');
+    expect(res().date).toEqual(['bun']);
+    expect(res().eroare).toBe(false);
   });
 });

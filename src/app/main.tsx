@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from '@tanstack/react-router';
 import { makeRouter } from './router';
+import { AppProviders } from './providers';
 import { installGlobalMonitoring } from '../lib/monitoring';
 import { pornesteAnalitice } from '../lib/analytics';
 import { redirectCanonic } from '../lib/canonicalHost';
@@ -36,5 +37,5 @@ if (!rootEl) throw new Error('Root element #root not found');
 // reconciliază când răspunde `public_config()`.
 const router = makeRouter();
 createRoot(rootEl).render(
-  <StrictMode><RouterProvider router={router} /></StrictMode>
+  <StrictMode><AppProviders><RouterProvider router={router} /></AppProviders></StrictMode>
 );

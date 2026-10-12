@@ -1,24 +1,10 @@
-import { useCallback, useRef, useState } from 'react';
-import { useAdminPolling, ADMIN_REFRESH_MS } from './useAdminPolling';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ADMIN_REFRESH_MS } from './useAdminPolling';
 import { useSesiuneAdmin } from './adminSession';
+import { wasAuthErrorHandled } from '../app/providers';
 
-/**
- * O listă din backoffice, ținută proaspătă.
- *
- * `useAdminPolling` se ocupa deja de programare și de anulare, dar fiecare tab
- * își scria singur ce se întâmplă cu răspunsul — și scria de fiecare dată
- * aceleași patru lucruri: pune datele, stinge eroarea, ignoră cererea anulată,
- * lasă `onAuthError` să trateze sesiunea expirată. Patru copii, patru șanse să
- * uiți una.
- *
- * Regula pentru `loadError` e cea de dinainte, păstrată intenționat: un eșec
- * contează doar cât timp N-AI încă date. După ce lista s-a încărcat o dată, o
- * reîmprospătare picată nu golește ecranul și nu sperie organizatorul — rămâne
- * ce era, până răspunde iar serverul.
- *
- * Vezi `tests/unit/useAdminResource.test.ts`.
- */
-
+/** Query deține încărcarea și anularea; poll-ul anulează și înlocuiește. Un refresh picat păstrează datele. */
 export type ResursaAdmin<T> = {
   /** `null` cât timp n-a venit niciun răspuns bun. */
   date: T | null;
@@ -31,40 +17,78 @@ export type ResursaAdmin<T> = {
   reincarca: () => Promise<boolean>;
 };
 
+// Contractul vechi repornește încărcarea când se schimbă callback-ul stabil.
+type Loader = (token: string, signal: AbortSignal) => Promise<unknown>;
+const loaderIds = new WeakMap<Loader, number>();
+let nextLoaderId = 0;
+const loaderId = (loader: Loader) => {
+  let id = loaderIds.get(loader);
+  if (id === undefined) {
+    id = ++nextLoaderId;
+    loaderIds.set(loader, id);
+  }
+  return id;
+};
+
 export const useAdminResource = <T>(
-  /** Stabil (`useCallback`) — identitatea lui repornește poll-ul. */
+  /** Stabil (`useCallback`) — identitatea lui repornește încărcarea. */
   incarca: (token: string, signal: AbortSignal) => Promise<T>,
-  /** `null` = se încarcă o singură dată. Vezi `useAdminPolling`. */
+  /** `null` = se încarcă o singură dată. */
   intervalMs: number | null = ADMIN_REFRESH_MS
 ): ResursaAdmin<T> => {
-  const { token, onAuthError } = useSesiuneAdmin();
-  const [date, setDate] = useState<T | null>(null);
-  const [eroare, setEroare] = useState(false);
-  // Citit din interiorul lui `catch`, unde `date` ar fi valoarea din randarea
-  // în care s-a pornit cererea, nu cea de acum.
-  const dateRef = useRef<T | null>(null);
-  dateRef.current = date;
+  const { token } = useSesiuneAdmin();
+  const client = useQueryClient();
+  const id = useId();
+  const queryKey = useMemo(() => ['admin-resource', token, id, loaderId(incarca)], [token, id, incarca]);
+  const [previous, setPrevious] = useState<{ date: T | null; eroare: boolean }>({ date: null, eroare: false });
+  const signalRef = useRef<AbortSignal | null>(null);
+  const { data, error, refetch } = useQuery({
+    queryKey,
+    queryFn: async ({ signal }) => {
+      signalRef.current = signal;
+      // RPC poate întoarce undefined pentru un corp gol; Query cere un cache
+      // definit, fără să schimbăm valoarea livrată ecranului.
+      return { date: await incarca(token, signal) };
+    },
+    gcTime: 0,
+  });
+  // Ca înainte, datele și eroarea inițială rămân până la un răspuns bun,
+  // inclusiv când schimbarea callback-ului creează un query nou.
+  const date = data !== undefined ? data.date : previous.date;
+  const eroare = error && date === null && !wasAuthErrorHandled(client, queryKey, error)
+    ? true
+    : data !== undefined ? false : previous.eroare;
+  if (date !== previous.date || eroare !== previous.eroare) setPrevious({ date, eroare });
 
-  const cere = useCallback(
-    (signal: AbortSignal) =>
-      incarca(token, signal)
-        .then((raspuns) => {
-          // O cerere anulată poate totuși să se rezolve (cu un corp gol): nu are
-          // voie să înlocuiască datele bune cu nimic.
-          if (signal.aborted) return false;
-          setDate(raspuns);
-          setEroare(false);
-          return true;
-        })
-        .catch((err) => {
-          if (signal.aborted || onAuthError(err)) return false;
-          setEroare((precedent) => precedent || dateRef.current === null);
-          return false;
-        }),
-    [incarca, token, onAuthError]
-  );
+  const reincarca = useCallback(() => {
+    // `refetch` singur nu anulează prima cerere, cât timp n-avem încă date.
+    void client.cancelQueries({ queryKey, exact: true });
+    const request = refetch({ throwOnError: true });
+    const signal = signalRef.current;
+    // Query poate întoarce datele precedente după anulare; contractul nostru
+    // întoarce false pentru cererea anulată, chiar dacă au rămas date bune.
+    return request.then(result => !signal?.aborted && result.isSuccess).catch(() => false);
+  }, [client, queryKey, refetch]);
 
-  const reincarca = useAdminPolling(cere, intervalMs);
+  // Nu `refetchInterval`: acela refolosește cererea rămasă în zbor. Poll-ul
+  // vechi o anula și pornea alta, și cerea imediat la revenirea în tab.
+  useEffect(() => {
+    if (intervalMs === null) return;
+    const tick = () => void reincarca();
+    const timer = window.setInterval(tick, intervalMs);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [reincarca, intervalMs]);
 
-  return { date, eroare, reincarca };
+  return {
+    date,
+    eroare,
+    reincarca,
+  };
 };

@@ -12,6 +12,7 @@
  * Se deschide cu `npm run dev` → /admin-preview.html
  */
 import { StrictMode } from 'react';
+import { AppProviders } from './app/providers';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 // Pentru cardul `.an-card`, pe care tabul de antrenament îl randează ca previzualizare.
@@ -27,8 +28,10 @@ await worker.start({ onUnhandledFrame: 'error', quiet: true });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RadacinaAdmin>
-      <AdminDashboard token="token-preview" onLogout={() => location.reload()} />
-    </RadacinaAdmin>
+    <AppProviders>
+      <RadacinaAdmin>
+        <AdminDashboard token="token-preview" onLogout={() => location.reload()} />
+      </RadacinaAdmin>
+    </AppProviders>
   </StrictMode>
 );

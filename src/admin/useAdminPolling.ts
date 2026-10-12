@@ -1,17 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 /**
- * Poll-ul comun al backoffice-ului. `AdminDashboard` și `AdminLaunchTab` aveau
- * fiecare aceeași secvență copiată — interval, listener pe `visibilitychange`,
- * `AbortController` per cerere și curățenie la demontare — iar fiecare tab nou
- * ar fi adus încă o copie.
- *
- * Hook-ul deține DOAR programarea și anularea. Ce se cere efectiv rămâne la
- * apelant: primește un `AbortSignal` și îl dă mai departe apelurilor din
- * `adminApi`. Callback-ul returnat declanșează un refresh manual (după o
- * ștergere, o promovare etc.) cu aceleași garanții de anulare.
- *
- * Vezi `tests/unit/useAdminPolling.test.ts`.
+ * Programarea veche, păstrată numai pentru `AdminDashboard`, până la migrarea
+ * lui. `useAdminResource` programează același poll peste Query.
+ * Callback-ul primește semnalul cererii și refresh-ul manual anulează cererea
+ * precedentă. Vezi `tests/unit/useAdminPolling.test.ts`.
  */
 
 /** Ritmul poll-ului din backoffice. Un singur operator, ~30 de rânduri. */
