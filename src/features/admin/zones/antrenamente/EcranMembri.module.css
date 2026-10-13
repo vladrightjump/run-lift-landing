@@ -1,0 +1,10 @@
+
+  .admin-sala-eticheta-mica {
+    margin-left: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700; color: var(--pa-accent-text); background: var(--pa-accent-soft);
+  }
+  .admin-sala-cauta { flex: 1 1 220px; min-width: 0; }
+  .admin-sala-necunoscuti { border-color: var(--pa-warn); }
+  .admin-sala-cont select { max-width: 220px; }
+  .admin-sala-formular { display: grid; gap: 8px; min-width: 0; }
+  .admin-sala-formular > :global(.admin-config-eticheta):not(:first-child) { margin-top: 10px; }
+  .admin-sala-formular > :where(:global([data-css~="admin-sala-bifa"]), :global(.admin-table-actions)) { margin-top: 12px; }

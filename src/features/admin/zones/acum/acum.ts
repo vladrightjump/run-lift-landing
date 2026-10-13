@@ -1,9 +1,10 @@
 import type { EventConfig } from '../../../../shared/content/eventConfig';
-import type { ComandaAcum, SalaComanda, SalaDate } from '../../../../lib/salaApi';
+import {
+  antrenamentulUrmator, cineVine, zileAnulate,
+  frazaSondaj, numeZi, plusZile, urmatorulSondaj, ziuaSaptamanii, stareBot,
+  type ComandaAcum, type SalaComanda, type SalaDate,
+} from '../antrenamente';
 import { reperele, type Reper } from '../evenimente/reperele';
-import { antrenamentulUrmator, cineVine, zileAnulate } from '../../../../admin/sala/model';
-import { frazaSondaj, numeZi, plusZile, urmatorulSondaj, ziuaSaptamanii } from '../../../../admin/sala/sondaj';
-import { stareBot } from '../../../../admin/sala/stareBot';
 import type { EcranAdmin, FazaSite, SemnaleAdmin } from '../../data/stareCurenta';
 import { semnaleDeAtentie } from '../../data/stareCurenta';
 

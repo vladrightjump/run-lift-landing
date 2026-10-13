@@ -1,19 +1,23 @@
 import shared1 from '../../components/AdminStyles.module.css';
 import styles from './EcranAcum.module.css';
-import { useTrials } from '../../data/useTrials';
-import { trialNeedsAttention } from '../../../../lib/trialApi';
+import {
+  useSala,
+  useTrials,
+  trialNeedsAttention,
+  trimiteComanda,
+  marcheazaComandaVerificata,
+  cereFiltruUrmatorul,
+  RO_DOW,
+  type FiltruUrmatorul,
+} from '../antrenamente';
 import { useId } from 'react';
 import type { EventConfig } from '../../../../shared/content/eventConfig';
-import { trimiteComanda, marcheazaComandaVerificata } from '../../../../lib/salaApi';
 import { useNow } from '../../../../shared/lib/useNow';
 import { cardAntrenament, deRezolvat, evenimenteleSaptamanii, reperulUrmator, saptamana, aziLaChisinau, ultimulRaspuns, type CardAntrenament, type ElementDeRezolvat, type EvenimentZi, type TipEveniment, type ZiCuEvenimente } from './acum';
 import { Icon, type NumeIcon } from '../../../../shared/ui/Icon';
 import { InelOcupare } from './InelOcupare';
 import { useEsteTelefon } from '../../../../shared/ui/useEsteTelefon';
 import { useNumarAnimat } from './useNumarAnimat';
-import { cereFiltruUrmatorul, type FiltruUrmatorul } from '../../../../admin/sala/filtruUrmatorul';
-import { RO_DOW } from '../../../../admin/sala/sondaj';
-import { useSala } from '../../data/useSala';
 import type { EcranAdmin, FazaSite, SemnaleAdmin } from '../../data/stareCurenta';
 
 type Props = {

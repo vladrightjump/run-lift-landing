@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { saptamana, evenimenteleSaptamanii, cardAntrenament, deRezolvat, ultimulRaspuns } from './acum';
-import type { SalaDate, SalaMembru } from '../../../../lib/salaApi';
+import type { SalaDate, SalaMembru } from '../antrenamente';
 import { SNAPSHOT_CONFIG, type EventConfig } from '../../../../shared/content/eventConfig';
 
 /**

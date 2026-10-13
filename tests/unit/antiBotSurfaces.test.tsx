@@ -91,10 +91,10 @@ describe('niciun formular din src/ nu scapă fără capcană', () => {
    */
   const EXCEPTII = new Set([
     'src/features/admin/pages/AdminLogin.tsx',
-    'src/admin/sala/EcranPrezente.tsx',
-    'src/admin/sala/EcranMembri.tsx',
-    'src/admin/sala/EcranBot.tsx',
-    'src/admin/sala/TrialSettings.tsx',
+    'src/features/admin/zones/antrenamente/EcranPrezente.tsx',
+    'src/features/admin/zones/antrenamente/EcranMembri.tsx',
+    'src/features/admin/zones/antrenamente/EcranBot.tsx',
+    'src/features/admin/zones/antrenamente/TrialSettings.tsx',
   ]);
 
   it('fiecare fișier cu <form> folosește hpProps', () => {

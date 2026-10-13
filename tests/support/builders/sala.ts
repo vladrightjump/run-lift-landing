@@ -6,7 +6,7 @@
  *
  * Nu e el însuși un test — `vitest.config.ts` colectează doar `*.test.ts(x)`.
  */
-import type { SalaComanda, SalaDate, SalaMembru } from '../../../src/lib/salaApi';
+import type { SalaComanda, SalaDate, SalaMembru } from '../../../src/features/admin/zones/antrenamente/api';
 
 export const membruSala = (id: string, peste: Partial<SalaMembru> = {}): SalaMembru => ({
   id,

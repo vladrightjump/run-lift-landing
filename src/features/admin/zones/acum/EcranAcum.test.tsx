@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, within, fireEvent, waitFor } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../data/adminSession';
 import { EcranAcum } from './EcranAcum';
-import { citesteFiltruUrmatorul } from '../../../../admin/sala/filtruUrmatorul';
+import { citesteFiltruUrmatorul } from '../antrenamente/filtruUrmatorul';
 import { SNAPSHOT_CONFIG, type EventConfig } from '../../../../shared/content/eventConfig';
-import { dateSala } from '../../../../../tests/unit/helpers/salaFixtures';
+import { dateSala } from '../../../../../tests/support/builders/sala';
+import { HttpResponse } from 'msw';
+import { trialData } from '../../../../../tests/support/builders/trial';
+import { server } from '../../../../../tests/support/vitest.setup';
+import { rpcHandler } from '../../../../../tests/support/handlers';
 import type { SemnaleAdmin } from '../../data/stareCurenta';
 
 /**
@@ -13,8 +17,8 @@ import type { SemnaleAdmin } from '../../data/stareCurenta';
  */
 
 const api = vi.hoisted(() => ({ incarcaSala: vi.fn(), trimiteComanda: vi.fn(), marcheazaComandaVerificata: vi.fn() }));
-vi.mock('../../../../lib/salaApi', async (orig) => ({
-  ...(await orig<typeof import('../../../../lib/salaApi')>()),
+vi.mock('../antrenamente/api', async (orig) => ({
+  ...(await orig<typeof import('../antrenamente/api')>()),
   ...api,
 }));
 
@@ -89,9 +93,17 @@ describe('Acum pe desktop', () => {
   });
 
   it('„De rezolvat" are numărul și acțiunea fiecărui rând', async () => {
+    server.use(rpcHandler('admin_trial_data', () => HttpResponse.json(trialData({
+      bookings: [{ id: 'b1', prospect_id: 'p1', status: 'awaiting_attendance', version: 1, session_start: '2026-10-08T03:30:00Z', session_location: 'Parc', attendance_at: null, continuation: null }],
+      questions: [{ id: 'q1', prospect_id: 'p1', body: 'Ce aduc?', response: null, status: 'open' }],
+      messages: [{ id: 'm1', prospect_id: 'p1', kind: 'reminder', status: 'ambiguous', result: 'Timeout', created_at: '2026-10-08T02:00:00Z' }],
+    }))));
     const { onEcran } = randeaza();
     const bloc = screen.getByRole('heading', { name: /De rezolvat/ }).parentElement as HTMLElement;
     expect(within(bloc).getByText('1 email nelivrat')).toBeDefined();
+    expect(await within(bloc).findByText('3 de rezolvat la persoanele noi')).toBeDefined();
+    fireEvent.click(within(bloc).getByRole('button', { name: 'Vezi persoanele' }));
+    expect(onEcran).toHaveBeenCalledWith('grup-probe');
     fireEvent.click(within(bloc).getByRole('button', { name: 'Vezi' }));
     expect(onEcran).toHaveBeenCalledWith('livrare');
   });
