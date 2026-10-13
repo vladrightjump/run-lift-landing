@@ -1,0 +1,328 @@
+import { describe, it, expect } from 'vitest';
+import { reperele, mutaReperele, reperiiCareSeMuta, momentulCheckinului, candScurt, durataRo } from './reperele';
+import { SNAPSHOT_CONFIG, type EventConfig } from '../../../../shared/content/eventConfig';
+
+/**
+ * Reperele ediției: ordinea în care se întâmplă, ce înseamnă fiecare față de
+ * start, și mutarea lor în bloc.
+ *
+ * Funcțiile sunt pure și `acum` e parametru — testele nu depind de ziua în care
+ * rulează, iar asta contează mai ales aici, unde jumătate din afirmații sunt
+ * despre trecut și viitor.
+ */
+
+const cu = (patch: Partial<EventConfig>): EventConfig => ({ ...SNAPSHOT_CONFIG, ...patch });
+
+/** Un moment cu mult înaintea ediției din instantaneu (start: 2026-09-19). */
+const INAINTE = new Date('2026-08-01T00:00:00+03:00').getTime();
+
+describe('durataRo — o durată scrisă ca o decizie, nu ca milisecunde', () => {
+  it('minute sub o oră', () => {
+    expect(durataRo(15 * 60_000)).toBe('15 min');
+  });
+
+  it('ora la singular', () => {
+    expect(durataRo(3_600_000)).toBe('o oră');
+  });
+
+  it('ore cu jumătăți, cu virgulă zecimală românească', () => {
+    expect(durataRo(1.5 * 3_600_000)).toBe('1,5 ore');
+  });
+
+  it('zile', () => {
+    expect(durataRo(2 * 86_400_000)).toBe('2 zile');
+  });
+
+  it('peste două săptămâni rotunjește la săptămâni', () => {
+    expect(durataRo(21 * 86_400_000)).toBe('3 săptămâni');
+  });
+
+  it('semnul nu contează — direcția o spune cine formulează', () => {
+    expect(durataRo(-2 * 86_400_000)).toBe(durataRo(2 * 86_400_000));
+  });
+});
+
+describe('momentul check-inului', () => {
+  it('ora seacă din document, în ziua cursei', () => {
+    // Documentul ține doar „06:45". Singurul lucru care-l face verificabil e
+    // ziua startului: aceeași oră e la fel de plauzibilă pentru o cursă de
+    // dimineață ca pentru una de seară.
+    expect(momentulCheckinului(SNAPSHOT_CONFIG)).toBe('2026-09-19T06:45:00');
+  });
+
+  it('un start stricat nu produce un moment inventat', () => {
+    expect(momentulCheckinului(cu({ start: '' }))).toBe('');
+  });
+});
+
+describe('cronologia — momentele în ordinea în care se întâmplă', () => {
+  it('instantaneul de build e o desfășurare coerentă, fără niciun semnal', () => {
+    const r = reperele(SNAPSHOT_CONFIG, INAINTE);
+    expect(r.map((x) => x.cheie)).toEqual([
+      'launchAt',
+      'registrationDeadline',
+      'checkin',
+      'start',
+      'final',
+      'nextEditionAt',
+    ]);
+    expect(r.filter((x) => x.problema)).toEqual([]);
+  });
+
+  it('include finalul cursei, care nu are câmp propriu în formular', () => {
+    // `start + durata` e reperul care comută homepage-ul pe countdown. Era
+    // complet invizibil în admin.
+    const final = reperele(SNAPSHOT_CONFIG, INAINTE).find((x) => x.cheie === 'final')!;
+    expect(final.moment).toBe('2026-09-19T08:00:00');
+    expect(final.fataDeStart).toBe('la o oră după start');
+  });
+
+  it('sortează după momentul real, nu după ordinea câmpurilor', () => {
+    // Anunțul mutat după deadline nu mai apare primul: sare din locul lui, și
+    // asta e tot semnalul de care e nevoie.
+    const r = reperele(cu({ launchAt: '2026-09-19T06:30:00' }), INAINTE);
+    expect(r[0].cheie).toBe('registrationDeadline');
+    expect(r.findIndex((x) => x.cheie === 'launchAt')).toBe(1);
+  });
+
+  it('spune distanța față de start, cu litere', () => {
+    const r = reperele(SNAPSHOT_CONFIG, INAINTE);
+    const pe = (cheie: string) => r.find((x) => x.cheie === cheie)!;
+    expect(pe('registrationDeadline').fataDeStart).toBe('cu o oră înainte de start');
+    expect(pe('checkin').fataDeStart).toBe('cu 15 min înainte de start');
+    expect(pe('launchAt').fataDeStart).toBe('cu 2 zile înainte de start');
+    expect(pe('start').fataDeStart).toBe('');
+  });
+
+  it('un format stricat nu desenează o ordine calculată din NaN', () => {
+    expect(reperele(cu({ nextEditionAt: 'mâine' }), INAINTE)).toEqual([]);
+  });
+
+  it('marchează ce a trecut deja, fără să-l scoată din listă', () => {
+    // O ediție în desfășurare are repere consumate — e normal, nu greșit. Scoase
+    // din listă, ordinea pe care o arătăm s-ar rupe.
+    const dupaAnunt = new Date('2026-09-18T00:00:00+03:00').getTime();
+    const r = reperele(SNAPSHOT_CONFIG, dupaAnunt);
+    expect(r.find((x) => x.cheie === 'launchAt')!.trecut).toBe(true);
+    expect(r.find((x) => x.cheie === 'start')!.trecut).toBe(false);
+  });
+});
+
+describe('nodurile în plus, cerute explicit', () => {
+  /**
+   * Linia de timp a backoffice-ului cere două noduri pe care formularul
+   * ediției nu le vrea: momentul în care pagina trece pe „cine vine" (trăia
+   * până acum într-o a doua listă, în `stareCurenta`) și reminderele armate.
+   *
+   * Opționale, nu implicite: cronologia din tabul „Evenimentul" e despre
+   * câmpurile pe care le editezi acolo, iar reminderele stau în alt grup. Un
+   * nod în plus acolo ar fi zgomot într-un ecran care nu l-a cerut.
+   */
+  it('implicit, lista rămâne exact cea de dinainte', () => {
+    expect(reperele(SNAPSHOT_CONFIG, INAINTE).map((x) => x.cheie)).toEqual(
+      reperele(SNAPSHOT_CONFIG, INAINTE, {}).map((x) => x.cheie)
+    );
+  });
+
+  it('cerut, nodul „cine vine" intră la locul lui cronologic', () => {
+    const r = reperele(SNAPSHOT_CONFIG, INAINTE, { leaderboard: true });
+    const chei = r.map((x) => x.cheie);
+    expect(chei).toContain('leaderboard');
+    // `leaderboardLeadHours` înaintea startului, deci între check-in și start
+    // pentru instantaneul de build.
+    expect(chei.indexOf('leaderboard')).toBeLessThan(chei.indexOf('start'));
+  });
+
+  it('cerute, reminderele armate apar câte unul', () => {
+    const r = reperele(
+      cu({
+        reminders: [
+          { offsetHours: 24, enabled: true, template: 'bulk_participant_reminder' },
+          { offsetHours: 2, enabled: true, template: 'bulk_participant_reminder_final' },
+        ],
+      }),
+      INAINTE,
+      { remindere: true }
+    );
+    expect(r.filter((x) => x.cheie === 'reminder')).toHaveLength(2);
+  });
+
+  it('un reminder oprit rămâne în orar dar nu pe linia de timp', () => {
+    // Oprit e altceva decât șters: rămâne în listă, dar nu pleacă. Linia de
+    // timp arată ce SE ÎNTÂMPLĂ, nu ce e configurat.
+    const r = reperele(
+      cu({
+        reminders: [{ offsetHours: 24, enabled: false, template: 'bulk_participant_reminder' }],
+      }),
+      INAINTE,
+      { remindere: true }
+    );
+    expect(r.filter((x) => x.cheie === 'reminder')).toHaveLength(0);
+  });
+
+  it('fiecare nod are un id unic, inclusiv când sunt mai multe remindere', () => {
+    // `cheie` nu mai e unică de când reminderele pot fi mai multe, iar randarea
+    // cheie pe `cheie` ar fi dat două rânduri cu aceeași cheie React.
+    const r = reperele(
+      cu({
+        reminders: [
+          { offsetHours: 24, enabled: true, template: 'bulk_participant_reminder' },
+          { offsetHours: 2, enabled: true, template: 'bulk_participant_reminder_final' },
+        ],
+      }),
+      INAINTE,
+      { leaderboard: true, remindere: true }
+    );
+    const ids = r.map((x) => x.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('cerut, anunțul dispare când pornirea nu e pe Coming Soon', () => {
+    // Regula venea din `stareCurenta.repere`: cu pornirea pe landing, momentul
+    // anunțului nu comută nimic.
+    const r = reperele(cu({ showComingSoon: false }), INAINTE, { scoateAnuntulInactiv: true });
+    expect(r.map((x) => x.cheie)).not.toContain('launchAt');
+  });
+
+  it('cu Coming Soon pornit, anunțul rămâne chiar și cerut', () => {
+    const r = reperele(cu({ showComingSoon: true }), INAINTE, { scoateAnuntulInactiv: true });
+    expect(r.map((x) => x.cheie)).toContain('launchAt');
+  });
+
+  it('necerut, anunțul rămâne oricum — formularul îl are ca un câmp', () => {
+    const r = reperele(cu({ showComingSoon: false }), INAINTE);
+    expect(r.map((x) => x.cheie)).toContain('launchAt');
+  });
+});
+
+describe('semnalele — consecința, nu regula', () => {
+  const problema = (c: EventConfig, cheie: string, acum = INAINTE): string | undefined =>
+    reperele(c, acum).find((x) => x.cheie === cheie)?.problema;
+
+  it('anunțul deja consumat, cu cursa încă în viitor', () => {
+    // Regresia care a motivat modulul: ciorna ediției următoare pornește de la
+    // cea publicată, deci moștenește anunțul ediției TRECUTE. Documentul e
+    // perfect valid; homepage-ul pur și simplu nu va sta pe Coming Soon.
+    const dupaAnunt = new Date('2026-09-18T00:00:00+03:00').getTime();
+    expect(problema(SNAPSHOT_CONFIG, 'launchAt', dupaAnunt)).toMatch(/Coming Soon/);
+  });
+
+  it('anunțul trecut NU e semnalat dacă a trecut și cursa', () => {
+    // Atunci toată ediția e în trecut, iar „anunțul a trecut" n-ar fi un
+    // reproș, ci o descriere.
+    const dupaCursa = new Date('2026-10-04T00:00:00+03:00').getTime();
+    expect(problema(SNAPSHOT_CONFIG, 'launchAt', dupaCursa)).toBeUndefined();
+  });
+
+  it('check-in după startul cursei', () => {
+    expect(problema(cu({ checkinFrom: '08:00' }), 'checkin')).toMatch(/după startul/);
+  });
+
+  it('check-in absurd de devreme', () => {
+    expect(problema(cu({ checkinFrom: '02:00' }), 'checkin')).toMatch(/trei ore/);
+  });
+
+  it('un check-in normal nu spune nimic', () => {
+    expect(problema(SNAPSHOT_CONFIG, 'checkin')).toBeUndefined();
+  });
+
+  it('semnalul e scurt, consecința e pe larg — două straturi, două locuri', () => {
+    // Linia de timp se parcurge dintr-o privire: o propoziție întreagă pe un
+    // rând o transformă în paragraf. Explicația stă pe câmp, unde se repară.
+    const dupaAnunt = new Date('2026-09-18T00:00:00+03:00').getTime();
+    const r = reperele(SNAPSHOT_CONFIG, dupaAnunt).find((x) => x.cheie === 'launchAt')!;
+    expect(r.semnal).toBe('anunțul a trecut deja');
+    expect(r.problema!.length).toBeGreaterThan(r.semnal!.length);
+  });
+
+  it('semnalul și consecința vin întotdeauna împreună', () => {
+    // Un semnal fără explicație e un reproș fără obiect; o explicație fără
+    // semnal n-ar apărea niciodată în linia de timp.
+    const cazuri = [
+      cu({ checkinFrom: '08:00' }),
+      cu({ checkinFrom: '02:00' }),
+      cu({ launchAt: '2026-09-20T12:00:00' }),
+    ];
+    for (const c of cazuri) {
+      for (const r of reperele(c, INAINTE)) {
+        expect(Boolean(r.semnal)).toBe(Boolean(r.problema));
+      }
+    }
+  });
+});
+
+describe('mutarea în bloc — startul trage după el ce atârnă de el', () => {
+  const CU_O_SAPTAMANA = '2026-09-26T07:00:00';
+
+  it('duce datele calendaristice cu același decalaj, păstrând distanțele alese', () => {
+    const dupa = mutaReperele(SNAPSHOT_CONFIG, CU_O_SAPTAMANA);
+    expect(dupa.start).toBe(CU_O_SAPTAMANA);
+    expect(dupa.registrationDeadline).toBe('2026-09-26T06:00:00');
+    expect(dupa.launchAt).toBe('2026-09-24T12:00:00');
+    expect(dupa.nextEditionAt).toBe('2026-10-03T07:00:00');
+  });
+
+  it('relațiile dintre repere sunt exact cele dinainte', () => {
+    const inainte = reperele(SNAPSHOT_CONFIG, INAINTE).map((r) => r.fataDeStart);
+    const dupa = reperele(mutaReperele(SNAPSHOT_CONFIG, CU_O_SAPTAMANA), INAINTE);
+    expect(dupa.map((r) => r.fataDeStart)).toEqual(inainte);
+  });
+
+  it('check-inul păstrează AVANSUL față de start, nu ora', () => {
+    // O cursă mutată de la 07:00 la 09:00 are check-in la 08:45, nu la 06:45.
+    const dupa = mutaReperele(SNAPSHOT_CONFIG, '2026-09-19T09:00:00');
+    expect(dupa.checkinFrom).toBe('08:45');
+  });
+
+  it('nu atinge nimic altceva din document', () => {
+    const dupa = mutaReperele(SNAPSHOT_CONFIG, CU_O_SAPTAMANA);
+    expect(dupa.venue).toEqual(SNAPSHOT_CONFIG.venue);
+    expect(dupa.slots).toEqual(SNAPSHOT_CONFIG.slots);
+    expect(dupa.number).toBe(SNAPSHOT_CONFIG.number);
+    expect(dupa.layout).toEqual(SNAPSHOT_CONFIG.layout);
+  });
+
+  it('un start identic lasă documentul neatins', () => {
+    expect(mutaReperele(SNAPSHOT_CONFIG, SNAPSHOT_CONFIG.start)).toBe(SNAPSHOT_CONFIG);
+  });
+
+  it('un start nerecunoscut se scrie ca atare, fără să mute restul', () => {
+    // Câmpul golit în timpul tastării nu e o decizie de mutat nimic după ea.
+    const dupa = mutaReperele(SNAPSHOT_CONFIG, '');
+    expect(dupa.start).toBe('');
+    expect(dupa.launchAt).toBe(SNAPSHOT_CONFIG.launchAt);
+  });
+});
+
+describe('ce s-ar muta — oferta nu se face când n-are ce oferi', () => {
+  it('numește reperele afectate, în limbajul formularului', () => {
+    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, '2026-09-26T07:00:00')).toEqual([
+      'închiderea înscrierilor',
+      'anunțul ediției',
+      'următorul antrenament',
+    ]);
+  });
+
+  it('ora de check-in intră în listă doar când startul își schimbă ORA', () => {
+    // Mutat cu o săptămână, la aceeași oră, check-inul rămâne 06:45 — un buton
+    // care nu schimbă nimic e mai rău decât unul lipsă.
+    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, '2026-09-26T07:00:00')).not.toContain(
+      'ora de check-in'
+    );
+    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, '2026-09-19T09:00:00')).toContain('ora de check-in');
+  });
+
+  it('start neschimbat — nimic de mutat', () => {
+    expect(reperiiCareSeMuta(SNAPSHOT_CONFIG, SNAPSHOT_CONFIG.start)).toEqual([]);
+  });
+});
+
+describe('candScurt', () => {
+  it('ziua săptămânii înainte de dată — greșeala pe care cifrele n-o arată', () => {
+    expect(candScurt('2026-09-05T07:00:00')).toBe('sâmbătă, 5 septembrie · 07:00');
+  });
+
+  it('un moment nerecunoscut nu produce o dată inventată', () => {
+    expect(candScurt('mâine')).toBe('');
+  });
+});

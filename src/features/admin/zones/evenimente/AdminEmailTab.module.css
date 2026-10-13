@@ -1,0 +1,17 @@
+
+  .admin-email-unsub-tag {
+    display: inline-block; margin-left: 8px; padding: 1px 6px;
+    border: 1px solid var(--pa-danger-soft); color: var(--pa-danger);
+    font-size: 10px; font-weight: 700;
+    vertical-align: middle;
+  }
+  .admin-email-unsub-note { font-weight: 400; color: var(--pa-danger); }
+  .admin-email-audience { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .admin-email-templates { display: flex; gap: 8px; flex-wrap: wrap; }
+  .admin-email-template {
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-muted); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 700; padding: 8px 14px;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .admin-email-template:hover { border-color: var(--pa-accent-text); }
+  .admin-email-template:global(.active) { background: var(--pa-accent); border-color: var(--pa-accent-text); color: var(--pa-accent-ink); }

@@ -1,4 +1,4 @@
-import { rpc } from './adminApi';
+import { rpc } from '../shared/lib/rpc';
 
 export type TrialConfig = {
   message_texts?: Record<string, string>;

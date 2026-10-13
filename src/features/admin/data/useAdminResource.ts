@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ADMIN_REFRESH_MS } from './useAdminPolling';
+import { ADMIN_REFRESH_MS } from './constants';
 import { useSesiuneAdmin } from './adminSession';
 import { wasAuthErrorHandled } from '../../../app/providers';
 
@@ -34,13 +34,20 @@ export const useAdminResource = <T>(
   /** Stabil (`useCallback`) — identitatea lui repornește încărcarea. */
   incarca: (token: string, signal: AbortSignal) => Promise<T>,
   /** `null` = se încarcă o singură dată. */
-  intervalMs: number | null = ADMIN_REFRESH_MS
+  intervalMs: number | null = ADMIN_REFRESH_MS,
+  options: { queryKey?: readonly unknown[]; enabled?: boolean; resetKey?: unknown } = {}
 ): ResursaAdmin<T> => {
   const { token } = useSesiuneAdmin();
   const client = useQueryClient();
   const id = useId();
-  const queryKey = useMemo(() => ['admin-resource', token, id, loaderId(incarca)], [token, id, incarca]);
+  const key = JSON.stringify(options.queryKey ?? []);
+  const queryKey = useMemo(() => ['admin-resource', token, ...JSON.parse(key), id, loaderId(incarca)], [token, id, incarca, key]);
+  const [resetKey, setResetKey] = useState(options.resetKey);
   const [previous, setPrevious] = useState<{ date: T | null; eroare: boolean }>({ date: null, eroare: false });
+  if (resetKey !== options.resetKey) {
+    setResetKey(options.resetKey);
+    setPrevious({ date: null, eroare: false });
+  }
   const signalRef = useRef<AbortSignal | null>(null);
   const { data, error, refetch } = useQuery({
     queryKey,
@@ -51,10 +58,11 @@ export const useAdminResource = <T>(
       return { date: await incarca(token, signal) };
     },
     gcTime: 0,
+    enabled: options.enabled ?? true,
   });
   // Ca înainte, datele și eroarea inițială rămân până la un răspuns bun,
   // inclusiv când schimbarea callback-ului creează un query nou.
-  const date = data !== undefined ? data.date : previous.date;
+  const date = data !== undefined ? data.date : resetKey === options.resetKey ? previous.date : null;
   const eroare = error && date === null && !wasAuthErrorHandled(client, queryKey, error)
     ? true
     : data !== undefined ? false : previous.eroare;
@@ -73,7 +81,7 @@ export const useAdminResource = <T>(
   // Nu `refetchInterval`: acela refolosește cererea rămasă în zbor. Poll-ul
   // vechi o anula și pornea alta, și cerea imediat la revenirea în tab.
   useEffect(() => {
-    if (intervalMs === null) return;
+    if (intervalMs === null || options.enabled === false) return;
     const tick = () => void reincarca();
     const timer = window.setInterval(tick, intervalMs);
     const onVisible = () => {
@@ -84,7 +92,7 @@ export const useAdminResource = <T>(
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [reincarca, intervalMs]);
+  }, [reincarca, intervalMs, options.enabled]);
 
   return {
     date,

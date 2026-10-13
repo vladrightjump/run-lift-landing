@@ -1,0 +1,18 @@
+
+  .admin-config-mutare {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px 18px; flex-wrap: wrap;
+    padding: 12px 16px; font-size: 13px; line-height: 1.5;
+    color: var(--pa-text); background: var(--pa-accent-soft);
+    border-left: 3px solid var(--pa-accent-text);
+    animation: global(row-in) 0.25s ease both;
+  }
+  .admin-config-mutare strong { color: var(--pa-accent-text); }
+  .admin-config-mutare-butoane { display: flex; gap: 8px; flex-wrap: wrap; flex: none; }
+  .admin-config-mutare :global(.admin-btn-accent),
+  .admin-config-mutare :global(.admin-btn-ghost) { min-height: var(--pa-control-h-sm); padding: 0 12px; font-size: 13px; }
+
+  @media (max-width: 720px) {
+    .admin-config-mutare-butoane { width: 100%; }
+  }

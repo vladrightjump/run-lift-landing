@@ -209,9 +209,18 @@ fragmentului `#cheie`, cu garda de ieșire), `data/` sesiunea, `useAdminResource
 poll-ul și datele grupului și ale probelor, citite și de Acum, și de Antrenamente.
 `zones/acum/` și `zones/site/` țin ecranele lor; Site are `api.ts` cu RPC-urile proprii,
 iar login-ul are `data/api.ts`. `GrupRadio`, folosit de Site și de Evenimente, trece în
-`shared/ui/`. `AdminApp` și `AdminDashboard` rămân în `src/admin/` până la U11: compun
-ecranele încă nemutate, care importă sesiunea din `features/admin`, iar o rută exportată
-din `index.ts` care ar ajunge la ele ar închide un ciclu.
+`shared/ui/`.
+
+U11 mută `AdminApp` și `AdminDashboard` în `features/admin/pages/`, iar Evenimente în
+`zones/evenimente/`: ediții, participanți, așteptare, email, livrare, șabloane și
+publicare. Zona își deține transportul în `api.ts`, componentele grupurilor editorului,
+modulele CSS și testele colocate. `useDashboardData` deține citirile ediției selectate
+și semnalele ediției curente, prin resurse Query separate; schimbarea ediției păstrează
+distincția dintre datele arhivei și semnalele de pe Acum. Scrierile trec prin mutații
+Query, iar publicarea și salvarea invalidează resursele afectate. Ruta adminului și
+încărcarea preview-ului trec prin API-ul public `features/admin/index.ts`; pagina și
+dashboardul rămân încărcate la cerere. Stocarea tokenului este comună, în
+`shared/lib/adminToken`, astfel încât preview-ul ciornei să nu importe adminul.
 
 Stilurile acestor componente au plecat din `index.css` în CSS Modules lângă ele, cu
 valorile neschimbate. Piesele folosite de mai multe componente ale adminului (logo-ul,
@@ -220,3 +229,12 @@ importat înaintea modulului propriu. Clasele pe care le poartă și ecranele î
 (`admin-btn-*`, `admin-config-*`, `admin-table-*`, `admin-stat*`, `admin-banner`,
 `admin-control`, `admin-confirm-*` și celelalte) rămân globale în `index.css` până la
 U11 și U12, iar componentele mutate le folosesc ca șiruri simple, lângă clasele de modul.
+
+Între U11 și U12, regula `legacy-admin-public-api` permite numai fișierelor din
+`src/admin/` să importe direct interiorul aceleiași funcționalități admin. Ecranele
+Antrenamente rămase acolo nu pot trece prin barrel-ul care încarcă dashboardul ce le
+compune, fiindcă ar crea un ciclu. Importurile spre orice altă funcționalitate rămân
+limitate la `index.ts`, iar `no-circular` rămâne activ peste tot. U12 elimină excepția
+odată cu mutarea acelor ecrane și mută `src/lib/workoutApi.ts` în zona sa. Facade-ul
+`src/lib/adminApi.ts` păstrează numai cele trei exporturi ale testului de contract
+backend nemodificat și dispare la U13.

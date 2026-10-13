@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { EcranAdmin } from '../../../admin/stareCurenta';
+import type { EcranAdmin } from '../data/stareCurenta';
 import { esteEcran } from './adminNavigatie';
 
 /**

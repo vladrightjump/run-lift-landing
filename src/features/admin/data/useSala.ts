@@ -1,7 +1,7 @@
 import { createContext, createElement, useCallback, useContext, useState, type ReactNode } from 'react';
 import { incarcaSala, refuzSala, MESAJE_REFUZ, type SalaDate } from '../../../lib/salaApi';
 import { useAdminResource } from './useAdminResource';
-import { ADMIN_REFRESH_MS } from './useAdminPolling';
+import { ADMIN_REFRESH_MS } from './constants';
 import { useSesiuneAdmin } from './adminSession';
 import { logClientError } from '../../../lib/monitoring';
 import { isNetworkOrCspError, isTimeoutError } from '../../../shared/lib/errors';

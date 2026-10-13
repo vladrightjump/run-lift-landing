@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { retryTrialMessage, trialAttendance, trialReply, type TrialEvent, type TrialProspect } from '../../lib/trialApi';
 import { ziLunaOra } from '../../shared/lib/formatare';
 import { Dialog } from '../../shared/ui/Dialog';
-import { useTrials } from '../../features/admin/index';
+import { useTrials } from '../../features/admin/data/useTrials';
 import './probe.css';
 
 const TRIAL_STAGE: Record<string, string> = {

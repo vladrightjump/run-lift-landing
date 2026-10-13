@@ -1,0 +1,566 @@
+import shared1 from './EvenimenteStyles.module.css';
+import styles from './AdminDeliveryTab.module.css';
+import { useAdminResource } from '../../data/useAdminResource';
+import { useAdminMutation } from '../../data/useAdminMutation';
+import { useMemo, useState } from 'react';
+import { toCsv } from '../../../../lib/csv';
+import { sendBulkEmail, listEmailTemplates, replayEmail, InvalidTokenError } from './api';
+import type { AdminEmailLogEntry, AdminRegistration, ReplayRefuz } from './api';
+import { normalizeParticipant, fillTemplate } from './emailAudience';
+import { useEventConfig } from '../../../../shared/lib/useEventConfig';
+import { motivEsec as motiv, ultimaIncercarePerCheie, emailuriRetrimisibile, emailuriRejucabile, motivNerejucabil, participantiFaraEmail, acoperire, COMUNICARI_EDITIE } from './deliveryLog';
+import type { StareCelula } from './deliveryLog';
+import { ziLunaOra } from '../../../../shared/lib/formatare';
+import { GrupRadio } from '../../../../shared/ui/GrupRadio';
+import { useSesiuneAdmin } from '../../data/adminSession';
+
+type Props = {
+  editie: number;
+  log: AdminEmailLogEntry[] | null;
+  /** Participanții ediției — ca să vedem cine n-a primit NIMIC. */
+  participanti: AdminRegistration[];
+  /** Ediție de arhivă: nu retrimitem emailuri în trecut. */
+  readOnly: boolean;
+  onRefresh: () => void;
+};
+
+type Filtru = 'toate' | 'esuate' | 'trimise' | 'fara-email';
+
+/** Cum se citește o celulă din fișă. `lipsa` e o stare, nu o absență. */
+const CELULA: Record<StareCelula, { semn: string; titlu: string }> = {
+  trimis: { semn: '✓', titlu: 'trimis' },
+  esuat: { semn: '✕', titlu: 'eșuat' },
+  lipsa: { semn: '–', titlu: 'nu s-a încercat niciodată' },
+};
+
+const MOD_LABELS: Record<string, string> = {
+  admin: 'Trimis manual',
+  confirm: 'Confirmare înscriere',
+  promoted: 'Promovat din așteptare',
+  info: 'Confirmare adresă',
+  broadcast: 'Reminder / anunț',
+  alert: 'Alertă către operator',
+};
+
+export const AdminDeliveryTab = ({
+  editie,
+  log,
+  participanti,
+  readOnly,
+  onRefresh,
+}: Props) => {
+  const { token, showToast } = useSesiuneAdmin();
+  // Configul publicat — sursa variabilelor de eveniment din șabloane.
+  const configPublicat = useEventConfig();
+  const [filtru, setFiltru] = useState<Filtru>('toate');
+  const [query, setQuery] = useState('');
+  const [deschis, setDeschis] = useState<string | null>(null);
+  const [retrimit, setRetrimit] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const { date: templates } = useAdminResource(listEmailTemplates, null);
+  const confTpl = templates?.find((t) => t.cheie === 'bulk_participant_confirmare') ?? null;
+  const send = useAdminMutation(sendBulkEmail);
+  const replay = useAdminMutation(replayEmail);
+
+  const intrari = useMemo(() => log ?? [], [log]);
+
+  // Ultima încercare pentru fiecare (adresă + subiect). O retrimitere reușită
+  // „repară" un eșec vechi, deci contorul de eșecuri se uită doar la ultima stare.
+  const ultimele = useMemo(() => ultimaIncercarePerCheie(intrari), [intrari]);
+
+  const nelivrate = useMemo(
+    () => [...ultimele.values()].filter((e) => e.status === 'esuat'),
+    [ultimele]
+  );
+
+  /**
+   * Ce putem retrimite de aici: DOAR emailurile trimise manual din backoffice.
+   *
+   * Retrimiterea reface mesajul din jurnal și-l trece prin modul `admin`, care nu
+   * știe de contextul celorlalte moduri:
+   *  • `broadcast` — textul e salvat ÎNAINTE ca funcția Edge să adauge linkul de
+   *    dezabonare, iar modul `admin` nu-l adaugă deloc; în plus s-ar sări peste
+   *    filtrul `dezabonat_la is null`, deci ar pleca email și către cine s-a
+   *    dezabonat între timp;
+   *  • `info` (double opt-in) — s-ar sări peste cooldown-ul de 10 minute și peste
+   *    `mark_confirmation_sent`, deci adresa ar rămâne eligibilă pentru încă unul;
+   *  • `confirm`/`promoted` — se re-declanșează din fluxul lor, nu de aici.
+   * Pentru astea reîncercarea corectă e din fluxul propriu, nu o retrimitere oarbă.
+   */
+  const retrimisibile = useMemo(() => emailuriRetrimisibile(nelivrate), [nelivrate]);
+
+  /**
+   * Eșecurile care se pot REJUCA prin fluxul modului lor.
+   *
+   * Rejucarea nu contrazice motivele de mai sus — le respectă pe altă cale: nu
+   * reia textul din jurnal, ci reconstruiește mesajul din șablon și din starea
+   * de ACUM a destinatarului. Linkul de dezabonare se readaugă, `{link_renunt}`
+   * primește tokenul curent, iar cine s-a dezabonat între timp nu mai e
+   * destinatar (serverul refuză, cu motiv).
+   */
+  const rejucabile = useMemo(() => emailuriRejucabile(nelivrate), [nelivrate]);
+  const nerezolvabile = nelivrate.length - retrimisibile.length - rejucabile.length;
+  const [rejucatId, setRejucatId] = useState<string | null>(null);
+
+  // Participanți care nu apar deloc în jurnal — n-au primit niciun email.
+  const fataDeEmail = useMemo(
+    () => participantiFaraEmail(participanti, intrari),
+    [participanti, intrari]
+  );
+
+  // Fișa de acoperire — participanții ediției × comunicările datorate.
+  // Rămâne alături de „fără niciun email": aceea e cazul tot-sau-nimic, pe care
+  // matricea nu-l scoate în evidență.
+  const randuriAcoperire = useMemo(
+    () => acoperire(participanti, intrari),
+    [participanti, intrari]
+  );
+
+  const nrTrimise = intrari.filter((e) => e.status === 'trimis').length;
+  const destinatari = new Set(intrari.map((e) => e.email.toLowerCase())).size;
+
+  // „Nelivrate" = ultima încercare per adresă+subiect e eșec. Un eșec urmat de o
+  // retrimitere reușită NU mai apare aici — altfel contorul din etichetă (care
+  // numără exact asta) ar arăta altceva decât lista de dedesubt.
+  const idNelivrate = useMemo(() => new Set(nelivrate.map((e) => e.id)), [nelivrate]);
+
+  const q = query.trim().toLowerCase();
+  const filtrate = intrari.filter((e) => {
+    if (filtru === 'esuate' && !idNelivrate.has(e.id)) return false;
+    if (filtru === 'trimise' && e.status !== 'trimis') return false;
+    if (!q) return true;
+    return `${e.email} ${e.nume} ${e.subiect}`.toLowerCase().includes(q);
+  });
+
+  const retrimiteEsuate = async () => {
+    if (retrimit || retrimisibile.length === 0) return;
+    setRetrimit(true);
+    try {
+      const res = await send(
+        token,
+        retrimisibile.map((e) => ({ to: e.email, subject: e.subiect, text: e.text_email })),
+        {
+          audience: retrimisibile[0].audienta === 'asteptare' ? 'asteptare' : 'participanti',
+          editie,
+        }
+      );
+      showToast({
+        kind: res.failed === 0 ? 'success' : 'error',
+        msg:
+          res.failed === 0
+            ? `Retrimis cu succes către ${res.sent}.`
+            : `Retrimise ${res.sent}, tot eșuate ${res.failed}.`,
+      });
+      onRefresh();
+    } catch (err) {
+      showToast({
+        kind: 'error',
+        msg:
+          err instanceof InvalidTokenError
+            ? 'Sesiune expirată — reautentifică-te.'
+            : 'Retrimiterea nu a mers. Încearcă din nou.',
+      });
+    } finally {
+      setRetrimit(false);
+    }
+  };
+
+  /** De ce serverul a refuzat rejucarea — în termeni de consecință, nu de cod. */
+  const MOTIVE_REFUZ: Record<ReplayRefuz, string> = {
+    dezabonat: 'S-a dezabonat între timp, deci nu mai e destinatar. Refuzul e corect.',
+    destinatar_lipsa:
+      'Adresa nu mai corespunde niciunei înscrieri active a ediției — ștearsă sau schimbată între timp.',
+    sablon_necunoscut: 'Nu se știe ce șablon a plecat, deci nu se poate reconstrui mesajul.',
+    mod_exclus: 'Modul ăsta nu se rejoacă — o reluare ar fi o cerere nouă, nu o reparație.',
+    jurnal_lipsa: 'Rândul de jurnal nu mai există.',
+    nu_mai_e_in_audienta:
+      'S-a înscris între timp la ediția curentă, deci anunțul nu-i mai e util. Refuzul e corect.',
+  };
+
+  const rejoaca = async (e: AdminEmailLogEntry) => {
+    if (rejucatId || readOnly) return;
+    setRejucatId(e.id);
+    try {
+      const res = await replay(token, e.id);
+      showToast({
+        kind: res.sent > 0 ? 'success' : 'error',
+        msg:
+          res.sent > 0
+            ? `Rejucat prin fluxul de ${MOD_LABELS[res.mod] ?? res.mod} către ${e.email}.`
+            : 'Tot eșuat. Vezi motivul în rând.',
+      });
+      onRefresh();
+    } catch (err) {
+      if (err instanceof InvalidTokenError) {
+        showToast({ kind: 'error', msg: 'Sesiune expirată — reautentifică-te.' });
+        return;
+      }
+      const text = err instanceof Error ? err.message : String(err);
+      const motivul = (Object.keys(MOTIVE_REFUZ) as ReplayRefuz[]).find((m) => text.includes(m));
+      showToast({
+        kind: 'error',
+        msg: motivul
+          ? MOTIVE_REFUZ[motivul]
+          : 'Rejucarea nu a mers. Încearcă din nou.',
+      });
+      // Un refuz e o informație despre starea de acum, nu un eșec de rețea:
+      // reîmprospătăm, ca rândul să reflecte ce a aflat serverul.
+      if (motivul) onRefresh();
+    } finally {
+      setRejucatId(null);
+    }
+  };
+
+  // Retrimite confirmarea către UN participant, la adresa lui curentă (după ce ai
+  // corectat un email greșit). Merge prin modul `admin` (spre deosebire de `confirm`,
+  // care are fereastră de 15 min) și apare în jurnal.
+  const CONF_FALLBACK = {
+    subiect: 'Confirmare înscriere — Run + Lift',
+    text_email:
+      'Salut, {prenume}!\n\nÎnscrierea ta la Run + Lift este confirmată. Ne vedem la start!\n\nEchipa Run + Lift',
+  };
+
+  const trimiteConfirmare = async (p: AdminRegistration) => {
+    if (sendingId || readOnly) return;
+    const tpl = confTpl ?? CONF_FALLBACK;
+    const r = normalizeParticipant(p);
+    const data = new Date(p.created_at).toLocaleDateString('ro-RO');
+    setSendingId(p.id);
+    try {
+      const res = await send(
+        token,
+        [
+          {
+            to: p.email,
+            subject: fillTemplate(tpl.subiect, r, data, configPublicat),
+            text: fillTemplate(tpl.text_email, r, data, configPublicat),
+          },
+        ],
+        { audience: 'participanti', editie }
+      );
+      showToast({
+        kind: res.sent > 0 ? 'success' : 'error',
+        msg:
+          res.sent > 0
+            ? `Confirmare trimisă către ${p.email}.`
+            : 'Nu s-a putut trimite. Verifică adresa și încearcă din nou.',
+      });
+      onRefresh();
+    } catch (err) {
+      showToast({
+        kind: 'error',
+        msg:
+          err instanceof InvalidTokenError
+            ? 'Sesiune expirată — reautentifică-te.'
+            : 'Trimiterea nu a mers. Încearcă din nou.',
+      });
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const exportCsv = () => {
+    // Filtrul „fără niciun email" arată participanți, nu rânduri de jurnal —
+    // exportul trebuie să scoată exact ce e pe ecran.
+    const header =
+      filtru === 'fara-email'
+        ? ['Nume', 'Telefon', 'Email', 'Înscris', 'Status']
+        : ['Data', 'Nume', 'Email', 'Tip', 'Subiect', 'Status', 'Cod', 'Motiv'];
+    const lines =
+      filtru === 'fara-email'
+        ? fataDeEmail.map((p) => [
+            p.nume,
+            p.telefon,
+            p.email,
+            new Date(p.created_at).toLocaleString('ro-RO'),
+            'niciun email',
+          ])
+        : filtrate.map((e) => [
+            new Date(e.created_at).toLocaleString('ro-RO'),
+            e.nume,
+            e.email,
+            MOD_LABELS[e.mod] ?? e.mod,
+            e.subiect,
+            e.status === 'trimis' ? 'trimis' : 'eșuat',
+            e.provider_status === null ? '' : String(e.provider_status),
+            e.status === 'esuat' ? motiv(e) : '',
+          ]);
+    const csv = toCsv([header, ...lines]);
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download =
+      filtru === 'fara-email'
+        ? `run-lift-fara-email-editia-${editie}.csv`
+        : `run-lift-livrare-editia-${editie}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  return (
+    <section className="admin-table-section" data-css="admin-table-section">
+      <div className="admin-stats" data-css="admin-stats">
+        <div className="admin-stat" data-css="admin-stat">
+          <span className="admin-stat-label" data-css="admin-stat-label">Emailuri trimise</span>
+          <span className="admin-stat-value accent" data-css="admin-stat-value accent">{nrTrimise}</span>
+        </div>
+        <div className="admin-stat" data-css="admin-stat">
+          <span className="admin-stat-label" data-css="admin-stat-label">Nelivrate acum</span>
+          <span className={`admin-stat-value${nelivrate.length > 0 ? ' low' : ''}`} data-css={`admin-stat-value${nelivrate.length > 0 ? ' low' : ''}`}>
+            {nelivrate.length}
+          </span>
+        </div>
+        <div className="admin-stat" data-css="admin-stat">
+          <span className="admin-stat-label" data-css="admin-stat-label">Adrese atinse</span>
+          <span className="admin-stat-value" data-css="admin-stat-value">{destinatari}</span>
+        </div>
+        <div className="admin-stat" data-css="admin-stat">
+          <span className="admin-stat-label" data-css="admin-stat-label">Participanți fără niciun email</span>
+          <span className={`admin-stat-value${fataDeEmail.length > 0 ? ' low' : ''}`} data-css={`admin-stat-value${fataDeEmail.length > 0 ? ' low' : ''}`}>
+            {fataDeEmail.length}
+          </span>
+        </div>
+      </div>
+
+      <section className={styles['admin-acoperire']} data-css="admin-acoperire">
+        <div className="admin-table-head" data-css="admin-table-head">
+          <h3>Fișa de acoperire</h3>
+          <p className={styles['admin-hint']} data-css="admin-hint">
+            Cine n-a primit ce. Rândurile sunt participanții ediției, coloanele sunt comunicările
+            pe care ediția le datorează. Un email reușit de un tip nu mai poate ascunde un eșec de
+            alt tip.
+          </p>
+        </div>
+        <div className="admin-table-wrap" data-css="admin-table-wrap">
+          <div className={'admin-table ' + styles['admin-acoperire-table']} data-css="admin-table admin-acoperire-table">
+            <div className={'admin-row ' + shared1['admin-row-head']} data-css="admin-row admin-row-head">
+              <span>Persoană</span>
+              {COMUNICARI_EDITIE.map((c) => (
+                <span key={c.cheie}>{c.eticheta}</span>
+              ))}
+            </div>
+            {randuriAcoperire.length === 0 && (
+              <div className={shared1['admin-empty']} data-css="admin-empty">Nu sunt participanți pe ediția asta.</div>
+            )}
+            {randuriAcoperire.map(({ participant, celule }) => (
+              <div key={participant.id} className="admin-row" data-css="admin-row">
+                <span className="admin-cell-name" data-css="admin-cell-name">{participant.nume}</span>
+                {COMUNICARI_EDITIE.map((c) => {
+                  const stare = celule[c.cheie] ?? 'lipsa';
+                  return (
+                    <span
+                      key={c.cheie}
+                      className={`${styles['admin-celula']} ${stare}`} data-css={`admin-celula ${stare}`}
+                      title={`${c.eticheta}: ${CELULA[stare].titlu}`}
+                    >
+                      {CELULA[stare].semn}
+                    </span>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Patru variante exclusive, deci un grup radio. Erau butoane a caror
+          selectie se vedea numai prin clasa `activ`: un cititor de ecran nu
+          putea spune care filtru e pornit. */}
+      <div className={shared1['admin-sursa-tabs']} data-css="admin-sursa-tabs">
+        <GrupRadio
+          eticheta="Ce arăți"
+          valoare={filtru}
+          onSchimba={setFiltru}
+          optiuni={[
+            { valoare: 'toate', eticheta: `Toate (${intrari.length})` },
+            { valoare: 'trimise', eticheta: `Trimise (${nrTrimise})` },
+            { valoare: 'esuate', eticheta: `Nelivrate (${nelivrate.length})` },
+            {
+              valoare: 'fara-email',
+              eticheta: `Fără niciun email (${fataDeEmail.length})`,
+              descriere: 'Participanți care n-au primit nimic — nu rânduri de jurnal',
+            },
+          ]}
+        />
+      </div>
+
+      {!readOnly && nerezolvabile > 0 && (
+        <div className="admin-banner" data-css="admin-banner" role="status">
+          <strong>
+            {nerezolvabile}{' '}
+            {nerezolvabile === 1 ? 'email nelivrat nu se poate' : 'emailuri nelivrate nu se pot'}{' '}
+            repara de aici.
+          </strong>{' '}
+          Restul se rejoacă acum din rândul lor, prin fluxul modului: mesajul se reconstruiește din
+          șablon și din datele de acum ale destinatarului, deci linkul de dezabonare se readaugă și
+          cine s-a dezabonat între timp nu mai primește. Cele rămase își spun motivul în rând —
+          deschide-le.
+        </div>
+      )}
+
+      <div className="admin-table-head" data-css="admin-table-head">
+        <h2>Livrare emailuri · ediția {editie}</h2>
+        <div className="admin-table-actions" data-css="admin-table-actions">
+          <input
+            type="text"
+            className={shared1['admin-search']} data-css="admin-search"
+            placeholder="Caută nume, email, subiect…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {!readOnly && retrimisibile.length > 0 && (
+            <button
+              type="button"
+              className={shared1['admin-btn-outline']} data-css="admin-btn-outline"
+              onClick={retrimiteEsuate}
+              disabled={retrimit}
+            >
+              {retrimit ? 'Se retrimite…' : `Retrimite nelivratele (${retrimisibile.length})`}
+            </button>
+          )}
+          <button type="button" className="admin-btn-accent" data-css="admin-btn-accent" onClick={exportCsv}>
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      {filtru === 'fara-email' ? (
+        <div className="admin-table-wrap" data-css="admin-table-wrap">
+          <div className={'admin-table ' + shared1['admin-wait']} data-css="admin-table admin-wait">
+            <div className={'admin-row ' + shared1['admin-row-head']} data-css="admin-row admin-row-head">
+              <span>#</span>
+              <span>Nume</span>
+              <span>Telefon</span>
+              <span>Email</span>
+              <span>Înscris</span>
+              <span className="right">Status</span>
+            </div>
+            {fataDeEmail.map((p, i) => (
+              <div key={p.id} className="admin-row" data-css="admin-row">
+                <span className={shared1['admin-cell-nr']} data-css="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
+                <span className="admin-cell-name" data-css="admin-cell-name">{p.nume}</span>
+                <a className={shared1['admin-cell-link']} data-css="admin-cell-link" href={`tel:${p.telefon}`}>
+                  {p.telefon}
+                </a>
+                <a className={shared1['admin-cell-link'] + ' ellipsis'} data-css="admin-cell-link ellipsis" href={`mailto:${p.email}`}>
+                  {p.email}
+                </a>
+                <span className="admin-cell-date" data-css="admin-cell-date">
+                  {new Date(p.created_at).toLocaleDateString('ro-RO')}
+                </span>
+                <span className={shared1['admin-cell-actions']} data-css="admin-cell-actions">
+                  {readOnly ? (
+                    <span className={shared1['admin-mail-badge'] + ' niciunul'} data-css="admin-mail-badge niciunul">niciun email</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className={shared1['admin-btn-outline']} data-css="admin-btn-outline"
+                      onClick={() => trimiteConfirmare(p)}
+                      disabled={sendingId !== null}
+                      title={`Trimite confirmarea către ${p.email}`}
+                    >
+                      {sendingId === p.id ? 'Se trimite…' : 'Trimite confirmarea'}
+                    </button>
+                  )}
+                </span>
+              </div>
+            ))}
+            {fataDeEmail.length === 0 && (
+              <div className={shared1['admin-empty']} data-css="admin-empty">
+                Toți participanții ediției au primit cel puțin un email.
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="admin-table-wrap" data-css="admin-table-wrap">
+          <div className={'admin-table ' + styles['admin-livrare']} data-css="admin-table admin-livrare">
+            <div className={'admin-row ' + shared1['admin-row-head']} data-css="admin-row admin-row-head">
+              <span>Când</span>
+              <span>Destinatar</span>
+              <span>Tip</span>
+              <span>Subiect</span>
+              <span className="right">Status</span>
+            </div>
+            {filtrate.map((e) => (
+              <div
+                key={e.id}
+                className={`admin-row ${styles['admin-livrare-row']}${e.status === 'esuat' ? ' esuat' : ''}${
+                  deschis === e.id ? ' deschis' : ''
+                }`} data-css={`admin-row admin-livrare-row${e.status === 'esuat' ? ' esuat' : ''}${
+                  deschis === e.id ? ' deschis' : ''
+                }`}
+              >
+                <button
+                  type="button"
+                  className={styles['admin-livrare-main']} data-css="admin-livrare-main"
+                  onClick={() => setDeschis(deschis === e.id ? null : e.id)}
+                  title={e.status === 'esuat' ? 'Vezi motivul eșecului' : 'Vezi textul trimis'}
+                >
+                  <span className="admin-cell-date" data-css="admin-cell-date">{ziLunaOra(e.created_at)}</span>
+                  <span className="admin-cell-name" data-css="admin-cell-name">
+                    {e.nume || e.email}
+                    {e.nume && <span className={styles['admin-livrare-email']} data-css="admin-livrare-email">{e.email}</span>}
+                  </span>
+                  <span className="admin-cell-date" data-css="admin-cell-date">{MOD_LABELS[e.mod] ?? e.mod}</span>
+                  <span className={styles['admin-cell-subject'] + ' ellipsis'} data-css="admin-cell-subject ellipsis">{e.subiect}</span>
+                  <span className="right">
+                    <span className={`${shared1['admin-mail-badge']} ${e.status}`} data-css={`admin-mail-badge ${e.status}`}>
+                      {e.status === 'trimis' ? '✓ trimis' : '✕ nelivrat'}
+                    </span>
+                  </span>
+                </button>
+                {deschis === e.id && (
+                  <div className={styles['admin-livrare-detaliu']} data-css="admin-livrare-detaliu">
+                    {e.status === 'esuat' && (
+                      <p className={styles['admin-livrare-eroare']} data-css="admin-livrare-eroare">
+                        <strong>Motiv:</strong> {motiv(e)}
+                        {e.provider_status !== null && ` (HTTP ${e.provider_status})`}
+                      </p>
+                    )}
+                    {!readOnly && e.status === 'esuat' && (
+                      <div className={styles['admin-livrare-rejucare']} data-css="admin-livrare-rejucare">
+                        {motivNerejucabil(e) ? (
+                          // Rândul rămâne pe ecran, cu motivul scris. Ascuns, ar
+                          // părea rezolvat — și exact ăsta e ecranul din care
+                          // operatorul află ce NU s-a livrat.
+                          <p className={styles['admin-livrare-nota']} data-css="admin-livrare-nota">{motivNerejucabil(e)}</p>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className={shared1['admin-btn-outline']} data-css="admin-btn-outline"
+                              onClick={() => rejoaca(e)}
+                              disabled={rejucatId !== null}
+                            >
+                              {rejucatId === e.id ? 'Se rejoacă…' : 'Rejoacă prin fluxul lui'}
+                            </button>
+                            <span className={styles['admin-livrare-nota']} data-css="admin-livrare-nota">
+                              Mesajul se reconstruiește din șablon și din datele de acum ale
+                              destinatarului — nu se reia textul de mai jos.
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    <pre className={styles['admin-livrare-text']} data-css="admin-livrare-text">{e.text_email || '(fără text)'}</pre>
+                  </div>
+                )}
+              </div>
+            ))}
+            {log === null && <div className={shared1['admin-empty']} data-css="admin-empty">Se încarcă…</div>}
+            {log !== null && filtrate.length === 0 && (
+              <div className={shared1['admin-empty']} data-css="admin-empty">
+                {query
+                  ? 'Nicio potrivire pentru căutarea ta.'
+                  : intrari.length === 0
+                    ? 'Niciun email trimis pentru ediția asta încă. Jurnalul se completează automat de la prima trimitere.'
+                    : 'Nimic pe filtrul ăsta.'}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};

@@ -1,4 +1,4 @@
-import { lazyRouteComponent } from '@tanstack/react-router';
+import { rutaAdmin } from '../features/admin';
 import { rutaLanding } from '../features/landing';
 import { rutaDespreNoi } from '../features/despre-noi';
 import { rutaAntrenament } from '../features/antrenament/index';
@@ -9,7 +9,7 @@ import { rutaUnsubscribe } from '../features/unsubscribe/index';
 
 
 export const editionPages = [
-  { path: '/admin', component: lazyRouteComponent(() => import('../admin/AdminApp'), 'AdminApp') },
+  rutaAdmin,
   rutaConfirmare,
   rutaInscriere,
   rutaUnsubscribe,

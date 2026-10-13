@@ -66,3 +66,13 @@ export const browserAssets = http.all(
   ({ request }) => new URL(request.url).origin !== new URL(SUPABASE.url).origin,
   () => passthrough()
 );
+
+/** JSON response and submitted bodies, shared by function transport characterizations. */
+export const functionResponse = (name: string, body: unknown, status = 200) => {
+  const requests: Record<string, unknown>[] = [];
+  const handler = functionHandler(name, async ({ request }) => {
+    requests.push(await request.json() as Record<string, unknown>);
+    return HttpResponse.json(body as object, { status });
+  });
+  return { handler, requests };
+};

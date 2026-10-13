@@ -2,10 +2,10 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
 import { AdminCadru } from './AdminCadru';
-import { AdminEditionTabs } from '../../../admin/AdminEditionTabs';
+import { AdminEditionTabs } from '../zones/evenimente/AdminEditionTabs';
 import { TOATE_ECRANELE } from '../navigatie/adminNavigatie';
-import type { EcranAdmin } from '../../../admin/stareCurenta';
-import type { AdminEdition } from '../../../lib/adminApi';
+import type { EcranAdmin } from '../data/stareCurenta';
+import type { AdminEdition } from '../zones/evenimente/api';
 
 /**
  * Cadrul adminului (U7) și selectorul de ediție.

@@ -1,4 +1,4 @@
-import type { AdminEdition } from '../../../src/lib/adminApi';
+import type { AdminEdition } from '../../../src/features/admin/zones/evenimente/api';
 
 export const editie = (over: Partial<AdminEdition> = {}): AdminEdition => ({
   editie: 5,

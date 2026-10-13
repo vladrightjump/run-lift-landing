@@ -1,0 +1,13 @@
+
+  .admin-stat-value--text {
+    font-family: Archivo, sans-serif !important;
+    font-size: 15px !important; font-weight: 600; line-height: 1.4;
+    letter-spacing: 0 !important; text-transform: none !important;
+  }
+  .admin-diferente dd {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .admin-diferenta-inainte { color: var(--pa-muted-2); text-decoration: line-through; }
+  .admin-diferenta-sageata { color: var(--pa-muted-2); }
+  .admin-diferenta-acum { color: var(--pa-accent-text); }

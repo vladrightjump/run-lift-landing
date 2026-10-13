@@ -1,0 +1,55 @@
+
+
+  .admin-tpl {
+    background: var(--pa-surface); border: 1px solid var(--pa-line); padding: 24px;
+    display: grid; gap: 16px; margin-bottom: 20px;
+  }
+  .admin-tpl-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px;
+  }
+  .admin-tpl-head h3 {
+    margin: 0; font-family: var(--pa-font); font-weight: 700; font-size: 20px; color: var(--pa-text);
+  }
+  .admin-tpl-meta { font-size: 12px; color: var(--pa-muted-2); }
+  .admin-tpl-desc { margin: 0; font-size: 13px; line-height: 1.6; color: var(--pa-muted); }
+  .admin-tpl-field { display: grid; gap: 7px; }
+  .admin-tpl-field > span {
+    font-size: 11px; font-weight: 700; color: var(--pa-muted);
+  }
+  .admin-tpl-field input, .admin-tpl-field textarea { width: 100%; }
+  .admin-tpl-field textarea { line-height: 1.6; }
+  .admin-tpl-avertisment {
+    margin: 0; padding: 10px 13px; font-size: 13px; line-height: 1.6;
+    border-left: 3px solid var(--pa-danger); color: var(--pa-danger);
+    background: var(--pa-danger-soft);
+  }
+  .admin-tpl-avertisment code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  }
+  .admin-tpl-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .admin-tpl-dirty {
+    flex: 1; font-size: 12px; font-weight: 600; color: var(--pa-accent-text);
+  }
+  .admin-tpl-actions button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  .admin-tpl-msg {
+    margin: 0 0 16px; padding: 11px 14px; font-size: 13px;
+    border: 1px solid var(--pa-accent-text); color: var(--pa-accent-text); background: var(--pa-accent-soft);
+  }
+  .admin-tpl-msg:global(.err) { border-color: var(--pa-danger-solid); color: var(--pa-danger-solid); background: var(--pa-danger-soft); }
+  .admin-tpl-preview { margin-top: 16px; border: 1px solid var(--pa-line); }
+  .admin-tpl-preview-bar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--pa-line);
+  }
+  .admin-tpl-preview-bar label { display: flex; align-items: center; gap: 8px; }
+  .admin-tpl-preview-bar span {
+    font-size: 11px; color: var(--pa-muted-2);
+  }
+  .admin-tpl-preview-meta {
+    margin: 0; padding: 10px 14px; font-size: 13px; color: var(--pa-muted); overflow-wrap: anywhere;
+  }
+  .admin-tpl-preview-meta strong { color: var(--pa-text); }
+  .admin-tpl-preview-frame {
+    display: block; width: 100%; height: 620px; border: 0; border-top: 1px solid var(--pa-line);
+    background: var(--pa-surface-3);
+  }

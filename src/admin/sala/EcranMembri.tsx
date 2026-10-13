@@ -15,7 +15,7 @@ import { StareComanda } from './StareComanda';
 import { MotivScoatere, ScoateDinGrup, ultimeleScoateri } from './DialogScoatere';
 import { prezentePeMembru } from './analiza';
 import { dataScurta } from './sondaj';
-import { useSala } from '../../features/admin/index';
+import { useSala } from '../../features/admin/data/useSala';
 
 /**
  * Membrii grupului — lista ținută la zi (R8, R9, F2).

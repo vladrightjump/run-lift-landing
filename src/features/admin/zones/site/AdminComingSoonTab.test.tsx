@@ -4,7 +4,7 @@ import { FurnizorSesiuneAdmin } from '../../data/adminSession';
 import { AdminComingSoonTab } from './AdminComingSoonTab';
 import { EventConfigProvider } from '../../../../shared/lib/useEventConfig';
 import { SNAPSHOT_CONFIG, type EventConfig } from '../../../../shared/content/eventConfig';
-import type { AdminEventConfigRow } from '../../../../lib/adminApi';
+import type { AdminEventConfigRow } from '../evenimente/api';
 
 /**
  * Panoul „Coming Soon" — singurul loc din admin cu efect IMEDIAT pe site.
@@ -21,7 +21,7 @@ const { listEventConfig, setComingSoon, setHomepageOrder, loadPublicHomepage } =
   loadPublicHomepage: vi.fn(),
 }));
 
-vi.mock('../../../../lib/adminApi', () => ({ listEventConfig }));
+vi.mock('../evenimente/api', () => ({ listEventConfig }));
 vi.mock('./api', () => ({ setComingSoon, setHomepageOrder }));
 vi.mock('../../../../shared/lib/homepagePublic', () => ({ loadPublicHomepage }));
 

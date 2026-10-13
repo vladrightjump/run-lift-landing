@@ -1,3 +1,4 @@
+import { useAdminMutation } from '../data/useAdminMutation';
 import shared1 from '../components/AdminStyles.module.css';
 import styles from './AdminLogin.module.css';
 import { useState } from 'react';
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export const AdminLogin = ({ onLogin }: Props) => {
+  const login = useAdminMutation(adminLogin);
   const { LAUNCH_DATE } = useEditionDates();
   const [error, setError] = useState('');
   const [shake, setShake] = useState(0);
@@ -28,7 +30,7 @@ export const AdminLogin = ({ onLogin }: Props) => {
     setChecking(true);
     setError('');
     try {
-      const token = await adminLogin(username, password);
+      const token = await login(username, password);
       if (token) {
         onLogin(token);
         return;

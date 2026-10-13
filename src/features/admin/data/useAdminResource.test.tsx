@@ -5,7 +5,7 @@ import { render, cleanup, act, waitFor } from '@testing-library/react';
 import { createAppQueryClient } from '../../../app/providers';
 import { useAdminResource } from './useAdminResource';
 import { FurnizorSesiuneAdmin } from './adminSession';
-import { InvalidTokenError } from '../../../lib/adminApi';
+import { InvalidTokenError } from '../../../shared/lib/rpc';
 import { rpc } from '../../../shared/lib/rpc';
 import { server } from '../../../../tests/support/vitest.setup';
 import { rpcHandler } from '../../../../tests/support/handlers';
@@ -448,7 +448,6 @@ describe('useAdminResource — contractul Query', () => {
   });
 });
 
-
 describe('useAdminResource — păstrează valorile la schimbarea query-ului', () => {
   it('un corp RPC gol rămâne succes cu undefined, fără eroare Query nouă', async () => {
     vi.useRealTimers();
@@ -494,4 +493,14 @@ describe('useAdminResource — păstrează valorile la schimbarea query-ului', (
     expect(res().date).toEqual(['bun']);
     expect(res().eroare).toBe(false);
   });
+});
+
+it('o resursă dezactivată nu pornește cereri la interval sau la revenirea în tab', async () => {
+  const incarca = vi.fn().mockResolvedValue(['date']);
+  const Dezactivat = () => { useAdminResource(incarca, 15_000, { enabled: false }); return null; };
+  render(<FurnizorSesiuneAdmin token="jeton" onAuthError={onAuthError} showToast={showToast}><Dezactivat /></FurnizorSesiuneAdmin>);
+  await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
+  document.dispatchEvent(new Event('visibilitychange'));
+  await lasaSaSeAseze();
+  expect(incarca).not.toHaveBeenCalled();
 });

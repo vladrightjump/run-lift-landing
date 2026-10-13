@@ -1,0 +1,911 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { useAdminResource } from '../../data/useAdminResource';
+import { useAdminMutation } from '../../data/useAdminMutation';
+import shared1 from './EvenimenteStyles.module.css';
+import styles from './AdminEventTab.module.css';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { listEventConfig, saveEventConfigDraft, publishEventConfig, restoreEventConfig, listEmailLog, type AdminEventConfigRow } from './api';
+import type { LivrareReminder } from './remindere';
+import { parseEventConfig, type EventConfig } from '../../../../shared/content/eventConfig';
+import { validateEventConfig, avertismenteEventConfig, layoutComplet, type CampInvalid } from './eventConfigForm';
+import { useSesiuneAdmin } from '../../data/adminSession';
+import { Blocat } from './eventTab/primitive';
+import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
+import { Dialog } from '../../../../shared/ui/Dialog';
+import { refuzCuPas, ETICHETE_SECTIUNI, type Pas } from './eventTab/ajutoare';
+import { esteNesalvat } from './eventTab/nesalvat';
+import { diferenteFataDePublicat, esteComparabil } from './eventTab/diferente';
+import { GrupCeArata } from './eventTab/grupuri/GrupCeArata';
+import { GrupLocuri } from './eventTab/grupuri/GrupLocuri';
+import { GrupUnde } from './eventTab/grupuri/GrupUnde';
+import { GrupEditia } from './eventTab/grupuri/GrupEditia';
+import { GrupRemindere } from './eventTab/grupuri/GrupRemindere';
+import { GrupInstagram } from './eventTab/grupuri/GrupInstagram';
+import { GrupCand } from './eventTab/grupuri/GrupCand';
+import { fetchBuildInfo, campuriVechiInBuild } from './buildFingerprint';
+import { InvelisEditare } from '../../components/InvelisEditare';
+import { descrieMoment, problemePeCamp } from './eventConfigFields';
+import { reperele, mutaReperele, reperiiCareSeMuta } from './reperele';
+import { useNow } from '../../../../shared/lib/useNow';
+
+type Props = {
+  /**
+   * Predă dashboardului garda „pot pleca din tab?" — el o consultă înainte să
+   * schimbe tabul, pentru că schimbarea DEMONTEAZĂ tabul ăsta cu tot cu ciorna
+   * din el. `null` o retrage.
+   */
+  inregistreazaGardaIesire: (garda: (() => boolean) | null) => void;
+  /**
+   * Cerere venită de pe linia de timp: deschide dialogul de ediție nouă imediat
+   * ce tabul se montează. Calea scurtă e chemată de acolo, nu căutată aici.
+   */
+  deschideDialogNou?: boolean;
+  /** Confirmă că cererea de mai sus a fost onorată, ca să nu se repete. */
+  onDialogNouDeschis?: () => void;
+};
+
+/** Pagina publică randată din ciorna de pe server. */
+const PREVIEW_URL = '/?config=draft';
+
+/**
+ * Valorile din listele formularului.
+ *
+ * Câmpurile astea erau text sau `number` liber, iar greșeala nu se vedea la
+ * tastare: „+3:00” în loc de „+03:00”, „6:30” în loc de „06:30”, o durată de
+ * 20 în loc de 2. Toate treceau de input și cădeau abia la „Publică”, ca refuz
+ * al serverului. O listă nu poate produce niciuna dintre ele.
+ *
+ * Valorile din afara listei nu se pierd: fiecare select adaugă valoarea curentă
+ * ca opțiune dacă nu e printre ele, altfel un document scris manual în DB ar
+ * părea că are altă valoare decât are.
+ */
+export const AdminEventTab = ({
+  inregistreazaGardaIesire,
+  deschideDialogNou = false,
+  onDialogNouDeschis,
+}: Props) => {
+  const { token, onAuthError, showToast } = useSesiuneAdmin();
+  const client = useQueryClient();
+  const saveDraft = useAdminMutation(saveEventConfigDraft);
+  const publishDraft = useAdminMutation(publishEventConfig);
+  const restoreDraft = useAdminMutation(restoreEventConfig);
+  const [ciorna, setCiorna] = useState<EventConfig | null>(null);
+  /**
+   * Documentul așa cum e pe server — reperul față de care „nesalvat" e o
+   * afirmație verificabilă.
+   *
+   * `null` cu o ciornă deschisă înseamnă „n-a ajuns niciodată acolo": ciorna
+   * din dialogul de ediție nouă sau cea pornită din publicat trăiește doar în
+   * browser. Vezi `eventTab/nesalvat.ts`.
+   */
+  const [salvat, setSalvat] = useState<EventConfig | null>(null);
+  /**
+   * Ediția ciornei ÎNCĂRCATE de pe server — nu cea din câmpul „Numărul ediției".
+   *
+   * Salvarea face `on conflict (editie) where status = 'draft'`, deci un număr
+   * schimbat scrie o ciornă SEPARATĂ, iar cea veche rămâne pe server. Fără
+   * reperul ăsta n-am avea cum spune că urmează să se întâmple.
+   */
+  const [editieIncarcata, setEditieIncarcata] = useState<number | null>(null);
+  const [salveaza, setSalveaza] = useState(false);
+  const [publica, setPublica] = useState(false);
+  const [confirmPublicare, setConfirmPublicare] = useState(false);
+  const [dialogEditieNoua, setDialogEditieNoua] = useState(false);
+  /**
+   * Ultimul refuz, până la următoarea încercare.
+   *
+   * Toastul a pornit și n-a fost văzut: 3,2 secunde, peste bara pe care tocmai
+   * ai apăsat, fix când se închide dialogul. Rămâne — e semnalul „tocmai s-a
+   * întâmplat" — dar mesajul stă și în bară, unde e „încă e adevărat".
+   */
+  const [refuz, setRefuz] = useState<string | null>(null);
+  // Ciorna nu se rescrie sub degetele organizatorului la fiecare poll.
+  const atinsa = useRef(false);
+
+  /**
+   * Startul de la care s-a plecat — reperul față de care se măsoară o mutare.
+   *
+   * NU e „valoarea anterioară a câmpului": un `datetime-local` trimite `change`
+   * la fiecare componentă parcursă (ziua, apoi luna, apoi ora), deci un delta
+   * calculat din ultima valoare ar fi trei mutări mărunte în loc de una. Ancora
+   * stă pe loc până când mutarea e acceptată sau refuzată explicit, iar oferta
+   * spune atunci cât s-a mutat startul cu totul.
+   */
+  const [ancoraStart, setAncoraStart] = useState<string | null>(null);
+
+  const { date: randuri } = useAdminResource(useCallback((t: string, signal: AbortSignal) => listEventConfig(t, undefined, signal), []), null, { queryKey: ['evenimente', 'config'] });
+  useEffect(() => {
+    if (!randuri || atinsa.current) return;
+    const draft = randuri.find((r) => r.status === 'draft');
+    if (draft) {
+      const cfg = parseEventConfig(draft.config);
+      setCiorna(cfg);
+      setSalvat(cfg);
+      setEditieIncarcata(draft.editie);
+      setAncoraStart(cfg?.start ?? null);
+    }
+  }, [randuri]);
+  const { date: build } = useAdminResource(
+    useCallback((_token: string, signal: AbortSignal) => fetchBuildInfo(signal), []), null
+  );
+  const actualizeazaConfig = (publicat = false) => {
+    void client.invalidateQueries({ queryKey: ['admin-resource', token, 'evenimente', 'config'] });
+    if (publicat) {
+      void client.invalidateQueries({ queryKey: ['admin-resource', token, 'evenimente', 'editions'], refetchType: 'none' });
+      void client.invalidateQueries({ queryKey: ['public', 'config'] });
+    }
+  };
+
+  /**
+   * Livrările ediției din ciornă, ca orarul de remindere să poată spune ce a
+   * plecat, nu doar ce ar trebui să plece.
+   *
+   * `null` = n-am putut citi jurnalul, și e diferit de `[]`: pe un jurnal
+   * indisponibil fiecare reminder scadent ar deveni „neplecat", o afirmație la
+   * fel de falsă ca aceea pe care o repară grupul.
+   */
+  const editieCiorna = ciorna?.number;
+  const { date: livrari } = useAdminResource(
+    useCallback(async (t: string, signal: AbortSignal): Promise<LivrareReminder[]> => {
+      const jurnal = await listEmailLog(t, editieCiorna, false, signal);
+      return jurnal.filter((r) => r.mod === 'broadcast')
+        .map((r) => ({ sablon: r.sablon, status: r.status, la: Date.parse(r.created_at) }))
+        .filter((l) => Number.isFinite(l.la));
+    }, [editieCiorna]), null, { enabled: editieCiorna !== undefined, resetKey: editieCiorna }
+  );
+
+  const publicat = useMemo(() => {
+    const row = randuri?.find((r) => r.status === 'published');
+    return row ? parseEventConfig(row.config) : null;
+  }, [randuri]);
+
+  /**
+   * Ciornele deschise pe server. Mai mult de una înseamnă că un număr de ediție
+   * schimbat a bifurcat documentul — iar tabul încarcă cea mai NOUĂ
+   * (`admin_get_event_config` sortează `created_at desc`), fără s-o spună.
+   */
+  const ciorne = useMemo(
+    () => (randuri ?? []).filter((r) => r.status === 'draft'),
+    [randuri]
+  );
+
+  const versiuni = useMemo(
+    () =>
+      (randuri ?? [])
+        .filter((r) => r.status === 'superseded' && r.published_at)
+        .sort((a, b) => (b.published_at ?? '').localeCompare(a.published_at ?? '')),
+    [randuri]
+  );
+
+  // Meta de share e injectată la build, deci o publicare o lasă în urmă până la
+  // următorul deploy. Notificare, nu blocaj.
+  const campuriVechi = build && publicat ? campuriVechiInBuild(build, publicat) : [];
+
+  /**
+   * O scriere e în zbor — formularul și toate butoanele care ating serverul
+   * sunt inerte.
+   *
+   * Salvarea contează la fel de mult ca publicarea: și ea ține documentul pe
+   * care l-a capturat, iar la succes resetează `atinsa` și cheamă `incarca()`,
+   * care rescrie ciorna din server. Ce s-a tastat în timpul dus-întorsului
+   * dispărea fără urmă.
+   */
+  const ocupat = salveaza || publica;
+
+  const probleme: CampInvalid[] = ciorna ? validateEventConfig(ciorna) : [];
+  const avertismente = ciorna ? avertismenteEventConfig(ciorna) : [];
+  const poatePublica = ciorna !== null && probleme.length === 0;
+  // Aceleași probleme, dar indexate pe câmp — ca să apară lângă inputul vinovat.
+  const erori = problemePeCamp(probleme);
+  /**
+   * Ciorna de pe ecran nu e (încă) documentul de pe server.
+   *
+   * De aici pleacă toate cele trei gărzi: confirmarea la „Renunță", cea la
+   * schimbarea tabului, și avertismentul browserului la închiderea paginii.
+   * Până acum niciuna nu exista, iar tabul se demontează la schimbarea tabului
+   * — deci un click greșit pierdea douăzeci de câmpuri fără o vorbă.
+   */
+  const nesalvat = esteNesalvat(salvat, ciorna);
+  const atentieNumar =
+    ciorna && editieIncarcata !== null && ciorna.number !== editieIncarcata
+      ? `Salvarea va crea o ciornă separată pentru ediția ${ciorna.number}. ` +
+        `Cea a ediției ${editieIncarcata} rămâne pe server, neatinsă.`
+      : undefined;
+  /**
+   * Ce se schimbă pe site la publicare. Calculat doar cât timp dialogul e
+   * deschis: e o listă întreagă construită pentru un ecran care apare o dată
+   * per publicare.
+   */
+  const diferente = useMemo(
+    () =>
+      confirmPublicare && ciorna
+        ? diferenteFataDePublicat(publicat, ciorna, ETICHETE_SECTIUNI)
+        : [],
+    [confirmPublicare, ciorna, publicat]
+  );
+  // Doar pentru „peste 3 luni” de sub datele calendaristice. Un minut e destul:
+  // nimeni nu se uită la ecoul ăsta ca la un cronometru.
+  const acum = useNow(60_000);
+
+  // Desfășurarea ediției, în ordine. Lista e goală cât timp un format e stricat
+  // — validarea spune deja care câmp, iar o linie de timp desenată din `NaN`
+  // ar fi o afirmație falsă despre document.
+  const repere = useMemo(() => (ciorna ? reperele(ciorna, acum) : []), [ciorna, acum]);
+
+  // Orarul reminderelor, tradus în momente concrete. Rândurile se afișează în
+  // ordinea în care pleacă emailurile, dar se editează prin `index`, care e
+  // poziția din DOCUMENT — resortarea nu trebuie să rescrie alt rând decât cel
+  // atins. `acum` se împrospătează la un minut, deci „peste 2 zile" nu îmbătrânește.
+
+  /**
+   * Startul s-a mutat — și odată cu el ar trebui să se mute și ce atârnă de el.
+   *
+   * Oferit, nu aplicat: un formular care rescrie patru câmpuri pe care nu le-ai
+   * atins e un formular în care nu mai știi ce ai setat tu. Dar netratat deloc
+   * înseamnă ce se întâmpla până acum — ciorna ediției următoare pornește de la
+   * cea publicată, deci moștenește momentul de anunț al ediției TRECUTE, iar
+   * nimic nu-l semnala până pe site.
+   *
+   * Deltele absurde (câmp golit, an tastat pe jumătate) nu produc ofertă: sub
+   * un minut n-are ce muta, peste doi ani e o stare de trecere, nu o decizie.
+   */
+  const mutareOferita = useMemo(() => {
+    if (!ciorna || ancoraStart === null || ancoraStart === ciorna.start) return null;
+    const delta =
+      new Date(`${ciorna.start}${ciorna.tz}`).getTime() -
+      new Date(`${ancoraStart}${ciorna.tz}`).getTime();
+    if (!Number.isFinite(delta) || Math.abs(delta) < 60_000 || Math.abs(delta) > 730 * 86_400_000) {
+      return null;
+    }
+    const nume = reperiiCareSeMuta({ ...ciorna, start: ancoraStart }, ciorna.start);
+    return nume.length > 0 ? { delta, nume } : null;
+  }, [ciorna, ancoraStart]);
+
+  const mutaTot = () => {
+    if (!ciorna || ancoraStart === null) return;
+    atinsa.current = true;
+    setCiorna(mutaReperele({ ...ciorna, start: ancoraStart }, ciorna.start));
+    setAncoraStart(ciorna.start);
+  };
+
+  /**
+   * Duce la primul câmp invalid: îl deschide, îl aduce în ecran, îl focusează.
+   *
+   * „3 câmpuri de reparat" era text inert — spunea CÂTE, niciodată CARE, iar
+   * căutarea trecea prin șapte grupuri. Ordinea din `validateEventConfig` e
+   * ordinea documentului, deci „primul" e și cel de sus. Grupurile cu eroare
+   * sînt deja deschise de la sine, deci elementul e randat.
+   */
+  const laPrimaEroare = () => {
+    const prima = probleme[0];
+    if (!prima) return;
+    const container = document.querySelector(`[data-camp="${prima.camp}"]`);
+    const control = container?.querySelector<HTMLElement>('input, select, textarea');
+    // `block: center` și nu `nearest`: bara lipită de jos acoperă exact ultima
+    // treime a formularului, iar un câmp adus „cât mai puțin" ajunge sub ea.
+    // Apelul e opțional pentru că jsdom nu implementează derularea; focusul,
+    // care e partea verificabilă, se face oricum.
+    (control ?? container)?.scrollIntoView?.({ block: 'center' });
+    control?.focus();
+  };
+
+  /**
+   * Întrebarea pusă înainte de orice plecare care ar pierde ciorna.
+   *
+   * `window.confirm`, nu un dialog al nostru: e singura întrebare care poate fi
+   * pusă SINCRON, dintr-un handler care trebuie să răspundă „da sau nu" pe loc
+   * (schimbarea tabului), și e aceeași voce cu avertismentul nativ de la
+   * închiderea paginii. Un dialog React ar fi cerut o mașinărie de intenție
+   * amânată pentru o întrebare de o linie.
+   */
+  const potPleca = (): boolean =>
+    !nesalvat ||
+    window.confirm(
+      'Ciorna are modificări nesalvate. Dacă pleci acum, se pierd. Continui?'
+    );
+
+  // Garda predată dashboardului. Se re-înregistrează când se schimbă
+  // `nesalvat`, ca să nu răspundă niciodată din starea de acum două randări; se
+  // retrage la demontare, altfel ar bloca navigarea din alt tab.
+  useEffect(() => {
+    inregistreazaGardaIesire(potPleca);
+    return () => inregistreazaGardaIesire(null);
+  });
+
+  /**
+   * Avertismentul nativ la închiderea sau reîncărcarea paginii.
+   *
+   * Înregistrat doar cât timp există ce pierde: un handler `beforeunload`
+   * permanent face unele browsere să trateze pagina ca „ocupată" și blochează
+   * restaurarea din bfcache degeaba.
+   */
+  useEffect(() => {
+    if (!nesalvat) return;
+    const avertizeaza = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Browserele moderne ignoră textul și afișează mesajul lor; `returnValue`
+      // rămâne necesar pentru cele care nu se uită la `preventDefault`.
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', avertizeaza);
+    return () => window.removeEventListener('beforeunload', avertizeaza);
+  }, [nesalvat]);
+
+  /**
+   * Are vreunul dintre câmpurile grupului o problemă?
+   *
+   * Un grup cu erori se deschide singur și nu se mai poate închide: altfel
+   * „Publică" ar rămâne blocat de o eroare ascunsă sub un capac, iar bannerul
+   * de sus ar spune CE e greșit fără să arate UNDE.
+   */
+  const areEroare = (campuri: string[]): boolean => campuri.some((c) => erori.has(c));
+
+  const seteaza = <K extends keyof EventConfig>(cheie: K, valoare: EventConfig[K]) => {
+    atinsa.current = true;
+    setCiorna((c) => (c ? { ...c, [cheie]: valoare } : c));
+  };
+
+  const seteazaRemindere = (reminders: EventConfig['reminders']) => {
+    setCiorna((c) => {
+      atinsa.current = true;
+      return c ? { ...c, reminders } : c;
+    });
+  };
+
+  /**
+   * Ciorna venită din dialogul rapid — reperele îi sunt deja recalculate.
+   *
+   * Ancora se așază pe startul NOU, nu pe cel publicat: mutarea s-a produs
+   * deja, iar o ancoră pe startul vechi ar face formularul să ofere imediat o
+   * a doua mutare, peste una aplicată.
+   *
+   * Un refuz descrie documentul care l-a produs. Când se schimbă ciorna
+   * deschisă, reproșul nu mai are despre ce să fie.
+   */
+  /**
+   * Dialogul e deschis fie fiindcă s-a apăsat butonul de aici, fie fiindcă
+   * linia de timp a cerut calea scurtă.
+   *
+   * Derivat la randare, nu scris dintr-un efect: un efect ar fi însemnat o
+   * rundă de randare în plus pentru o stare care se poate citi direct. Cererea
+   * de afară așteaptă `publicat` — dialogul pornește ciorna DIN ediția
+   * publicată, deci fără ea n-ar avea din ce moșteni — și se stinge la
+   * închidere, prin `inchideDialogNou`.
+   */
+  const arataDialogEditieNoua = dialogEditieNoua || (deschideDialogNou && publicat !== null);
+
+  const inchideDialogNou = () => {
+    setDialogEditieNoua(false);
+    onDialogNouDeschis?.();
+  };
+
+  const creeazaDinDialog = (noua: EventConfig) => {
+    atinsa.current = true;
+    setRefuz(null);
+    inchideDialogNou();
+    setCiorna(noua);
+    // Ciorna asta n-a fost niciodată pe server, deci e nesalvată din prima
+    // clipă — și e chiar starea pe care ar durea cel mai tare s-o pierzi.
+    setSalvat(null);
+    setEditieIncarcata(null);
+    setAncoraStart(noua.start);
+  };
+
+  /**
+   * Deschide o ciornă anume dintre cele de pe server.
+   *
+   * Aceeași cale ca încărcarea inițială, doar că rândul e ales, nu ghicit:
+   * `incarca()` ia întotdeauna cea mai nouă, ceea ce e util la deschiderea
+   * tabului și inutil când vrei cealaltă.
+   */
+  const deschideCiorna = (rand: AdminEventConfigRow) => {
+    if (!potPleca()) return;
+    const cfg = parseEventConfig(rand.config);
+    if (!cfg) return;
+    atinsa.current = true;
+    setRefuz(null);
+    setCiorna(cfg);
+    setSalvat(cfg);
+    setEditieIncarcata(rand.editie);
+    setAncoraStart(cfg.start);
+  };
+
+  const porneteDinPublicat = () => {
+    if (!publicat) return;
+    atinsa.current = true;
+    setRefuz(null);
+    setCiorna({ ...publicat, layout: layoutComplet(publicat.layout) });
+    setSalvat(null);
+    setEditieIncarcata(null);
+    setAncoraStart(publicat.start);
+  };
+
+  /**
+   * Previzualizarea arată ce e pe ecran, nu ce era pe server.
+   *
+   * `/?config=draft` reinterogează `admin_get_event_config` și randează rândul
+   * `draft` (vezi `hooks/useEventConfig.tsx`). Cât timp butonul a fost o simplă
+   * ancoră, editai șase câmpuri, deschideai previzualizarea, verificai
+   * documentul de DINAINTEA editărilor — și publicai convins că ai văzut. E
+   * aceeași clasă de capcană ca `launchAt` moștenit, doar mutată cu un ecran
+   * mai jos.
+   *
+   * Tabul se deschide SINCRON, pe click: un `window.open` de după `await` nu
+   * mai e o acțiune a utilizatorului, deci îl blochează browserul. La refuzul
+   * salvării se închide la loc — un tab rămas deschis pe configul publicat ar
+   * fi exact minciuna pe care o reparăm.
+   */
+  const previzualizeaza = async () => {
+    if (!ciorna || probleme.length > 0) return;
+    const fereastra = window.open('', '_blank', 'noopener');
+    setRefuz(null);
+    setSalveaza(true);
+    try {
+      await saveDraft(token, ciorna.number, ciorna);
+      setSalvat(ciorna);
+      setEditieIncarcata(ciorna.number);
+      atinsa.current = false;
+      actualizeazaConfig();
+      if (fereastra) fereastra.location.href = PREVIEW_URL;
+      // Popup blocat: documentul e salvat, deci linkul din bară (ancora de
+      // lângă buton, activă cât timp nu mai sînt diferențe) arată deja ciorna
+      // corectă. Nu inventăm o a doua cale.
+    } catch (err) {
+      fereastra?.close();
+      if (!onAuthError(err)) {
+        const msg = refuzCuPas('salvare', err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
+    } finally {
+      setSalveaza(false);
+    }
+  };
+
+  const salveazaCiorna = async () => {
+    if (!ciorna || probleme.length > 0) return;
+    setRefuz(null);
+    setSalveaza(true);
+    try {
+      await saveDraft(token, ciorna.number, ciorna);
+      showToast({
+        kind: 'success',
+        msg: `Ciorna ediției ${ciorna.number} a fost salvată.`,
+      });
+      // Reperul se mută pe documentul tocmai scris, fără să așteptăm
+      // `incarca()`: între cerere și răspuns bara ar continua să spună
+      // „Nesalvat" despre un document care e deja pe server.
+      setSalvat(ciorna);
+      setEditieIncarcata(ciorna.number);
+      atinsa.current = false;
+      actualizeazaConfig();
+    } catch (err) {
+      if (!onAuthError(err)) {
+        const msg = refuzCuPas('salvare', err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
+    } finally {
+      setSalveaza(false);
+    }
+  };
+
+  /**
+   * „Publică" salvează întâi ce e pe ecran, apoi publică.
+   *
+   * `admin_publish_event_config` primește doar `p_editie`: publică rândul
+   * `draft` de pe server, nu documentul din câmpuri. Fără salvarea asta,
+   * apăsarea pe „Publică" fără „Salvează" înainte n-avea ce publica
+   * (`no_draft`) — iar cu o ciornă VECHE pe server publica documentul vechi
+   * și raporta succes. Al doilea e mai rău: nimic nu te trimite să verifici.
+   *
+   * Cele două apeluri nu sînt o tranzacție. Dacă salvarea trece și publicarea
+   * e refuzată, rămîi cu ciorna salvată și cu site-ul pe configul vechi — o
+   * stare din care poți relua, și exact ce obții azi apăsînd „Salvează" și
+   * eșuînd apoi la „Publică".
+   */
+  const publicaCiorna = async () => {
+    // Aceeași gardă ca la salvare: butonul dezactivat nu e o gardă, iar
+    // dialogul nu prinde focusul în capcană.
+    if (!ciorna || probleme.length > 0) return;
+    setConfirmPublicare(false);
+    setRefuz(null);
+    setPublica(true);
+    // Care apel a picat — singurul lucru care spune dacă editările au ajuns
+    // sau nu pe server. Motivul serverului nu-l poate spune.
+    let pas: Pas = 'salvare';
+    try {
+      await saveDraft(token, ciorna.number, ciorna);
+      pas = 'publicare';
+      await publishDraft(token, ciorna.number);
+      showToast({
+        kind: 'success',
+        msg: `Ediția ${ciorna.number} e publicată.`,
+      });
+      setSalvat(ciorna);
+      atinsa.current = false;
+      actualizeazaConfig(true);
+    } catch (err) {
+      if (!onAuthError(err)) {
+        const msg = refuzCuPas(pas, err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
+    } finally {
+      setPublica(false);
+    }
+  };
+
+  const revino = async (id: string, editie: number) => {
+    setRefuz(null);
+    try {
+      await restoreDraft(token, id);
+      showToast({
+        kind: 'success',
+        msg: `Ai revenit la o versiune anterioară a ediției ${editie}.`,
+      });
+      atinsa.current = false;
+      actualizeazaConfig(true);
+    } catch (err) {
+      if (!onAuthError(err)) {
+        // Republicarea e singurul buton care schimbă site-ul dintr-un click.
+        // Refuzul ei merită aceeași bară ca al celorlalte două scrieri, nu doar
+        // toastul de 3,2 secunde.
+        const msg = refuzCuPas('revenire', err);
+        setRefuz(msg);
+        showToast({ kind: 'error', msg });
+      }
+    }
+  };
+
+  if (randuri === null) {
+    return (
+      <section className="admin-table-section" data-css="admin-table-section">
+        <div className={shared1['admin-empty']} data-css="admin-empty">Se încarcă…</div>
+      </section>
+    );
+  }
+
+  const actiuni = (
+    <>
+          {ciorna === null ? (
+            <>
+              <button type="button" className="admin-btn-ghost" data-css="admin-btn-ghost" onClick={porneteDinPublicat}>
+                Editează ediția {publicat?.number ?? ''}
+              </button>
+              <button
+                type="button"
+                className="admin-btn-accent" data-css="admin-btn-accent"
+                disabled={!publicat}
+                onClick={() => setDialogEditieNoua(true)}
+              >
+                + Ciornă pentru ediția {(publicat?.number ?? 0) + 1}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="admin-btn-ghost" data-css="admin-btn-ghost"
+                // Abandonul demontează bara, deci un refuz apărut după el n-ar
+                // avea unde să se afișeze — exact garanția pe care o dăm.
+                disabled={ocupat}
+                onClick={() => {
+                  if (!potPleca()) return;
+                  atinsa.current = false;
+                  setRefuz(null);
+                  setCiorna(null);
+                  setSalvat(null);
+                  setEditieIncarcata(null);
+                  setAncoraStart(null);
+                }}
+              >
+                Renunță
+              </button>
+              {/* Salveaza / Previzualizeaza / Publica traiesc DOAR in bara
+                  lipita jos, prin inveliș. Aceleasi trei butoane si sus, si
+                  jos, inseamna ca la fiecare apasare intrebi care set e cel
+                  „real". */}
+            </>
+          )}
+    </>
+  );
+
+  const rezumat = publicat && (
+        <div className="admin-stats" data-css="admin-stats">
+          <div className="admin-stat" data-css="admin-stat">
+            <span className="admin-stat-label" data-css="admin-stat-label">Publicat acum</span>
+            <span className="admin-stat-value accent" data-css="admin-stat-value accent">Ediția {publicat.number}</span>
+          </div>
+          <div className="admin-stat" data-css="admin-stat">
+            <span className="admin-stat-label" data-css="admin-stat-label">Start</span>
+            {/* Scria „2026-08-22 07:00:00" — formatul în care o ține documentul,
+                nu unul în care cineva citește o dată. Ziua săptămânii e chiar
+                lucrul pe care organizatorul îl verifică: o cursă mutată din
+                greșeală de sâmbătă pe duminică arată identic în cifre. */}
+            <span className={'admin-stat-value ' + styles['admin-stat-value--text']} data-css="admin-stat-value admin-stat-value--text">
+              {descrieMoment(publicat.start, publicat.tz, acum) || publicat.start}
+            </span>
+          </div>
+          <div className="admin-stat" data-css="admin-stat">
+            <span className="admin-stat-label" data-css="admin-stat-label">Locuri</span>
+            <span className="admin-stat-value" data-css="admin-stat-value">{publicat.slots.total}</span>
+          </div>
+          <div className="admin-stat" data-css="admin-stat">
+            <span className="admin-stat-label" data-css="admin-stat-label">Pagina arată</span>
+            <span className="admin-stat-value" data-css="admin-stat-value">
+              {publicat.showComingSoon ? 'Coming Soon' : 'Landing'}
+            </span>
+          </div>
+        </div>
+      );
+
+  return (
+    <InvelisEditare
+      titlu="Evenimentul"
+      descriere="Data, locul, locurile și ce arată pagina — se publică fără deploy."
+      actiuni={actiuni}
+      rezumat={rezumat}
+      bara={
+        ciorna === null
+          ? null
+          : {
+              identitate: <strong>Ediția {ciorna.number}</strong>,
+              detaliu: descrieMoment(ciorna.start, ciorna.tz, acum) || ciorna.start,
+              nesalvat,
+              probleme: probleme.map((p) => p.camp),
+              onPrimaProblema: laPrimaEroare,
+              refuz,
+              ocupat,
+              poatePublica,
+              onPreviz: previzualizeaza,
+              urlPreviz: PREVIEW_URL,
+              onSalveaza: salveazaCiorna,
+              onPublica: () => setConfirmPublicare(true),
+              seSalveaza: salveaza,
+              sePublica: publica,
+            }
+      }
+    >
+      {/* Două ciorne pe server înseamnă că un număr de ediție schimbat a
+          bifurcat documentul. Tabul o încarcă pe cea mai nouă și publica din
+          câmpul „Numărul ediției" — deci se putea lucra la una și publica
+          alta, fără ca ceva să spună că a doua există. */}
+      {ciorne.length > 1 && (
+        <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+          <strong>Sunt {ciorne.length} ciorne deschise</strong> — pentru edițiile{' '}
+          {ciorne.map((c) => c.editie).join(', ')}.
+          {editieIncarcata !== null && ` Aici se editează ediția ${editieIncarcata}.`} O ciornă se
+          publică singură, cu numărul ei; celelalte rămân pe server până le publici sau le rescrii.
+          <span className={shared1['admin-presetari']} data-css="admin-presetari">
+            {ciorne
+              .filter((c) => c.editie !== editieIncarcata)
+              .map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={shared1['admin-chip']} data-css="admin-chip"
+                  disabled={ocupat}
+                  onClick={() => deschideCiorna(c)}
+                >
+                  Deschide ciorna ediției {c.editie}
+                </button>
+              ))}
+          </span>
+        </div>
+      )}
+
+      {campuriVechi.length > 0 && (
+        <div className="admin-banner" data-css="admin-banner" role="status">
+          <strong>Share preview-ul e mai vechi decât configul publicat.</strong> Build-ul deployat
+          încă poartă{' '}
+          {campuriVechi.map((c, i) => (
+            <span key={c.camp}>
+              {i > 0 && ', '}
+              {c.camp} „{c.inBuild}” (publicat: „{c.publicat}”)
+            </span>
+          ))}
+          . Linkurile trimise pe WhatsApp/Facebook vor arăta valorile vechi până la următorul deploy
+          — scraper-ele citesc HTML-ul static, fără să ruleze JS. Restul paginii e deja pe configul
+          publicat.
+        </div>
+      )}
+
+      {ciorna === null ? (
+        <>
+          {/* Fără ciornă deschisă bara nu se randează, iar „Revino la asta" e
+              tocmai butonul care se apasă de aici. Refuzul lui are nevoie de un
+              loc al lui, altfel rămâne doar pe toast. */}
+          {refuz && (
+            <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+              {refuz}
+            </div>
+          )}
+          <div className={shared1['admin-empty']} data-css="admin-empty">
+            Nicio ciornă deschisă. Pornește una ca să schimbi ediția — nimic nu ajunge pe site până
+            nu apeși „Publică”.
+          </div>
+        </>
+      ) : (
+        <Blocat.Provider value={ocupat}>
+        <div className="admin-config-form" data-css="admin-config-form">
+          {probleme.length > 0 && (
+            <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+              <strong>Configul nu se poate publica încă:</strong>
+              <ul>
+                {probleme.map((p) => (
+                  <li key={`${p.camp}-${p.mesaj}`}>{p.mesaj}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {avertismente.map((a) => (
+            <div className="admin-banner" data-css="admin-banner" role="status" key={a.mesaj}>
+              {a.mesaj}
+            </div>
+          ))}
+
+          <GrupEditia
+            ciorna={ciorna}
+            seteaza={seteaza}
+            erori={erori}
+            areEroare={areEroare}
+            atentieNumar={atentieNumar}
+          />
+
+          <GrupCand
+            ciorna={ciorna}
+            seteaza={seteaza}
+            erori={erori}
+            areEroare={areEroare}
+            acum={acum}
+            repere={repere}
+            mutareOferita={mutareOferita}
+            onMutaTot={mutaTot}
+            onAncoreaza={setAncoraStart}
+          />
+
+          <GrupUnde
+            ciorna={ciorna}
+            seteaza={seteaza}
+            erori={erori}
+            areEroare={areEroare}
+          />
+
+          <GrupLocuri
+            ciorna={ciorna}
+            seteaza={seteaza}
+            erori={erori}
+            areEroare={areEroare}
+          />
+
+          <GrupRemindere
+            ciorna={ciorna}
+            seteazaRemindere={seteazaRemindere}
+            erori={erori}
+            acum={acum}
+            livrari={livrari}
+          />
+
+          <GrupCeArata
+            ciorna={ciorna}
+            seteaza={seteaza}
+          />
+
+          <GrupInstagram ciorna={ciorna} seteaza={seteaza} />
+
+        </div>
+        </Blocat.Provider>
+      )}
+
+      {versiuni.length > 0 && (
+        <>
+          <h3>Versiuni anterioare</h3>
+          <div className="admin-table-wrap" data-css="admin-table-wrap">
+            <div className="admin-table" data-css="admin-table">
+              {versiuni.map((v) => (
+                <div key={v.id} className="admin-row" data-css="admin-row">
+                  <span className="admin-cell-name" data-css="admin-cell-name">Ediția {v.editie}</span>
+                  <span className="admin-cell-date" data-css="admin-cell-date">
+                    {v.published_at ? new Date(v.published_at).toLocaleString('ro-RO') : ''}
+                  </span>
+                  <button
+                    type="button"
+                    className="admin-btn-ghost" data-css="admin-btn-ghost"
+                    // Republicare imediată — n-are ce căuta în paralel cu o
+                    // salvare sau o publicare pe același rând.
+                    disabled={ocupat}
+                    onClick={() => revino(v.id, v.editie)}
+                  >
+                    Revino la asta
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {arataDialogEditieNoua && publicat && (
+        <DialogEditieNoua
+          publicat={publicat}
+          onCreeaza={creeazaDinDialog}
+          onAnuleaza={inchideDialogNou}
+        />
+      )}
+
+      {confirmPublicare && ciorna && (
+        <Dialog
+          titlu={`Publici ediția ${ciorna.number}?`}
+          rol="alertdialog"
+          onInchide={() => setConfirmPublicare(false)}
+        >
+            <p>
+              Se <strong>salvează ciorna așa cum arată acum</strong>, apoi se publică. Site-ul
+              public trece pe configul ăsta imediat, fără deploy. Vizitatorii vor vedea{' '}
+              <strong>{ciorna.showComingSoon ? 'Coming Soon' : 'landing-ul cu înscrieri'}</strong>.
+            </p>
+
+            {/* CE se schimbă, nu doar ce se va vedea.
+                Singurul click ireversibil din backoffice era și singurul fără o
+                listă sub el: „vizitatorii vor vedea landing-ul" e adevărat și
+                când ai mutat cursa cu o săptămână din greșeală. */}
+            {!esteComparabil(publicat, ciorna) ? (
+              <p className="admin-confirm-note" data-css="admin-confirm-note">
+                Prima publicare a ediției {ciorna.number} — nu există o versiune anterioară a ei cu
+                care să se compare.
+              </p>
+            ) : diferente.length === 0 ? (
+              <p className="admin-confirm-note" data-css="admin-confirm-note">
+                Nimic nu se schimbă față de ce e publicat acum.
+              </p>
+            ) : (
+              <>
+                <p className="admin-confirm-note" data-css="admin-confirm-note">Față de ce e publicat acum se schimbă:</p>
+                <dl className={shared1['admin-mostenire'] + " " + styles['admin-diferente']} data-css="admin-mostenire admin-diferente">
+                  {diferente.map((d) => (
+                    <div key={d.eticheta}>
+                      <dt>{d.eticheta}</dt>
+                      <dd>
+                        <span className={styles['admin-diferenta-inainte']} data-css="admin-diferenta-inainte">{d.inainte}</span>
+                        <span className={styles['admin-diferenta-sageata']} data-css="admin-diferenta-sageata" aria-hidden="true">
+                          →
+                        </span>
+                        <span className={styles['admin-diferenta-acum']} data-css="admin-diferenta-acum">{d.acum}</span>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
+            )}
+            <p className="admin-confirm-note" data-css="admin-confirm-note">
+              Share preview-ul (WhatsApp/Facebook) rămâne pe datele build-ului deployat până la
+              următorul deploy — scraper-ele nu rulează JS, deci meta nu se poate schimba la
+              runtime. Versiunea publicată acum rămâne salvată, deci poți reveni la ea.
+            </p>
+            <div className="admin-confirm-actions" data-css="admin-confirm-actions">
+              <button type="button" className="admin-btn-accent" data-css="admin-btn-accent" onClick={publicaCiorna}>
+                Da, publică
+              </button>
+              <button
+                type="button"
+                className="admin-confirm-cancel" data-css="admin-confirm-cancel"
+                onClick={() => setConfirmPublicare(false)}
+              >
+                Anulează
+              </button>
+            </div>
+        </Dialog>
+      )}
+    </InvelisEditare>
+  );
+};
+
+/**
+ * Un grup de câmpuri, sub o întrebare („Când”, „Unde”, „Locuri”).
+ *
+ * Formularul avea optsprezece câmpuri într-o singură coloană plată, în ordinea
+ * în care apar în tipul TypeScript — o ordine care are sens pentru cod, nu
+ * pentru omul care deschide pagina ca să mute ora cursei.
+ */

@@ -1,4 +1,4 @@
-import type { EcranAdmin } from '../../../admin/stareCurenta';
+import type { EcranAdmin } from '../data/stareCurenta';
 
 /**
  * Registrul adminului: zone → file → ecrane (KTD3 din

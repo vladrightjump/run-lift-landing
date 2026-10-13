@@ -10,7 +10,7 @@ import { istoricMembru, peZileleSaptamanii, randuriFrecventa, type StareFrecvent
 import { sesiuniPentruStatistici } from './model';
 import { MotivScoatere, ScoateDinGrup, ultimeleScoateri } from './DialogScoatere';
 import { dataScurta, ziSiData } from './sondaj';
-import { useSala } from '../../features/admin/index';
+import { useSala } from '../../features/admin/data/useSala';
 
 /**
  * Analiza prezențelor (R10) — tot ce arăta „Analiză" din gym-app.

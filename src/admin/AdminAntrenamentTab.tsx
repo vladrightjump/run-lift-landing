@@ -7,8 +7,9 @@ import {
   restoreWeeklyWorkout,
   mesajRefuzAntrenament,
   type AdminWorkoutRow,
-} from '../lib/adminApi';
-import { InvelisEditare, useSesiuneAdmin } from '../features/admin/index';
+} from '../lib/workoutApi';
+import { InvelisEditare } from '../features/admin/components/InvelisEditare';
+import { useSesiuneAdmin } from '../features/admin/data/adminSession';
 import { CardSaptamana } from '../features/antrenament/index';
 import { Dialog } from '../shared/ui/Dialog';
 

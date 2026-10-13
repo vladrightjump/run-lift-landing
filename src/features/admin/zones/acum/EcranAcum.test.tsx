@@ -5,7 +5,7 @@ import { EcranAcum } from './EcranAcum';
 import { citesteFiltruUrmatorul } from '../../../../admin/sala/filtruUrmatorul';
 import { SNAPSHOT_CONFIG, type EventConfig } from '../../../../shared/content/eventConfig';
 import { dateSala } from '../../../../../tests/unit/helpers/salaFixtures';
-import type { SemnaleAdmin } from '../../../../admin/stareCurenta';
+import type { SemnaleAdmin } from '../../data/stareCurenta';
 
 /**
  * Ecranul Acum (U8): săptămâna, „De rezolvat", antrenamentul și ediția, pe

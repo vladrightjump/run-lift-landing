@@ -27,6 +27,10 @@ const css = [
   'src/admin/sala/probe.css',
 ]
   .map((f) => readFileSync(resolve(root, f), 'utf8'))
+  .concat((readdirSync(resolve(root, 'src'), { recursive: true }) as string[])
+    .filter((f) => f.endsWith('.module.css'))
+    .flatMap((f) => [...readFileSync(resolve(root, 'src', f), 'utf8')
+      .matchAll(/:global\(([^)]+)\)/g)].map((match) => match[1])))
   .join('\n');
 
 /** Prefixele claselor scrise de noi. O clasă fără unul din ele nu se verifică. */
@@ -64,7 +68,10 @@ const faraComentarii = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//
 
 /** Clasele definite într-un `*.module.css`. */
 const claseModul = (stil: string): Set<string> =>
-  new Set([...faraComentarii(stil).replace(/(['"])(?:\\.|(?!\1)[^\\])*?\1/g, '').matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1]));
+  new Set([...faraComentarii(stil)
+    .replace(/:global\([^)]*\)/g, '')
+    .replace(/(['"])(?:\\.|(?!\1)[^\\])*?\1/g, '')
+    .matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1]));
 
 /** Modulele CSS importate de o sursă: numele legat și calea relativă. */
 const importuriModul = (sursa: string): { nume: string; cale: string }[] =>
@@ -271,6 +278,7 @@ describe('garda însăși', () => {
   it('prinde un `styles.x` care nu există în modul', () => {
     const sursa = "import styles from './Card.module.css';\nexport const C = () => <div className={styles.nuExista} />;";
     expect(claseModulLipsa(sursa, () => '.exista { color: red; }')).toEqual(['nuExista']);
+    expect(claseModulLipsa(sursa, () => ':global(.nuExista) { color: red; }')).toEqual(['nuExista']);
     const svg = "import styles from './Card.module.css';\nconst C = () => <div className={styles.card} />;";
     expect(claseModulLipsa(svg, () => '.card { background: url("https://www.w3.org/a.svg"); }')).toEqual([]);
   });

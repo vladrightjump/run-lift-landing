@@ -1,13 +1,6 @@
 import styles from './AdminClipuriTab.module.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  listTrainingReels,
-  saveTrainingReel,
-  moveTrainingReel,
-  deleteTrainingReel,
-  mesajRefuzClip,
-  type AdminReelRow,
-} from './api';
+import { listTrainingReels, saveTrainingReel, moveTrainingReel, deleteTrainingReel, mesajRefuzClip, type AdminReelRow } from './api';
 import { useSesiuneAdmin } from '../../data/adminSession';
 import { idYouTube, esteIdYouTube, sursaIncorporare } from '../../../../shared/lib/youtube';
 import { InvelisEditare } from '../../components/InvelisEditare';

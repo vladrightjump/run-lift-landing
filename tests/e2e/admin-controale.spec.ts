@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../support/playwright';
+import { installAdminResponses } from '../support/admin';
 import type { Page } from '@playwright/test';
-import { participant } from '../unit/helpers/adminHarness';
-import { dateSala } from '../unit/helpers/salaFixtures';
-import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
+import type { NetworkFixture } from '@msw/playwright';
+import { adminControlsData } from '../support/builders/admin';
 
 /**
  * Garda pentru limbajul comun al controalelor din admin (planul
@@ -17,44 +17,10 @@ import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
  * Nu scrie nimic: toate RPC-urile Supabase sînt interceptate.
  */
 
-const RPC = '**/rest/v1/rpc/*';
-
 /** Câte un rând în fiecare listă, ca acțiunile de pe rând să existe pe ecran. */
-const RASPUNSURI: Record<string, unknown> = {
-  admin_check_token: true,
-  admin_list_registrations: [
-    participant({ id: 'p1', nume: 'Ana Rusu', email: 'ana@exemplu.md', editie: SNAPSHOT_CONFIG.number }),
-  ],
-  admin_list_waitlist: [
-    { id: 'w1', created_at: '2026-08-20T10:00:00Z', nume: 'Ion Ceban', telefon: '069000001', email: 'ion@exemplu.md', editie: SNAPSHOT_CONFIG.number },
-  ],
-  admin_list_email_log: [],
-  admin_list_events: [],
-  admin_list_editions: [
-    { editie: SNAPSHOT_CONFIG.number, participanti: 1, asteptare: 1, lansare: 0, prima: null, ultima: null, este_curenta: true },
-  ],
-  admin_list_launch_notifications: [],
-  admin_list_email_templates: [],
-  admin_get_event_config: [],
-  // Două clipuri: lista ordonabilă arată selectorul de poziție doar de la două.
-  admin_list_training_reels: [
-    { id: 'c1', numar: 1, youtube: 'dQw4w9WgXcQ', caption: 'Marți seara, în parc', url: 'https://www.instagram.com/reel/AAAAA11111/', vizibil: true },
-    { id: 'c2', numar: 2, youtube: 'Ab01234567x', caption: 'Circuit funcțional', url: 'https://www.instagram.com/reel/BBBBB22222/', vizibil: true },
-  ],
-  admin_list_weekly_workout: [],
-  admin_sala_date: dateSala(),
-  admin_login: null,
-};
+const RASPUNSURI = adminControlsData();
 
-const cuRaspunsuri = (page: Page) =>
-  page.route(RPC, async (ruta) => {
-    const nume = /\/rpc\/([a-z_]+)/.exec(ruta.request().url())?.[1] ?? '';
-    await ruta.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(RASPUNSURI[nume] ?? null),
-    });
-  });
+const cuRaspunsuri = (network: NetworkFixture) => installAdminResponses(network, RASPUNSURI);
 
 const pregatite = new WeakSet<Page>();
 
@@ -63,10 +29,10 @@ const pregatite = new WeakSet<Page>();
  * `/admin#a` ar schimba doar fragmentul: aceeași pagină, `networkidle` gata
  * imediat, iar testul ar citi încă ecranul de dinainte și ar trece pe nedrept.
  */
-const deschideAdminul = async (page: Page, ecran: string) => {
+const deschideAdminul = async (page: Page, network: NetworkFixture, ecran: string) => {
   if (!pregatite.has(page)) {
     pregatite.add(page);
-    await cuRaspunsuri(page);
+    cuRaspunsuri(network);
     await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
   }
   await page.goto('about:blank');
@@ -111,7 +77,7 @@ const citesteCampurile = (page: Page) =>
     };
     return [
       ...document.querySelectorAll(
-        '.admin-app input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]), .admin-app select, .admin-app textarea'
+        '[data-css~="admin-app"] input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]), [data-css~="admin-app"] select, [data-css~="admin-app"] textarea'
       ),
     ]
       .filter(vizibil)
@@ -140,7 +106,7 @@ const jeton = (page: Page, nume: string) =>
     const proba = document.createElement('i');
     proba.style.color = `var(${jetonCerut})`;
     // Jetoanele stau pe rădăcina adminului; fără ea, proba ar citi culoarea implicită.
-    (document.querySelector('.admin-app, .admin-pagina') ?? document.body).appendChild(proba);
+    (document.querySelector('[data-css~="admin-app"], .admin-pagina') ?? document.body).appendChild(proba);
     const valoare = getComputedStyle(proba).color;
     proba.remove();
     return valoare;
@@ -148,8 +114,8 @@ const jeton = (page: Page, nume: string) =>
 
 test.describe('câmpurile și listele, pe fiecare ecran', () => {
   for (const ecran of ECRANE) {
-    test(`${ecran}: margine vizibilă, schemă luminoasă, înălțimea comună`, async ({ page }) => {
-      await deschideAdminul(page, ecran);
+    test(`${ecran}: margine vizibilă, schemă luminoasă, înălțimea comună`, async ({ page, network }) => {
+      await deschideAdminul(page, network, ecran);
       const campuri = await citesteCampurile(page);
       expect(campuri.length, `${ecran} n-a randat niciun câmp`).toBeGreaterThan(0);
       const control = await jeton(page, '--pa-line-control');
@@ -167,10 +133,10 @@ test.describe('câmpurile și listele, pe fiecare ecran', () => {
     });
   }
 
-  test('pe telefon, niciun câmp sub 16px, deci fără zoom la focus', async ({ page }) => {
+  test('pe telefon, niciun câmp sub 16px, deci fără zoom la focus', async ({ page, network }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     for (const ecran of ['#email', '#clipuri', '#grup-bot', '#participanti']) {
-      await deschideAdminul(page, ecran);
+      await deschideAdminul(page, network, ecran);
       const campuri = await citesteCampurile(page);
       if (ecran === '#clipuri') {
         expect(campuri.some((c) => c.compact), 'selectorul de poziție nu s-a randat').toBe(true);
@@ -186,8 +152,8 @@ test.describe('stările unui câmp', () => {
   // Marcajul e cel din `src/admin/eventTab/primitive.tsx`: grupul primește
   // `invalid` când oricare câmp din el greșește, câmpul primește `invalid` sau
   // `atentie`. Doar câmpul greșit se înroșește, nu tot grupul.
-  test('eroarea și atenția colorează doar câmpul lor', async ({ page }) => {
-    await deschideAdminul(page, '#grup-bot');
+  test('eroarea și atenția colorează doar câmpul lor', async ({ page, network }) => {
+    await deschideAdminul(page, network, '#grup-bot');
     // Doar câmpurile cu un control de text: zilele sondajului sînt butoane.
     const CU_CONTROL = '.admin-config-camp:has(input:not([type=checkbox]):not([type=radio]), select, textarea)';
     const campuri = page.locator('.admin-config-grup').first().locator(CU_CONTROL);
@@ -211,9 +177,9 @@ test.describe('stările unui câmp', () => {
 });
 
 test.describe('focusul pe un câmp', () => {
-  test('un singur indicator, iar câmpul nu se mișcă', async ({ page }) => {
-    await deschideAdminul(page, '#email');
-    const subiect = page.locator('.admin-email-field input[type="text"]').first();
+  test('un singur indicator, iar câmpul nu se mișcă', async ({ page, network }) => {
+    await deschideAdminul(page, network, '#email');
+    const subiect = page.getByLabel('Subiect', { exact: true });
     const inainte = await subiect.boundingBox();
     await subiect.focus();
     const stil = await subiect.evaluate((el) => {
@@ -228,8 +194,8 @@ test.describe('focusul pe un câmp', () => {
 });
 
 test.describe('autentificarea', () => {
-  test('câmpurile sînt din aceeași familie, inclusiv parola afișată', async ({ page }) => {
-    await cuRaspunsuri(page);
+  test('câmpurile sînt din aceeași familie, inclusiv parola afișată', async ({ page, network }) => {
+    cuRaspunsuri(network);
     await page.goto('/admin');
     const utilizator = page.locator('input[name="utilizator"]');
     await expect(utilizator).toBeVisible();
@@ -252,8 +218,8 @@ test.describe('autentificarea', () => {
     expect(await utilizator.evaluate((el) => getComputedStyle(el).transform)).toBe('none');
   });
 
-  test('o eroare înroșește marginea și rămâne roșie la focus', async ({ page }) => {
-    await cuRaspunsuri(page);
+  test('o eroare înroșește marginea și rămâne roșie la focus', async ({ page, network }) => {
+    cuRaspunsuri(network);
     await page.goto('/admin');
     await page.locator('input[name="utilizator"]').fill('vlad');
     await page.locator('input[name="parola"]').fill('gresit');
@@ -273,9 +239,9 @@ test.describe('autentificarea', () => {
 });
 
 test.describe('butoanele', () => {
-  test('acțiunile de pe rând au cel puțin 36px și se văd în repaus', async ({ page }) => {
-    await deschideAdminul(page, '#participanti');
-    const randuri = page.locator('.admin-btn-delete, .admin-btn-promote');
+  test('acțiunile de pe rând au cel puțin 36px și se văd în repaus', async ({ page, network }) => {
+    await deschideAdminul(page, network, '#participanti');
+    const randuri = page.locator('[data-css~="admin-btn-delete"], [data-css~="admin-btn-promote"]');
     expect(await randuri.count(), 'lista simulată n-a randat acțiuni de rând').toBeGreaterThan(0);
     const fundal = await jeton(page, '--pa-bg');
     for (const buton of await randuri.all()) {
@@ -288,8 +254,8 @@ test.describe('butoanele', () => {
     }
   });
 
-  test('butoanele fără rol de pe rândurile clipurilor nu mai sînt native', async ({ page }) => {
-    await deschideAdminul(page, '#clipuri');
+  test('butoanele fără rol de pe rândurile clipurilor nu mai sînt native', async ({ page, network }) => {
+    await deschideAdminul(page, network, '#clipuri');
     const randuri = page.locator('.admin-table-actions > button:not([class])');
     expect(await randuri.count(), 'lista simulată n-a randat clipuri').toBeGreaterThan(0);
     const linie = await jeton(page, '--pa-line');
@@ -299,11 +265,11 @@ test.describe('butoanele', () => {
     }
   });
 
-  test('butonul principal are 44px pe fiecare ecran', async ({ page }) => {
+  test('butonul principal are 44px pe fiecare ecran', async ({ page, network }) => {
     let vazute = 0;
     for (const ecran of ['#email', '#participanti', '#eveniment', '#antrenament', '#grup-bot']) {
-      await deschideAdminul(page, ecran);
-      for (const buton of await page.locator('.admin-btn-accent:visible').all()) {
+      await deschideAdminul(page, network, ecran);
+      for (const buton of await page.locator(':is(.admin-btn-accent, [data-css~="admin-btn-accent"]):visible').all()) {
         if (await buton.evaluate((el) => !!el.closest('.admin-config-mutare'))) continue;
         vazute++;
         const inaltime = await buton.evaluate((el) => el.getBoundingClientRect().height);
@@ -313,17 +279,17 @@ test.describe('butoanele', () => {
     expect(vazute).toBeGreaterThan(0);
   });
 
-  test('starea dezactivat e aceeași pentru toate rolurile', async ({ page }) => {
+  test('starea dezactivat e aceeași pentru toate rolurile', async ({ page, network }) => {
     const fundaluri = new Set<string>();
     const roluri = new Set<string>();
     for (const ecran of ['#clipuri', '#antrenament', '#grup-membri', '#grup-bot', '#eveniment']) {
-      await deschideAdminul(page, ecran);
+      await deschideAdminul(page, network, ecran);
       // Link-ul e text în rând, fără umplere: nu intră în comparație.
-      for (const buton of await page.locator('[class*="admin-btn-"]:not(.admin-btn-link):disabled:visible').all()) {
+      for (const buton of await page.locator(':is([class*="admin-btn-"], [data-css*="admin-btn-"]):not(.admin-btn-link):not([data-css~="admin-btn-link"]):disabled:visible').all()) {
         const stil = await buton.evaluate((el) => ({
           fundal: getComputedStyle(el).backgroundColor,
           opacitate: getComputedStyle(el).opacity,
-          rol: [...el.classList].find((c) => c.startsWith('admin-btn-')) ?? '',
+          rol: [...(el.getAttribute('data-css') ?? '').split(' '), ...el.classList].find((c) => c.startsWith('admin-btn-')) ?? '',
         }));
         fundaluri.add(`${stil.fundal} / ${stil.opacitate}`);
         roluri.add(stil.rol);
@@ -340,18 +306,12 @@ test.describe('pagina publică', () => {
   // înălțimi: ele depind de metricile fontului pe fiecare sistem (pe Linux,
   // în CI, câmpul are 45 px, nu 46), iar culorile, fontul și raza sînt cele
   // pe care stratul adminului le-ar putea atinge.
-  test('formularul de înscriere arată ca înainte', async ({ page }) => {
+  test('formularul de înscriere arată ca înainte', async ({ page, network }) => {
     await page.addInitScript(() => {
       const fix = new Date('2026-08-06T10:00:00+03:00').getTime();
       Date.now = () => fix;
     });
-    await page.route('**/rest/v1/rpc/public_stats', (ruta) =>
-      ruta.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ count: 0, participants: [], waitlist: 0 }),
-      })
-    );
+    installAdminResponses(network, { public_stats: { count: 0, participants: [], waitlist: 0 } });
     await page.goto('/inscriere');
     const camp = page.locator('form input[type="tel"]');
     await expect(camp).toBeVisible();
