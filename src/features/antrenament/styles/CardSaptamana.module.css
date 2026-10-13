@@ -1,6 +1,6 @@
 /*
  * Cardul unei săptămâni: pe `/antrenament` și în previzualizarea din editorul
- * adminului. Editorul își ajustează lățimea și animația din `index.css`
+ * adminului. Editorul își ajustează lățimea și animația din `AdminAntrenamentTab.module.css`
  * (`.admin-previz .admin-previz-saptamana`, prin `className`), cu specificitate mai mare decât regulile de aici.
  */
   .card {

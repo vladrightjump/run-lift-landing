@@ -54,9 +54,9 @@ scoți întâi difuzarea manuală, primul risc real e ca oamenii să primească 
       sosire și operatorul se uită doar la un contor. A doua variantă costă zero efort de operator
       și refolosește tiparul de token care există deja de două ori în cod.
 
-**Temei (verificat):** `src/lib/adminApi.ts:12-31` — `AdminRegistration` n-are niciun câmp de
+**Temei (verificat):** `src/features/admin/zones/evenimente/api.ts` — `AdminRegistration` n-are niciun câmp de
 prezență, număr sau timp (are un `echipa` nefolosit). Exportul CSV e `Nr, Nume, Telefon, Email,
-Data înscrierii`. Nu există rută `/rezultate` în `src/main.tsx`.
+Data înscrierii`. Nu există rută `/rezultate` în `src/app/router.tsx`.
 `docs/plans/2026-08-21-faze-zi-eveniment.md:158-165` a scos explicit rezultatele din scop.
 Singurele date între ediții care există azi sunt agregate — numărători, niciodată identități.
 
@@ -122,7 +122,7 @@ rezolvă corectarea emailului, care e jumătate din motiv.
 
 **Temei (verificat):** `registrationStates.tsx:30-31` — `TEXT_ACORD` îi pune să confirme că sunt
 „apt din punct de vedere medical pentru efort fizic intens” și că acceptă „regulamentul
-evenimentului”; nu există nicio rută `/regulament` în `src/main.tsx`. Caseta de acord nu poate
+evenimentului”; nu există nicio rută `/regulament` în `src/app/router.tsx`. Caseta de acord nu poate
 însemna nimic: nimeni nu poate atesta că e apt pentru un efort a cărui formă nu i-a fost arătată.
 
 **De ce contează:** singura idee din set cu expunere legală, nu doar cu cost de oportunitate — și
@@ -142,7 +142,7 @@ decizie omenească despre ce te angajezi.
       copiat. Formularul complet rămâne ca „editează tot”, nu ca ușă de intrare.
 - [ ] **Un rezumat al ce s-a moștenit** — altfel muți capcana de la `launchAt` la orice alt câmp.
 
-**Temei (verificat):** `src/admin/reperele.ts:14-18`, cuvânt cu cuvânt: „Ciorna ediției următoare
+**Temei (verificat):** `src/features/admin/zones/evenimente/reperele.ts:14-18`, cuvânt cu cuvânt: „Ciorna ediției următoare
 pornește de la cea publicată […] deci moștenește momentul de anunț al ediției TRECUTE — un moment
 deja consumat. Nimic nu-l semnala: validarea nu-l leagă de nimic, iar consecința […] se descoperă
 abia pe site.” Funcția pură `mutaReperele` există deja și mută întregul grup odată cu startul.
@@ -197,7 +197,7 @@ numărătoare și de o gardă anti-dublare.
       **la anomalii** — un email de confirmare eșuat, o promovare de pe listă, locurile epuizate.
 - [ ] **Îngust, nu larg:** doar anomaliile de flux, nu toate erorile de JS.
 
-**Temei (verificat):** `src/lib/monitoring.ts:33-50` — `logClientError` loghează ediția, url-ul și
+**Temei (verificat):** `src/shared/lib/monitoring.ts:33-50` — `logClientError` loghează ediția, url-ul și
 marca de timp în `console`; `:60-70` ascultă `securitypolicyviolation` și loghează `blockedURI` cu
 sugestia „connect-src pare desincronizat”. Nimic nu părăsește clientul.
 

@@ -8,7 +8,7 @@ generat, fără deploy.
 > `app_config` pe care le citesc guard-urile din DB și cron-ul de remindere. Nu mai există
 > „desincronizare" de aliniat manual.
 >
-> `src/content/edition.ts` a rămas **instantaneul de build**: randează primul cadru și acoperă cazul
+> `src/shared/content/edition.ts` a rămas **instantaneul de build**: randează primul cadru și acoperă cazul
 > în care backendul nu răspunde. **Nu-l edita ca să schimbi ediția.**
 
 ---
@@ -215,7 +215,7 @@ evenimentului sau locul, cardul de share rămâne pe datele build-ului.
 Tabul **Eveniment** îți spune când se întâmplă asta, numind câmpurile rămase în urmă. Ca să-l aduci
 la zi:
 
-1. Aliniază `src/content/edition.ts` cu ediția publicată (asta e singura ocazie în care îl atingi).
+1. Aliniază `src/shared/content/edition.ts` cu ediția publicată (asta e singura ocazie în care îl atingi).
 2. Regenerează `public/og.png` (1200×630) și **incrementează `ogImageVersion`** — altfel preview-ul
    vine din cache.
 3. `npm run verify`, apoi commit + push.
@@ -282,7 +282,7 @@ avertizează dacă o faci, dar nu te oprește — sunt situații în care e inte
 
 ## Ce NU mai faci (vs. fluxul vechi)
 
-- ~~Editezi `src/content/edition.ts` la fiecare ediție~~ → publici din admin.
+- ~~Editezi `src/shared/content/edition.ts` la fiecare ediție~~ → publici din admin.
 - ~~Rulezi `npm run sync-edition` și copiezi SQL în Supabase~~ → publicarea scrie ea scalarele,
   atomic. Scriptul a fost șters.
 - ~~Aștepți un redeploy ca site-ul să arate ediția nouă~~ → e live la publicare.

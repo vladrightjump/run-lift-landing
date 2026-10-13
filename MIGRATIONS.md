@@ -83,7 +83,7 @@ prefix `runlift_`:
 | 2026…      | `runlift_unsubscribe` | runlift | Dezabonare din emailurile în masă: `dezabonat_la` + `token_unsub` pe `registrations`/`launch_notifications`, RPC public `unsubscribe`, recipients (`edition2_recipients`/`waitlist_recipients`) exclud dezabonații + întorc `token_unsub`. Vezi `supabase/sql/supabase-migration-unsubscribe.sql` |
 | 2026…      | `runlift_reminder_idempotent` | runlift | Reminder pre-eveniment idempotent: `broadcast_once` + `maybe_send_reminder` (fereastră de timp, server-only) + chei `event_start`/`reminder_offset_hours`. Armarea cron: `supabase/sql/supabase-cron-reminder-ARM.sql` (manual). Vezi `supabase/sql/supabase-migration-reminder-idempotent.sql` |
 | 20260827   | `runlift_event_config` | runlift | Configurarea ediției trece în DB: tabelul `event_config` (document `jsonb` per rând, stări `draft`/`published`/`superseded`, RLS fără politici), validarea `event_config_validate`, citirea publică `public_config()` și RPC-urile `admin_get_event_config` / `admin_save_event_config_draft` / `admin_publish_event_config` / `admin_restore_event_config`. Publicarea scrie în ACEEAȘI tranzacție cele cinci scalare din `app_config` citite de guard-uri — de aici încolo nu mai există desincronizare de aliniat manual. Vezi `supabase/sql/supabase-migration-event-config.sql` |
-| 20260827   | `runlift_event_config_seed_editia5` | runlift | Seed-ul ediției 5 transcris din `src/content/edition.ts`, ca rând `published`. NU trece prin publicare: verifică întâi că scalarele din `app_config` sunt deja de acord cu documentul și crapă la nepotrivire (`seed_drift`). |
+| 20260827   | `runlift_event_config_seed_editia5` | runlift | Seed-ul ediției 5 transcris din `src/shared/content/edition.ts`, ca rând `published`. NU trece prin publicare: verifică întâi că scalarele din `app_config` sunt deja de acord cu documentul și crapă la nepotrivire (`seed_drift`). |
 | 20260827   | `runlift_server_assigned_edition` | runlift | Politica RLS de insert public pe `registrations` si `event_waitlist` cere `editie = current_event_edition()` - clientul nu-si mai alege editia. Vezi `supabase/sql/supabase-migration-server-assigned-edition.sql` |
 | 20260827   | `runlift_event_config_validate_duplicate_si_checkin` | runlift | `event_config_validate` respinge si o sectiune duplicata in `layout` (s-ar randa de doua ori) si un `checkinFrom` malformat - alinierea serverului la regulile formularului din admin. |
 | 20260827   | `runlift_admin_get_event_config_vede_ciornele` | runlift | `admin_get_event_config` nu mai filtreaza pe editie: filtra pe cea curenta si astfel nu vedea ciorna editiei URMATOARE, care are alt numar. Ciorna disparea din UI si `?config=draft` cadea pe publicat. |
@@ -284,7 +284,7 @@ Decizii: `docs/plans/2026-09-20-0838-feat-programul-antrenamentelor-pe-saptamani
 > aceeași semnătură ca noul, deci **încă rezolvă** — întoarce rânduri cu `activ` și
 > fără `numar`, iar ecranul de admin randează un program greșit în loc să se
 > oprească. (Clientul se apără acum de asta — vezi `listWeeklyWorkout` în
-> `src/lib/adminApi.ts` — dar apărarea e a clientului nou, nu a celui deployat.)
+> `src/features/admin/zones/antrenamente/api.ts` — dar apărarea e a clientului nou, nu a celui deployat.)
 
 **Premisă de date:** tabelul era **gol** în producție la scrierea migrării (verificat direct în
 `ironworks-gym`, 20 septembrie 2026: 0 rânduri). De asta `numar int not null` se adaugă fără
@@ -540,6 +540,6 @@ tranzacție cele **șase** valori din `app_config` pe care le citesc guard-urile
 `event_start`, `reminder_schedule`) — deci nu mai există drift de aliniat manual, iar
 `sync-edition` a fost șters.
 
-`src/content/edition.ts` a rămas instantaneul de build (primul cadru + meta de share). Un test
+`src/shared/content/edition.ts` a rămas instantaneul de build (primul cadru + meta de share). Un test
 opt-in (`npm run test:integration`) verifică relația care poate încă să se rupă: scalarele din
 `app_config` trebuie să urmeze documentul publicat.

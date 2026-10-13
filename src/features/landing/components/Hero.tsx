@@ -17,7 +17,7 @@ type Props = {
 /**
  * Hero-ul ca afiș: kicker-ul pe o linie, titlul „Hyrox / Trial." pe toată
  * lățimea, apoi o bază despărțită de o linie, cu rezumatul și CTA-ul.
- * Aspectul stă în `.e3-hero*` (public.css); aici rămâne doar structura.
+ * Aspectul stă în `.e3-hero*` (Hero.module.css); aici rămâne doar structura.
  */
 export const Hero = ({ onInscrie, showCta = true, trialHref }: Props) => {
   const { HERO_KICKER } = useEditionStrings();
