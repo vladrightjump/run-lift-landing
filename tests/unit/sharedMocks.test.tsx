@@ -1,7 +1,7 @@
 import { afterEach, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { AdminDashboard } from '../../src/admin/AdminDashboard';
-import { RadacinaAdmin } from '../../src/admin/AdminApp';
+import { AdminDashboard } from '../../src/features/admin/pages/AdminDashboard';
+import { RadacinaAdmin } from '../../src/features/admin';
 import { createHandlers } from '../support/handlers';
 import { participant } from '../support/builders/registrations';
 import { configRow } from '../support/builders/config';

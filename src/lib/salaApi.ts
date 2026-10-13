@@ -1,4 +1,4 @@
-import { rpc } from './adminApi';
+import { rpc } from '../shared/lib/rpc';
 
 /**
  * Clientul grupului de antrenament: botul de Telegram, prezențele și membrii

@@ -1,17 +1,9 @@
 import shared1 from './AdminStyles.module.css';
 import styles from './AdminCadru.module.css';
 import { useEffect, useRef, type ReactNode } from 'react';
-import type { EcranAdmin, FazaSite } from '../../../admin/stareCurenta';
-import { ETICHETA_FAZA } from '../../../admin/stareCurenta';
-import {
-  ZONE,
-  contorFila,
-  ecranulDinRegistru,
-  filaEcranului,
-  zonaEcranului,
-  type ZonaAdmin,
-  type ZonaRegistru,
-} from '../navigatie/adminNavigatie';
+import type { EcranAdmin, FazaSite } from '../data/stareCurenta';
+import { ETICHETA_FAZA } from '../data/stareCurenta';
+import { ZONE, contorFila, ecranulDinRegistru, filaEcranului, zonaEcranului, type ZonaAdmin, type ZonaRegistru } from '../navigatie/adminNavigatie';
 import { Icon, type NumeIcon } from '../../../shared/ui/Icon';
 import { useEsteTelefon } from '../../../shared/ui/useEsteTelefon';
 

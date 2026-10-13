@@ -1,0 +1,189 @@
+
+  .admin-search { width: 240px; }
+  .admin-btn-outline { background: transparent; border-color: var(--pa-line-control); color: var(--pa-accent-text); }
+  .admin-btn-outline:hover:not(:disabled) { background: var(--pa-accent-soft); border-color: var(--pa-accent-text); }
+  .admin-row-head {
+    padding: 12px 24px; border-bottom: 1px solid var(--pa-line);
+    font-size: 11px; font-weight: 700; color: var(--pa-muted-2); animation: none;
+  }
+  .admin-row-head:hover { background: transparent; }
+  .admin-row-head :global(.right) { text-align: right; }
+  .admin-cell-nr { font-family: var(--pa-font); font-weight: 700; font-size: 14px; color: var(--pa-muted-2); font-variant-numeric: tabular-nums; }
+  .admin-cell-link { font-size: 14px; color: var(--pa-text-2); font-variant-numeric: tabular-nums; transition: color 0.2s ease; }
+  .admin-cell-link:hover { color: var(--pa-accent-text); }
+  .admin-cell-link:global(.ellipsis) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-cell-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .admin-btn-delete { background: transparent; border-color: var(--pa-danger); color: var(--pa-danger); }
+  .admin-btn-delete:hover:not(:disabled) { background: var(--pa-danger-solid); border-color: var(--pa-danger-solid); color: var(--pa-surface); }
+  .admin-empty { padding: 36px 24px; text-align: center; font-size: 15px; color: var(--pa-muted); }
+  .admin-wait-head { display: block; }
+  .admin-wait-count {
+    display: inline-block; background: var(--pa-line); color: var(--pa-accent-text);
+    font-family: Anton, sans-serif; font-size: 13px; padding: 2px 10px;
+    margin-left: 6px; vertical-align: middle; font-variant-numeric: tabular-nums;
+  }
+  .admin-wait-note { display: block; margin-top: 8px; font-size: 13px; color: var(--pa-muted); }
+  .admin-wait:global(.admin-table) { min-width: 900px; }
+  .admin-wait:global(.admin-table) :global(.admin-row) {
+    grid-template-columns: 48px 1.4fr 1fr 1.4fr 0.9fr 200px;
+  }
+  .admin-wait:global(.arhiva):global(.admin-table) { min-width: 760px; }
+  .admin-wait:global(.arhiva):global(.admin-table) :global(.admin-row) {
+    grid-template-columns: 48px 1.4fr 1fr 1.4fr 0.9fr;
+  }
+  .admin-btn-promote { background: transparent; border-color: var(--pa-line-control); color: var(--pa-accent-text); }
+  .admin-btn-promote:hover:not(:disabled) { background: var(--pa-accent-soft); border-color: var(--pa-accent-text); }
+  .admin-activity-item {
+    display: flex; align-items: center; gap: 10px; padding: 12px 20px;
+    border-bottom: 1px solid var(--pa-line-soft); font-size: 14px;
+    animation: global(row-in) 0.35s ease-out;
+  }
+  .admin-activity-item:last-child { border-bottom: none; }
+  .admin-activity-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--pa-accent); flex: none;
+  }
+  .admin-config-grup-campuri {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: 18px 22px; align-items: start;
+  }
+  .admin-config-eroare { font-size: 13px; color: var(--pa-danger); line-height: 1.4; }
+  .admin-presetari { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .admin-chip {
+    font: inherit; font-size: 12px; line-height: 1.2;
+    padding: 6px 11px; cursor: pointer;
+    background: transparent; color: var(--pa-text-2);
+    border: 1px solid var(--pa-line);
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .admin-chip:hover:not(:disabled) {
+    border-color: var(--pa-accent-text); color: var(--pa-accent-text); background: var(--pa-surface-2);
+  }
+  .admin-chip:active:not(:disabled) { transform: translateY(1px); }
+  .admin-chip:disabled { opacity: 0.4; cursor: default; }
+  @media (max-width: 640px) {
+    .admin-config-grup-campuri { gap: 16px; }
+  }
+  .admin-mail-badge {
+    display: inline-block; background: transparent; cursor: pointer;
+    border: 1px solid var(--pa-line); color: var(--pa-muted-2);
+    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.5px; padding: 5px 9px; white-space: nowrap;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .admin-mail-badge:global(.trimis) { border-color: var(--pa-line-strong); color: var(--pa-accent-text); }
+  .admin-mail-badge:global(.esuat) { border-color: var(--pa-danger-soft); color: var(--pa-danger); }
+  .admin-mail-badge:global(.partial) { border-color: var(--pa-graph-warn); color: var(--pa-warn); }
+  .admin-mail-badge:global(.niciunul) { cursor: default; }
+  button.admin-mail-badge:hover { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
+  button.admin-mail-badge:global(.niciunul):hover { border-color: var(--pa-line); color: var(--pa-muted-2); }
+  .admin-email {
+    display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    gap: 20px; align-items: start;
+  }
+  @media (max-width: 860px) {
+    .admin-email { grid-template-columns: 1fr; }
+  }
+  .admin-email-recipients { border: 1px solid var(--pa-line); background: var(--pa-surface); }
+  .admin-email-recipients-head {
+    padding: 16px 20px; border-bottom: 1px solid var(--pa-line);
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  }
+  .admin-email-recipients-head h2 {
+    margin: 0; font-family: var(--pa-font); font-weight: 700;
+    font-size: 18px;
+  }
+  .admin-email-count {
+    font-size: 12px; font-weight: 700; color: var(--pa-accent-text);
+  }
+  .admin-email-recipient {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px; border-bottom: 1px solid var(--pa-line-soft); cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .admin-email-recipient:hover { background: var(--pa-surface-2); }
+  .admin-email-recipient:global(.all) { padding: 12px 20px; }
+  .admin-email-recipient input[type="checkbox"] {
+    accent-color: var(--pa-accent-text); width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;
+  }
+  .admin-email-all-label {
+    font-size: 12px; font-weight: 700; color: var(--pa-accent-text);
+  }
+  .admin-email-recipient-info { display: grid; gap: 2px; min-width: 0; }
+  .admin-email-recipient-info :global(.name) { font-size: 14px; font-weight: 600; color: var(--pa-text); }
+  .admin-email-recipient-info :global(.email) {
+    font-size: 12px; color: var(--pa-muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .admin-email-recipient-list { max-height: 440px; overflow-y: auto; }
+  .admin-email-recipient:global(.dezabonat) { opacity: 0.55; cursor: not-allowed; }
+  .admin-email-recipient:global(.dezabonat) input[type="checkbox"] { cursor: not-allowed; }
+
+  .admin-email-compose-col { display: grid; gap: 20px; min-width: 0; }
+  .admin-email-compose {
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
+    padding: 20px 24px; display: grid; gap: 16px;
+  }
+  .admin-email-field { display: grid; gap: 8px; }
+  .admin-email-label {
+    font-size: 11px; font-weight: 700; color: var(--pa-muted);
+  }
+  .admin-email-field input[type="text"] { width: 100%; }
+  .admin-email-body-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .admin-email-vars { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .admin-email-vars > span { font-size: 11px; color: var(--pa-muted-2); }
+  .admin-email-vars button {
+    background: var(--pa-input); border: 1px dashed var(--pa-line-strong); color: var(--pa-accent-text); cursor: pointer;
+    font-family: 'Courier New', monospace; font-size: 12px; padding: 4px 8px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .admin-email-vars button:hover { background: var(--pa-accent-soft); border-color: var(--pa-accent-text); }
+  .admin-email-field textarea { width: 100%; line-height: 1.6; }
+
+  .admin-email-preview { border: 1px solid var(--pa-line); background: var(--pa-surface-2); }
+  .admin-email-preview-head {
+    padding: 14px 20px; border-bottom: 1px solid var(--pa-line);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .admin-email-pager { display: flex; align-items: center; gap: 8px; }
+  .admin-email-pager button {
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-accent-text); cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 5px 10px;
+    transition: border-color 0.2s ease;
+  }
+  .admin-email-pager button:hover { border-color: var(--pa-accent-text); }
+  .admin-email-pager span { font-size: 12px; color: var(--pa-muted); font-variant-numeric: tabular-nums; }
+  .admin-email-preview-body { padding: 18px 24px; display: grid; gap: 12px; }
+  .admin-email-preview-meta { display: grid; gap: 4px; }
+  .admin-email-preview-meta :global(.to) { font-size: 12px; color: var(--pa-muted-2); overflow-wrap: anywhere; }
+  .admin-email-preview-meta :global(.subject) { font-size: 15px; font-weight: 700; color: var(--pa-text); }
+  .admin-email-preview-text {
+    font-size: 14px; line-height: 1.6; color: var(--pa-text-2); white-space: pre-wrap;
+    border-top: 1px solid var(--pa-line-soft); padding-top: 12px;
+  }
+  .admin-email-preview-empty { padding: 24px; font-size: 14px; color: var(--pa-muted); }
+  .admin-email-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .admin-email-actions :global(.admin-btn-accent) { font-size: 15px; padding: 0 24px; }
+  .admin-email-note { font-size: 12px; color: var(--pa-muted-2); }
+  .admin-confirm-delete {
+    min-height: 44px; padding: 0 18px; border: 1px solid var(--pa-danger-solid); cursor: pointer;
+    background: var(--pa-danger-solid); color: #fff;
+    font-family: var(--pa-font); font-weight: 600; font-size: 15px;
+  }
+  .admin-confirm-delete:hover:not(:disabled) { background: var(--pa-danger); border-color: var(--pa-danger); }
+  :global(.admin-confirm--neutru) .admin-confirm-delete {
+    background: var(--pa-accent); border-color: var(--pa-accent); color: var(--pa-accent-ink);
+  }
+  :global(.admin-confirm--neutru) .admin-confirm-delete:hover:not(:disabled) { background: var(--pa-accent-hover); border-color: var(--pa-accent-hover); }
+  .admin-mostenire { margin: 0; display: grid; gap: 1px; background: var(--pa-line); border: 1px solid var(--pa-line); }
+  .admin-mostenire > div {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 8px 12px; background: var(--pa-surface);
+  }
+  .admin-mostenire dt { font-size: 12px; color: var(--pa-muted-2); }
+  .admin-mostenire dd { margin: 0; font-size: 14px; color: var(--pa-text); text-align: right; overflow-wrap: anywhere; }
+  .admin-mostenire > div:global(.recalculat) dd { color: var(--pa-accent-text); }
+  .admin-sursa-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }

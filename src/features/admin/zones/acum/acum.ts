@@ -1,11 +1,11 @@
 import type { EventConfig } from '../../../../shared/content/eventConfig';
 import type { ComandaAcum, SalaComanda, SalaDate } from '../../../../lib/salaApi';
-import { reperele, type Reper } from '../../../../admin/reperele';
+import { reperele, type Reper } from '../evenimente/reperele';
 import { antrenamentulUrmator, cineVine, zileAnulate } from '../../../../admin/sala/model';
 import { frazaSondaj, numeZi, plusZile, urmatorulSondaj, ziuaSaptamanii } from '../../../../admin/sala/sondaj';
 import { stareBot } from '../../../../admin/sala/stareBot';
-import type { EcranAdmin, FazaSite, SemnaleAdmin } from '../../../../admin/stareCurenta';
-import { semnaleDeAtentie } from '../../../../admin/stareCurenta';
+import type { EcranAdmin, FazaSite, SemnaleAdmin } from '../../data/stareCurenta';
+import { semnaleDeAtentie } from '../../data/stareCurenta';
 
 /**
  * Ecranul Acum, partea de calcul (U8, KTD9 din planul redesignului).

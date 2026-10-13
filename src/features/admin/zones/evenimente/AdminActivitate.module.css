@@ -1,0 +1,16 @@
+
+  .admin-activity {
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
+    display: flex; flex-direction: column;
+  }
+  .admin-activity-text { flex: 1; color: var(--pa-text); }
+  .admin-activity-text strong { font-weight: 700; }
+  .admin-activity-email { color: var(--pa-muted); font-variant-numeric: tabular-nums; }
+  .admin-activity-mail {
+    font-size: 11px; font-weight: 700;
+    color: var(--pa-danger); flex: none;
+  }
+  .admin-activity-mail:global(.ok) { color: var(--pa-accent-text); }
+  .admin-activity-time {
+    font-size: 12px; color: var(--pa-muted); font-variant-numeric: tabular-nums; flex: none;
+  }

@@ -1,4 +1,4 @@
-import type { EcranAdmin } from '../stareCurenta';
+import type { EcranAdmin } from '../../features/admin/data/stareCurenta';
 
 const GRUPE = [
   {

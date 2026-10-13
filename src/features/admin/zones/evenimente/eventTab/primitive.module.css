@@ -1,0 +1,84 @@
+
+  :global(.admin-config-grup):has(> .admin-config-grup-cap) { padding: 0; }
+  .admin-config-grup-cap {
+    display: flex; align-items: baseline; gap: 12px; width: 100%;
+    background: transparent; border: none; cursor: pointer; text-align: left;
+    padding: 14px 20px; transition: background 0.2s ease;
+  }
+  .admin-config-grup-cap:hover { background: var(--pa-surface-2); }
+  .admin-config-grup-sageata {
+    color: var(--pa-muted-2); font-size: 12px; flex: none; width: 10px;
+  }
+  .admin-config-grup-titlu {
+    font-family: var(--pa-font); font-weight: 700; font-size: 17px; color: var(--pa-accent-text);
+    flex: none;
+  }
+  .admin-config-grup-rezumat {
+    font-size: 13px; color: var(--pa-muted); min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .admin-config-grup-corp { padding: 0 20px 22px; }
+  .admin-config-grup-corp > :global(.admin-config-hint) { margin: 0 0 18px; max-width: 62ch; }
+  .admin-config-atentie {
+    font-size: 13px; color: var(--pa-warn); line-height: 1.4;
+    display: flex; gap: 7px;
+  }
+  .admin-config-atentie::before { content: "▲"; font-size: 9px; line-height: 1.7; flex: none; }
+  .admin-cronologie {
+    grid-column: 1 / -1; list-style: none; margin: 0 0 4px; padding: 0;
+    position: relative; font-variant-numeric: tabular-nums;
+  }
+  .admin-cronologie::before {
+    content: ""; position: absolute; left: 4px; top: 14px; bottom: 14px;
+    width: 1px; background: var(--pa-line);
+  }
+  .admin-cronologie-reper {
+    display: grid; align-items: baseline;
+    grid-template-columns: 9px minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1.5fr);
+    gap: 4px 14px; padding: 5px 0;
+  }
+  .admin-cronologie-punct {
+    grid-column: 1; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--pa-input); border: 1px solid var(--pa-muted-2);
+    align-self: center; position: relative; z-index: 1;
+  }
+  .admin-cronologie-nume { font-size: 13px; color: var(--pa-text-2); }
+  .admin-cronologie-cand { font-size: 13px; color: var(--pa-text); }
+  .admin-cronologie-fata { font-size: 12px; color: var(--pa-muted-2); }
+  .admin-cronologie-reper:global(.start) .admin-cronologie-punct {
+    background: var(--pa-accent); border-color: var(--pa-accent-text);
+    box-shadow: 0 0 0 3px var(--pa-focus-soft);
+  }
+  .admin-cronologie-reper:global(.start) .admin-cronologie-nume {
+    color: var(--pa-accent-text); font-weight: 700; font-size: 12px;
+  }
+  .admin-cronologie-reper:global(.start) .admin-cronologie-cand { color: var(--pa-text); font-weight: 600; }
+  .admin-cronologie-reper:global(.trecut) .admin-cronologie-nume,
+  .admin-cronologie-reper:global(.trecut) .admin-cronologie-cand { color: var(--pa-muted-2); }
+  .admin-cronologie-reper:global(.trecut) .admin-cronologie-punct { border-style: dashed; }
+
+  .admin-cronologie-reper:global(.problema) .admin-cronologie-punct {
+    background: var(--pa-graph-warn); border-color: var(--pa-warn); box-shadow: none;
+  }
+  .admin-cronologie-reper:global(.problema) .admin-cronologie-fata { color: var(--pa-warn); }
+
+  @media (max-width: 720px) {
+    .admin-cronologie-reper {
+      grid-template-columns: 9px minmax(0, 1fr);
+      gap: 2px 12px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .admin-cronologie-cand,
+    .admin-cronologie-fata { grid-column: 2; }
+  }
+  @media (max-width: 640px) {
+    .admin-config-grup-cap { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
+  }
+  @media (max-width: 640px) {
+    .admin-config-grup-corp { padding: 0 14px 18px; }
+  }
+  @media (max-width: 640px) {
+    .admin-config-grup-rezumat { flex-basis: 100%; white-space: normal; }
+  }

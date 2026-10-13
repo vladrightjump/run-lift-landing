@@ -1,0 +1,8 @@
+
+  .admin-stat-total { font-size: 20px; color: var(--pa-muted-2); }
+  .admin-occupancy {
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
+    padding: 18px 24px; display: grid; gap: 12px;
+  }
+  .admin-occupancy-count { font-size: 13px; color: var(--pa-muted); }
+  .admin-slot { height: 10px; }

@@ -3,7 +3,7 @@ import { render, screen, cleanup, fireEvent, within } from '@testing-library/rea
 import { LiniaDeTimp } from './LiniaDeTimp';
 import { EventConfigProvider } from '../../../shared/lib/useEventConfig';
 import { SNAPSHOT_CONFIG, type EventConfig } from '../../../shared/content/eventConfig';
-import type { SemnaleAdmin } from '../../../admin/stareCurenta';
+import type { SemnaleAdmin } from '../data/stareCurenta';
 
 /**
  * Linia de timp — primul lucru de pe ecran în backoffice.

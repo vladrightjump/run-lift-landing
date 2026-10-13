@@ -1,0 +1,16 @@
+
+  .admin-config-optiune {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
+    font-size: 13.5px; color: var(--pa-text); cursor: pointer; user-select: none;
+  }
+  .admin-config-optiune input { width: auto; margin: 0; accent-color: var(--pa-accent-text); }
+  .admin-reels-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+  .admin-reels-list li {
+    background: var(--pa-input); border: 1px solid var(--pa-line); padding: 12px 14px;
+  }
+  .admin-reels-list li:global(.invalid) { border-color: var(--pa-danger); }
+  .admin-reels-rand { display: flex; align-items: flex-start; gap: 12px; }
+  .admin-reels-campuri { flex: 1; display: grid; gap: 4px; min-width: 0; }
+  .admin-reels-campuri input { width: 100%; }
+  .admin-reels-campuri :global(.admin-config-eticheta):not(:first-child) { margin-top: 8px; }
+  .admin-reels-actiuni { display: grid; gap: 6px; }

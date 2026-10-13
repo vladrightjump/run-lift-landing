@@ -31,7 +31,8 @@ const kitAdmin = [
 ].map((f) => readFileSync(f, 'utf8'));
 const admin = [css.slice(css.indexOf(MARCA)), ...kitAdmin].join('\n');
 
-const blocTema = /\.admin-pagina,\s*\.admin-app\s*\{([^}]*)\}/.exec(admin)?.[1] ?? '';
+const cssRadacina = readFileSync(join(dirAdmin, 'components/RadacinaAdmin.module.css'), 'utf8');
+const blocTema = /:global\(\.admin-pagina\),\s*\.admin-app\s*\{([^}]*)\}/.exec(cssRadacina)?.[1] ?? '';
 const jetoane = new Map<string, string[]>();
 for (const m of blocTema.matchAll(/(--pa-[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
   jetoane.set(m[1], [...(jetoane.get(m[1]) ?? []), m[2].trim()]);

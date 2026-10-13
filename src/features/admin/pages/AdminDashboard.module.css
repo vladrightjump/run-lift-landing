@@ -1,0 +1,25 @@
+
+  @media (min-width: 900px) {
+    .admin-participanti-head {
+      position: sticky; top: 56px; z-index: 3;
+      /* Opac, nu translucid: rândurile trebuie să treacă PE SUB, nu prin el. */
+      background: var(--pa-surface);
+    }
+  }
+  .admin-table-rezultate {
+    font-size: 13px; color: var(--pa-muted); font-variant-numeric: tabular-nums;
+  }
+  .admin-participanti:global(.admin-table) { min-width: 1000px; }
+  .admin-participanti:global(.admin-table) :global(.admin-row) {
+    grid-template-columns: 48px 1.4fr 1fr 1.4fr 0.8fr 120px 180px;
+  }
+  .admin-participanti:global(.arhiva):global(.admin-table) { min-width: 880px; }
+  .admin-participanti:global(.arhiva):global(.admin-table) :global(.admin-row) {
+    grid-template-columns: 48px 1.4fr 1fr 1.4fr 0.8fr 120px;
+  }
+  .admin-launch :global(.admin-row) {
+    grid-template-columns: 44px 1.2fr 1.2fr 1fr 1.6fr 0.8fr 48px;
+  }
+  .admin-launch :global(.show-editions) :global(.admin-row) {
+    grid-template-columns: 44px 1.2fr 1.2fr 1fr 1.6fr 0.8fr 48px 44px;
+  }

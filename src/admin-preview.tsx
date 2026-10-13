@@ -16,8 +16,8 @@ import { AppProviders } from './app/providers';
 import { createRoot } from 'react-dom/client';
 // Ca în producție, unde `app/main.tsx` importă foaia globală.
 import './index.css';
-import { AdminDashboard } from './admin/AdminDashboard';
-import { RadacinaAdmin } from './admin/AdminApp';
+import { loadAdminPreview, RadacinaAdmin } from './features/admin';
+const { AdminDashboard } = await loadAdminPreview();
 import { setupWorker } from 'msw/browser';
 import { browserAssets, createHandlers } from '../tests/support/handlers';
 import { adminPreviewData } from '../tests/support/builders/preview';

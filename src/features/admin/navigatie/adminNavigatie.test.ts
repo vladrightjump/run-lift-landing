@@ -1,16 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  ZONE,
-  TOATE_ECRANELE,
-  zonaEcranului,
-  filaEcranului,
-  etichetaEcranului,
-  esteEcran,
-  estePeEditie,
-  contorZona,
-  ECRAN_IMPLICIT,
-} from './adminNavigatie';
-import type { EcranAdmin } from '../../../admin/stareCurenta';
+import { ZONE, TOATE_ECRANELE, zonaEcranului, filaEcranului, etichetaEcranului, esteEcran, estePeEditie, contorZona, ECRAN_IMPLICIT } from './adminNavigatie';
+import type { EcranAdmin } from '../data/stareCurenta';
 
 /**
  * Registrul de zone și file (U6, KTD3 din planul redesignului adminului).

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { FurnizorSesiuneAdmin } from '../../src/features/admin/data/adminSession';
 import { AdminAntrenamentTab } from '../../src/admin/AdminAntrenamentTab';
-import type { AdminWorkoutRow } from '../../src/lib/adminApi';
+import type { AdminWorkoutRow } from '../../src/lib/workoutApi';
 
 /**
  * Ecranul programului de antrenamente.
@@ -36,7 +36,7 @@ const {
   ),
 }));
 
-vi.mock('../../src/lib/adminApi', () => ({
+vi.mock('../../src/lib/workoutApi', () => ({
   listWeeklyWorkout,
   saveWeeklyWorkout,
   moveWeeklyWorkout,

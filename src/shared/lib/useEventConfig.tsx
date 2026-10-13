@@ -65,7 +65,8 @@ type Props = {
 const sursaConfig = async (signal: AbortSignal): Promise<EventConfig | null> => {
   if (configParam() !== 'draft') return fetchPublicConfig(signal);
 
-  const { getStoredToken, listEventConfig } = await import('../../lib/adminApi');
+  const { getStoredToken } = await import('./adminToken');
+  const { listEventConfig } = await import('./eventConfigAdmin');
   const token = getStoredToken();
   if (!token) return fetchPublicConfig(signal);
 

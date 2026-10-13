@@ -1,15 +1,15 @@
 import shared1 from '../../components/AdminStyles.module.css';
 import styles from './AdminComingSoonTab.module.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { listEventConfig } from '../../../../lib/adminApi';
+import { listEventConfig } from '../evenimente/api';
 import { setComingSoon } from './api';
-import type { AdminEventConfigRow } from '../../../../lib/adminApi';
+import type { AdminEventConfigRow } from '../evenimente/api';
 import { parseEventConfig, type EventConfig } from '../../../../shared/content/eventConfig';
 import { useEventConfig, useEditionDates } from '../../../../shared/lib/useEventConfig';
 import { useNow } from '../../../../shared/lib/useNow';
 import { useSesiuneAdmin } from '../../data/adminSession';
-import { fazaSite } from '../../../../admin/stareCurenta';
-import { laDatetimeLocal, dinDatetimeLocal, descrieMoment } from '../../../../admin/eventConfigFields';
+import { fazaSite } from '../../data/stareCurenta';
+import { laDatetimeLocal, dinDatetimeLocal, descrieMoment } from '../evenimente/eventConfigFields';
 import { Dialog } from '../../../../shared/ui/Dialog';
 import { AdminOrdineHomepage } from './AdminOrdineHomepage';
 

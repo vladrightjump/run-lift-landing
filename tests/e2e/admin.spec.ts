@@ -1,6 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../support/playwright';
+import { installAdminResponses } from '../support/admin';
 import type { Page } from '@playwright/test';
-import { participant, logEntry } from '../unit/helpers/adminHarness';
+import type { NetworkFixture } from '@msw/playwright';
+import { participant, logEntry } from '../support/builders/registrations';
+import { adminNavigationData } from '../support/builders/admin';
 import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
 /**
@@ -14,39 +17,11 @@ import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
  * Nu scrie nimic: toate RPC-urile Supabase sînt interceptate.
  */
 
-const RPC = '**/rest/v1/rpc/*';
-
 /** Răspunsuri plauzibile, cât să se randeze fiecare ecran. */
-const RASPUNSURI: Record<string, unknown> = {
-  admin_check_token: true,
-  admin_list_registrations: [],
-  admin_list_waitlist: [],
-  admin_list_email_log: [],
-  admin_list_events: [],
-  admin_list_editions: [
-    { editie: SNAPSHOT_CONFIG.number, participanti: 0, asteptare: 0, lansare: 0, prima: null, ultima: null, este_curenta: true },
-  ],
-  admin_list_launch_notifications: [],
-  admin_list_email_templates: [],
-  admin_get_event_config: [],
-  admin_list_training_reels: [],
-  admin_list_weekly_workout: [],
-};
+const RASPUNSURI = adminNavigationData();
 
-const deschideAdminul = async (page: Page, ecran = '', raspunsuri: Record<string, unknown> = RASPUNSURI) => {
-  await page.route(RPC, async (ruta) => {
-    const nume = /\/rpc\/([a-z_]+)/.exec(ruta.request().url())?.[1] ?? '';
-    await ruta.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      // Un răspuns-funcție primește corpul cererii (de ex. ediția cerută).
-      body: JSON.stringify(
-        typeof raspunsuri[nume] === 'function'
-          ? raspunsuri[nume](ruta.request().postDataJSON())
-          : (raspunsuri[nume] ?? null)
-      ),
-    });
-  });
+const deschideAdminul = async (page: Page, network: NetworkFixture, ecran = '', raspunsuri: Record<string, unknown> = RASPUNSURI) => {
+  installAdminResponses(network, raspunsuri);
   // Tokenul sărit peste login: testul e despre navigare, nu despre autentificare.
   await page.addInitScript(() => {
     localStorage.setItem('runlift_admin_token', 'token-e2e');
@@ -56,12 +31,8 @@ const deschideAdminul = async (page: Page, ecran = '', raspunsuri: Record<string
 
 test.describe('autentificarea', () => {
   // Refuzul (`admin_login` → null) și eroarea lui sunt în `admin-controale.spec.ts`.
-  test('datele bune deschid Acum', async ({ page }) => {
-    await page.route(RPC, async (ruta) => {
-      const nume = /\/rpc\/([a-z_]+)/.exec(ruta.request().url())?.[1] ?? '';
-      const raspuns = nume === 'admin_login' ? 'token-e2e' : (RASPUNSURI[nume] ?? null);
-      await ruta.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(raspuns) });
-    });
+  test('datele bune deschid Acum', async ({ page, network }) => {
+    installAdminResponses(network, { ...RASPUNSURI, admin_login: 'token-e2e' });
     await page.goto('/admin');
     await page.locator('input[name="utilizator"]').fill('vlad');
     await page.locator('input[name="parola"]').fill('corect');
@@ -72,15 +43,15 @@ test.describe('autentificarea', () => {
 });
 
 test.describe('navigarea între ecrane', () => {
-  test('aterizarea e pe Acum, cu navigarea pe zone', async ({ page }) => {
-    await deschideAdminul(page);
+  test('aterizarea e pe Acum, cu navigarea pe zone', async ({ page, network }) => {
+    await deschideAdminul(page, network);
 
     await expect(page.getByRole('heading', { name: 'Acum', exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Zone și ecrane' })).toBeVisible();
   });
 
-  test('un ecran deschis din navigare schimbă și adresa', async ({ page }) => {
-    await deschideAdminul(page);
+  test('un ecran deschis din navigare schimbă și adresa', async ({ page, network }) => {
+    await deschideAdminul(page, network);
 
     await page.getByRole('button', { name: /Clipuri/ }).click();
 
@@ -88,10 +59,10 @@ test.describe('navigarea între ecrane', () => {
     await expect(page).toHaveURL(/#clipuri$/);
   });
 
-  test('„înapoi" se întoarce la ecranul anterior, fără să iasă din admin', async ({ page }) => {
+  test('„înapoi" se întoarce la ecranul anterior, fără să iasă din admin', async ({ page, network }) => {
     // Regresia pe care o păzește: fără fragment în URL, butonul „înapoi" scotea
     // din /admin cu totul — pierdeai tot contextul pentru că voiai un pas înapoi.
-    await deschideAdminul(page);
+    await deschideAdminul(page, network);
 
     await page.getByRole('button', { name: /Clipuri/ }).click();
     await expect(page).toHaveURL(/#clipuri$/);
@@ -105,8 +76,8 @@ test.describe('navigarea între ecrane', () => {
     await expect(page.getByRole('heading', { name: 'Clipuri de antrenament' })).toBeVisible();
   });
 
-  test('un singur ecran e randat odată', async ({ page }) => {
-    await deschideAdminul(page);
+  test('un singur ecran e randat odată', async ({ page, network }) => {
+    await deschideAdminul(page, network);
 
     await page.getByRole('navigation', { name: 'Zone și ecrane' }).getByRole('button', { name: 'Mesaje', exact: true }).click();
     await page.getByRole('button', { name: /Șabloane/ }).click();
@@ -116,15 +87,8 @@ test.describe('navigarea între ecrane', () => {
     await expect(page.getByRole('navigation', { name: 'Zone și ecrane' })).toBeVisible();
   });
 
-  test('adresa deschide direct ecranul, deci se poate trimite prin link', async ({ page }) => {
-    await page.route(RPC, async (ruta) => {
-      const nume = /\/rpc\/([a-z_]+)/.exec(ruta.request().url())?.[1] ?? '';
-      await ruta.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(nume in RASPUNSURI ? RASPUNSURI[nume] : null),
-      });
-    });
+  test('adresa deschide direct ecranul, deci se poate trimite prin link', async ({ page, network }) => {
+    installAdminResponses(network, RASPUNSURI);
     await page.addInitScript(() => {
       localStorage.setItem('runlift_admin_token', 'token-e2e');
     });
@@ -134,8 +98,8 @@ test.describe('navigarea între ecrane', () => {
     await expect(page.getByRole('heading', { name: 'Antrenamentele' })).toBeVisible();
   });
 
-  test('calea de întoarcere duce acasă de pe orice ecran', async ({ page }) => {
-    await deschideAdminul(page);
+  test('calea de întoarcere duce acasă de pe orice ecran', async ({ page, network }) => {
+    await deschideAdminul(page, network);
 
     await page.getByRole('button', { name: /Clipuri/ }).click();
     await page.getByRole('navigation', { name: 'Zone și ecrane' }).getByRole('button', { name: /^Acum/ }).click();
@@ -143,10 +107,10 @@ test.describe('navigarea între ecrane', () => {
     await expect(page.getByRole('heading', { name: 'Acum', exact: true })).toBeVisible();
   });
 
-  test('saltul peste antet e primul control focusabil și duce la ecran', async ({ page }) => {
+  test('saltul peste antet e primul control focusabil și duce la ecran', async ({ page, network }) => {
     // Antetul are faza, numărătoarea, alerta, comutatorul și ieșirea din cont
     // — cinci opriri înaintea treburii, pe fiecare ecran.
-    await deschideAdminul(page);
+    await deschideAdminul(page, network);
     await expect(page).toHaveURL(/#acum$/);
 
     const sari = page.getByRole('button', { name: 'Sari la ecran' });
@@ -168,15 +132,15 @@ test.describe('navigarea între ecrane', () => {
     await expect(page).toHaveURL(/#acum$/);
   });
 
-  test('linkul vechi #desfasurare păstrează rezumatul ediției', async ({ page }) => {
-    await deschideAdminul(page, '#desfasurare');
+  test('linkul vechi #desfasurare păstrează rezumatul ediției', async ({ page, network }) => {
+    await deschideAdminul(page, network, '#desfasurare');
     await expect(page.getByLabel('Desfășurarea ediției')).toBeVisible();
     await expect(page).toHaveURL(/#desfasurare$/);
   });
 
-  test('pe telefon, zonele și filele păstrează ultima destinație', async ({ page }) => {
+  test('pe telefon, zonele și filele păstrează ultima destinație', async ({ page, network }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await deschideAdminul(page);
+    await deschideAdminul(page, network);
     const zone = page.getByRole('navigation', { name: 'Zone', exact: true });
     await zone.getByRole('button', { name: 'Site', exact: true }).click();
     await page.getByRole('navigation', { name: 'Ecrane din Site' }).getByRole('button', { name: 'Clipuri' }).click();
@@ -192,8 +156,8 @@ test.describe('dialogul de prezență', () => {
   // Grupul radio e primul control: după o alegere, oprirea lui de Tab e
   // varianta aleasă, nu prima, iar Shift+Tab trebuie să rămână în dialog.
   for (const alegere of ['A venit', 'N-a venit']) {
-    test(`focusul rămâne în dialog după ce e ales „${alegere}"`, async ({ page }) => {
-      await deschideAdminul(page, '#participanti', {
+    test(`focusul rămâne în dialog după ce e ales „${alegere}"`, async ({ page, network }) => {
+      await deschideAdminul(page, network, '#participanti', {
         ...RASPUNSURI,
         admin_list_registrations: [participant({ id: 'r1', nume: 'Ana Popescu', email: 'ana@example.test', editie: SNAPSHOT_CONFIG.number, prezent: alegere === 'A venit' })],
       });
@@ -215,11 +179,11 @@ test.describe('dialogul de prezență', () => {
 });
 
 test.describe('dialogul de ediție nouă', () => {
-  test('Tab trece prin segmentele datei, nu sare la ora', async ({ page }) => {
+  test('Tab trece prin segmentele datei, nu sare la ora', async ({ page, network }) => {
     // Capcana de focus ia Tab-ul doar la margini. Dacă l-ar lua pe fiecare,
     // de pe lună ai sări direct la oră și ziua n-ar mai avea cum fi atinsă.
     const nou = SNAPSHOT_CONFIG.number + 1;
-    await deschideAdminul(page, '#eveniment', {
+    await deschideAdminul(page, network, '#eveniment', {
       ...RASPUNSURI,
       admin_get_event_config: [{
         id: 'publicat', editie: SNAPSHOT_CONFIG.number, config: SNAPSHOT_CONFIG, status: 'published',
@@ -244,11 +208,11 @@ test.describe('dialogul de ediție nouă', () => {
 });
 
 test.describe('Acum și arhiva', () => {
-  test('arhiva nu contaminează cifrele, alertele sau destinațiile de pe Acum', async ({ page }) => {
+  test('arhiva nu contaminează cifrele, alertele sau destinațiile de pe Acum', async ({ page, network }) => {
     const curenta = SNAPSHOT_CONFIG.number;
     const arhiva = curenta - 1;
     await page.clock.setFixedTime(new Date(Date.parse(`${SNAPSHOT_CONFIG.start}${SNAPSHOT_CONFIG.tz}`) - 86_400_000));
-    await deschideAdminul(page, '', {
+    await deschideAdminul(page, network, '', {
       ...RASPUNSURI,
       admin_list_editions: [
         { editie: curenta, participanti: 1, asteptare: 0, lansare: 0, prima: null, ultima: null, este_curenta: true },

@@ -1,5 +1,5 @@
 import { SNAPSHOT_CONFIG, type EventConfig } from '../../../src/shared/content/eventConfig';
-import type { AdminEventConfigRow } from '../../../src/lib/adminApi';
+import type { AdminEventConfigRow } from '../../../src/features/admin/zones/evenimente/api';
 
 const eventConfig = (): EventConfig => structuredClone(SNAPSHOT_CONFIG);
 

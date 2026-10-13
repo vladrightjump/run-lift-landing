@@ -1,4 +1,4 @@
-import type { AdminRegistration, AdminEmailLogEntry } from '../../../src/lib/adminApi';
+import type { AdminRegistration, AdminEmailLogEntry } from '../../../src/features/admin/zones/evenimente/api';
 
 export const participant = (
   over: Partial<AdminRegistration> & Pick<AdminRegistration, 'id' | 'nume' | 'email'>

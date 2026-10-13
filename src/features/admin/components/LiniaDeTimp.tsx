@@ -1,16 +1,9 @@
 import styles from './LiniaDeTimp.module.css';
 import { useEventConfig, useEditionDates } from '../../../shared/lib/useEventConfig';
 import { useNow } from '../../../shared/lib/useNow';
-import {
-  fazaSite,
-  semnaleDeAtentie,
-  NODURI_DESFASURARE,
-  type SemnaleAdmin,
-  type EcranAdmin,
-  type FazaSite,
-} from '../../../admin/stareCurenta';
-import { reperele, type Reper } from '../../../admin/reperele';
-import { descrieMoment } from '../../../admin/eventConfigFields';
+import { fazaSite, semnaleDeAtentie, NODURI_DESFASURARE, type SemnaleAdmin, type EcranAdmin, type FazaSite } from '../data/stareCurenta';
+import { reperele, type Reper } from '../zones/evenimente/reperele';
+import { descrieMoment } from '../zones/evenimente/eventConfigFields';
 
 /** Fazele în care punctul de lângă numele ediției se aprinde. */
 const CLASA_FAZA: Partial<Record<FazaSite, string>> = {
