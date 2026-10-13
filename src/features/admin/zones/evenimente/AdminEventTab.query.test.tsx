@@ -1,5 +1,5 @@
 import { it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { HttpResponse } from 'msw';
 import { AdminEventTab } from './AdminEventTab';
 import { FurnizorSesiuneAdmin } from '../../data/adminSession';
@@ -49,5 +49,9 @@ it('publicarea reîmprospătează configul public o dată și configul editorulu
   fireEvent.click(screen.getByRole('button', { name: 'Da, publică' }));
   await waitFor(() => expect(citestePublic).toHaveBeenCalledTimes(2));
   await waitFor(() => expect(citesteEditor).toHaveBeenCalledTimes(2));
+  // „O dată" înseamnă și că nu mai vine o a treia citire după ce s-au așezat.
+  await act(() => new Promise((gata) => setTimeout(gata, 100)));
+  expect(citestePublic).toHaveBeenCalledTimes(2);
+  expect(citesteEditor).toHaveBeenCalledTimes(2);
   expect(screen.getByText('Ediția publicată acum', { selector: 'output' })).toBeDefined();
 });
