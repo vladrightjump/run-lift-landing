@@ -1,4 +1,6 @@
 import sharedSala from './SalaStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './EcranBot.module.css';
 import { TrialSettings } from './TrialSettings';
 import { useEffect, useState } from 'react';
@@ -84,7 +86,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
 
   if (!date || !forma || !salvat) {
     return (
-      <p className="admin-config-hint" role="status">
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint" role="status">
         {eroare ? 'Nu s-au putut încărca setările botului. Reîncearcă peste câteva secunde.' : 'Se încarcă…'}
       </p>
     );
@@ -130,7 +132,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
                 : 'Niciun sondaj programat: alege zilele mai jos.'}
         </p>
         {stare.tip === 'normal' && (
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             {stare.ultimaExecutata
               ? `Nicio comandă blocată. Ultima executată de bot: ${ziLunaOra(stare.ultimaExecutata)}.`
               : 'Nicio comandă blocată.'}{' '}
@@ -139,7 +141,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
         )}
         <button
           type="button"
-          className={salvat.enabled ? 'admin-btn-ghost' : 'admin-btn-accent'}
+          className={salvat.enabled ? `${adminRoot['admin-btn-ghost']}` : `${adminStyles['admin-btn-accent']}`} data-css={salvat.enabled ? 'admin-btn-ghost' : 'admin-btn-accent'}
           disabled={ocupat}
           onClick={() =>
             void fa((t) => pornesteBot(t, !salvat.enabled), salvat.enabled ? 'Botul e oprit.' : 'Botul e pornit.')
@@ -150,7 +152,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
       </section>
 
       <form
-        className="admin-config-form"
+        className={adminStyles['admin-config-form']} data-css="admin-config-form"
         onSubmit={(e) => {
           e.preventDefault();
           if (probleme.length > 0 || !nesalvat) return;
@@ -162,9 +164,9 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
           );
         }}
       >
-        <fieldset className="admin-config-grup">
+        <fieldset className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
           <legend>Sondajul</legend>
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             Botul întreabă „vii mâine?", deci sondajul pleacă în ziua dinaintea antrenamentului.
           </p>
           <ZileSaptamana
@@ -177,9 +179,9 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
           <Camp eticheta="Locul" id="bot-loc" valoare={forma.location} onSchimba={(v) => schimba('location', v)} />
         </fieldset>
 
-        <fieldset className="admin-config-grup">
+        <fieldset className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
           <legend>Textul sondajului</legend>
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             Gol înseamnă textul de acum. O schimbare ajunge la sondajul următor, iar unul deja în
             grup își păstrează textul. Titlul e pentru sondajul din ziua dinainte; un antrenament
             extra anunțat mai devreme sau în aceeași zi primește „Antrenament” sau „Antrenament azi”.
@@ -217,9 +219,9 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
           </div>
         </fieldset>
 
-        <fieldset className="admin-config-grup">
+        <fieldset className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
           <legend>Rezumatul de dimineață și reminderul</legend>
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             Rezumatul pleacă în privat, la admini. Reminderul pleacă în grup cu două ore înainte de
             antrenament, doar dacă au confirmat mai puțini decât pragul.
           </p>
@@ -254,32 +256,32 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
           </ul>
         )}
 
-        <div className="admin-table-actions">
+        <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
           {nesalvat && <span className={styles['admin-sala-nesalvat']} data-css="admin-sala-nesalvat">Nesalvat</span>}
           <button
             type="button"
-            className="admin-btn-ghost"
+            className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
             disabled={!nesalvat || ocupat}
             onClick={() => setCiorna(null)}
           >
             Renunță la modificări
           </button>
-          <button type="submit" className="admin-btn-accent" disabled={!nesalvat || probleme.length > 0 || ocupat}>
+          <button type="submit" className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent" disabled={!nesalvat || probleme.length > 0 || ocupat}>
             Salvează setările
           </button>
         </div>
       </form>
 
       <TrialSettings onDirty={setTrialDirty} />
-      <section className="admin-config-grup" aria-labelledby="bot-acum">
+      <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="bot-acum">
         <h3 id="bot-acum">Acum</h3>
-        <p className="admin-config-hint">
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
           Botul execută comanda în cel mult un minut. Cât una așteaptă, butonul ei stă blocat.
         </p>
-        <div className={'admin-table-actions ' + styles['admin-sala-comenzi']} data-css="admin-table-actions admin-sala-comenzi">
+        <div className={`${adminStyles['admin-table-actions']} ` + styles['admin-sala-comenzi']} data-css="admin-table-actions admin-sala-comenzi">
           <button
             type="button"
-            className="admin-btn-ghost"
+            className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
             disabled={ocupat || inAsteptare.has('send_poll')}
             onClick={() => setDeConfirmat('send_poll')}
           >
@@ -287,7 +289,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
           </button>
           <button
             type="button"
-            className="admin-btn-ghost"
+            className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
             disabled={ocupat || inAsteptare.has('send_reminder')}
             onClick={() => setDeConfirmat('send_reminder')}
           >
@@ -295,7 +297,7 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
           </button>
           <button
             type="button"
-            className="admin-btn-ghost"
+            className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
             disabled={ocupat || inAsteptare.has('send_summary')}
             onClick={() => void fa((t) => trimiteComanda(t, 'send_summary'), 'Rezumatul pleacă la admini în cel mult un minut.')}
           >
@@ -306,10 +308,10 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
 
       <MesajGrup membri={date.membri} ocupat={ocupat} onTrimite={(html) => fa((t) => trimiteComanda(t, 'send_message', html), 'Mesajul pleacă în grup în cel mult un minut.')} />
 
-      <section className="admin-config-grup" aria-labelledby="bot-jurnal">
+      <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="bot-jurnal">
         <h3 id="bot-jurnal">Ultimele comenzi</h3>
         {date.comenzi.length === 0 ? (
-          <p className="admin-config-hint">Nicio comandă încă.</p>
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Nicio comandă încă.</p>
         ) : (
           <ul className={sharedSala['admin-sala-lista']} data-css="admin-sala-lista">
             {date.comenzi.map((c) => (
@@ -345,13 +347,13 @@ export const EcranBot = ({ inregistreazaGardaIesire }: Props) => {
                 : 'Botul postează în grup sondajul pentru antrenamentul de mâine.'
               : 'Botul scrie în grup și îi pomenește pe membrii activi care n-au răspuns încă la sondajul de mâine.'}
           </p>
-          <div className="admin-table-actions">
-            <button type="button" className="admin-btn-ghost" onClick={() => setDeConfirmat(null)}>
+          <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+            <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => setDeConfirmat(null)}>
               Nu trimite
             </button>
             <button
               type="button"
-              className="admin-btn-accent"
+              className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
               onClick={() => {
                 const c = deConfirmat;
                 setDeConfirmat(null);
@@ -380,8 +382,8 @@ type PropsCamp = {
 };
 
 const Camp = ({ eticheta, id, valoare, tip = 'text', indiciu, onSchimba }: PropsCamp) => (
-  <div className="admin-config-camp">
-    <label className="admin-config-eticheta" htmlFor={id}>
+  <div className={adminStyles['admin-config-camp']} data-css="admin-config-camp">
+    <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor={id}>
       {eticheta}
     </label>
     <input
@@ -403,9 +405,9 @@ type PropsZile = {
 };
 
 const ZileSaptamana = ({ eticheta, zile, onComuta }: PropsZile) => (
-  <div className="admin-config-camp">
-    <span className="admin-config-eticheta">{eticheta}</span>
-    <div className="admin-cs-comutator" role="group" aria-label={eticheta}>
+  <div className={adminStyles['admin-config-camp']} data-css="admin-config-camp">
+    <span className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta">{eticheta}</span>
+    <div className={adminStyles['admin-cs-comutator']} data-css="admin-cs-comutator" role="group" aria-label={eticheta}>
       {ZILE.map(([zi, scurt]) => (
         <button
           key={zi}
@@ -441,9 +443,9 @@ const MesajGrup = ({ membri, ocupat, onTrimite }: PropsMesaj) => {
   const preaLung = html.length > 4096;
 
   return (
-    <section className="admin-config-grup" aria-labelledby="bot-mesaj">
+    <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="bot-mesaj">
       <h3 id="bot-mesaj">Mesaj în grup</h3>
-      <p className="admin-config-hint">
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
         Alege un membru din listă ca să-l pomenești: în text apare „@Nume", iar în Telegram devine o
         mențiune care îl anunță.
       </p>
@@ -477,7 +479,7 @@ const MesajGrup = ({ membri, ocupat, onTrimite }: PropsMesaj) => {
         </select>
         <button
           type="button"
-          className="admin-btn-accent"
+          className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
           disabled={ocupat || text.trim() === '' || preaLung}
           onClick={() => setConfirmare(true)}
         >
@@ -489,13 +491,13 @@ const MesajGrup = ({ membri, ocupat, onTrimite }: PropsMesaj) => {
       {confirmare && (
         <Dialog titlu="Trimiți mesajul în grup?" rol="alertdialog" onInchide={() => setConfirmare(false)}>
           <p className={styles['admin-sala-citat']} data-css="admin-sala-citat">{text.trim()}</p>
-          <div className="admin-table-actions">
-            <button type="button" className="admin-btn-ghost" onClick={() => setConfirmare(false)}>
+          <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+            <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => setConfirmare(false)}>
               Nu trimite
             </button>
             <button
               type="button"
-              className="admin-btn-accent"
+              className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
               onClick={() => {
                 setConfirmare(false);
                 void onTrimite(html).then((ok) => {

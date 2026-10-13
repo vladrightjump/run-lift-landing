@@ -39,25 +39,22 @@ export default defineConfig({
         'src/**/*.test.{ts,tsx}',
         // Puncte de intrare: montează arborele, n-au logică proprie.
         'src/app/main.tsx',
-        'src/admin-preview.tsx',
-        'src/vite-env.d.ts',
+        'src/app/admin-preview.tsx',
+        'src/app/vite-env.d.ts',
       ],
       reporter: ['text-summary', 'json-summary'],
       // Praguri de CLICHET: coborâte sub valoarea măsurată, ca să prindă o
       // regresie fără să blocheze un PR pentru zgomot. Se URCĂ pe măsură ce
       // acoperirea crește; nu se coboară niciodată. Vezi `CI-CD.md`.
-      // Măsurate pe 22 septembrie 2026, după
-      // `docs/plans/2026-09-22-1328-feat-admin-pe-ecrane-plan.md`:
-      // linii 75,99 · instrucțiuni 74,13 · funcții 70,77 · ramuri 67,20.
-      // (Anterior, 21 septembrie: 75,36 · 73,55 · 69,65 · 66,42.)
-      // (Anterior, 18 septembrie: 74,35 · 72,9 · 69,75 · 65,71. „Funcții" a
-      // scăzut cu o zecime — `analytics.ts` aduce funcții noi, nu toate atinse
-      // de teste — deci pragul ei rămâne pe loc. Clichetul nu coboară.)
+      // Resetarea unică U13, măsurată pe 13 octombrie 2026 după eliminarea
+      // structurii vechi și colocarea testelor, conform planului de arhitectură:
+      // linii 84,56 · instrucțiuni 82,85 · funcții 80,08 · ramuri 77,93.
+      // Pragurile sunt întregii imediat inferiori; de aici clichetul doar urcă.
       thresholds: {
-        lines: 75,
-        statements: 74,
-        functions: 70,
-        branches: 67,
+        lines: 84,
+        statements: 82,
+        functions: 80,
+        branches: 77,
       },
     },
   },

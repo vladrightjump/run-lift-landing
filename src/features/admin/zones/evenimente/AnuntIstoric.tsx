@@ -1,3 +1,4 @@
+import adminStyles from '../../components/AdminStyles.module.css';
 import { useQuery } from '@tanstack/react-query';
 import { useAdminResource } from '../../data/useAdminResource';
 import { useAdminMutation } from '../../data/useAdminMutation';
@@ -188,7 +189,7 @@ export const AnuntIstoric = ({ editie, emailLog, readOnly, audiente }: Props) =>
 
         {audiente}
 
-        <p className="admin-config-hint" data-css="admin-config-hint">
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
           Toți cei care s-au înscris la o ediție, o dată pe persoană. Nu apar cei deja înscriși la
           ediția curentă și nici cei care s-au dezabonat — lista o calculează serverul.
         </p>
@@ -269,7 +270,7 @@ export const AnuntIstoric = ({ editie, emailLog, readOnly, audiente }: Props) =>
               value={textCur}
               onChange={(e) => setText(e.target.value)}
             />
-            <p className="admin-config-hint" data-css="admin-config-hint">
+            <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
               Linkul de dezabonare se adaugă automat la finalul fiecărui email.
             </p>
             {nesuportate.length > 0 && (
@@ -336,14 +337,14 @@ export const AnuntIstoric = ({ editie, emailLog, readOnly, audiente }: Props) =>
         </div>
 
         {anterior && !readOnly && (
-          <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+          <div className={`${adminStyles['admin-banner']} warn`} data-css="admin-banner warn" role="status">
             <strong>
               Ediția asta a fost deja anunțată pe {ziLunaOra(anterior.cand)}, către{' '}
               {anterior.catreCati} {anterior.catreCati === 1 ? 'om' : 'oameni'}.
             </strong>{' '}
             Un al doilea anunț ajunge la aceiași oameni. Dacă e intenționat — o corectură, o
             schimbare de dată — deblochează-l explicit.
-            <div className="admin-confirm-actions" data-css="admin-confirm-actions">
+            <div className={adminStyles['admin-confirm-actions']} data-css="admin-confirm-actions">
               <button
                 type="button"
                 className={shared1['admin-btn-outline']} data-css="admin-btn-outline"
@@ -359,7 +360,7 @@ export const AnuntIstoric = ({ editie, emailLog, readOnly, audiente }: Props) =>
         <div className={shared1['admin-email-actions']} data-css="admin-email-actions">
           <button
             type="button"
-            className="admin-btn-accent" data-css="admin-btn-accent"
+            className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
             onClick={() => setConfirmare(true)}
             disabled={seTrimite || readOnly || blocat || ramasi.length === 0 || !continutGata}
           >
@@ -374,19 +375,19 @@ export const AnuntIstoric = ({ editie, emailLog, readOnly, audiente }: Props) =>
       </div>
 
       {confirmare && (
-        <Dialog titlu="Trimiți anunțul?" rol="alertdialog" clasa="admin-confirm--neutru" onInchide={() => setConfirmare(false)}>
+        <Dialog titlu="Trimiți anunțul?" rol="alertdialog" clasa={adminStyles['admin-confirm--neutru']} onInchide={() => setConfirmare(false)}>
           <p>
             Pleacă la <strong>{ramasi.length}</strong>{' '}
             {ramasi.length === 1 ? 'om care a alergat' : 'oameni care au alergat'} cu voi.
             Emailul pleacă acum și nu se poate retrage.
           </p>
-          <div className="admin-confirm-actions" data-css="admin-confirm-actions">
+          <div className={adminStyles['admin-confirm-actions']} data-css="admin-confirm-actions">
             <button type="button" className={shared1['admin-confirm-delete']} data-css="admin-confirm-delete" onClick={trimite}>
               Da, trimite
             </button>
             <button
               type="button"
-              className="admin-confirm-cancel" data-css="admin-confirm-cancel"
+              className={adminStyles['admin-confirm-cancel']} data-css="admin-confirm-cancel"
               onClick={() => setConfirmare(false)}
             >
               Anulează

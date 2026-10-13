@@ -3,14 +3,15 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from '@tanstack/react-router';
 import { makeRouter } from './router';
 import { AppProviders } from './providers';
-import { installGlobalMonitoring } from '../lib/monitoring';
-import { pornesteAnalitice } from '../lib/analytics';
-import { redirectCanonic } from '../lib/canonicalHost';
-import '../index.css';
+import { installGlobalMonitoring } from '../shared/lib/monitoring';
+import { pornesteAnalitice } from '../shared/lib/analytics';
+import { redirectCanonic } from '../shared/lib/canonicalHost';
+import '../shared/styles/tokens.css';
+import '../shared/styles/base.css';
 
 // Vizitatorii ajunși pe URL-ul de `*.vercel.app` al producției sunt mutați pe
 // domeniul evenimentului, cu tot cu cale și parametri. Preview-urile de PR și
-// dev-ul local rămân pe loc — vezi `../lib/canonicalHost.ts`.
+// dev-ul local rămân pe loc — vezi `../shared/lib/canonicalHost.ts`.
 //
 // PRIMUL lucru din fișier, înaintea oricărei randări: `replace`, nu `assign`,
 // ca URL-ul greșit să nu rămână în istoric și butonul „înapoi" să nu-l aducă

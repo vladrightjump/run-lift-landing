@@ -1,4 +1,5 @@
 import shared1 from './EvenimenteStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
 import styles from './AdminEmailTab.module.css';
 import { useAdminResource } from '../../data/useAdminResource';
 import { useAdminMutation } from '../../data/useAdminMutation';
@@ -483,7 +484,7 @@ export const AdminEmailTab = ({
         </div>
 
         {anterioara && !readOnly && (
-          <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+          <div className={`${adminStyles['admin-banner']} warn`} data-css="admin-banner warn" role="status">
             <strong>
               Aceeași difuzare a plecat deja pe {ziLunaOra(anterioara.cand)},
               către {anterioara.catreCati}{' '}
@@ -492,7 +493,7 @@ export const AdminEmailTab = ({
             Butonul de trimitere e blocat pe server pentru această combinație de ediție, audiență
             și subiect. Dacă retrimiterea e intenționată — ai corectat audiența sau reformulezi —
             deblocheaz-o explicit.
-            <div className="admin-confirm-actions" data-css="admin-confirm-actions">
+            <div className={adminStyles['admin-confirm-actions']} data-css="admin-confirm-actions">
               <button
                 type="button"
                 className={shared1['admin-btn-outline']} data-css="admin-btn-outline"
@@ -510,7 +511,7 @@ export const AdminEmailTab = ({
         <div className={shared1['admin-email-actions']} data-css="admin-email-actions">
           <button
             type="button"
-            className="admin-btn-accent" data-css="admin-btn-accent"
+            className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
             onClick={send}
             disabled={
               sending || readOnly || (anterioara !== null && !ambiguu && jetonValid === null)

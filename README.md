@@ -4,47 +4,49 @@ Pagină de înscriere pentru evenimentul **Run + Lift**. React 19 + Vite + TypeS
 **Supabase** ca backend (Postgres + RPC public de statistici + funcție edge pentru emailuri).
 Fără server propriu. Deploy pe **Vercel**.
 
-> **Ediția curentă** și toate datele evenimentului (dată, locație, branding, sloturi) sunt
-> configurate într-un singur loc: **`src/content/edition.ts`**. Vezi „Ediție nouă" mai jos.
+> **Ediția curentă** se configurează din `/admin`, în baza de date.
+> `src/shared/content/edition.ts` este instantaneul de build pentru primul cadru și
+> metadatele de share. Vezi „Ediție nouă” mai jos.
 
 ## Structura proiectului
 
-Harta aplicației web, regulile de import, locul codului și al testelor, plus pașii de
-adăugare/eliminare sunt în **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. Structura țintă
-folosește `src/app/`, `src/features/<nume-românesc>/` și `src/shared/`, cu aliasul `@/` către
-`src/` și `npm run lint:arch` în verificările locale și CI.
+Harta aplicației, regulile de import, straturile de testare și pașii de
+adăugare/eliminare sunt în **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+Tot codul web este sub `src/app/`, `src/features/` și `src/shared/`; `npm run lint:arch`
+verifică atât granițele de import, cât și fișierele din afara acestei structuri.
 
-Arborele de mai jos descrie **structura actuală, în tranziție**. `app/` compune routerul și provider-ul Query;
-`shared/lib/` conține transportul RPC comun, iar `features/` este deocamdată schelet.
-Codul existent se mută pe zone, în unitățile planificate.
-
-```
+```text
 run-lift-landing/
-├── index.html            # meta injectată la build din content/meta.ts (plugin Vite)
-├── vercel.json           # headere de securitate (CSP: connect-src → Supabase)
-├── public/               # favicon, og.png, apple-touch-icon
-├── scripts/
-│   └── write-version.ts  # ștampilează dist/version.json (commit + amprenta meta)
+├── index.html                  # shell-ul ediției; meta din shared/content/meta.ts
+├── antrenament.html            # shell și card de share proprii pentru /antrenament
+├── admin-preview.html          # demo de dev cu handler-ele MSW comune
+├── vercel.json                 # rewrites explicite, CSP și deploy git oprit
+├── public/                     # favicon, og.png, apple-touch-icon
+├── scripts/                    # garda de deploy și version.json
 ├── src/
-│   ├── app/              # entry, router tipizat, QueryClient și layout cu config
-│   ├── features/         # schelet: viitoarele funcționalități cu API public index.ts
-│   ├── shared/           # transport RPC; urmează UI/content/styles comune
-│   ├── content/          # instantaneul de build (sursa de adevăr e în DB)
-│   │   ├── edition.ts    #   instantaneu: primul cadru + meta de share. NU-l edita per ediție
-│   │   ├── eventConfig.ts#   forma documentului de config + parsarea lui
-│   │   ├── format.ts     #   derivate: ordinal, dată RO, EVENT_META, HERO_KICKER…
-│   │   └── meta.ts       #   title/description/OG derivate din EDITION
-│   ├── components/       # Edition3Landing, ComingSoon, Confirmare, DespreNoi, Toast
-│   │                     #   landing/ReelsSection — banda Instagram (façade + iframe la click)
-│   ├── admin/            # backoffice /admin (login, dashboard, email, șabloane)
-│   ├── hooks/            # useCountdown, usePagePhase, useScrollReveal, useToast, useNow, useStats
-│   └── lib/
-│       ├── config.ts     # derivă din content/edition.ts (NU edita valori aici)
-│       ├── backend.ts    # config Supabase (url/key/schema) — mediu, nu ediție
-│       ├── validation.ts
-│       └── supabase.ts   # submit înscriere + fetch statistici + emailuri
-└── supabase/functions/send-email/  # funcția edge (Resend); conținut din DB (email_templates)
+│   ├── app/                    # entry, router, QueryClient, preview și tipuri Vite
+│   ├── features/               # pagini, componente, date, CSS Modules și teste
+│   │   ├── antrenament/        # exemplul de referință pentru o funcționalitate
+│   │   ├── landing/            # homepage și Coming Soon
+│   │   ├── inscriere/          # formular, validare și transport înscriere
+│   │   ├── admin/              # Acum, Site, Evenimente și Antrenamente
+│   │   └── ...                 # linkuri de email, Despre noi, reels și trial
+│   └── shared/
+│       ├── content/            # instantaneul ediției, forma configului și derivate
+│       ├── lib/                # RPC, backend/config, hook-uri și utilitare comune
+│       ├── ui/                 # primitive, componente și stiluri comune
+│       └── styles/             # tokens.css și base.css
+├── tests/
+│   ├── support/                # MSW și builder-e comune pentru Vitest/Playwright
+│   ├── e2e/                    # parcursuri și verificări pe build
+│   ├── unit/                   # contracte între straturi, guard-uri, SQL și Edge
+│   └── integration/            # backend real, opt-in
+├── bot/                        # serviciul Telegram, deploy pe Railway
+└── supabase/                   # funcții Edge și SQL, în afara structurii web
 ```
+
+Testele unitare și de componentă stau lângă codul lor. Fiecare funcționalitate
+expune un `index.ts`; alte funcționalități folosesc doar acel API public.
 
 ## Rulare locală
 
@@ -73,7 +75,7 @@ botul de Telegram. Run + Lift trăiește în schema **`runlift`** (rutată prin 
   Alimentează bara „Locuri rămase".
 - **Emailuri (Resend)** — funcția edge `send-email`. Conținutul (confirmare, reminder, anunț,
   badge) NU e hardcodat: vine din `email_templates` și e **editabil din `/admin`**.
-- **Config client** — `src/lib/backend.ts` (`SUPABASE`). Cheia e publică prin design; protecția
+- **Config client** — `src/shared/lib/backend.ts` (`SUPABASE`). Cheia e publică prin design; protecția
   vine din RLS + verificarea Turnstile din `submit-form`.
 
 ## Ediție nouă (pe scurt)
@@ -94,14 +96,16 @@ Runbook complet: **`GHID-EDITIE-NOUA.md`**. Decizii de arhitectură: secțiunea 
 
 Homepage-ul trece singur prin trei faze, pe ceas, fără redeploy: landing normal → landing fără
 înscriere cu „cine vine" sub hero (de la `start` − `leaderboardLeadHours`) → countdown spre
-`nextEditionAt` (de la finalul cursei). Logica: `src/hooks/usePagePhase.ts`. Le vezi înainte de
+`nextEditionAt` (de la finalul cursei). Logica: `src/shared/lib/usePagePhase.ts`. Le vezi înainte de
 ora lor cu `?preview=leaderboard` și `?preview=next`. Detalii + pașii de după cursă:
 **`GHID-EDITIE-NOUA.md`**.
 
 ## Deploy (Vercel)
 
-Git-connected: push pe `main` (GitHub `vladrightjump/run-lift-landing`) → Vercel rulează
-`npm run build` și publică. Domeniu: **parktraining.fit**. CSP-ul (`vercel.json`) trebuie să
+Merge prin PR în `main` (GitHub `vladrightjump/run-lift-landing`) → CI rulează verificările
+și declanșează hook-ul Vercel după poarta web. Vercel rulează `npm run build`, iar CI
+verifică versiunea și CSP-ul live. Auto-deploy-ul git Vercel este oprit; detalii în
+[CI-CD.md](CI-CD.md). Domeniu: **parktraining.fit**. CSP-ul (`vercel.json`) trebuie să
 permită originul Supabase curent **și `challenges.cloudflare.com`** (Turnstile) — există teste
 care păzesc ambele. `VITE_TURNSTILE_SITE_KEY` e obligatorie la build-ul de producție.
 
@@ -117,23 +121,23 @@ doar dacă trece job-ul `bot` din CI (Railway are „Wait for CI"). Serviciul Ra
 
 ```bash
 npm run test          # unitare (vitest) — logică + contract cereri + config/CSP + meta
-npm run test:e2e      # e2e (Playwright) — fluxuri, butoane, stări (mock Supabase)
+npm run test:e2e      # Playwright pe dev server, cu MSW comun
+npm run test:e2e:preview # Playwright pe build; rulează întâi npm run build
 npm run test:integration   # OPT-IN, backend real (necesită RUNLIFT_LIVE=1 + credențiale)
-npm run verify        # typecheck + typecheck:tests + test + build + e2e
+npm run verify        # lint + arhitectură + cod mort + tipuri + coverage + build + e2e
 ```
 
 ## Backoffice (/admin)
 
-Dashboard de organizator. Primul lucru pe ecran e **linia de timp a ediției** — anunț, înscrieri,
-remindere, start, după cursă, ediția următoare — fiecare nod cu starea lui în cuvinte și cu acțiunea
-care-i aparține; calea scurtă de creare a ediției următoare stă pe ultimul nod. Sub ea, blocul
-**„în fiecare săptămână"** (antrenamentul, în afara structurii pe ediții, fiindcă nu ține de nicio
-ediție). Abia apoi navigația pe trei grupuri, ca al doilea nivel.
+Backoffice pe zonele **Acum**, **Site**, **Evenimente** și **Antrenamente**.
+Navigarea păstrează ecranul în fragmentul URL-ului (`/admin#cheie`). Cadrul comun
+arată filele pe desktop și bara de zone pe telefon. Linia de timp a ediției și
+editorul programului săptămânal aparțin zonelor lor; programul nu ține de o ediție.
 
 Restul: statistici live, listă înscrieri, căutare, adăugare manuală, ștergere
 cu undo, export CSV, trimitere emailuri în masă, editare șabloane. Auth: cont unic în
 `admin_users` (bcrypt) + token de sesiune în `admin_sessions`; operațiile trec prin RPC-uri
-`SECURITY DEFINER`. Cod: `src/admin/` + `src/lib/adminApi.ts`.
+`SECURITY DEFINER`. Cod: `src/features/admin/` (API-uri lângă fiecare zonă).
 
 Tabul **„Coming Soon"** e singurul cu efect **imediat** pe site: comută ecranul de dinainte de
 lansare și mută țintele numărătorilor fără să treacă prin ciornă → publică. Scurtătura e de pași,
@@ -156,7 +160,7 @@ Pe ecranul „Ne vedem curând" (între ediții), sub countdown apare cardul **�
 săptămâna curentă — numărul, titlul și primele rânduri, tăiate cu fade. Arată conținut, nu o
 etichetă: un buton scris „Antrenamentul săptămânii" ar fi cerut încredere înainte de clic.
 Tace complet dacă programul e gol sau cererea pică — e decor pe un ecran al cărui rost e
-formularul de notificare. Cod: `src/components/CardAntrenament.tsx`.
+formularul de notificare. Cod: `src/features/antrenament/components/CardAntrenament.tsx`.
 
 Se scrie din `/admin`, din blocul „în fiecare săptămână" de sub linia de timp. Ecranul e lista
 programului plus editorul săptămânii deschise; numărul îl pune serverul, iar butonul de adăugare
@@ -201,7 +205,7 @@ playerul e un iframe, nu API-ul de player al gazdei. Există teste care păzesc 
 De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
 
 - **Ediția trăiește în baza de date, nu în cod.** Sursa de adevăr e rândul `published` din
-  `runlift.event_config`, editabil din `/admin`. `src/content/edition.ts` a rămas doar
+  `runlift.event_config`, editabil din `/admin`. `src/shared/content/edition.ts` a rămas doar
   instantaneul de build: randează primul cadru și hrănește meta de share, pentru că
   scraperele de WhatsApp/Facebook nu rulează JS. Are voie să rămână în urmă față de ediția
   publicată — tabul „Eveniment" îți spune când s-a întâmplat.
@@ -209,7 +213,7 @@ De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
   un generator din cod ar crea două stăpâne și ar suprascrie editările. Constantele
   `*_FALLBACK` din funcția Edge sunt generice, fără dată, și se folosesc doar dacă DB-ul tace.
 - **Fără `copy.ts` de i18n.** Aplicația e mono-lingvă. Derivăm din config DOAR string-urile
-  dependente de ediție (`src/content/format.ts`); proza statică rămâne în componente.
+  dependente de ediție (`src/shared/content/format.ts`); proza statică rămâne în componente.
 - **Meta de share injectată la build**, prin plugin Vite, nu din React — scraperele citesc
   HTML static.
 - **Numărul săptămânii e poziția în program, nu un identificator etern.** Mutarea și ștergerea
@@ -223,7 +227,7 @@ De ce arată lucrurile așa, ca să nu se redeschidă degeaba:
   o constrângere unică parțială nu există. Măsurat: un schimb dintr-un singur `update … case` pică
   cu „duplicate key". De asta ambele operații mută întâi rândurile în negativ.
 - **Analiticele sunt tăcute peste tot în afară de producție.** `pornesteAnalitice` (în
-  `src/lib/analytics.ts`) pornește Vercel Web Analytics doar când `__VERCEL_ENV__` e
+  `src/shared/lib/analytics.ts`) pornește Vercel Web Analytics doar când `__VERCEL_ENV__` e
   `'production'`. Nu `import.meta.env.PROD`: acela e adevărat și sub `vite preview`, unde rulează
   testele e2e și unde `/_vercel/insights/*` nu există — scriptul ar da 404 la fiecare rulare,
   fix motivul pentru care blocurile de `<script>` au fost scoase din shell-uri în august. Mediul

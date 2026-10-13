@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type NetworkFixture } from '../support/playwright';
+import { rpcResponse } from '../support/responses';
+import { publicStats } from '../support/builders/public';
 import type { Page } from '@playwright/test';
 import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 
@@ -16,17 +18,14 @@ import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
  * păzesc, ca reparația să nu fie desfăcută din greșeală.
  */
 
-const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
-const EMPTY = { count: 0, participants: [], waitlist: 0 };
+const EMPTY = publicStats();
 
 /** Tokenii de brand, în forma în care îi raportează `getComputedStyle`. */
 const SURFACE = 'rgb(26, 29, 23)'; //  --e3-surface #1A1D17
 const BORDER = 'rgb(42, 46, 37)'; //   --e3-border  #2A2E25
 
-const mockStats = (page: Page, body: unknown) =>
-  page.route(STATS_ROUTE, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
-  );
+const mockStats = (network: NetworkFixture, body: unknown) =>
+  network.use(rpcResponse('public_stats', body));
 
 /** `scaleX` din matricea de transform a unui element (0 dacă n-are transform). */
 const scaleX = (page: Page, selector: string) =>
@@ -110,13 +109,13 @@ const scrollTo = async (page: Page, y: number) => {
   );
 };
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, network }) => {
   await page.addInitScript(() => {
     const base = new Date('2026-08-06T10:00:00+03:00').getTime();
     const start = performance.now();
     Date.now = () => base + (performance.now() - start);
   });
-  await mockStats(page, EMPTY);
+  mockStats(network, EMPTY);
 });
 
 test.describe('Mișcare — efecte legate de scroll', () => {
@@ -204,8 +203,8 @@ test.describe('Mișcare — reduced motion', () => {
     }
   });
 
-  test('fără mișcare: contorul ajunge la valoarea finală', async ({ page }) => {
-    await mockStats(page, { count: 7, participants: [], waitlist: 0 });
+  test('fără mișcare: contorul ajunge la valoarea finală', async ({ page, network }) => {
+    mockStats(network, { count: 7, participants: [], waitlist: 0 });
     await page.goto('/?preview=landing');
     await settle(page);
     // Garda din useCountUp scurtcircuitează rAF-ul. Testul păzește faptul că
@@ -217,9 +216,7 @@ test.describe('Mișcare — reduced motion', () => {
     });
   });
 
-  test('Covers AE4. fără mișcare: banda de sosire și panoul exploratorului stau pe loc', async ({
-    page,
-  }) => {
+  test('Covers AE4. fără mișcare: banda de sosire și panoul exploratorului stau pe loc', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
     await expect(page.locator("#inscriere [data-css~=\"e3-finish-band\"]")).toHaveCSS('animation-name', 'none');
@@ -330,9 +327,7 @@ test.describe('Mișcare — titlul din hero', () => {
 
   // KTD7: primul ecran nu așteaptă animațiile. Titlul e posibilul element LCP,
   // deci nu pornește niciodată de la opacitate zero și nici complet mascat.
-  test('titlul are formă din primul cadru: fără opacitate zero, jumătate de literă vizibilă', async ({
-    page,
-  }) => {
+  test('titlul are formă din primul cadru: fără opacitate zero, jumătate de literă vizibilă', async ({ page }) => {
     await page.goto('/?preview=landing');
     const start = await page.evaluate(() =>
       Array.from(document.querySelectorAll<HTMLElement>("[data-css~=\"e3-hero-title\"], [data-css~=\"e3-word\"]")).map((el) => {

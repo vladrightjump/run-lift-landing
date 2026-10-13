@@ -36,3 +36,5 @@
   .e3-root * { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) {
   .e3-spot::before { display: none; } }
+
+.e3-root [data-reveal] { will-change: opacity, transform; }

@@ -41,7 +41,7 @@ vi.mock('../data/api', async (importOriginal) => ({
   fetchPublicConfig: vi.fn().mockResolvedValue(null),
 }));
 vi.mock('../../../shared/lib/mySignups', () => ({ rememberMySignup, getMySignups: () => [], maskName: (s: string) => s }));
-vi.mock('../../../lib/monitoring', () => ({
+vi.mock('../../../shared/lib/monitoring', () => ({
   logClientError,
   setMonitoringEdition: vi.fn(),
 }));

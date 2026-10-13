@@ -1,3 +1,5 @@
+// Controalele adminului suprascriu primitivele publice cu aceeași specificitate.
+import '../../../shared/ui/PublicForm.module.css';
 import styles from './RadacinaAdmin.module.css';
 import { useEffect, type ReactNode } from 'react';
 

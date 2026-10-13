@@ -1,5 +1,6 @@
-import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import { test, expect, type NetworkFixture } from '../support/playwright';
+import { rpcResponse } from '../support/responses';
+import { publicStats } from '../support/builders/public';
 
 /**
  * Navigarea între pagini — în special tabul „Despre noi" din antet, prezent
@@ -15,9 +16,7 @@ import type { Page } from '@playwright/test';
  * ceea ce schimbă numele accesibil), ci de href și de clasă.
  */
 
-const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
-const CONFIG_ROUTE = '**/rest/v1/rpc/public_config';
-const EMPTY = { count: 0, participants: [], waitlist: 0 };
+const EMPTY = publicStats();
 
 /**
  * Landing-ul cere statisticile ȘI configul publicat la montare — le mock-uim pe
@@ -29,14 +28,12 @@ const EMPTY = { count: 0, participants: [], waitlist: 0 };
  * din antet — clicul cade pe elementul vechi, ancora navighează, iar dialogul
  * nu se mai deschide. Mock-uit, momentul e determinist.
  */
-const mockStats = (page: Page) =>
-  Promise.all([
-    page.route(STATS_ROUTE, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY) })
-    ),
+const mockStats = (network: NetworkFixture) =>
+  network.use(
+    rpcResponse('public_stats', EMPTY),
     // Fără corp: clientul păstrează instantaneul de build, deci nicio re-randare.
-    page.route(CONFIG_ROUTE, (route) => route.abort()),
-  ]);
+    rpcResponse('public_config', null, { networkError: true }),
+  );
 
 test.describe('Tabul „Despre noi" — Coming Soon', () => {
   test('e prezent în antet și trimite către /despre-noi', async ({ page }) => {
@@ -53,9 +50,7 @@ test.describe('Tabul „Despre noi" — Coming Soon', () => {
     await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
   });
 
-  test('rămâne vizibil pe mobil (375px), fără să fie tăiat de marginea paginii', async ({
-    page,
-  }) => {
+  test('rămâne vizibil pe mobil (375px), fără să fie tăiat de marginea paginii', async ({ page }) => {
     // `.cs-root` are `overflow: hidden`, deci un antet prea lat NU produce
     // scroll orizontal — se taie în tăcere. Verificăm direct că tabul încape
     // în viewport, altfel testul obișnuit de overflow ar trece degeaba.
@@ -72,8 +67,8 @@ test.describe('Tabul „Despre noi" — Coming Soon', () => {
 });
 
 test.describe('Tabul „Despre noi" — landing', () => {
-  test.beforeEach(async ({ page }) => {
-    await mockStats(page);
+  test.beforeEach(async ({ network }) => {
+    mockStats(network);
   });
 
   test('e prezent în antet și trimite către /despre-noi', async ({ page }) => {
@@ -112,8 +107,8 @@ test.describe('Tabul „Despre noi" — landing', () => {
 });
 
 test.describe('Drumul dus-întors', () => {
-  test('Despre noi → înapoi la eveniment („/")', async ({ page }) => {
-    await mockStats(page);
+  test('Despre noi → înapoi la eveniment („/")', async ({ page, network }) => {
+    mockStats(network);
     await page.goto('/despre-noi');
     await page.locator("[data-css~=\"dn-footer\"] a[href=\"/\"]").click();
     await expect(page).toHaveURL(/\/$/);
@@ -125,16 +120,16 @@ test.describe('Drumul dus-întors', () => {
     await expect(page.locator("[data-css~=\"cs-root\"], [data-css~=\"e3-root\"]").first()).toBeVisible();
   });
 
-  test('logoul din antetul Despre noi duce la pagina principală', async ({ page }) => {
-    await mockStats(page);
+  test('logoul din antetul Despre noi duce la pagina principală', async ({ page, network }) => {
+    mockStats(network);
     await page.goto('/despre-noi');
     await page.locator("a[data-css~=\"dn-logo\"]").click();
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test('toate rutele publice răspund fără eroare la acces direct', async ({ page }) => {
+  test('toate rutele publice răspund fără eroare la acces direct', async ({ page, network }) => {
     // Simulează refresh/deschidere directă — cazul care cere rewrite pe Vercel.
-    await mockStats(page);
+    mockStats(network);
     for (const ruta of ['/', '/despre-noi', '/confirmare']) {
       const res = await page.goto(ruta);
       expect(res?.status(), `Ruta ${ruta} a răspuns cu eroare`).toBeLessThan(400);

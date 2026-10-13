@@ -22,7 +22,7 @@ const injectMock = vi.hoisted(() => vi.fn());
 vi.mock('@vercel/analytics', () => ({ inject: injectMock }));
 
 const { curataEveniment, pornesteAnalitice, reseteazaAnaliticePentruTeste } = await import(
-  '../../src/lib/analytics'
+  './analytics'
 );
 
 beforeEach(() => {

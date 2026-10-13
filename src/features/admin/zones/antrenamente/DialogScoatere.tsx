@@ -1,3 +1,5 @@
+import adminStyles from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import sharedSala from './SalaStyles.module.css';
 import { useState } from 'react';
 import { scoateDinGrup, type SalaComanda, type SalaMembru } from './api';
@@ -26,11 +28,11 @@ const DialogScoatere = ({ membru, ocupat, onConfirma, onInchide }: PropsDialog) 
       Rezultatul apare după executare. Istoricul și starea la antrenamente rămân.
       Persoana va putea fi invitată din nou.
     </p>
-    <div className="admin-table-actions">
-      <button type="button" className="admin-btn-ghost" onClick={onInchide}>
+    <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+      <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={onInchide}>
         Nu-l scoate
       </button>
-      <button type="button" className="admin-btn-accent" disabled={ocupat} onClick={onConfirma}>
+      <button type="button" className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent" disabled={ocupat} onClick={onConfirma}>
         Scoate din grup
       </button>
     </div>
@@ -83,7 +85,7 @@ export const ScoateDinGrup = ({ membru: m, ultimaScoatere, ocupat, fa }: Props) 
     <>
       <button
         type="button"
-        className="admin-btn-ghost"
+        className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
         disabled={ocupat || motiv !== null}
         title={motiv ?? undefined}
         aria-label={

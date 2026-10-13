@@ -2,10 +2,10 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { useState } from 'react';
-import { Suprapunere, pozitiePopover } from '../../src/shared/ui/Suprapunere';
-import { MeniuActiuni } from '../../src/admin/controale/MeniuActiuni';
-import { Toast, useToast } from '../../src/admin/controale/Toast';
-import { GrupRadio } from '../../src/shared/ui/GrupRadio';
+import { Suprapunere, pozitiePopover } from './Suprapunere';
+import { MeniuActiuni } from './MeniuActiuni';
+import { Toast, useToast } from './ToastAdmin';
+import { GrupRadio } from './GrupRadio';
 
 /**
  * Suprapunerea comună (U2, KTD5): popover, foaie de jos, panou, dialog.

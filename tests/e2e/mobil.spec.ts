@@ -1,5 +1,7 @@
-import { test, expect } from '@playwright/test';
-import type { Page, Route } from '@playwright/test';
+import { test, expect, type NetworkFixture } from '../support/playwright';
+import { rpcResponse } from '../support/responses';
+import { publicStats } from '../support/builders/public';
+import type { Page } from '@playwright/test';
 
 /**
  * Confortul pe telefon, pentru ambele intrări în formular (linkul direct și
@@ -23,14 +25,8 @@ const fixClock = (page: Page) =>
     Date.now = () => fixed;
   });
 
-const mockStats = (page: Page) =>
-  page.route('**/rest/v1/rpc/public_stats', (route: Route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ count: 0, participants: [], waitlist: 0 }),
-    })
-  );
+const mockStats = (network: NetworkFixture) =>
+  network.use(rpcResponse('public_stats', publicStats()));
 
 const INTRARI = [
   { nume: 'linkul direct /inscriere', url: '/inscriere' },
@@ -38,9 +34,9 @@ const INTRARI = [
 ] as const;
 
 for (const { nume, url } of INTRARI) {
-  test(`${nume}: niciun câmp sub ${MIN_FONT_PX}px, deci fără zoom la focus`, async ({ page }) => {
+  test(`${nume}: niciun câmp sub ${MIN_FONT_PX}px, deci fără zoom la focus`, async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page);
+    mockStats(network);
     await page.goto(url);
 
     await expect(page.locator('form input:not([type=hidden]):not([type=checkbox])').first()).toBeVisible();
@@ -62,9 +58,9 @@ for (const { nume, url } of INTRARI) {
     }
   });
 
-  test(`${nume}: fără scroll orizontal la ${IPHONE.width}px`, async ({ page }) => {
+  test(`${nume}: fără scroll orizontal la ${IPHONE.width}px`, async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page);
+    mockStats(network);
     await page.goto(url);
 
     await expect(page.locator('form input:not([type=hidden]):not([type=checkbox])').first()).toBeVisible();

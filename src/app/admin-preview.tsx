@@ -12,15 +12,16 @@
  * Se deschide cu `npm run dev` → /admin-preview.html
  */
 import { StrictMode } from 'react';
-import { AppProviders } from './app/providers';
+import { AppProviders } from './providers';
 import { createRoot } from 'react-dom/client';
 // Ca în producție, unde `app/main.tsx` importă foaia globală.
-import './index.css';
-import { loadAdminPreview, RadacinaAdmin } from './features/admin';
+import '../shared/styles/tokens.css';
+import '../shared/styles/base.css';
+import { loadAdminPreview, RadacinaAdmin } from '../features/admin/index';
 const { AdminDashboard } = await loadAdminPreview();
 import { setupWorker } from 'msw/browser';
-import { browserAssets, createHandlers } from '../tests/support/handlers';
-import { adminPreviewData } from '../tests/support/builders/preview';
+import { browserAssets, createHandlers } from '../../tests/support/handlers';
+import { adminPreviewData } from '../../tests/support/builders/preview';
 
 const worker = setupWorker(...createHandlers(adminPreviewData(), 120), browserAssets);
 await worker.start({ onUnhandledFrame: 'error', quiet: true });

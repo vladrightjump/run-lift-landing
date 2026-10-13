@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { maskName, getMySignups, rememberMySignup } from '../../src/shared/lib/mySignups';
+import { maskName, getMySignups, rememberMySignup } from './mySignups';
 
 /**
  * `mySignups` reține local înscrierile de pe acest dispozitiv, doar pentru

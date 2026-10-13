@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { fetchStats } from '../data/api';
 import { isAbortError } from '../../../shared/lib/errors';
-import { logClientError } from '../../../lib/monitoring';
+import { logClientError } from '../../../shared/lib/monitoring';
 import { usePublicQuery } from '../../../shared/lib/usePublicQuery';
 
 /** Datele rămân null până la primul succes; eșecul păstrează ultima valoare. */

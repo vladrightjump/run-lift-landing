@@ -28,7 +28,7 @@ vi.mock('./publicConfig', () => ({
   fetchPublicConfig,
   isAbortError: (e: unknown) => e instanceof DOMException && e.name === 'AbortError',
 }));
-vi.mock('../../lib/monitoring', () => ({ setMonitoringEdition, logClientError }));
+vi.mock('./monitoring', () => ({ setMonitoringEdition, logClientError }));
 vi.mock('../../features/admin/zones/evenimente/api', () => ({
   getStoredToken: () => null,
   listEventConfig: vi.fn(),

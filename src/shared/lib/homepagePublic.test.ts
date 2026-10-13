@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { server } from '../../../tests/support/vitest.setup';
+import { rpcResponse } from '../../../tests/support/responses';
+import { publicHomepage } from '../../../tests/support/builders/public';
 import {
   HOMEPAGE_IMPLICIT,
   loadPublicHomepage,
@@ -46,14 +49,12 @@ describe('parseHomepage', () => {
 });
 
 describe('loadPublicHomepage', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   it('cheamă public_homepage și întoarce forma citită', async () => {
-    const fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ trial_first: true, training_location: 'Sala X' }), { status: 200 })
-    );
-    vi.stubGlobal('fetch', fetch);
+    const requests: Request[] = [];
+    server.use(rpcResponse('public_homepage', publicHomepage({ trial_first: true, training_location: 'Sala X' }), {
+      onRequest: (request) => { requests.push(request); },
+    }));
     await expect(loadPublicHomepage()).resolves.toEqual({ trialFirst: true, trainingLocation: 'Sala X' });
-    expect(String(fetch.mock.calls[0][0])).toMatch(/\/rest\/v1\/rpc\/public_homepage$/);
+    expect(requests[0].url).toMatch(/\/rest\/v1\/rpc\/public_homepage$/);
   });
 });

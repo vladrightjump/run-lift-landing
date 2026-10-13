@@ -1,9 +1,10 @@
 import shared1 from './EvenimenteStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
 import styles from './AdminDeliveryTab.module.css';
 import { useAdminResource } from '../../data/useAdminResource';
 import { useAdminMutation } from '../../data/useAdminMutation';
 import { useMemo, useState } from 'react';
-import { toCsv } from '../../../../lib/csv';
+import { toCsv } from '../../../../shared/lib/csv';
 import { sendBulkEmail, listEmailTemplates, replayEmail, InvalidTokenError } from './api';
 import type { AdminEmailLogEntry, AdminRegistration, ReplayRefuz } from './api';
 import { normalizeParticipant, fillTemplate } from './emailAudience';
@@ -298,32 +299,32 @@ export const AdminDeliveryTab = ({
   };
 
   return (
-    <section className="admin-table-section" data-css="admin-table-section">
-      <div className="admin-stats" data-css="admin-stats">
-        <div className="admin-stat" data-css="admin-stat">
-          <span className="admin-stat-label" data-css="admin-stat-label">Emailuri trimise</span>
-          <span className="admin-stat-value accent" data-css="admin-stat-value accent">{nrTrimise}</span>
+    <section className={adminStyles['admin-table-section']} data-css="admin-table-section">
+      <div className={adminStyles['admin-stats']} data-css="admin-stats">
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Emailuri trimise</span>
+          <span className={`${adminStyles['admin-stat-value']} ${adminStyles['accent']}`} data-css="admin-stat-value accent">{nrTrimise}</span>
         </div>
-        <div className="admin-stat" data-css="admin-stat">
-          <span className="admin-stat-label" data-css="admin-stat-label">Nelivrate acum</span>
-          <span className={`admin-stat-value${nelivrate.length > 0 ? ' low' : ''}`} data-css={`admin-stat-value${nelivrate.length > 0 ? ' low' : ''}`}>
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Nelivrate acum</span>
+          <span className={`${adminStyles['admin-stat-value']}${nelivrate.length > 0 ? ' low' : ''}`} data-css={`admin-stat-value${nelivrate.length > 0 ? ' low' : ''}`}>
             {nelivrate.length}
           </span>
         </div>
-        <div className="admin-stat" data-css="admin-stat">
-          <span className="admin-stat-label" data-css="admin-stat-label">Adrese atinse</span>
-          <span className="admin-stat-value" data-css="admin-stat-value">{destinatari}</span>
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Adrese atinse</span>
+          <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value">{destinatari}</span>
         </div>
-        <div className="admin-stat" data-css="admin-stat">
-          <span className="admin-stat-label" data-css="admin-stat-label">Participanți fără niciun email</span>
-          <span className={`admin-stat-value${fataDeEmail.length > 0 ? ' low' : ''}`} data-css={`admin-stat-value${fataDeEmail.length > 0 ? ' low' : ''}`}>
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Participanți fără niciun email</span>
+          <span className={`${adminStyles['admin-stat-value']}${fataDeEmail.length > 0 ? ' low' : ''}`} data-css={`admin-stat-value${fataDeEmail.length > 0 ? ' low' : ''}`}>
             {fataDeEmail.length}
           </span>
         </div>
       </div>
 
       <section className={styles['admin-acoperire']} data-css="admin-acoperire">
-        <div className="admin-table-head" data-css="admin-table-head">
+        <div className={adminStyles['admin-table-head']} data-css="admin-table-head">
           <h3>Fișa de acoperire</h3>
           <p className={styles['admin-hint']} data-css="admin-hint">
             Cine n-a primit ce. Rândurile sunt participanții ediției, coloanele sunt comunicările
@@ -331,9 +332,9 @@ export const AdminDeliveryTab = ({
             alt tip.
           </p>
         </div>
-        <div className="admin-table-wrap" data-css="admin-table-wrap">
-          <div className={'admin-table ' + styles['admin-acoperire-table']} data-css="admin-table admin-acoperire-table">
-            <div className={'admin-row ' + shared1['admin-row-head']} data-css="admin-row admin-row-head">
+        <div className={adminStyles['admin-table-wrap']} data-css="admin-table-wrap">
+          <div className={`${adminStyles['admin-table']} ` + styles['admin-acoperire-table']} data-css="admin-table admin-acoperire-table">
+            <div className={`${adminStyles['admin-row']} ` + shared1['admin-row-head']} data-css="admin-row admin-row-head">
               <span>Persoană</span>
               {COMUNICARI_EDITIE.map((c) => (
                 <span key={c.cheie}>{c.eticheta}</span>
@@ -343,8 +344,8 @@ export const AdminDeliveryTab = ({
               <div className={shared1['admin-empty']} data-css="admin-empty">Nu sunt participanți pe ediția asta.</div>
             )}
             {randuriAcoperire.map(({ participant, celule }) => (
-              <div key={participant.id} className="admin-row" data-css="admin-row">
-                <span className="admin-cell-name" data-css="admin-cell-name">{participant.nume}</span>
+              <div key={participant.id} className={adminStyles['admin-row']} data-css="admin-row">
+                <span className={adminStyles['admin-cell-name']} data-css="admin-cell-name">{participant.nume}</span>
                 {COMUNICARI_EDITIE.map((c) => {
                   const stare = celule[c.cheie] ?? 'lipsa';
                   return (
@@ -385,7 +386,7 @@ export const AdminDeliveryTab = ({
       </div>
 
       {!readOnly && nerezolvabile > 0 && (
-        <div className="admin-banner" data-css="admin-banner" role="status">
+        <div className={adminStyles['admin-banner']} data-css="admin-banner" role="status">
           <strong>
             {nerezolvabile}{' '}
             {nerezolvabile === 1 ? 'email nelivrat nu se poate' : 'emailuri nelivrate nu se pot'}{' '}
@@ -398,9 +399,9 @@ export const AdminDeliveryTab = ({
         </div>
       )}
 
-      <div className="admin-table-head" data-css="admin-table-head">
+      <div className={adminStyles['admin-table-head']} data-css="admin-table-head">
         <h2>Livrare emailuri · ediția {editie}</h2>
-        <div className="admin-table-actions" data-css="admin-table-actions">
+        <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
           <input
             type="text"
             className={shared1['admin-search']} data-css="admin-search"
@@ -418,16 +419,16 @@ export const AdminDeliveryTab = ({
               {retrimit ? 'Se retrimite…' : `Retrimite nelivratele (${retrimisibile.length})`}
             </button>
           )}
-          <button type="button" className="admin-btn-accent" data-css="admin-btn-accent" onClick={exportCsv}>
+          <button type="button" className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent" onClick={exportCsv}>
             Export CSV
           </button>
         </div>
       </div>
 
       {filtru === 'fara-email' ? (
-        <div className="admin-table-wrap" data-css="admin-table-wrap">
-          <div className={'admin-table ' + shared1['admin-wait']} data-css="admin-table admin-wait">
-            <div className={'admin-row ' + shared1['admin-row-head']} data-css="admin-row admin-row-head">
+        <div className={adminStyles['admin-table-wrap']} data-css="admin-table-wrap">
+          <div className={`${adminStyles['admin-table']} ` + shared1['admin-wait']} data-css="admin-table admin-wait">
+            <div className={`${adminStyles['admin-row']} ` + shared1['admin-row-head']} data-css="admin-row admin-row-head">
               <span>#</span>
               <span>Nume</span>
               <span>Telefon</span>
@@ -436,16 +437,16 @@ export const AdminDeliveryTab = ({
               <span className="right">Status</span>
             </div>
             {fataDeEmail.map((p, i) => (
-              <div key={p.id} className="admin-row" data-css="admin-row">
+              <div key={p.id} className={adminStyles['admin-row']} data-css="admin-row">
                 <span className={shared1['admin-cell-nr']} data-css="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
-                <span className="admin-cell-name" data-css="admin-cell-name">{p.nume}</span>
+                <span className={adminStyles['admin-cell-name']} data-css="admin-cell-name">{p.nume}</span>
                 <a className={shared1['admin-cell-link']} data-css="admin-cell-link" href={`tel:${p.telefon}`}>
                   {p.telefon}
                 </a>
                 <a className={shared1['admin-cell-link'] + ' ellipsis'} data-css="admin-cell-link ellipsis" href={`mailto:${p.email}`}>
                   {p.email}
                 </a>
-                <span className="admin-cell-date" data-css="admin-cell-date">
+                <span className={adminStyles['admin-cell-date']} data-css="admin-cell-date">
                   {new Date(p.created_at).toLocaleDateString('ro-RO')}
                 </span>
                 <span className={shared1['admin-cell-actions']} data-css="admin-cell-actions">
@@ -473,9 +474,9 @@ export const AdminDeliveryTab = ({
           </div>
         </div>
       ) : (
-        <div className="admin-table-wrap" data-css="admin-table-wrap">
-          <div className={'admin-table ' + styles['admin-livrare']} data-css="admin-table admin-livrare">
-            <div className={'admin-row ' + shared1['admin-row-head']} data-css="admin-row admin-row-head">
+        <div className={adminStyles['admin-table-wrap']} data-css="admin-table-wrap">
+          <div className={`${adminStyles['admin-table']} ` + styles['admin-livrare']} data-css="admin-table admin-livrare">
+            <div className={`${adminStyles['admin-row']} ` + shared1['admin-row-head']} data-css="admin-row admin-row-head">
               <span>Când</span>
               <span>Destinatar</span>
               <span>Tip</span>
@@ -485,7 +486,7 @@ export const AdminDeliveryTab = ({
             {filtrate.map((e) => (
               <div
                 key={e.id}
-                className={`admin-row ${styles['admin-livrare-row']}${e.status === 'esuat' ? ' esuat' : ''}${
+                className={`${adminStyles['admin-row']} ${styles['admin-livrare-row']}${e.status === 'esuat' ? ' esuat' : ''}${
                   deschis === e.id ? ' deschis' : ''
                 }`} data-css={`admin-row admin-livrare-row${e.status === 'esuat' ? ' esuat' : ''}${
                   deschis === e.id ? ' deschis' : ''
@@ -497,12 +498,12 @@ export const AdminDeliveryTab = ({
                   onClick={() => setDeschis(deschis === e.id ? null : e.id)}
                   title={e.status === 'esuat' ? 'Vezi motivul eșecului' : 'Vezi textul trimis'}
                 >
-                  <span className="admin-cell-date" data-css="admin-cell-date">{ziLunaOra(e.created_at)}</span>
-                  <span className="admin-cell-name" data-css="admin-cell-name">
+                  <span className={adminStyles['admin-cell-date']} data-css="admin-cell-date">{ziLunaOra(e.created_at)}</span>
+                  <span className={adminStyles['admin-cell-name']} data-css="admin-cell-name">
                     {e.nume || e.email}
                     {e.nume && <span className={styles['admin-livrare-email']} data-css="admin-livrare-email">{e.email}</span>}
                   </span>
-                  <span className="admin-cell-date" data-css="admin-cell-date">{MOD_LABELS[e.mod] ?? e.mod}</span>
+                  <span className={adminStyles['admin-cell-date']} data-css="admin-cell-date">{MOD_LABELS[e.mod] ?? e.mod}</span>
                   <span className={styles['admin-cell-subject'] + ' ellipsis'} data-css="admin-cell-subject ellipsis">{e.subiect}</span>
                   <span className="right">
                     <span className={`${shared1['admin-mail-badge']} ${e.status}`} data-css={`admin-mail-badge ${e.status}`}>

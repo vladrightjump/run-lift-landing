@@ -1,4 +1,5 @@
 import shared1 from './EvenimenteStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
 import styles from './AdminSkeleton.module.css';
 type Props = {
   /** Câte coloane are tabelul-gazdă (grila vine din `.admin-row`). */
@@ -28,7 +29,7 @@ export const AdminSkeleton = ({ cols, rows = 5 }: Props) => (
   <div role="status" aria-busy="true">
     <span className={styles['admin-sr']} data-css="admin-sr">Se încarcă…</span>
     {Array.from({ length: rows }, (_, r) => (
-      <div key={r} className="admin-row" data-css="admin-row" aria-hidden="true">
+      <div key={r} className={adminStyles['admin-row']} data-css="admin-row" aria-hidden="true">
         {Array.from({ length: cols }, (_column, c) => (
           // Lățimi inegale, altfel șirul de bare arată a grilă, nu a date.
           <span key={c} className={styles['admin-skel']} data-css="admin-skel" style={{ width: `${52 + ((r + c) % 4) * 14}%` }} />

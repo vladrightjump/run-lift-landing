@@ -1,7 +1,9 @@
 import shared1 from './EvenimenteStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './AdminLaunchTab.module.css';
 import { useState } from 'react';
-import { toCsv } from '../../../../lib/csv';
+import { toCsv } from '../../../../shared/lib/csv';
 import { listLaunchNotifications } from './api';
 import { useEventConfig } from '../../../../shared/lib/useEventConfig';
 import { useAdminResource } from '../../data/useAdminResource';
@@ -58,36 +60,36 @@ export const AdminLaunchTab = () => {
   };
 
   return (
-    <section className={`admin-table-section${showAllEditions ? ' show-editions' : ''}`} data-css={`admin-table-section${showAllEditions ? ' show-editions' : ''}`}>
-      <div className="admin-stats" data-css="admin-stats">
-        <div className="admin-stat" data-css="admin-stat">
-          <span className="admin-stat-label" data-css="admin-stat-label">
+    <section className={`${adminStyles['admin-table-section']}${showAllEditions ? ' show-editions' : ''}`} data-css={`admin-table-section${showAllEditions ? ' show-editions' : ''}`}>
+      <div className={adminStyles['admin-stats']} data-css="admin-stats">
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">
             {showAllEditions
               ? 'Înscriși la notificare · toate edițiile'
               : `Înscriși la notificare · ediția ${CURRENT_LAUNCH_EDITION}`}
           </span>
-          <span className="admin-stat-value accent" data-css="admin-stat-value accent" key={dupaSursa.length}>
+          <span className={`${adminStyles['admin-stat-value']} ${adminStyles['accent']}`} data-css="admin-stat-value accent" key={dupaSursa.length}>
             {dupaSursa.length}
           </span>
         </div>
-        <div className="admin-stat" data-css="admin-stat">
-          <span className="admin-stat-label" data-css="admin-stat-label">De la „Anunță-mă”</span>
-          <span className="admin-stat-value" data-css="admin-stat-value">{nrLansare}</span>
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">De la „Anunță-mă”</span>
+          <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value">{nrLansare}</span>
         </div>
-        <div className="admin-stat" data-css="admin-stat">
-          <span className="admin-stat-label" data-css="admin-stat-label">De la „Află mai multe”</span>
-          <span className="admin-stat-value" data-css="admin-stat-value">{nrDespreNoi}</span>
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">De la „Află mai multe”</span>
+          <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value">{nrDespreNoi}</span>
         </div>
-        <div className="admin-stat" data-css="admin-stat">
-          <span className="admin-stat-label" data-css="admin-stat-label">Confirmați (primesc emailuri)</span>
-          <span className="admin-stat-value accent" data-css="admin-stat-value accent">
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Confirmați (primesc emailuri)</span>
+          <span className={`${adminStyles['admin-stat-value']} ${adminStyles['accent']}`} data-css="admin-stat-value accent">
             {dupaSursa.filter((r) => r.confirmat_la).length}
           </span>
         </div>
         {previous > 0 && (
-          <div className="admin-stat" data-css="admin-stat">
-            <span className="admin-stat-label" data-css="admin-stat-label">Ediții anterioare</span>
-            <span className="admin-stat-value" data-css="admin-stat-value">{previous}</span>
+          <div className={adminStyles['admin-stat']} data-css="admin-stat">
+            <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Ediții anterioare</span>
+            <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value">{previous}</span>
           </div>
         )}
       </div>
@@ -103,7 +105,7 @@ export const AdminLaunchTab = () => {
           <button
             key={val}
             type="button"
-            className={`admin-sursa-tab${sursa === val ? ' activ' : ''}`} data-css={`admin-sursa-tab${sursa === val ? ' activ' : ''}`}
+            className={`${adminStyles['admin-sursa-tab']}${sursa === val ? ' activ' : ''}`} data-css={`admin-sursa-tab${sursa === val ? ' activ' : ''}`}
             onClick={() => setSursa(val)}
           >
             {eticheta}
@@ -111,13 +113,13 @@ export const AdminLaunchTab = () => {
         ))}
       </div>
 
-      <div className="admin-table-head" data-css="admin-table-head">
+      <div className={adminStyles['admin-table-head']} data-css="admin-table-head">
         <h2>Anunță-mă la lansare</h2>
-        <div className="admin-table-actions" data-css="admin-table-actions">
+        <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
           {previous > 0 && (
             <button
               type="button"
-              className="admin-btn-ghost" data-css="admin-btn-ghost"
+              className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
               onClick={() => setShowAllEditions((v) => !v)}
             >
               {showAllEditions
@@ -132,15 +134,15 @@ export const AdminLaunchTab = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button type="button" className="admin-btn-accent" data-css="admin-btn-accent" onClick={exportCsv}>
+          <button type="button" className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent" onClick={exportCsv}>
             Export CSV
           </button>
         </div>
       </div>
 
-      <div className="admin-table-wrap" data-css="admin-table-wrap">
-        <div className="admin-table" data-css="admin-table">
-          <div className={'admin-row ' + shared1['admin-row-head']} data-css="admin-row admin-row-head">
+      <div className={adminStyles['admin-table-wrap']} data-css="admin-table-wrap">
+        <div className={adminStyles['admin-table']} data-css="admin-table">
+          <div className={`${adminStyles['admin-row']} ` + shared1['admin-row-head']} data-css="admin-row admin-row-head">
             <span>#</span>
             <span>Nume</span>
             <span>Prenume</span>
@@ -151,17 +153,17 @@ export const AdminLaunchTab = () => {
             {showAllEditions && <span>Ed.</span>}
           </div>
           {filtered.map((r, i) => (
-            <div key={r.id} className="admin-row" data-css="admin-row">
+            <div key={r.id} className={adminStyles['admin-row']} data-css="admin-row">
               <span className={shared1['admin-cell-nr']} data-css="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
-              <span className="admin-cell-name" data-css="admin-cell-name">{r.nume}</span>
-              <span className="admin-cell-name" data-css="admin-cell-name">{r.prenume}</span>
+              <span className={adminStyles['admin-cell-name']} data-css="admin-cell-name">{r.nume}</span>
+              <span className={adminStyles['admin-cell-name']} data-css="admin-cell-name">{r.prenume}</span>
               <a className={shared1['admin-cell-link']} data-css="admin-cell-link" href={`tel:${r.telefon}`}>
                 {r.telefon}
               </a>
               <a className={shared1['admin-cell-link'] + ' ellipsis'} data-css="admin-cell-link ellipsis" href={`mailto:${r.email}`}>
                 {r.email}
               </a>
-              <span className="admin-cell-date" data-css="admin-cell-date">{ziSiLuna(r.created_at)}</span>
+              <span className={adminStyles['admin-cell-date']} data-css="admin-cell-date">{ziSiLuna(r.created_at)}</span>
               <span
                 className={`${styles['admin-conf']}${r.confirmat_la ? ' da' : ''}`} data-css={`admin-conf${r.confirmat_la ? ' da' : ''}`}
                 title={
@@ -172,7 +174,7 @@ export const AdminLaunchTab = () => {
               >
                 {r.confirmat_la ? '✓' : '—'}
               </span>
-              {showAllEditions && <span className="admin-cell-date" data-css="admin-cell-date">{r.editie}</span>}
+              {showAllEditions && <span className={adminStyles['admin-cell-date']} data-css="admin-cell-date">{r.editie}</span>}
             </div>
           ))}
           {rows === null && !loadError && <div className={shared1['admin-empty']} data-css="admin-empty">Se încarcă…</div>}

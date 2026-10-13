@@ -6,7 +6,7 @@ import { confirmSignup } from '../../src/features/confirmare/data/api';
 import { HttpResponse } from 'msw';
 import { server, withExpectedUnhandledRequest } from '../support/vitest.setup';
 import { functionHandler, responseHandler } from '../support/handlers';
-import { SUPABASE } from '../../src/lib/backend';
+import { SUPABASE } from '../../src/shared/lib/backend';
 import type { AntiBot } from '../../src/features/inscriere/data/api';
 
 const draft = {

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { fetchTrainingReels, type Reel } from '../data/api';
 import { isAbortError } from '../../../shared/lib/errors';
-import { logClientError } from '../../../lib/monitoring';
+import { logClientError } from '../../../shared/lib/monitoring';
 import { usePublicQuery } from '../../../shared/lib/usePublicQuery';
 
 /** O singură încărcare pe montare; lipsa serviciului ascunde banda. */

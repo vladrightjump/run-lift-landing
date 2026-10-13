@@ -1,3 +1,4 @@
+import controlStyles from './ControlStyles.module.css';
 import styles from './GrupRadio.module.css';
 import { useId } from 'react';
 
@@ -36,8 +37,8 @@ export const GrupRadio = <T extends string>({
   const nume = useId();
 
   return (
-    <fieldset className={'admin-control ' + styles['admin-radio']} data-css={"admin-control admin-radio"} disabled={dezactivat}>
-      <legend className="admin-control-eticheta">{eticheta}</legend>
+    <fieldset className={`${controlStyles['admin-control']} ` + styles['admin-radio']} data-css={"admin-control admin-radio"} disabled={dezactivat}>
+      <legend className={controlStyles['admin-control-eticheta']} data-css="admin-control-eticheta">{eticheta}</legend>
 
       {optiuni.map((o) => {
         const id = `${nume}-${o.valoare}`;

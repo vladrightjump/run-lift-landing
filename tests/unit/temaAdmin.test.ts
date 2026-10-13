@@ -16,8 +16,6 @@ import { join, resolve } from 'node:path';
  * soare, la antrenament.
  */
 
-const css = readFileSync(resolve(__dirname, '../../src/index.css'), 'utf8');
-const MARCA = '/* ==== Admin backoffice (/admin) ==== */';
 // Suprapunerea și grupul radio din kitul comun se randează în rădăcina
 // adminului și îi citesc jetoanele, la fel ca modulele din `features/admin`.
 const dirAdmin = resolve(__dirname, '../../src/features/admin');
@@ -26,10 +24,12 @@ const moduleAdmin = (readdirSync(dirAdmin, { recursive: true }) as string[])
   .map((f) => join(dirAdmin, f));
 const kitAdmin = [
   resolve(__dirname, '../../src/shared/ui/Suprapunere.module.css'),
-  resolve(__dirname, '../../src/shared/ui/GrupRadio.module.css'),
+  ...['GrupRadio', 'ControlStyles', 'ListaDerulanta', 'MeniuActiuni', 'ToastAdmin', 'Icon'].map((nume) =>
+    resolve(__dirname, `../../src/shared/ui/${nume}.module.css`)
+  ),
   ...moduleAdmin,
 ].map((f) => readFileSync(f, 'utf8'));
-const admin = [css.slice(css.indexOf(MARCA)), ...kitAdmin].join('\n');
+const admin = kitAdmin.join('\n');
 
 const cssRadacina = readFileSync(join(dirAdmin, 'components/RadacinaAdmin.module.css'), 'utf8');
 const blocTema = /:global\(\.admin-pagina\),\s*\.admin-app\s*\{([^}]*)\}/.exec(cssRadacina)?.[1] ?? '';

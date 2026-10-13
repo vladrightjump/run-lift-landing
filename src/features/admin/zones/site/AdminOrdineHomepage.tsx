@@ -1,3 +1,4 @@
+import adminStyles from '../../components/AdminStyles.module.css';
 import { useEffect, useState } from 'react';
 import { setHomepageOrder } from './api';
 import { loadPublicHomepage } from '../../../../shared/lib/homepagePublic';
@@ -62,16 +63,16 @@ export const AdminOrdineHomepage = () => {
   };
 
   return (
-    <div className="admin-config-grup">
-      <p className="admin-config-hint">
+    <div className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
         Pe ecranul „Ne vedem curând", dintre ediții. Landing-ul unei ediții active nu se schimbă.
       </p>
       {eroare ? (
-        <p className="admin-config-hint" role="status">
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint" role="status">
           Ordinea nu se poate citi acum. Verifică migrarea bazei de date și reîncarcă pagina.
         </p>
       ) : salvat === null ? (
-        <p className="admin-config-hint" role="status">Se încarcă ordinea…</p>
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint" role="status">Se încarcă ordinea…</p>
       ) : (
         <GrupRadio
           eticheta="Ordinea pe ecranul dintre ediții"

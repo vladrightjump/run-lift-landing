@@ -1,3 +1,4 @@
+import adminStyles from '../../components/AdminStyles.module.css';
 import styles from './AdminRandAdaugare.module.css';
 type Ciorna = { nume: string; telefon: string; email: string };
 
@@ -62,7 +63,7 @@ export const AdminRandAdaugare = ({
         </label>
         <button
           type="button"
-          className="admin-btn-accent" data-css="admin-btn-accent"
+          className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
           onClick={onSalveaza}
           disabled={saving}
         >

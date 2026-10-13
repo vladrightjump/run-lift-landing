@@ -1,5 +1,7 @@
-import { test, expect } from '@playwright/test';
-import type { Page, Route } from '@playwright/test';
+import { test, expect, type NetworkFixture } from '../support/playwright';
+import { rpcResponse, functionReply, submitFormResponse, type FormEnvelope as Plic } from '../support/responses';
+import { publicStats } from '../support/builders/public';
+import type { Page } from '@playwright/test';
 import { EDITION } from '../../src/shared/content/edition';
 
 /**
@@ -9,30 +11,9 @@ import { EDITION } from '../../src/shared/content/edition';
  * în baza de date reală și nu trimit emailuri.
  */
 
-const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
 // Toate formularele trec acum prin aceeași funcție Edge, care verifică Turnstile
 // înainte de a scrie (browserul nu mai are voie să insereze direct în PostgREST).
 // Testele disting înscrierea de lista de așteptare după câmpul `mode` din plic.
-const SUBMIT_ROUTE = '**/functions/v1/submit-form';
-const EMAIL_ROUTE = '**/functions/v1/send-email';
-
-type Plic = { mode: string; token: string; hp: string; elapsed: number; data: Record<string, unknown> };
-
-/**
- * Interceptează `submit-form`. `handler` primește plicul decodat și decide
- * răspunsul; ce nu e tratat primește un 200 „ok".
- */
-const mockSubmit = (
-  page: Page,
-  handler: (plic: Plic, route: Route) => unknown | Promise<unknown>
-) =>
-  page.route(SUBMIT_ROUTE, async (route: Route) => {
-    const plic = route.request().postDataJSON() as Plic;
-    await handler(plic, route);
-  });
-
-const ok = (route: Route, body = '{"ok":true}') =>
-  route.fulfill({ status: 200, contentType: 'application/json', body });
 
 // Ora fixată înainte de start (8 august) ca formularul să fie mereu deschis,
 // indiferent când rulează testul.
@@ -45,19 +26,11 @@ const fixClock = (page: Page) =>
     void RealDate;
   });
 
-const mockStats = (page: Page, count: number, waitlist = 0) =>
-  page.route(STATS_ROUTE, (route: Route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ count, participants: [], waitlist }),
-    })
-  );
+const mockStats = (network: NetworkFixture, count: number, waitlist = 0) =>
+  network.use(rpcResponse('public_stats', publicStats({ count, waitlist })));
 
-const mockEmail = (page: Page) =>
-  page.route(EMAIL_ROUTE, (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{"sent":1}' })
-  );
+const mockEmail = (network: NetworkFixture) =>
+  network.use(functionReply('send-email', { sent: 1 }));
 
 const fillValid = async (page: Page) => {
   await page.getByPlaceholder('Popescu').fill('Filip');
@@ -71,9 +44,9 @@ const fillValid = async (page: Page) => {
 const submitBtn = (page: Page) => page.getByRole('button', { name: /trimite înscrierea/i });
 
 test.describe('Înscriere — formular ediția curentă', () => {
-  test('formularul e vizibil cu buton activ „Trimite înscrierea"', async ({ page }) => {
+  test('formularul e vizibil cu buton activ „Trimite înscrierea"', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
+    mockStats(network, 0);
     await page.goto('/?preview=landing');
 
     const btn = submitBtn(page);
@@ -84,15 +57,15 @@ test.describe('Înscriere — formular ediția curentă', () => {
   // Regresie critică: butonul se dezactiva pe navigator.onLine === false (fals
   // „OFFLINE" pe unele rețele/VPN) și bloca toate înscrierile.
   test('nu se blochează pe „offline" fals — submit-ul merge chiar dacă navigator.onLine e false', async ({
-    page,
+    page, network,
   }) => {
     await fixClock(page);
     await page.addInitScript(() =>
       Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false })
     );
-    await mockStats(page, 0);
-    await mockEmail(page);
-    await mockSubmit(page, (_plic, route) => ok(route));
+    mockStats(network, 0);
+    mockEmail(network);
+    network.use(submitFormResponse());
 
     await page.goto('/?preview=landing');
 
@@ -106,17 +79,14 @@ test.describe('Înscriere — formular ediția curentă', () => {
   });
 
   test('submit valid → plic corect spre submit-form, cu dovezi anti-bot și fără ediție', async ({
-    page,
+    page, network,
   }) => {
     await fixClock(page);
-    await mockStats(page, 0);
-    await mockEmail(page);
+    mockStats(network, 0);
+    mockEmail(network);
 
     let plic: Plic | null = null;
-    await mockSubmit(page, (p, route) => {
-      plic = p;
-      return ok(route);
-    });
+    network.use(submitFormResponse({ onRequest: (p) => { plic = p; } }));
 
     await page.goto('/?preview=landing');
     await fillValid(page);
@@ -143,9 +113,9 @@ test.describe('Înscriere — formular ediția curentă', () => {
 
   // Pe telefon, cele 3 select-uri însemnau 3 deschideri de picker pentru o
   // singură informație. Testul păzește să nu se întoarcă pe furiș.
-  test('data nașterii e un singur câmp scris, nu trei select-uri', async ({ page }) => {
+  test('data nașterii e un singur câmp scris, nu trei select-uri', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
+    mockStats(network, 0);
     await page.goto('/?preview=landing');
 
     const camp = page.getByPlaceholder('zz.ll.aaaa');
@@ -159,13 +129,11 @@ test.describe('Înscriere — formular ediția curentă', () => {
     await expect(page.locator('input[name="dataNasterii"]')).toHaveValue('1994-05-15');
   });
 
-  test('email duplicat (mock 409) → ecran „Ceva n-a mers"', async ({ page }) => {
+  test('email duplicat (mock 409) → ecran „Ceva n-a mers"', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
-    await mockEmail(page);
-    await mockSubmit(page, (_plic, route) =>
-      route.fulfill({ status: 409, contentType: 'application/json', body: '{"code":"23505"}' })
-    );
+    mockStats(network, 0);
+    mockEmail(network);
+    network.use(submitFormResponse({ status: 409, body: { code: '23505' } }));
 
     await page.goto('/?preview=landing');
     await fillValid(page);
@@ -175,17 +143,16 @@ test.describe('Înscriere — formular ediția curentă', () => {
   });
 
   test('sold-out (la capacitate) → butonul devine „listă de așteptare" și scrie în event_waitlist', async ({
-    page,
+    page, network,
   }) => {
     await fixClock(page);
-    await mockStats(page, EDITION.slots.total);
-    await mockEmail(page);
+    mockStats(network, EDITION.slots.total);
+    mockEmail(network);
 
     let waitlistHit = false;
-    await mockSubmit(page, (plic, route) => {
+    network.use(submitFormResponse({ onRequest: (plic) => {
       if (plic.mode === 'waitlist') waitlistHit = true;
-      return ok(route);
-    });
+    } }));
 
     await page.goto('/?preview=landing');
 
@@ -204,9 +171,9 @@ test.describe('Înscriere — formular ediția curentă', () => {
     expect(waitlistHit).toBe(true);
   });
 
-  test('secțiunea Locație: harta e afișată, iar linkul duce la Google Maps', async ({ page }) => {
+  test('secțiunea Locație: harta e afișată, iar linkul duce la Google Maps', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
+    mockStats(network, 0);
     await page.goto('/?preview=landing');
 
     // Harta embed a locației (Scările de Granit) e prezentă.

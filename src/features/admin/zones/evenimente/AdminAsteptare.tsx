@@ -1,3 +1,4 @@
+import adminStyles from '../../components/AdminStyles.module.css';
 import shared1 from './EvenimenteStyles.module.css';
 import type { CSSProperties } from 'react';
 import type { AdminWaitlistEntry } from './api';
@@ -36,8 +37,8 @@ export const AdminAsteptare = ({
   onPromote,
   onDelete,
 }: Props) => (
-    <section className="admin-table-section" data-css="admin-table-section">
-      <div className={'admin-table-head ' + shared1['admin-wait-head']} data-css="admin-table-head admin-wait-head">
+    <section className={adminStyles['admin-table-section']} data-css="admin-table-section">
+      <div className={`${adminStyles['admin-table-head']} ` + shared1['admin-wait-head']} data-css="admin-table-head admin-wait-head">
         <h2>
           Lista de așteptare <span className={shared1['admin-wait-count']} data-css="admin-wait-count">{waitAll.length}</span>
         </h2>
@@ -45,9 +46,9 @@ export const AdminAsteptare = ({
           Se completează automat când locurile sunt pline — promovează când se eliberează un loc.
         </span>
       </div>
-      <div className="admin-table-wrap" data-css="admin-table-wrap">
-        <div className={`admin-table ${shared1['admin-wait']}${arhiva ? ' arhiva' : ''}`} data-css={`admin-table admin-wait${arhiva ? ' arhiva' : ''}`}>
-          <div className={'admin-row ' + shared1['admin-row-head']} data-css="admin-row admin-row-head">
+      <div className={adminStyles['admin-table-wrap']} data-css="admin-table-wrap">
+        <div className={`${adminStyles['admin-table']} ${shared1['admin-wait']}${arhiva ? ' arhiva' : ''}`} data-css={`admin-table admin-wait${arhiva ? ' arhiva' : ''}`}>
+          <div className={`${adminStyles['admin-row']} ` + shared1['admin-row-head']} data-css="admin-row admin-row-head">
             <span>#</span>
             <span>Nume</span>
             <span>Telefon</span>
@@ -56,16 +57,16 @@ export const AdminAsteptare = ({
             {!arhiva && <span className="right">Acțiuni</span>}
           </div>
           {waitAll.map((w, i) => (
-            <div key={w.id} className="admin-row" data-css="admin-row" style={{ '--i': i } as CSSProperties}>
+            <div key={w.id} className={adminStyles['admin-row']} data-css="admin-row" style={{ '--i': i } as CSSProperties}>
               <span className={shared1['admin-cell-nr']} data-css="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
-              <span className="admin-cell-name" data-css="admin-cell-name">{w.nume}</span>
+              <span className={adminStyles['admin-cell-name']} data-css="admin-cell-name">{w.nume}</span>
               <a className={shared1['admin-cell-link']} data-css="admin-cell-link" href={`tel:${w.telefon}`}>
                 {w.telefon}
               </a>
               <a className={shared1['admin-cell-link'] + ' ellipsis'} data-css="admin-cell-link ellipsis" href={`mailto:${w.email}`}>
                 {w.email}
               </a>
-              <span className="admin-cell-date" data-css="admin-cell-date">{ziSiLuna(w.created_at)}</span>
+              <span className={adminStyles['admin-cell-date']} data-css="admin-cell-date">{ziSiLuna(w.created_at)}</span>
               {!arhiva && (
                 <div className={shared1['admin-cell-actions']} data-css="admin-cell-actions">
                   <button

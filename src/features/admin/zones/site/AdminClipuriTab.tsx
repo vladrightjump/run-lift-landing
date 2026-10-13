@@ -1,3 +1,5 @@
+import adminRoot from '../../components/RadacinaAdmin.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
 import styles from './AdminClipuriTab.module.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listTrainingReels, saveTrainingReel, moveTrainingReel, deleteTrainingReel, mesajRefuzClip, type AdminReelRow } from './api';
@@ -283,7 +285,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
       descriere={'Banda de pe pagina principală și de pe „Despre noi” — aceeași listă în amândouă. Încarcă clipul pe YouTube ca nelistat, lipește linkul aici. Nimic din ecranul ăsta nu cere deploy.'}
       actiuni={
         deschis.fel === 'existent' && (
-          <button className="admin-btn-ghost" type="button" onClick={deschideNou} disabled={ocupat}>
+          <button className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" type="button" onClick={deschideNou} disabled={ocupat}>
             Renunță la editare
           </button>
         )
@@ -311,9 +313,9 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
       }}
     >
       {randuri === null ? (
-        <p className="admin-config-hint">Se încarcă…</p>
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Se încarcă…</p>
       ) : randuri.length === 0 ? (
-        <p className="admin-config-hint">
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
           Niciun clip. Cât timp banda e goală, secțiunea nu apare pe pagină — nici pe landing,
           nici pe „Despre noi" — și nu strică numerotarea celorlalte.
         </p>
@@ -326,17 +328,17 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
             id: r.id,
             nume: r.caption,
             continut: (
-              <div className="admin-row">
-                <div className="admin-cell-name">
+              <div className={adminStyles['admin-row']} data-css="admin-row">
+                <div className={adminStyles['admin-cell-name']} data-css="admin-cell-name">
                   <strong>{r.caption}</strong>
                   {/* `div`, nu `span`: pe un element inline identificatorul se
                       lipea de legendă și rândul se citea „Marți în parcdQw4…". */}
-                  <div className="admin-config-hint">
+                  <div className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
                     {r.youtube}
                     {r.vizibil ? '' : ' · ascuns, nepublicat'}
                   </div>
                 </div>
-                <div className="admin-table-actions">
+                <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
                   <button type="button" onClick={() => deschideExistent(r)} disabled={ocupat}>
                     Editează
                   </button>
@@ -363,7 +365,7 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
         />
       )}
 
-      <div className="admin-config-grup">
+      <div className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
         <h3>{deschis.fel === 'nou' ? 'Clip nou' : 'Editezi un clip'}</h3>
 
         <CampEditare
@@ -421,8 +423,8 @@ export const AdminClipuriTab = ({ inregistreazaGardaIesire }: Props) => {
             nepublicat nu apare pe banda publică, deci acolo n-ar avea ce
             arăta. Același `iframe` pe care-l folosește pagina. */}
         {esteIdYouTube(camp.youtube) && (
-          <div className="admin-previz">
-            <span className="admin-previz-eticheta">Așa se va vedea pe pagină</span>
+          <div className={adminStyles['admin-previz']} data-css="admin-previz">
+            <span className={adminStyles['admin-previz-eticheta']} data-css="admin-previz-eticheta">Așa se va vedea pe pagină</span>
             <div className={styles['admin-previz-card']} data-css={"admin-previz-card"}>
               <iframe
                 src={sursaIncorporare(camp.youtube)}

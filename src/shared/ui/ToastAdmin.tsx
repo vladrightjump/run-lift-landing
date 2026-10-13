@@ -1,3 +1,4 @@
+import styles from './ToastAdmin.module.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
@@ -52,15 +53,15 @@ export const useToast = () => {
  * schimbările dintr-o regiune care exista deja când s-au produs.
  */
 export const Toast = ({ toast, onInchide }: { toast: ToastAfisat | null; onInchide: () => void }) => (
-  <div className="admin-toast-zona" role="status" aria-live="polite">
+  <div className={styles['admin-toast-zona']} data-css="admin-toast-zona" role="status" aria-live="polite">
     {toast && (
-      <div key={toast.id} className={`admin-toast${toast.kind === 'error' ? ' error' : ''}`}>
-        <span className="admin-toast-punct" aria-hidden="true" />
-        <span className="admin-toast-text">{toast.msg}</span>
+      <div key={toast.id} className={`${styles['admin-toast']}${toast.kind === 'error' ? ' error' : ''}`} data-css={`admin-toast${toast.kind === 'error' ? ' error' : ''}`}>
+        <span className={styles['admin-toast-punct']} data-css="admin-toast-punct" aria-hidden="true" />
+        <span className={styles['admin-toast-text']} data-css="admin-toast-text">{toast.msg}</span>
         {toast.undo && (
           <button
             type="button"
-            className="admin-toast-actiune"
+            className={styles['admin-toast-actiune']} data-css="admin-toast-actiune"
             onClick={() => {
               toast.undo?.();
               onInchide();

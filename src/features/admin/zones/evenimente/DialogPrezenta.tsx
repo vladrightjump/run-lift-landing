@@ -1,4 +1,6 @@
+import adminStyles from '../../components/AdminStyles.module.css';
 import shared1 from './EvenimenteStyles.module.css';
+import styles from './DialogPrezenta.module.css';
 import { useState } from 'react';
 import type { AdminRegistration, Prezenta } from './api';
 import { GrupRadio } from '../../../../shared/ui/GrupRadio';
@@ -69,7 +71,7 @@ export const DialogPrezenta = ({ rand, ocupat, onSalveaza, onInchide }: Props) =
   };
 
   return (
-    <Dialog titlu={rand.nume} clasa="admin-prezenta admin-confirm--neutru" onInchide={onInchide}>
+    <Dialog titlu={rand.nume} clasa={`${styles['admin-prezenta']} ${adminStyles['admin-confirm--neutru']}`} onInchide={onInchide}>
       {/*
         Trei stări, nu o bifă. O bifă are doar „da" și „nu", iar „nu" ar fi
         scris din prima clipă pe toată lista — adică ar afirma absența
@@ -88,7 +90,7 @@ export const DialogPrezenta = ({ rand, ocupat, onSalveaza, onInchide }: Props) =
         dezactivat={ocupat}
       />
 
-      <label className="admin-config-camp" data-css="admin-config-camp">
+      <label className={adminStyles['admin-config-camp']} data-css="admin-config-camp">
         <span>Număr de concurs</span>
         <input
           type="text"
@@ -101,7 +103,7 @@ export const DialogPrezenta = ({ rand, ocupat, onSalveaza, onInchide }: Props) =
         />
       </label>
 
-      <label className="admin-config-camp" data-css="admin-config-camp">
+      <label className={adminStyles['admin-config-camp']} data-css="admin-config-camp">
         <span>Timp final</span>
         <input
           type="text"
@@ -113,7 +115,7 @@ export const DialogPrezenta = ({ rand, ocupat, onSalveaza, onInchide }: Props) =
           onChange={(e) => setTimp(e.target.value)}
         />
       </label>
-      <p className="admin-config-hint" data-css="admin-config-hint">
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
         Minute și secunde („32:15") sau cu ore („1:02:15"). Lasă gol dacă nu se aplică.
       </p>
 
@@ -123,8 +125,8 @@ export const DialogPrezenta = ({ rand, ocupat, onSalveaza, onInchide }: Props) =
         </p>
       )}
 
-      <div className="admin-confirm-actions" data-css="admin-confirm-actions">
-        <button type="button" className="admin-confirm-cancel" data-css="admin-confirm-cancel" onClick={onInchide} disabled={ocupat}>
+      <div className={adminStyles['admin-confirm-actions']} data-css="admin-confirm-actions">
+        <button type="button" className={adminStyles['admin-confirm-cancel']} data-css="admin-confirm-cancel" onClick={onInchide} disabled={ocupat}>
           Renunță
         </button>
         <button type="button" className={shared1['admin-confirm-delete']} data-css="admin-confirm-delete" onClick={salveaza} disabled={ocupat}>

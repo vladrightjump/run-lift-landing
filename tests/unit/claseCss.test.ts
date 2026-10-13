@@ -17,19 +17,11 @@ import { resolve, join, dirname } from 'node:path';
  */
 
 const root = resolve(__dirname, '../..');
-// Toate fișierele de stil globale: `shared/styles` jetoanele și baza,
-// `public.css` paginile publice, `edition3.css` stările și keyframes-urile
-// `e3-*`, `index.css` adminul. `*.module.css` au garda lor, mai jos.
-const css = [
-  'src/shared/styles/tokens.css',
-  'src/shared/styles/base.css',
-  'src/index.css',
-]
-  .map((f) => readFileSync(resolve(root, f), 'utf8'))
-  .concat((readdirSync(resolve(root, 'src'), { recursive: true }) as string[])
-    .filter((f) => f.endsWith('.module.css'))
-    .flatMap((f) => [...readFileSync(resolve(root, 'src', f), 'utf8')
-      .matchAll(/:global\(([^)]+)\)/g)].map((match) => match[1])))
+// Clasele globale rămase sunt variante explicite în modulele componentelor.
+const css = (readdirSync(resolve(root, 'src'), { recursive: true }) as string[])
+  .filter((f) => f.endsWith('.module.css'))
+  .flatMap((f) => [...readFileSync(resolve(root, 'src', f), 'utf8')
+    .matchAll(/:global\(([^)]+)\)/g)].map((match) => match[1]))
   .join('\n');
 
 /** Prefixele claselor scrise de noi. O clasă fără unul din ele nu se verifică. */
@@ -44,7 +36,7 @@ const PREFIXE = ['admin-', 'an-', 'cs-', 'cf-', 'dn-', 'e3-', 'rn-'];
  * atinge oricum fișierul.
  */
 const RESTANTE = new Set([
-  // `src/admin/AnuntIstoric.tsx` — rândul de test al anunțului se randează
+  // `src/features/admin/zones/evenimente/AnuntIstoric.tsx` — rândul de test al anunțului se randează
   // nestilat. Vizibil doar în tabul „Trimite emailuri" → „Toți de până acum".
   'admin-email-test',
 ]);
@@ -80,11 +72,12 @@ const importuriModul = (sursa: string): { nume: string; cale: string }[] =>
   }));
 
 /**
- * Mențiunile de `.module.css` pe care `importuriModul` nu le poate citi (alt fel
- * de import, alias `@/`, ghilimele duble). Garda pică pe ele în loc să le sară.
+ * Importurile relative cu binding sau fără binding sunt recunoscute. Alte forme
+ * (alias `@/`, ghilimele duble) fac garda să pice în loc să fie sărite.
  */
 export const importuriModulNecitite = (sursa: string): number =>
-  (faraComentarii(sursa).match(/\.module\.css/g) ?? []).length - importuriModul(sursa).length;
+  (faraComentarii(sursa).match(/\.module\.css/g) ?? []).length - importuriModul(sursa).length
+  - [...faraComentarii(sursa).matchAll(/import\s+'(\.[^']+\.module\.css)'/g)].length;
 
 /** `styles.x` și `styles['x']` pentru un nume legat. */
 const referinte = (sursa: string, nume: string): string[] => [
@@ -125,7 +118,7 @@ describe('fiecare clasă proprie folosită în TSX există în CSS', () => {
 
     expect(
       Object.fromEntries(lipsa),
-      'Clase folosite în TSX dar fără nicio regulă în src/index.css sau src/edition3.css'
+      'Clase globale folosite în TSX dar fără nicio regulă în modulele CSS'
     ).toEqual({});
   });
 });
@@ -146,7 +139,7 @@ describe('fiecare `styles.x` există în modulul lui', () => {
     const necitite = fisiereTsx(resolve(root, 'src'))
       .filter((f) => importuriModulNecitite(readFileSync(f, 'utf8')) !== 0)
       .map((f) => f.slice(root.length + 1));
-    expect(necitite, "Importă modulul ca `import styles from './X.module.css'`").toEqual([]);
+    expect(necitite, "Importă modulul relativ, cu binding sau pentru ordinea cascadei").toEqual([]);
   });
 
   it('nu există clase de modul fără purtător', () => {
@@ -178,7 +171,9 @@ describe('fiecare `styles.x` există în modulul lui', () => {
  * iar landing-ul ieșea cu 24px mai scurt, fără ca vreun test să observe.
  */
 export const moduleDupaStyles = (sursa: string): string[] => {
-  const importuri = importuriModul(sursa);
+  const importuri = [...faraComentarii(sursa)
+    .matchAll(/import\s+(?:(\w+)\s+from\s+)?'(\.[^']+\.module\.css)'/g)]
+    .map((m) => ({ nume: m[1], cale: m[2] }));
   const propriu = importuri.findIndex(({ nume }) => nume === 'styles');
   return propriu < 0 ? [] : importuri.slice(propriu + 1).map(({ cale }) => cale);
 };
@@ -197,6 +192,8 @@ describe('modulul propriu vine ultimul', () => {
     const sursa = "import styles from './A.module.css';\nimport shared1 from '../shared/ui/B.module.css';";
     expect(moduleDupaStyles(sursa)).toEqual(['../shared/ui/B.module.css']);
     expect(moduleDupaStyles("import shared1 from '../B.module.css';\nimport styles from './A.module.css';")).toEqual([]);
+    expect(moduleDupaStyles("import styles from './A.module.css';\nimport './B.module.css';")).toEqual(['./B.module.css']);
+    expect(moduleDupaStyles("import './B.module.css';\nimport styles from './A.module.css';")).toEqual([]);
   });
 });
 
@@ -285,6 +282,8 @@ describe('garda însăși', () => {
   it('nu sare peste un import de modul pe care nu-l poate citi', () => {
     expect(importuriModulNecitite('import * as s from "@/shared/ui/X.module.css";')).toBe(1);
     expect(importuriModulNecitite("import styles from './X.module.css';")).toBe(0);
+    expect(importuriModulNecitite("import './X.module.css';")).toBe(0);
+    expect(importuriModulNecitite("import '@/shared/ui/X.module.css';")).toBe(1);
   });
 
   it('prinde o clasă globală inventată cu un prefix cunoscut', () => {

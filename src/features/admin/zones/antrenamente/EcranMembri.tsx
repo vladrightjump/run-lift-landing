@@ -1,4 +1,6 @@
 import sharedSala from './SalaStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './EcranMembri.module.css';
 import { useMemo, useState } from 'react';
 import {
@@ -78,7 +80,7 @@ export const EcranMembri = () => {
 
   if (!date) {
     return (
-      <p className="admin-config-hint" role="status">
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint" role="status">
         {eroare ? 'Nu s-au putut încărca membrii. Reîncearcă peste câteva secunde.' : 'Se încarcă…'}
       </p>
     );
@@ -108,11 +110,11 @@ export const EcranMembri = () => {
   return (
     <div className={sharedSala['admin-sala']} data-css="admin-sala">
       {nelegate.length > 0 && (
-        <section className={'admin-config-grup ' + styles['admin-sala-necunoscuti']} data-css="admin-config-grup admin-sala-necunoscuti" aria-labelledby="sala-necunoscuti">
+        <section className={`${adminStyles['admin-config-grup']} ` + styles['admin-sala-necunoscuti']} data-css="admin-config-grup admin-sala-necunoscuti" aria-labelledby="sala-necunoscuti">
           <h3 id="sala-necunoscuti">
-            Conturi de Telegram nelegate <span className="admin-tab-alert">{nelegate.length}</span>
+            Conturi de Telegram nelegate <span className={adminStyles['admin-tab-alert']} data-css="admin-tab-alert">{nelegate.length}</span>
           </h3>
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             Au intrat în grup, dar nu sunt legați de niciun membru. Cine votează devine membru de la
             sine; restul îi legi de aici de un membru existent — sau faci din cont un membru nou.
           </p>
@@ -137,11 +139,11 @@ export const EcranMembri = () => {
       )}
 
       {esuate.length > 0 && (
-        <section className="admin-config-grup" aria-labelledby="sala-scoateri-esuate">
+        <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-scoateri-esuate">
           <h3 id="sala-scoateri-esuate">
-            Scoateri eșuate <span className="admin-tab-alert">{esuate.length}</span>
+            Scoateri eșuate <span className={adminStyles['admin-tab-alert']} data-css="admin-tab-alert">{esuate.length}</span>
           </h3>
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             Comanda nu s-a încheiat cu succes. Verifică motivul și apartenența curentă;
             o eroare nu dovedește că persoana este încă în grup.
           </p>
@@ -164,20 +166,20 @@ export const EcranMembri = () => {
         </section>
       )}
 
-      <section className="admin-config-grup" aria-labelledby="sala-membri">
+      <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-membri">
         <h3 id="sala-membri">Membrii</h3>
-        <p className="admin-config-hint">
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
           Apartenența la Telegram se verifică separat de starea la antrenamente.
           Lista include conturile cunoscute botului; nu poate importa automat toți membrii vechi.
           Conturile fără verificare apar la „Neverificați”. Persoanele ieșite sau blocate sunt în „Arhivă”, cu istoricul păstrat.
         </p>
-        <div className="admin-table-actions">
-          <button type="button" className="admin-btn-ghost" disabled={ocupat}
+        <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+          <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" disabled={ocupat}
             onClick={() => void fa(verificaMembri, 'Verificarea este programată. Botul verifică până la 10 conturi pe minut.')}>
             Verifică apartenența
           </button>
         </div>
-        <div className="admin-cs-comutator" role="group" aria-label="Apartenență Telegram">
+        <div className={adminStyles['admin-cs-comutator']} data-css="admin-cs-comutator" role="group" aria-label="Apartenență Telegram">
           {FILTRE_TELEGRAM.map(([cheie, eticheta]) => (
             <button key={cheie} type="button" className={`${sharedSala['admin-sala-filtru']}${apartenenta === cheie ? ' activ' : ''}`} data-css="admin-sala-filtru"
               aria-pressed={apartenenta === cheie} onClick={() => setApartenenta(cheie)}>
@@ -194,7 +196,7 @@ export const EcranMembri = () => {
             value={cauta}
             onChange={(e) => setCauta(e.target.value)}
           />
-          <div className="admin-cs-comutator" role="group" aria-label="Filtrează după stare">
+          <div className={adminStyles['admin-cs-comutator']} data-css="admin-cs-comutator" role="group" aria-label="Filtrează după stare">
             {FILTRE.map(([cheie, eticheta]) => (
               <button
                 key={cheie}
@@ -210,7 +212,7 @@ export const EcranMembri = () => {
         </div>
 
         {vizibili.length === 0 ? (
-          <p className="admin-config-hint">Niciun membru nu se potrivește.</p>
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Niciun membru nu se potrivește.</p>
         ) : (
           <ul className={sharedSala['admin-sala-lista']} data-css="admin-sala-lista">
             {vizibili.map((m) => {
@@ -236,7 +238,7 @@ export const EcranMembri = () => {
                     )}
                   </span>
                   <span className={sharedSala['admin-sala-actiuni']} data-css="admin-sala-actiuni">
-                    <button type="button" className="admin-btn-ghost" onClick={() => setDeEditat(m)}>
+                    <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => setDeEditat(m)}>
                       Editează
                     </button>
                     <ScoateDinGrup membru={m} ultimaScoatere={k} ocupat={ocupat} fa={fa} />
@@ -248,10 +250,10 @@ export const EcranMembri = () => {
           </ul>
         )}
 
-        <div className="admin-table-actions">
+        <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
           <button
             type="button"
-            className="admin-btn-ghost"
+            className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
             disabled={date.membri.length < 2}
             onClick={() => setUnire(true)}
           >
@@ -324,13 +326,13 @@ const ContNelegat = ({ nume, utilizator, membri, ocupat, onLeaga, onMembruNou }:
         </select>
         <button
           type="button"
-          className="admin-btn-ghost"
+          className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
           disabled={ocupat || !membru}
           onClick={() => membru && onLeaga(membru)}
         >
           Leagă
         </button>
-        <button type="button" className="admin-btn-ghost" disabled={ocupat} onClick={onMembruNou}>
+        <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" disabled={ocupat} onClick={onMembruNou}>
           Membru nou
         </button>
       </span>
@@ -373,13 +375,13 @@ const DialogMembru = ({ membru: m, ocupat, onInchide, onSalveaza }: PropsMembru)
           });
         }}
       >
-        <label className="admin-config-eticheta" htmlFor="sala-m-nume">
+        <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="sala-m-nume">
           Nume
         </label>
         <input id="sala-m-nume" type="text" value={nume} onChange={(e) => setNume(e.target.value)} />
         {!numeValid && <span className={sharedSala['admin-sala-motiv']} data-css="admin-sala-motiv">Cel puțin două litere.</span>}
 
-        <label className="admin-config-eticheta" htmlFor="sala-m-tgid">
+        <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="sala-m-tgid">
           Id Telegram
         </label>
         <input
@@ -391,13 +393,13 @@ const DialogMembru = ({ membru: m, ocupat, onInchide, onSalveaza }: PropsMembru)
         />
         {!idValid && <span className={sharedSala['admin-sala-motiv']} data-css="admin-sala-motiv">Doar cifre (3–15).</span>}
 
-        <label className="admin-config-eticheta" htmlFor="sala-m-tguser">
+        <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="sala-m-tguser">
           Utilizator Telegram
         </label>
         <input id="sala-m-tguser" type="text" value={tgUser} onChange={(e) => setTgUser(e.target.value)} />
         {!userValid && <span className={sharedSala['admin-sala-motiv']} data-css="admin-sala-motiv">Doar litere, cifre și „_”.</span>}
 
-        <label className="admin-config-eticheta" htmlFor="sala-m-stare">
+        <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="sala-m-stare">
           Stare
         </label>
         <select
@@ -415,13 +417,13 @@ const DialogMembru = ({ membru: m, ocupat, onInchide, onSalveaza }: PropsMembru)
           (nu poate fi scos)
         </label>
 
-        <div className="admin-table-actions">
-          <button type="button" className="admin-btn-ghost" onClick={onInchide}>
+        <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+          <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={onInchide}>
             Renunță
           </button>
           <button
             type="submit"
-            className="admin-btn-accent"
+            className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
             disabled={ocupat || !idValid || !userValid || !numeValid}
           >
             Salvează
@@ -449,12 +451,12 @@ const DialogUnire = ({ date, ocupat, onInchide, onUneste }: PropsUnire) => {
 
   return (
     <Dialog titlu="Unește doi membri" onInchide={onInchide}>
-      <p className="admin-config-hint">
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
         Pentru aceeași persoană înregistrată de două ori. Răspunsurile duplicatului trec pe membrul
         păstrat, contul de Telegram la fel dacă păstratul n-are, iar duplicatul dispare.
       </p>
       <div className={styles['admin-sala-formular']} data-css="admin-sala-formular">
-        <label className="admin-config-eticheta" htmlFor="sala-u-pastrat">
+        <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="sala-u-pastrat">
           Păstrează
         </label>
         <select id="sala-u-pastrat" value={pastratId} onChange={(e) => setPastratId(e.target.value)}>
@@ -465,7 +467,7 @@ const DialogUnire = ({ date, ocupat, onInchide, onUneste }: PropsUnire) => {
             </option>
           ))}
         </select>
-        <label className="admin-config-eticheta" htmlFor="sala-u-eliminat">
+        <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="sala-u-eliminat">
           Duplicatul (dispare)
         </label>
         <select id="sala-u-eliminat" value={eliminatId} onChange={(e) => setEliminatId(e.target.value)}>
@@ -484,13 +486,13 @@ const DialogUnire = ({ date, ocupat, onInchide, onUneste }: PropsUnire) => {
           </p>
         )}
       </div>
-      <div className="admin-table-actions">
-        <button type="button" className="admin-btn-ghost" onClick={onInchide}>
+      <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+        <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={onInchide}>
           Renunță
         </button>
         <button
           type="button"
-          className="admin-btn-accent"
+          className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
           disabled={ocupat || !pastrat || !eliminat || acelasi}
           onClick={() => pastrat && eliminat && onUneste(pastrat, eliminat)}
         >

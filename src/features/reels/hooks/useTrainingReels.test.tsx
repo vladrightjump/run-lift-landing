@@ -17,7 +17,7 @@ const { fetchTrainingReels, logClientError } = vi.hoisted(() => ({
 }));
 
 vi.mock('../data/api', () => ({ fetchTrainingReels }));
-vi.mock('../../../lib/monitoring', () => ({ logClientError }));
+vi.mock('../../../shared/lib/monitoring', () => ({ logClientError }));
 
 const CLIP = {
   youtube: 'dQw4w9WgXcQ',

@@ -1,5 +1,7 @@
-import { test, expect } from '@playwright/test';
-import type { Page, Route } from '@playwright/test';
+import { test, expect, type NetworkFixture } from '../support/playwright';
+import { rpcResponse, functionReply, submitFormResponse, type FormEnvelope as Plic } from '../support/responses';
+import { publicStats } from '../support/builders/public';
+import type { Page } from '@playwright/test';
 
 /**
  * Linkul direct `/inscriere` + overlay-ul de pe landing.
@@ -10,22 +12,10 @@ import type { Page, Route } from '@playwright/test';
  * baza de date reală și nu trimit emailuri.
  */
 
-const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
 // Browserul nu mai scrie direct în PostgREST: toate formularele publice trec
 // prin funcția Edge, care verifică Turnstile înainte de insert. Fișierul ăsta a
 // apărut pe `main` DUPĂ ce PR-ul anti-bot fusese scris, deci merge-ul l-a lăsat
 // în pace și mock-urile lui vizau un endpoint mort.
-const REG_ROUTE = '**/functions/v1/submit-form';
-const EMAIL_ROUTE = '**/functions/v1/send-email';
-
-/** Plicul trimis către `submit-form`: { mode, token, hp, elapsed, data }. */
-type Plic = {
-  mode: string;
-  token: string;
-  hp: string;
-  elapsed: number;
-  data: Record<string, unknown>;
-};
 
 const fixClock = (page: Page) =>
   page.addInitScript(() => {
@@ -33,19 +23,11 @@ const fixClock = (page: Page) =>
     Date.now = () => fixed;
   });
 
-const mockStats = (page: Page, count: number, waitlist = 0) =>
-  page.route(STATS_ROUTE, (route: Route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ count, participants: [], waitlist }),
-    })
-  );
+const mockStats = (network: NetworkFixture, count: number, waitlist = 0) =>
+  network.use(rpcResponse('public_stats', publicStats({ count, waitlist })));
 
-const mockEmail = (page: Page) =>
-  page.route(EMAIL_ROUTE, (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{"sent":1}' })
-  );
+const mockEmail = (network: NetworkFixture) =>
+  network.use(functionReply('send-email', { sent: 1 }));
 
 const dateField = (page: Page) => page.getByPlaceholder('zz.ll.aaaa');
 
@@ -61,9 +43,9 @@ const fillValid = async (page: Page) => {
 const submitBtn = (page: Page) => page.getByRole('button', { name: /trimite înscrierea/i });
 
 test.describe('/inscriere — pagina cu link direct', () => {
-  test('se deschide direct pe formular, cu primul câmp focusat', async ({ page }) => {
+  test('se deschide direct pe formular, cu primul câmp focusat', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
+    mockStats(network, 0);
     await page.goto('/inscriere');
 
     await expect(page.getByRole('heading', { name: /înscrie-te/i })).toBeVisible();
@@ -72,16 +54,13 @@ test.describe('/inscriere — pagina cu link direct', () => {
     await expect(page.getByPlaceholder('Popescu')).toBeFocused();
   });
 
-  test('submit valid → aceleași date ca de pe landing', async ({ page }) => {
+  test('submit valid → aceleași date ca de pe landing', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
-    await mockEmail(page);
+    mockStats(network, 0);
+    mockEmail(network);
 
     let plic: Plic | null = null;
-    await page.route(REG_ROUTE, (route: Route) => {
-      plic = route.request().postDataJSON() as Plic;
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
-    });
+    network.use(submitFormResponse({ onRequest: (p) => { plic = p; } }));
 
     await page.goto('/inscriere');
     await fillValid(page);
@@ -103,14 +82,11 @@ test.describe('/inscriere — pagina cu link direct', () => {
     expect(typeof trimis.elapsed).toBe('number');
   });
 
-  test('vârstă sub minim → eroare pe câmp, fără request', async ({ page }) => {
+  test('vârstă sub minim → eroare pe câmp, fără request', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
+    mockStats(network, 0);
     let requested = false;
-    await page.route(REG_ROUTE, (route: Route) => {
-      requested = true;
-      return route.abort();
-    });
+    network.use(submitFormResponse({ networkError: true, onRequest: () => { requested = true; } }));
 
     await page.goto('/inscriere');
     await page.getByPlaceholder('Popescu').fill('Filip');
@@ -125,14 +101,11 @@ test.describe('/inscriere — pagina cu link direct', () => {
     expect(requested).toBe(false);
   });
 
-  test('data incompletă nu trece drept validă', async ({ page }) => {
+  test('data incompletă nu trece drept validă', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
+    mockStats(network, 0);
     let requested = false;
-    await page.route(REG_ROUTE, (route: Route) => {
-      requested = true;
-      return route.abort();
-    });
+    network.use(submitFormResponse({ networkError: true, onRequest: () => { requested = true; } }));
 
     await page.goto('/inscriere');
     await page.getByPlaceholder('Popescu').fill('Filip');
@@ -147,11 +120,11 @@ test.describe('/inscriere — pagina cu link direct', () => {
     expect(requested).toBe(false);
   });
 
-  test('după confirmare ajunge pe landing, cu bannerul afișat o singură dată', async ({ page }) => {
+  test('după confirmare ajunge pe landing, cu bannerul afișat o singură dată', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 12);
-    await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+    mockStats(network, 12);
+    mockEmail(network);
+    network.use(submitFormResponse());
 
     await page.goto('/inscriere');
     await fillValid(page);
@@ -169,11 +142,11 @@ test.describe('/inscriere — pagina cu link direct', () => {
     await expect(page.getByRole('status').filter({ hasText: /ești înscris/i })).toHaveCount(0);
   });
 
-  test('o interacțiune oprește redirectul automat', async ({ page }) => {
+  test('o interacțiune oprește redirectul automat', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
-    await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+    mockStats(network, 0);
+    mockEmail(network);
+    network.use(submitFormResponse());
 
     await page.goto('/inscriere');
     await fillValid(page);
@@ -190,9 +163,9 @@ test.describe('/inscriere — pagina cu link direct', () => {
 });
 
 test.describe('overlay-ul de pe landing', () => {
-  test('CTA-urile deschid overlay-ul și schimbă URL-ul fără reîncărcare', async ({ page }) => {
+  test('CTA-urile deschid overlay-ul și schimbă URL-ul fără reîncărcare', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
+    mockStats(network, 0);
     await page.goto('/?preview=landing');
 
     // Fallback fără JS: linkul duce tot la pagina reală.
@@ -205,9 +178,9 @@ test.describe('overlay-ul de pe landing', () => {
     expect(new URL(page.url()).pathname).toBe('/inscriere');
   });
 
-  test('Esc închide overlay-ul și pune URL-ul la loc', async ({ page }) => {
+  test('Esc închide overlay-ul și pune URL-ul la loc', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
+    mockStats(network, 0);
     await page.goto('/?preview=landing');
 
     await page.getByRole('link', { name: /înscrie-te/i }).first().click();
@@ -218,11 +191,11 @@ test.describe('overlay-ul de pe landing', () => {
     expect(new URL(page.url()).pathname).toBe('/');
   });
 
-  test('înscriere din overlay: confirmare, fără banner (ești deja pe landing)', async ({ page }) => {
+  test('înscriere din overlay: confirmare, fără banner (ești deja pe landing)', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
-    await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+    mockStats(network, 0);
+    mockEmail(network);
+    network.use(submitFormResponse());
 
     await page.goto('/?preview=landing');
     await page.getByRole('link', { name: /înscrie-te/i }).first().click();
@@ -244,11 +217,11 @@ test.describe('overlay-ul de pe landing', () => {
 
   // Regresia pe care kitul o avea: setTimeout gol, care închidea confirmarea
   // chiar dacă utilizatorul era la jumătatea unui tap pe „Adaugă în calendar".
-  test('o interacțiune oprește închiderea automată a overlay-ului', async ({ page }) => {
+  test('o interacțiune oprește închiderea automată a overlay-ului', async ({ page, network }) => {
     await fixClock(page);
-    await mockStats(page, 0);
-    await mockEmail(page);
-    await page.route(REG_ROUTE, (route: Route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+    mockStats(network, 0);
+    mockEmail(network);
+    network.use(submitFormResponse());
 
     await page.goto('/?preview=landing');
     await page.getByRole('link', { name: /înscrie-te/i }).first().click();

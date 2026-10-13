@@ -1,4 +1,5 @@
 import shared1 from './AdminStyles.module.css';
+import publicForm from '../../../shared/ui/PublicForm.module.css';
 import styles from './AdminCadru.module.css';
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { EcranAdmin, FazaSite } from '../data/stareCurenta';
@@ -176,7 +177,7 @@ export const AdminCadru = ({
             )}
             {zonaActiva === 'evenimente' && countdown && (
               <p className={styles['admin-cd']} data-css={"admin-cd"}>
-                <span className="countdown-dot" />
+                <span className={publicForm['countdown-dot']} data-css="countdown-dot" />
                 {countdown}
               </p>
             )}

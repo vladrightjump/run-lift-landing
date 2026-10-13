@@ -3,7 +3,7 @@
  * pagina publică.
  *
  * SURSA DE ADEVĂR e rândul `published` din `runlift.event_config`, citit la
- * runtime prin `public_config()`. `src/content/edition.ts` a rămas INSTANTANEU
+ * runtime prin `public_config()`. `src/shared/content/edition.ts` a rămas INSTANTANEU
  * de build: randează primul cadru și acoperă cazul „backendul nu răspunde".
  *
  * Ce NU stă aici (rămâne în cod, pentru că nu se schimbă de la o ediție la alta):

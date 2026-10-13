@@ -1,3 +1,5 @@
+import adminStyles from '../../components/AdminStyles.module.css';
+import publicForm from '../../../../shared/ui/PublicForm.module.css';
 import styles from './AdminCifre.module.css';
 type Props = {
   /** Câți sunt înscriși în ediția deschisă. */
@@ -32,40 +34,40 @@ export const AdminCifre = ({
   const percent = TOTAL_SLOTS > 0 ? Math.round((inscrisi / TOTAL_SLOTS) * 100) : 0;
   return (
     <>
-    <section className="admin-stats" data-css="admin-stats">
-      <div className="admin-stat" data-css="admin-stat">
-        <span className="admin-stat-label" data-css="admin-stat-label">Înscriși</span>
-        <span className="admin-stat-value" data-css="admin-stat-value" key={inscrisi}>
+    <section className={adminStyles['admin-stats']} data-css="admin-stats">
+      <div className={adminStyles['admin-stat']} data-css="admin-stat">
+        <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Înscriși</span>
+        <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value" key={inscrisi}>
           {inscrisi}
           {!arhiva && <span className={styles['admin-stat-total']} data-css="admin-stat-total"> / {TOTAL_SLOTS}</span>}
         </span>
       </div>
       {!arhiva && (
         <>
-          <div className="admin-stat" data-css="admin-stat">
-            <span className="admin-stat-label" data-css="admin-stat-label">Locuri rămase</span>
-            <span className={`admin-stat-value${remaining <= 3 ? ' low' : ''}`} data-css={`admin-stat-value${remaining <= 3 ? ' low' : ''}`} key={remaining}>
+          <div className={adminStyles['admin-stat']} data-css="admin-stat">
+            <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Locuri rămase</span>
+            <span className={`${adminStyles['admin-stat-value']}${remaining <= 3 ? ' low' : ''}`} data-css={`admin-stat-value${remaining <= 3 ? ' low' : ''}`} key={remaining}>
               {remaining}
             </span>
           </div>
-          <div className="admin-stat" data-css="admin-stat">
-            <span className="admin-stat-label" data-css="admin-stat-label">Grad de ocupare</span>
-            <span className="admin-stat-value accent" data-css="admin-stat-value accent" key={percent}>
+          <div className={adminStyles['admin-stat']} data-css="admin-stat">
+            <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Grad de ocupare</span>
+            <span className={`${adminStyles['admin-stat-value']} ${adminStyles['accent']}`} data-css="admin-stat-value accent" key={percent}>
               {percent}%
             </span>
           </div>
         </>
       )}
-      <div className="admin-stat" data-css="admin-stat">
-        <span className="admin-stat-label" data-css="admin-stat-label">În așteptare</span>
-        <span className="admin-stat-value" data-css="admin-stat-value" key={peAsteptare}>
+      <div className={adminStyles['admin-stat']} data-css="admin-stat">
+        <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">În așteptare</span>
+        <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value" key={peAsteptare}>
           {peAsteptare}
           {!arhiva && <span className={styles['admin-stat-total']} data-css="admin-stat-total"> / {WAITLIST_SLOTS}</span>}
         </span>
       </div>
-      <div className="admin-stat" data-css="admin-stat">
-        <span className="admin-stat-label" data-css="admin-stat-label">Emailuri nelivrate</span>
-        <span className={`admin-stat-value${nelivrate > 0 ? ' low' : ''}`} data-css={`admin-stat-value${nelivrate > 0 ? ' low' : ''}`} key={nelivrate}>
+      <div className={adminStyles['admin-stat']} data-css="admin-stat">
+        <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Emailuri nelivrate</span>
+        <span className={`${adminStyles['admin-stat-value']}${nelivrate > 0 ? ' low' : ''}`} data-css={`admin-stat-value${nelivrate > 0 ? ' low' : ''}`} key={nelivrate}>
           {nelivrate}
         </span>
       </div>
@@ -73,15 +75,15 @@ export const AdminCifre = ({
 
     {!arhiva && (
       <section className={styles['admin-occupancy']} data-css="admin-occupancy">
-        <div className="slots-head">
-          <span className="slots-label">Ocupare locuri</span>
+        <div className={publicForm['slots-head']} data-css="slots-head">
+          <span className={publicForm['slots-label']} data-css="slots-label">Ocupare locuri</span>
           <span className={styles['admin-occupancy-count']} data-css="admin-occupancy-count">
             {inscrisi} din {TOTAL_SLOTS} locuri ocupate
           </span>
         </div>
-        <div className="slots-grid">
+        <div className={publicForm['slots-grid']} data-css="slots-grid">
           {Array.from({ length: TOTAL_SLOTS }, (_, i) => (
-            <div key={i} className={`slot ${styles['admin-slot']}${i < inscrisi ? ' filled' : ''}`} data-css={`slot admin-slot${i < inscrisi ? ' filled' : ''}`} />
+            <div key={i} className={`${publicForm['slot']} ${styles['admin-slot']}${i < inscrisi ? ' filled' : ''}`} data-css={`slot admin-slot${i < inscrisi ? ' filled' : ''}`} />
           ))}
         </div>
       </section>

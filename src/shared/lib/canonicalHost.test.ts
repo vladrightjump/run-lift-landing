@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { redirectCanonic, HOST_CANONIC } from '../../src/lib/canonicalHost';
+import { redirectCanonic, HOST_CANONIC } from './canonicalHost';
 
 /**
  * Ținerea vizitatorilor pe domeniul de producție.

@@ -10,5 +10,5 @@
   .admin-ghid-bot dt { font-weight: 600; margin-top: 16px; }
   .admin-ghid-bot dd { margin: 4px 0 0; }
   .admin-ghid-comenzi { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; }
-  .admin-ghid-bot :global(.admin-config-grup) { margin: 0; min-width: 0; padding: 20px; }
+  .admin-ghid-bot :global([data-css~="admin-config-grup"]) { margin: 0; min-width: 0; padding: 20px; }
   .admin-ghid-exemplu { display: block; padding: 10px 12px; margin-bottom: 12px; background: var(--pa-input); border-radius: 6px; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 13px; }

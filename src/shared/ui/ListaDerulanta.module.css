@@ -1,0 +1,4 @@
+
+.admin-control-select { font-weight: 600; }
+.admin-control-descriere { font-size: 12px; line-height: 1.45; color: var(--pa-muted-2); }
+.admin-control-problema { font-size: 12px; line-height: 1.45; color: var(--pa-danger); }

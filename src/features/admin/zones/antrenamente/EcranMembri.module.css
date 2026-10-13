@@ -6,5 +6,5 @@
   .admin-sala-necunoscuti { border-color: var(--pa-warn); }
   .admin-sala-cont select { max-width: 220px; }
   .admin-sala-formular { display: grid; gap: 8px; min-width: 0; }
-  .admin-sala-formular > :global(.admin-config-eticheta):not(:first-child) { margin-top: 10px; }
-  .admin-sala-formular > :where(:global([data-css~="admin-sala-bifa"]), :global(.admin-table-actions)) { margin-top: 12px; }
+  .admin-sala-formular > :global([data-css~="admin-config-eticheta"]):not(:first-child) { margin-top: 10px; }
+  .admin-sala-formular > :where(:global([data-css~="admin-sala-bifa"]), :global([data-css~="admin-table-actions"])) { margin-top: 12px; }

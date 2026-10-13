@@ -1,5 +1,6 @@
 import { useAdminMutation } from '../data/useAdminMutation';
 import shared1 from '../components/AdminStyles.module.css';
+import publicForm from '../../../shared/ui/PublicForm.module.css';
 import styles from './AdminLogin.module.css';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
@@ -45,7 +46,7 @@ export const AdminLogin = ({ onLogin }: Props) => {
   };
 
   return (
-    <main className="admin-auth">
+    <main className={shared1['admin-auth']} data-css="admin-auth">
       <div className={styles['admin-auth-box']} data-css={"admin-auth-box"}>
         <div className={styles['admin-auth-brand']} data-css={"admin-auth-brand"}>
           <span className={shared1['admin-logo']} data-css={"admin-logo"}>
@@ -64,8 +65,8 @@ export const AdminLogin = ({ onLogin }: Props) => {
             <p>Acces doar pentru organizatori.</p>
           </div>
 
-          <label className={`field${error ? ' invalid' : ''}`}>
-            <span className="label">Utilizator</span>
+          <label className={`${publicForm['field']}${error ? ' invalid' : ''}`} data-css={`field${error ? ' invalid' : ''}`}>
+            <span className={publicForm['label']} data-css="label">Utilizator</span>
             <input
               name="utilizator"
               type="text"
@@ -76,8 +77,8 @@ export const AdminLogin = ({ onLogin }: Props) => {
             />
           </label>
 
-          <label className={`field${error ? ' invalid' : ''}`}>
-            <span className="label">Parolă</span>
+          <label className={`${publicForm['field']}${error ? ' invalid' : ''}`} data-css={`field${error ? ' invalid' : ''}`}>
+            <span className={publicForm['label']} data-css="label">Parolă</span>
             <div className={styles['admin-password-wrap']} data-css={"admin-password-wrap"}>
               <input
                 name="parola"
@@ -103,13 +104,13 @@ export const AdminLogin = ({ onLogin }: Props) => {
             </p>
           )}
 
-          <button type="submit" className={'btn-submit ' + styles['admin-auth-submit']} data-css={"btn-submit admin-auth-submit"} disabled={checking}>
+          <button type="submit" className={`${publicForm['btn-submit']} ` + styles['admin-auth-submit']} data-css={"btn-submit admin-auth-submit"} disabled={checking}>
             {checking ? 'Se verifică…' : 'Intră în cont'}
           </button>
         </form>
 
         <p className={styles['admin-auth-countdown']} data-css={"admin-auth-countdown"}>
-          <span className="countdown-dot" />
+          <span className={publicForm['countdown-dot']} data-css="countdown-dot" />
           {cd.done
             ? 'Anunțul e live'
             : `Anunț în ${cd.zile}z ${cd.ore}h ${cd.minute}m ${cd.secunde}s`}

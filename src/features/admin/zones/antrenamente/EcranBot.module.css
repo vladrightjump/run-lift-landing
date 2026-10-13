@@ -1,5 +1,5 @@
 
-  :global(.admin-config-grup) > :where(.admin-sala-text-sondaj) {
+  :global([data-css~="admin-config-grup"]) > :where(.admin-sala-text-sondaj) {
     margin-top: 16px;
   }
   .admin-sala-text-sondaj > div:first-child { display: grid; gap: 18px; min-width: 0; }

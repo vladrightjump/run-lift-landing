@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
-import { Dialog } from '../../src/shared/ui/Dialog';
+import { Dialog } from './Dialog';
 
 /**
  * Dialogul modal al tabului „Eveniment".

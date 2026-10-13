@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "src/admin-preview.tsx",
+    "src/app/admin-preview.tsx",
     "scripts/*.{ts,mjs}",
     "tests/e2e/**/*.spec.ts",
     "{src,tests}/**/*.test.{ts,tsx}"

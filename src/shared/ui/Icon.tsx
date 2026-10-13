@@ -1,3 +1,4 @@
+import styles from './Icon.module.css';
 /**
  * Iconițele adminului: un singur set, același contur (1.8), desenate pe grila
  * de 24. Sunt decor pe lângă text — `aria-hidden` — deci nicio iconiță nu e
@@ -103,7 +104,7 @@ export type NumeIcon = keyof typeof CAI;
 
 export const Icon = ({ nume, marime = 20 }: { nume: NumeIcon; marime?: number }) => (
   <svg
-    className="admin-icon"
+    className={styles['admin-icon']} data-css="admin-icon"
     width={marime}
     height={marime}
     viewBox="0 0 24 24"

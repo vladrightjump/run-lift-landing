@@ -1,4 +1,6 @@
 import shared1 from '../../EvenimenteStyles.module.css';
+import adminStyles from '../../../../components/AdminStyles.module.css';
+import adminRoot from '../../../../components/RadacinaAdmin.module.css';
 import styles from './GrupRemindere.module.css';
 import type { EventConfig } from '../../../../../../shared/content/eventConfig';
 import { useContext, useMemo } from 'react';
@@ -81,14 +83,14 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }
           : `${ciorna.reminders.length} în orar · niciunul nu mai pleacă`
     }
   >
-    <p className="admin-config-hint" data-css="admin-config-hint">
+    <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
       Fiecare rând pleacă o singură dată, cu atâtea ore înainte de startul cursei. Textul
       se editează în „Șabloane"; pune <code>{'{link_renunt}'}</code> în el ca oamenii
       să-și poată elibera locul cu un click — locul trece automat la primul de pe lista de
       așteptare.
     </p>
     {erori.get('reminders') && (
-      <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+      <div className={`${adminStyles['admin-banner']} warn`} data-css="admin-banner warn" role="status">
         {erori.get('reminders')}
       </div>
     )}
@@ -99,9 +101,9 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }
         return (
           <li key={i} className={eroareAvans ? 'invalid' : ''}>
             <div className={styles['admin-reels-rand']} data-css="admin-reels-rand">
-              <span className="admin-layout-nr" data-css="admin-layout-nr">{SEMNE[r.stare]}</span>
+              <span className={adminStyles['admin-layout-nr']} data-css="admin-layout-nr">{SEMNE[r.stare]}</span>
               <div className={styles['admin-reels-campuri']} data-css="admin-reels-campuri">
-                <label className="admin-config-eticheta" data-css="admin-config-eticheta" htmlFor={`rem-ore-${i}`}>
+                <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor={`rem-ore-${i}`}>
                   Cu câte ore înainte de start
                 </label>
                 <input
@@ -130,7 +132,7 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }
                   </span>
                 ) : (
                   r.cand && (
-                    <span className="admin-config-ecou" data-css="admin-config-ecou">
+                    <span className={adminStyles['admin-config-ecou']} data-css="admin-config-ecou">
                       {`${verbul(r.stare)} ${r.cand} · ${r.distanta}`}
                     </span>
                   )
@@ -142,7 +144,7 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }
                 {r.nota && (
                   <span
                     className={
-                      esteNereusit(r.stare) ? (shared1['admin-config-eroare']) : 'admin-config-ecou'
+                      esteNereusit(r.stare) ? (shared1['admin-config-eroare']) : `${adminStyles['admin-config-ecou']}`
                     } data-css={
                       esteNereusit(r.stare) ? 'admin-config-eroare' : 'admin-config-ecou'
                     }
@@ -152,7 +154,7 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }
                   </span>
                 )}
 
-                <label className="admin-config-eticheta" data-css="admin-config-eticheta" htmlFor={`rem-sablon-${i}`}>
+                <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor={`rem-sablon-${i}`}>
                   Textul
                 </label>
                 <select
@@ -195,7 +197,7 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }
               <div className={styles['admin-reels-actiuni']} data-css="admin-reels-actiuni">
                 <button
                   type="button"
-                  className="admin-btn-ghost" data-css="admin-btn-ghost"
+                  className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                   disabled={ocupat}
                   aria-label={`Șterge reminderul cu ${r.intrare.offsetHours} ore înainte`}
                   onClick={() => {
@@ -221,7 +223,7 @@ export const GrupRemindere = ({ ciorna, seteazaRemindere, erori, acum, livrari }
     </ol>
     <button
       type="button"
-      className="admin-btn-ghost" data-css="admin-btn-ghost"
+      className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
       disabled={ocupat || ciorna.reminders.length >= MAX_REMINDERS}
       onClick={() => seteazaRemindere(adaugaReminder(ciorna.reminders))}
     >
