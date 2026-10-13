@@ -1,4 +1,6 @@
 import shared1 from './EvenimenteStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
 import styles from './AdminTemplatesTab.module.css';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAdminMutation } from '../../data/useAdminMutation';
@@ -302,7 +304,7 @@ export const AdminTemplatesTab = () => {
               {modificat(t) && <span className={styles['admin-tpl-dirty']} data-css="admin-tpl-dirty">Modificări nepublicate</span>}
               <button
                 type="button"
-                className="admin-btn-ghost" data-css="admin-btn-ghost"
+                className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                 // Cu modificări nepublicate randează ciorna, nu șablonul din DB:
                 // asta e ce va pleca după „Publică".
                 disabled={!d.subiect.trim() || !d.text.trim()}
@@ -317,7 +319,7 @@ export const AdminTemplatesTab = () => {
               </button>
               <button
                 type="button"
-                className="admin-btn-ghost" data-css="admin-btn-ghost"
+                className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                 disabled={!modificat(t) || saving === t.cheie}
                 onClick={() => scrieCiorna(t.cheie, { subiect: t.subiect, text: t.text_email })}
               >
@@ -325,7 +327,7 @@ export const AdminTemplatesTab = () => {
               </button>
               <button
                 type="button"
-                className="admin-btn-accent" data-css="admin-btn-accent"
+                className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
                 disabled={!modificat(t) || saving === t.cheie}
                 onClick={() => salveaza(t.cheie)}
               >
@@ -355,7 +357,7 @@ export const AdminTemplatesTab = () => {
                   </label>
                   <button
                     type="button"
-                    className="admin-btn-ghost" data-css="admin-btn-ghost"
+                    className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                     onClick={() => setPrevizualizare(null)}
                   >
                     Închide

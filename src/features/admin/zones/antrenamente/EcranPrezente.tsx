@@ -1,4 +1,6 @@
 import sharedSala from './SalaStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './EcranPrezente.module.css';
 import { useEffect, useState } from 'react';
 import {
@@ -49,7 +51,7 @@ export const EcranPrezente = () => {
 
   if (!date) {
     return (
-      <p className="admin-config-hint" role="status">
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint" role="status">
         {eroare ? 'Nu s-au putut încărca prezențele. Reîncearcă peste câteva secunde.' : 'Se încarcă…'}
       </p>
     );
@@ -96,9 +98,9 @@ export const EcranPrezente = () => {
         <FaraAntrenament date={date} />
       )}
 
-      <section className="admin-config-grup" aria-labelledby="sala-anulari">
+      <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-anulari">
         <h3 id="sala-anulari">Zile anulate</h3>
-        <p className="admin-config-hint">
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
           Pentru o zi anulată botul nu trimite sondaj. Poți anula și o zi pentru care sondajul n-a
           plecat încă.
         </p>
@@ -109,7 +111,7 @@ export const EcranPrezente = () => {
                 <span className={sharedSala['admin-sala-nume']} data-css="admin-sala-nume">{dataLunga(a.session_date)}</span>
                 <button
                   type="button"
-                  className="admin-btn-ghost"
+                  className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                   disabled={ocupat}
                   onClick={() => (a.poll_sent ? setDeReactivat(a) : reactiveaza(a.session_date))}
                 >
@@ -137,7 +139,7 @@ export const EcranPrezente = () => {
             );
           }}
         >
-          <label className="admin-config-eticheta" htmlFor="sala-zi-anulare">
+          <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="sala-zi-anulare">
             Anulează o zi
           </label>
           <input
@@ -147,16 +149,16 @@ export const EcranPrezente = () => {
             value={ziDeAnulat}
             onChange={(e) => setZiDeAnulat(e.target.value)}
           />
-          <button type="submit" className="admin-btn-ghost" disabled={ocupat || !ziDeAnulat}>
+          <button type="submit" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" disabled={ocupat || !ziDeAnulat}>
             Anulează ziua
           </button>
         </form>
       </section>
 
-      <section className="admin-config-grup" aria-labelledby="sala-trecute">
+      <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-trecute">
         <h3 id="sala-trecute">Antrenamentele trecute</h3>
         {trecute.length === 0 ? (
-          <p className="admin-config-hint">Încă niciun antrenament trecut.</p>
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Încă niciun antrenament trecut.</p>
         ) : (
           <>
             {trecute.slice(0, trecuteVizibile).map((a) => (
@@ -165,7 +167,7 @@ export const EcranPrezente = () => {
             {trecute.length > trecuteVizibile && (
               <button
                 type="button"
-                className="admin-btn-ghost"
+                className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                 onClick={() => setTrecuteVizibile((n) => n + 10)}
               >
                 Arată mai multe ({trecute.length - trecuteVizibile})
@@ -189,7 +191,7 @@ export const EcranPrezente = () => {
           </p>
           {deAnulat.poll_sent && (
             <>
-              <label className="admin-config-eticheta" htmlFor="sala-motiv-anulare">
+              <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="sala-motiv-anulare">
                 Motiv (opțional, apare în anunț)
               </label>
               <input
@@ -201,13 +203,13 @@ export const EcranPrezente = () => {
               />
             </>
           )}
-          <div className="admin-table-actions">
-            <button type="button" className="admin-btn-ghost" onClick={() => setDeAnulat(null)}>
+          <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+            <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => setDeAnulat(null)}>
               Nu anula
             </button>
             <button
               type="button"
-              className="admin-btn-accent"
+              className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
               disabled={ocupat}
               onClick={() => {
                 const zi = deAnulat.session_date;
@@ -235,13 +237,13 @@ export const EcranPrezente = () => {
           <p>
             {`Sondajul își recapătă butoanele și voturile, iar botul anunță grupul în cel mult un minut, pomenindu-i pe cei ${vinLa(deReactivat)} care au spus „Vin”.`}
           </p>
-          <div className="admin-table-actions">
-            <button type="button" className="admin-btn-ghost" onClick={() => setDeReactivat(null)}>
+          <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+            <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => setDeReactivat(null)}>
               Nu reactiva
             </button>
             <button
               type="button"
-              className="admin-btn-accent"
+              className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
               disabled={ocupat}
               onClick={() => {
                 const zi = deReactivat.session_date;
@@ -303,7 +305,7 @@ const AntrenamentUrmator = ({ date, antrenament: a, filtru, onFiltru, ocupat, on
         </div>
       </dl>
 
-      <div className="admin-cs-comutator" role="group" aria-label="Filtrează răspunsurile">
+      <div className={adminStyles['admin-cs-comutator']} data-css="admin-cs-comutator" role="group" aria-label="Filtrează răspunsurile">
         {FILTRE.map(([cheie, eticheta]) => (
           <button
             key={cheie}
@@ -345,8 +347,8 @@ const AntrenamentUrmator = ({ date, antrenament: a, filtru, onFiltru, ocupat, on
         onMarcheaza={onMarcheaza}
       />
 
-      <div className="admin-table-actions">
-        <button type="button" className="admin-btn-ghost" disabled={ocupat} onClick={onAnuleaza}>
+      <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+        <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" disabled={ocupat} onClick={onAnuleaza}>
           Anulează antrenamentul
         </button>
       </div>
@@ -370,10 +372,10 @@ type PropsLista = {
 const ListaRaspuns = ({ titlu, zi, membri, gol, sesiune, date, ocupat, onMarcheaza }: PropsLista) => (
   <div className={styles['admin-sala-coloana']} data-css="admin-sala-coloana">
     <h3 className={styles['admin-sala-coloana-titlu']} data-css="admin-sala-coloana-titlu">
-      {titlu} <span className="admin-tab-contor">{membri.length}</span>
+      {titlu} <span className={adminStyles['admin-tab-contor']} data-css="admin-tab-contor">{membri.length}</span>
     </h3>
     {membri.length === 0 ? (
-      <p className="admin-config-hint">{gol}</p>
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">{gol}</p>
     ) : (
       <ul className={sharedSala['admin-sala-lista']} data-css="admin-sala-lista">
         {membri.map((m) => (
@@ -460,7 +462,7 @@ const MarcheazaDeMana = ({ membri, sesiune, buton, ocupat, onMarcheaza }: PropsD
         if (m) onMarcheaza(sesiune, m, 'yes');
       }}
     >
-      <label className="admin-config-eticheta" htmlFor={id}>
+      <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor={id}>
         Fără sondaj (fără Telegram sau în pauză)
       </label>
       <select id={id} value={m?.id ?? ''} disabled={ocupat} onChange={(e) => setAles(e.target.value)}>
@@ -471,7 +473,7 @@ const MarcheazaDeMana = ({ membri, sesiune, buton, ocupat, onMarcheaza }: PropsD
           </option>
         ))}
       </select>
-      <button type="submit" className="admin-btn-ghost" disabled={ocupat || !m}>
+      <button type="submit" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" disabled={ocupat || !m}>
         {buton}
       </button>
     </form>
@@ -512,7 +514,7 @@ const AntrenamentTrecut = ({ date, antrenament: a, ocupat, onMarcheaza }: PropsT
     <details className={styles['admin-sala-trecut']} data-css="admin-sala-trecut">
       <summary>
         <span className={sharedSala['admin-sala-nume']} data-css="admin-sala-nume">{dataLunga(a.session_date)}</span>
-        <span className="admin-config-hint">
+        <span className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
           {c.vin.length} au venit · {c.nuVin.length} nu
         </span>
       </summary>

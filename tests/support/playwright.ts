@@ -2,6 +2,7 @@ import { test as base, type BrowserContext } from '@playwright/test';
 import { defineNetworkFixture, type NetworkFixture } from '@msw/playwright';
 import { type AnyHandler } from 'msw';
 import { HttpNetworkFrame } from 'msw/experimental';
+import { SUPABASE } from '../../src/shared/lib/backend';
 import { browserAssets, handlers as defaultHandlers } from './handlers';
 
 export const test = base.extend<{ handlers: AnyHandler[]; network: NetworkFixture }>({
@@ -33,3 +34,13 @@ export function createMockNetwork(context: BrowserContext, handlers: AnyHandler[
   return { network, unhandled };
 }
 export { expect } from '@playwright/test';
+
+export type { NetworkFixture } from '@msw/playwright';
+
+/** Catches bridge fallback locally, before a diagnostic request could escape. */
+export async function installBackendEscapeSentinel(context: BrowserContext, onEscape: () => void) {
+  await context.route(`${SUPABASE.url}/**`, async (route) => {
+    onEscape();
+    await route.fulfill({ status: 200, body: 'escaped', headers: { 'Access-Control-Allow-Origin': '*' } });
+  });
+}

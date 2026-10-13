@@ -1,4 +1,5 @@
 import shared1 from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './EcranAcum.module.css';
 import {
   useSala,
@@ -157,7 +158,7 @@ export const EcranAcum = ({ semnale, faza, config, inscrisi, asteptare, onEcran,
                   </button>
                 )}
                 {el.comandaDeVerificat && (
-                  <button type="button" className="admin-btn-ghost" disabled={ocupat}
+                  <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" disabled={ocupat}
                     title="Ascunde avertizarea din De rezolvat. Istoricul și starea Telegram rămân neschimbate."
                     onClick={() => {
                       const id = el.comandaDeVerificat;

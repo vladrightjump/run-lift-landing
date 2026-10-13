@@ -3,4 +3,4 @@
      nu cei 680px ai paginii, ca pe telefon sa nu impinga ecranul in lateral.
      Doua clase (0,2,0) bat clasa cardului din modulul lui (0,1,0). */
 
-  :global(.admin-previz) .admin-previz-saptamana { width: auto; max-width: 680px; margin: 0; animation: none; }
+  :global([data-css~="admin-previz"]) .admin-previz-saptamana { width: auto; max-width: 680px; margin: 0; animation: none; }

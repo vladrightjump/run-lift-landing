@@ -1,4 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { server } from '../../../../../tests/support/vitest.setup';
+import { rpcResponse } from '../../../../../tests/support/responses';
 import { listTrainingReels, saveTrainingReel, moveTrainingReel, deleteTrainingReel, mesajRefuzClip } from './api';
 import { InvalidTokenError } from '../../../../shared/lib/rpc';
 
@@ -16,22 +18,22 @@ import { InvalidTokenError } from '../../../../shared/lib/rpc';
  * mesajul pe care textele astea există ca să-l evite.
  */
 
-let fetchMock: ReturnType<typeof vi.fn>;
+const requests: { name: string; body: Record<string, unknown> }[] = [];
+const RPCS = ['admin_list_training_reels', 'admin_save_training_reel', 'admin_move_training_reel', 'admin_delete_training_reel'];
 
-const raspunde = (corp: unknown, status = 200) => {
-  fetchMock = vi.fn(async () => new Response(JSON.stringify(corp), { status }));
-  vi.stubGlobal('fetch', fetchMock);
+const raspunde = (corp: unknown, status = 200, text?: string) => {
+  requests.length = 0;
+  server.use(...RPCS.map((name) => rpcResponse(name, corp, {
+    status, text,
+    onRequest: async (request) => { requests.push({ name, body: await request.json() as Record<string, unknown> }); },
+  })));
 };
 
 /** Corpul trimis de ultimul apel, deserializat. */
-const trimis = (): Record<string, unknown> =>
-  JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
-
-const numeRpc = (): string =>
-  (fetchMock.mock.calls[0][0] as string).split('/rest/v1/rpc/')[1];
+const trimis = (): Record<string, unknown> => requests[0].body;
+const numeRpc = (): string => requests[0].name;
 
 beforeEach(() => raspunde([]));
-afterEach(() => vi.unstubAllGlobals());
 
 describe('citirea listei', () => {
   it('cere lista de admin cu tokenul', async () => {
@@ -42,8 +44,7 @@ describe('citirea listei', () => {
   });
 
   it('un token respins de server devine InvalidTokenError, nu o eroare de rețea', async () => {
-    fetchMock = vi.fn(async () => new Response('invalid_token', { status: 401 }));
-    vi.stubGlobal('fetch', fetchMock);
+    raspunde(null, 401, 'invalid_token');
     await expect(listTrainingReels('tok')).rejects.toBeInstanceOf(InvalidTokenError);
   });
 });

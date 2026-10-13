@@ -1,3 +1,5 @@
+import adminStyles from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './EcranGhidBot.module.css';
 import type { EcranAdmin } from '../../data/stareCurenta';
 
@@ -39,7 +41,7 @@ const GRUPE = [
 
 export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void }) => (
   <article className={styles['admin-ghid-bot']} data-css="admin-ghid-bot" aria-labelledby="ghid-bot-titlu">
-    <header className="admin-config-grup">
+    <header className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
       <h2 id="ghid-bot-titlu">Instrucțiuni bot</h2>
       <p>Botul vă ajută să organizați antrenamentele din conversația privată de Telegram.
         Dashboard-ul arată prezențele și acțiunile de administrare. Mesajele /mesaj și sondajele /poll se verifică în grup, iar confirmarea publicării vine în privat.</p>
@@ -48,17 +50,17 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
         <li><strong>Alege o comandă</strong> din meniu sau scrie unul dintre exemplele de mai jos, cu datele tale.</li>
         <li><strong>Verifică previzualizarea.</strong> Acțiunile care schimbă date sau trimit mesaje cer confirmare. Citirea programului și a prezențelor nu modifică nimic.</li>
       </ol>
-      <p className="admin-config-hint">Comenzile de administrare funcționează pentru organizatorii autorizați,
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Comenzile de administrare funcționează pentru organizatorii autorizați,
         în privat. Faptul că ești administrator în grup nu îți dă automat acces la comenzile botului.
         Dacă meniul lipsește, cere responsabilului botului să îți activeze accesul, apoi repetă <code>/start</code>.</p>
     </header>
 
-    <section className="admin-config-grup" aria-labelledby="ghid-probe">
+    <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="ghid-probe">
       <h3 id="ghid-probe">Persoane noi și antrenamentul de probă</h3>
       <p>Linkul public deschide botul în privat. Persoana apasă Start, citește condițiile și alege o dată din program. Botul trimite confirmarea și reminderul, apoi te întreabă după antrenament dacă a venit.</p>
       <p>Apasă „A venit” sau „Nu a venit”. Fără răspuns, cazul rămâne de confirmat în admin. După „A venit”, botul întreabă persoana dacă vrea să continue. Invitația în grup pleacă numai după răspunsul ei „Da”.</p>
       <p>Întrebările și mesajele nelivrate apar la Persoane noi. Un rezultat ambiguu poate însemna că mesajul a ajuns deja; verifică înainte să reîncerci. O persoană exclusă nu este deblocată automat.</p>
-      <button className="admin-btn-ghost" onClick={() => onEcran('grup-probe')}>Deschide Persoane noi</button>
+      <button className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => onEcran('grup-probe')}>Deschide Persoane noi</button>
     </section>
 
     {GRUPE.map((grup) => (
@@ -66,7 +68,7 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
         <h3>{grup.titlu}</h3>
         <div className={styles['admin-ghid-comenzi']} data-css="admin-ghid-comenzi">
           {grup.comenzi.map((comanda) => (
-            <section className="admin-config-grup" key={comanda.exemplu}>
+            <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" key={comanda.exemplu}>
               <h4>{comanda.titlu}</h4>
               <code className={styles['admin-ghid-exemplu']} data-css="admin-ghid-exemplu">{comanda.exemplu}</code>
               <p>{comanda.text}</p>
@@ -76,7 +78,7 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
       </section>
     ))}
 
-    <section className="admin-config-grup" aria-labelledby="ghid-automat">
+    <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="ghid-automat">
       <h3 id="ghid-automat">Ce face automat</h3>
       <ul>
         <li><strong>Sondajul:</strong> pleacă în zilele și la ora salvate în „Setări bot”, pentru antrenamentul de a doua zi.</li>
@@ -87,10 +89,10 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
       </ul>
       <p>Orele sunt cele din Chișinău. Oprirea din „Setări bot” oprește sarcinile programate de antrenament;
         comenzile deja puse în coadă și verificarea apartenenței continuă.</p>
-      <button type="button" className="admin-btn-ghost" onClick={() => onEcran('grup-bot')}>Deschide Setări bot</button>
+      <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => onEcran('grup-bot')}>Deschide Setări bot</button>
     </section>
 
-    <section className="admin-config-grup" aria-labelledby="ghid-membri">
+    <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="ghid-membri">
       <h3 id="ghid-membri">Cum citești lista de membri</h3>
       <ul>
         <li><strong>În grup:</strong> ultima verificare confirmă apartenența la Telegram.</li>
@@ -101,10 +103,10 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
       <p>„Activ” și „În pauză” descriu starea la antrenamente, separat de apartenența la Telegram.
         „Verifică apartenența” programează verificarea a până la 10 conturi pe minut.
         Botul nu poate importa automat întreaga listă de membri vechi pe care nu îi cunoaște.</p>
-      <button type="button" className="admin-btn-ghost" onClick={() => onEcran('grup-membri')}>Deschide Membri</button>
+      <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => onEcran('grup-membri')}>Deschide Membri</button>
     </section>
 
-    <section className="admin-config-grup" aria-labelledby="ghid-rezolvare">
+    <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="ghid-rezolvare">
       <h3 id="ghid-rezolvare">Dacă ceva nu merge</h3>
       <dl>
         <dt>Comanda este în așteptare</dt>
@@ -118,7 +120,7 @@ export const EcranGhidBot = ({ onEcran }: { onEcran: (ecran: EcranAdmin) => void
         <dt>Verificarea membrilor a eșuat</dt>
         <dd>Dashboard-ul păstrează ultima stare cunoscută. Verifică data observației și cere o reverificare; persoana nu este marcată automat ca ieșită.</dd>
       </dl>
-      <p className="admin-config-hint">Pentru un mesaj personalizat către grup, folosește editorul din Setări bot.
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Pentru un mesaj personalizat către grup, folosește editorul din Setări bot.
         Exemplele din acest ghid sunt instrucțiuni de introdus în Telegram; afișarea lor aici nu execută comenzi.</p>
     </section>
   </article>

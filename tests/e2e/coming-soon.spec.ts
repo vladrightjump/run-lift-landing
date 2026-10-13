@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../support/playwright';
+import { submitFormResponse } from '../support/responses';
+
 import type { Locator, Page } from '@playwright/test';
 import { META } from '../../src/shared/content/meta';
 import { deriveEditionDates } from '../../src/shared/lib/config';
@@ -17,7 +19,6 @@ const { LAUNCH_EDITION_ORDINAL } = deriveEventStrings(SNAPSHOT_CONFIG);
 
 // Formularul trece prin funcția Edge `submit-form`, care verifică Turnstile
 // înainte de a scrie — browserul nu mai inserează direct în PostgREST.
-const INSERT_ROUTE = '**/functions/v1/submit-form';
 
 // Ceas fixat înainte de lansare (22 iulie 18:00) dar care AVANSEAZĂ în timp real
 // — altfel, dacă rulăm testele după ora lansării, countdown-ul e „done" și
@@ -138,8 +139,8 @@ test.describe('Coming Soon — formular „Anunță-mă la lansare"', () => {
     await expect(modal.getByPlaceholder('07xx xxx xxx')).toBeVisible();
   });
 
-  test('submit valid (mock 201) → ecran de succes', async ({ page }) => {
-    await page.route(INSERT_ROUTE, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+  test('submit valid (mock 201) → ecran de succes', async ({ page, network }) => {
+    network.use(submitFormResponse());
 
     const modal = await openModal(page);
     await fillValid(modal);
@@ -159,12 +160,12 @@ test.describe('Coming Soon — formular „Anunță-mă la lansare"', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('formularul funcționează și după expirarea countdown-ului', async ({ page }) => {
+  test('formularul funcționează și după expirarea countdown-ului', async ({ page, network }) => {
     await page.addInitScript(() => {
       const fixed = new Date('2026-08-04T18:00:01+03:00').getTime();
       Date.now = () => fixed;
     });
-    await page.route(INSERT_ROUTE, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+    network.use(submitFormResponse());
 
     const modal = await openModal(page);
     await fillValid(modal);

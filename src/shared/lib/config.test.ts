@@ -5,9 +5,9 @@ import {
   INSTAGRAM_HANDLE,
   SUPABASE,
   isBackendConfigured,
-} from '../../src/shared/lib/config';
-import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
-import { EDITION } from '../../src/shared/content/edition';
+} from './config';
+import { SNAPSHOT_CONFIG } from '../content/eventConfig';
+import { EDITION } from '../content/edition';
 
 // Derivările se verifică pe INSTANTANEUL de build — acelaşi rol pe care îl avea
 // `EDITION` înainte de mutarea configului în DB.

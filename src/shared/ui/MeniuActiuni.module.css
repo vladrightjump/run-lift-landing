@@ -1,0 +1,13 @@
+
+.admin-meniu { min-width: 240px; display: flex; flex-direction: column; }
+.admin-meniu[data-prezentare="foaie"] { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+.admin-meniu-item {
+    display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px;
+    border: 0; background: transparent; text-align: left; cursor: pointer;
+    font-family: var(--pa-font); font-size: 15px; font-weight: 500; color: var(--pa-text);
+  }
+.admin-meniu-item :global([data-css~="admin-icon"]) { color: var(--pa-muted); }
+.admin-meniu-item:hover:not(:disabled), .admin-meniu-item:focus-visible { background: var(--pa-surface-2); }
+.admin-meniu-item:disabled { color: var(--pa-muted-2); cursor: not-allowed; }
+.admin-meniu-item--distructiv, .admin-meniu-item--distructiv :global([data-css~="admin-icon"]) { color: var(--pa-danger); }
+.admin-meniu-sep { border: 0; border-top: 1px solid var(--pa-line); margin: 4px 0; }

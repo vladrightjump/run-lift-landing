@@ -1,4 +1,5 @@
 import shared1 from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './AdminComingSoonTab.module.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listEventConfig } from '../evenimente/api';
@@ -147,23 +148,23 @@ export const AdminComingSoonTab = () => {
   };
 
   return (
-    <section className="admin-table-section">
-      <div className="admin-stats">
-        <div className="admin-stat">
-          <span className="admin-stat-label">Acum vizitatorul vede</span>
-          <span className="admin-stat-value accent">
+    <section className={shared1['admin-table-section']} data-css="admin-table-section">
+      <div className={shared1['admin-stats']} data-css="admin-stats">
+        <div className={shared1['admin-stat']} data-css="admin-stat">
+          <span className={shared1['admin-stat-label']} data-css="admin-stat-label">Acum vizitatorul vede</span>
+          <span className={`${shared1['admin-stat-value']} ${shared1['accent']}`} data-css="admin-stat-value accent">
             {faza === 'coming-soon' ? 'Coming Soon' : 'Landing'}
           </span>
         </div>
-        <div className="admin-stat">
-          <span className="admin-stat-label">Ecranul de pornire e setat pe</span>
-          <span className="admin-stat-value">
+        <div className={shared1['admin-stat']} data-css="admin-stat">
+          <span className={shared1['admin-stat-label']} data-css="admin-stat-label">Ecranul de pornire e setat pe</span>
+          <span className={shared1['admin-stat-value']} data-css="admin-stat-value">
             {publicat.showComingSoon ? 'Coming Soon' : 'Landing'}
           </span>
         </div>
-        <div className="admin-stat">
-          <span className="admin-stat-label">Anunțul</span>
-          <span className="admin-stat-value">
+        <div className={shared1['admin-stat']} data-css="admin-stat">
+          <span className={shared1['admin-stat-label']} data-css="admin-stat-label">Anunțul</span>
+          <span className={shared1['admin-stat-value']} data-css="admin-stat-value">
             {descrieMoment(publicat.launchAt, publicat.tz, acum) || '—'}
           </span>
         </div>
@@ -173,7 +174,7 @@ export const AdminComingSoonTab = () => {
           anunțului a trecut, deci site-ul arată deja landing-ul. Fără nota
           asta, organizatorul apasă degeaba pe comutator. */}
       {publicat.showComingSoon && faza !== 'coming-soon' && (
-        <div className="admin-banner" role="status">
+        <div className={shared1['admin-banner']} data-css="admin-banner" role="status">
           Ecranul de pornire e „Coming Soon", dar <strong>ora anunțului a trecut</strong>, deci
           site-ul arată deja landing-ul. Ca să-l duci înapoi pe Coming Soon, mută ținta anunțului
           în viitor.
@@ -181,7 +182,7 @@ export const AdminComingSoonTab = () => {
       )}
 
       {ciornaAtinge && (
-        <div className="admin-banner warn" role="status">
+        <div className={`${shared1['admin-banner']} warn`} data-css="admin-banner warn" role="status">
           <strong>Există o ciornă deschisă</strong> (ediția {ciorna?.editie}) care poartă alte
           valori pentru ecranul de pornire și pentru țintele numărătorilor. Dacă o publici din
           tabul „Eveniment", ea <strong>suprascrie</strong> ce setezi aici. Aliniaz-o acolo sau
@@ -189,22 +190,22 @@ export const AdminComingSoonTab = () => {
         </div>
       )}
 
-      <div className="admin-table-head">
+      <div className={shared1['admin-table-head']} data-css="admin-table-head">
         <div className={shared1['admin-invelis-titlu']} data-css={"admin-invelis-titlu"}>
           <h2>Coming Soon</h2>
           {/* Excepția se SCRIE, nu se deduce din lipsa unui buton „Publică".
               Celelalte ecrane de conținut au ciornă și publicare; ăsta e o
               manetă, iar o manetă cu un pas de publicare ar însemna s-o
               armezi și apoi s-o tragi. */}
-          <p className="admin-config-hint">
+          <p className={shared1['admin-config-hint']} data-css="admin-config-hint">
             <strong>Ecranul ăsta are efect imediat.</strong> Spre deosebire de „Evenimentul",
             „Clipuri" sau „Antrenamente", aici nu există ciornă: ce schimbi se vede pe site de
             îndată ce salvezi. E o manetă, nu un document.
           </p>
         </div>
-        <div className="admin-table-actions">
+        <div className={shared1['admin-table-actions']} data-css="admin-table-actions">
           <a
-            className="admin-btn-ghost"
+            className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
             href="/?preview=soon"
             target="_blank"
             rel="noopener noreferrer"
@@ -214,14 +215,14 @@ export const AdminComingSoonTab = () => {
         </div>
       </div>
 
-      <div className="admin-config-form">
-        <fieldset className="admin-config-grup">
+      <div className={shared1['admin-config-form']} data-css="admin-config-form">
+        <fieldset className={shared1['admin-config-grup']} data-css="admin-config-grup">
           <legend>Ce arată homepage-ul</legend>
-          <p className="admin-config-hint">
+          <p className={shared1['admin-config-hint']} data-css="admin-config-hint">
             „Coming Soon" ține pagina pe numărătoarea spre anunț, fără formular. Comutarea se
             aplică imediat, fără deploy.
           </p>
-          <div className="admin-cs-comutator">
+          <div className={shared1['admin-cs-comutator']} data-css="admin-cs-comutator">
             {(
               [
                 [true, 'Coming Soon'],
@@ -231,7 +232,7 @@ export const AdminComingSoonTab = () => {
               <button
                 key={eticheta}
                 type="button"
-                className={`admin-sursa-tab${show === val ? ' activ' : ''}`}
+                className={`${shared1['admin-sursa-tab']}${show === val ? ' activ' : ''}`} data-css={`admin-sursa-tab${show === val ? ' activ' : ''}`}
                 aria-pressed={show === val}
                 onClick={() => setShow(val)}
               >
@@ -241,13 +242,13 @@ export const AdminComingSoonTab = () => {
           </div>
         </fieldset>
 
-        <fieldset className="admin-config-grup">
+        <fieldset className={shared1['admin-config-grup']} data-css="admin-config-grup">
           <legend>Ținta numărătorii</legend>
-          <p className="admin-config-hint">
+          <p className={shared1['admin-config-hint']} data-css="admin-config-hint">
             Momentul anunțului. Când ceasul îl trece, homepage-ul comută singur pe landing.
           </p>
-          <div className="admin-config-camp">
-            <label className="admin-config-eticheta" htmlFor="cs-launch">
+          <div className={shared1['admin-config-camp']} data-css="admin-config-camp">
+            <label className={shared1['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="cs-launch">
               Se anunță ediția
             </label>
             <input
@@ -257,7 +258,7 @@ export const AdminComingSoonTab = () => {
               value={laDatetimeLocal(launchAt)}
               onChange={(e) => setLaunchAt(dinDatetimeLocal(e.target.value))}
             />
-            <span className="admin-config-ecou">
+            <span className={shared1['admin-config-ecou']} data-css="admin-config-ecou">
               {descrieMoment(launchAt, publicat.tz, acum) || 'Alege un moment.'}
             </span>
             <div className={styles['admin-cs-presetari']} data-css={"admin-cs-presetari"}>
@@ -265,7 +266,7 @@ export const AdminComingSoonTab = () => {
                 <button
                   key={p.eticheta}
                   type="button"
-                  className="admin-btn-ghost"
+                  className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                   onClick={() => setLaunchAt(caIsoLocal(p.calc(new Date(acum))))}
                 >
                   {p.eticheta}
@@ -274,8 +275,8 @@ export const AdminComingSoonTab = () => {
             </div>
           </div>
 
-          <div className="admin-config-camp">
-            <label className="admin-config-eticheta" htmlFor="cs-next">
+          <div className={shared1['admin-config-camp']} data-css="admin-config-camp">
+            <label className={shared1['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="cs-next">
               Următorul antrenament
             </label>
             <input
@@ -285,19 +286,19 @@ export const AdminComingSoonTab = () => {
               value={laDatetimeLocal(nextAt)}
               onChange={(e) => setNextAt(dinDatetimeLocal(e.target.value))}
             />
-            <span className="admin-config-ecou">
+            <span className={shared1['admin-config-ecou']} data-css="admin-config-ecou">
               {descrieMoment(nextAt, publicat.tz, acum) || 'Alege un moment.'}
             </span>
-            <span className="admin-config-ajutor">
+            <span className={shared1['admin-config-ajutor']} data-css="admin-config-ajutor">
               Ținta numărătorii de DUPĂ cursă. Același ecran pentru vizitator, de asta stă aici.
             </span>
           </div>
         </fieldset>
 
-        <div className="admin-table-actions">
+        <div className={shared1['admin-table-actions']} data-css="admin-table-actions">
           <button
             type="button"
-            className="admin-btn-accent"
+            className={shared1['admin-btn-accent']} data-css="admin-btn-accent"
             disabled={!schimbat || !formatOk || aplica}
             onClick={() => setConfirma(true)}
           >
@@ -306,7 +307,7 @@ export const AdminComingSoonTab = () => {
           {schimbat && (
             <button
               type="button"
-              className="admin-btn-ghost"
+              className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
               disabled={aplica}
               onClick={() => {
                 setShow(publicat.showComingSoon);
@@ -325,20 +326,20 @@ export const AdminComingSoonTab = () => {
       <AdminOrdineHomepage />
 
       {confirma && (
-        <Dialog titlu="Aplici schimbarea acum?" rol="alertdialog" clasa="admin-confirm--neutru" onInchide={() => setConfirma(false)}>
+        <Dialog titlu="Aplici schimbarea acum?" rol="alertdialog" clasa={shared1['admin-confirm--neutru']} onInchide={() => setConfirma(false)}>
           <p>
             Site-ul public trece <strong>imediat</strong> pe{' '}
             <strong>{show ? 'Coming Soon' : 'landing-ul cu înscrieri'}</strong>, cu numărătoarea
             spre {descrieMoment(launchAt, publicat.tz, acum) || launchAt}.
           </p>
-          <p className="admin-confirm-note">
+          <p className={shared1['admin-confirm-note']} data-css="admin-confirm-note">
             Nu trece prin ciornă. Versiunea de acum rămâne salvată, deci o poți întoarce din
             „Versiuni anterioare", în tabul „Eveniment".
           </p>
-          <div className="admin-confirm-actions">
+          <div className={shared1['admin-confirm-actions']} data-css="admin-confirm-actions">
             <button
               type="button"
-              className="admin-btn-accent"
+              className={shared1['admin-btn-accent']} data-css="admin-btn-accent"
               disabled={aplica}
               onClick={aplicaAcum}
             >
@@ -346,7 +347,7 @@ export const AdminComingSoonTab = () => {
             </button>
             <button
               type="button"
-              className="admin-confirm-cancel"
+              className={shared1['admin-confirm-cancel']} data-css="admin-confirm-cancel"
               disabled={aplica}
               onClick={() => setConfirma(false)}
             >

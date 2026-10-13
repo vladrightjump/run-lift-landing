@@ -4,12 +4,12 @@
  * `npm run build` ÎNAINTE de `vite build`, deci un drift face build-ul Vercel
  * să pice — regresia din 4 august nu mai poate ajunge în producție.
  *
- * Logica de verificare stă în `src/lib/deployConfig.ts` (partajată cu testul).
+ * Logica de verificare stă în `src/shared/lib/deployConfig.ts` (partajată cu testul).
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { checkDeployConfig } from '../src/lib/deployConfig';
+import { checkDeployConfig } from '../src/shared/lib/deployConfig';
 import { sqlDinRadacina, mesajSqlInRadacina } from './rootSqlGuard';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,14 +25,14 @@ if (problems.length > 0) {
   for (const p of problems) console.error(`  - ${p}`);
   console.error(
     '\nActualizează `vercel.json` (headerul CSP: connect-src / script-src / frame-src)\n' +
-      'ca să corespundă cu `src/lib/backend.ts` (SUPABASE.url) și cu Turnstile.\n' +
-      'Vezi src/lib/deployConfig.ts.\n'
+      'ca să corespundă cu `src/shared/lib/backend.ts` (SUPABASE.url) și cu Turnstile.\n' +
+      'Vezi src/shared/lib/deployConfig.ts.\n'
   );
   process.exit(1);
 }
 
 /**
- * Cheia publică Turnstile. Fără ea, `src/lib/turnstile.ts` se dezactivează
+ * Cheia publică Turnstile. Fără ea, `src/shared/lib/turnstile.ts` se dezactivează
  * singur — util în dev, dar în producție ar însemna captcha oprit fără ca nimeni
  * să observe. De aceea build-ul de producție Vercel pică; local doar avertizează.
  */

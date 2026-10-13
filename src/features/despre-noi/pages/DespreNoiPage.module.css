@@ -85,18 +85,18 @@
   }
   .dn-kicker {
     margin: 0 0 20px; font-size: 15px; font-weight: 600; letter-spacing: 2.5px;
-    text-transform: uppercase; color: var(--e3-accent); animation: global(fade-up) 0.6s ease-out both;
+    text-transform: uppercase; color: var(--e3-accent); animation: fade-up 0.6s ease-out both;
   }
   .dn-hero-title {
     margin: 0; font-family: Anton, sans-serif; font-weight: 400;
     font-size: clamp(52px, 12vw, 176px); line-height: 0.9; letter-spacing: -0.005em;
     padding-top: 0.1em;
     text-transform: uppercase; text-wrap: balance; color: var(--e3-text);
-    animation: global(fade-up) 0.6s ease-out 0.15s both;
+    animation: fade-up 0.6s ease-out 0.15s both;
   }
   .dn-hero-sub {
     margin: 28px 0 0; max-width: 560px; font-size: 18px; line-height: 1.55;
-    color: var(--e3-text); text-wrap: pretty; animation: global(fade-up) 0.6s ease-out 0.3s both;
+    color: var(--e3-text); text-wrap: pretty; animation: fade-up 0.6s ease-out 0.3s both;
   }
 
   .dn-section {
@@ -136,7 +136,7 @@
     transform: translateY(-4px); box-shadow: 0 14px 32px rgba(10,14,8,0.55);
   }
   .dn-stat {
-    animation: global(fade-up) 0.5s ease-out both;
+    animation: fade-up 0.5s ease-out both;
     animation-delay: calc(var(--i, 0) * 90ms);
   }
   .dn-orar-row { transition: background 0.2s ease, box-shadow 0.2s ease; }
@@ -213,7 +213,7 @@
   .dn-success-check {
     width: 56px; height: 56px; background: var(--e3-accent); color: var(--e3-bg);
     display: flex; align-items: center; justify-content: center; font-size: 28px;
-    animation: global(pop-in) 0.35s ease-out both;
+    animation: pop-in 0.35s ease-out both;
   }
   .dn-success h3 {
     margin: 0; font-family: Anton, sans-serif; font-weight: 400; font-size: 28px;
@@ -262,3 +262,14 @@
 .link10.link10.link10.link10 { margin-top: 20px; display: inline-block; background: var(--e3-accent); color: var(--e3-bg); font-family: Anton, sans-serif; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; padding: 12px 24px; text-decoration: none; }
 .layout11.layout11.layout11.layout11 { position: relative; border: 1px solid var(--e3-border); aspect-ratio: 4 / 3; overflow: hidden; background: var(--e3-surface); }
 .map12.map12.map12.map12 { width: 100%; height: 100%; border: none; display: block; filter: grayscale(0.3) contrast(1.05); }
+
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+@keyframes pop-in {
+    0%   { transform: scale(0); }
+    70%  { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }

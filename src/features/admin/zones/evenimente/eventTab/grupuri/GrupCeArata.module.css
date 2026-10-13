@@ -1,3 +1,3 @@
 
   .admin-config-lista { grid-column: 1 / -1; display: grid; gap: 10px; }
-  .admin-config-lista > :global(.admin-config-hint) { margin: 0; }
+  .admin-config-lista > :global([data-css~="admin-config-hint"]) { margin: 0; }

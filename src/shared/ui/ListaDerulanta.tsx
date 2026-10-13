@@ -1,3 +1,5 @@
+import listStyles from './ListaDerulanta.module.css';
+import controlStyles from './ControlStyles.module.css';
 import { useId } from 'react';
 
 type Optiune<T extends string> = { valoare: T; eticheta: string };
@@ -43,14 +45,14 @@ export const ListaDerulanta = <T extends string>({
   const idProblema = `${id}-problema`;
 
   return (
-    <div className="admin-control">
-      <label className="admin-control-eticheta" htmlFor={id}>
+    <div className={controlStyles['admin-control']} data-css="admin-control">
+      <label className={controlStyles['admin-control-eticheta']} data-css="admin-control-eticheta" htmlFor={id}>
         {eticheta}
       </label>
 
       <select
         id={id}
-        className="admin-control-select"
+        className={listStyles['admin-control-select']} data-css="admin-control-select"
         value={valoare}
         disabled={dezactivat}
         aria-invalid={problema ? true : undefined}
@@ -87,13 +89,13 @@ export const ListaDerulanta = <T extends string>({
       </select>
 
       {descriere && (
-        <small id={idDescriere} className="admin-control-descriere">
+        <small id={idDescriere} className={listStyles['admin-control-descriere']} data-css="admin-control-descriere">
           {descriere}
         </small>
       )}
 
       {problema && (
-        <small id={idProblema} className="admin-control-problema" role="alert">
+        <small id={idProblema} className={listStyles['admin-control-problema']} data-css="admin-control-problema" role="alert">
           {problema}
         </small>
       )}

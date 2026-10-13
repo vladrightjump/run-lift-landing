@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toCsv, durataCsv } from '../../src/lib/csv';
+import { toCsv, durataCsv } from './csv';
 
 describe('toCsv', () => {
   it('încadrează în ghilimele și dublează ghilimelele interne', () => {

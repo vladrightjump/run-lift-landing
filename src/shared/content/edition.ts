@@ -20,7 +20,7 @@
  * ediție): `brand`, `urls`, `training` și `ogImageVersion`.
  *
  * NOTĂ: configul de backend (Supabase url/key/schema) NU stă aici — e configurare
- * de MEDIU, nu de ediție. Trăiește în `src/lib/backend.ts`.
+ * de MEDIU, nu de ediție. Trăiește în `src/shared/lib/backend.ts`.
  *
  * Datele/orele se scriu FĂRĂ offset (`start`, `registrationDeadline`, `launchAt`)
  * și se compun cu `tz` (fusul Chișinăului), ca vizitatorii din alte fusuri să

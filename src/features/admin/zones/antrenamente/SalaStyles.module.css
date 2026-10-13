@@ -3,7 +3,7 @@
      cu o singură excepție deliberată: cifrele de pe „Prezențe" sînt mari, în
      Anton, fiindcă se citesc de pe telefon, în parc, la 6 dimineața. */
 
-  :global(.admin-config-grup) > :where(.admin-sala-filtre) {
+  :global([data-css~="admin-config-grup"]) > :where(.admin-sala-filtre) {
     margin-top: 16px;
   }
   .admin-sala { display: grid; gap: 20px; min-width: 0; }

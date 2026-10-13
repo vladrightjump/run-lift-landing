@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
-import { ListaDerulanta } from '../../src/admin/controale/ListaDerulanta';
+import { ListaDerulanta } from './ListaDerulanta';
 
 /**
  * Primitivele de control.

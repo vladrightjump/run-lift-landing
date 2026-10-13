@@ -111,7 +111,7 @@ creează deloc un deploy Railway (calea urmărită e `/bot/**`). Vezi `bot/READM
 
 ## Cum știe că „build-ul nou e live"
 
-La build, `scripts/write-version.mjs` scrie `dist/version.json`:
+La build, `scripts/write-version.ts` scrie `dist/version.json`:
 
 ```json
 { "commit": "<sha>", "builtAt": "<iso>" }
@@ -172,17 +172,20 @@ vercel --prod --yes
 
 ## Pragurile automate (linter, cod mort, acoperire)
 
-De la 5 septembrie 2026, pipeline-ul rulează trei verificări în plus, toate
+De la 5 septembrie 2026, pipeline-ul include verificări de lint, cod nefolosit și
+acoperire, completate cu verificarea structurii aplicației. Ele rulează
 înaintea build-ului și a browserului, ca o încălcare să se vadă în câteva
 secunde, nu după cinci minute.
 
 | Comandă | Ce păzește | Cum e calibrată |
 |---|---|---|
 | `npm run lint` | `oxlint` — greșeli de React și de corectitudine | clichet: `--max-warnings=25` |
+| `npm run lint:arch` | granițe de import și structura completă `src/app`, `features`, `shared` | zero toleranță |
 | `npm run deadcode` | `knip` — fișiere, exporturi și dependențe nefolosite | zero toleranță |
 | `npm run test:coverage` | acoperirea testelor unitare | praguri în `vitest.config.ts` |
 
-**Toate trei sunt CLICHETE: se urcă, nu se coboară.**
+**Lint-ul și acoperirea au praguri de clichet; codul nefolosit și încălcările
+structurii trebuie eliminate.**
 
 ### De ce `--max-warnings=25` și nu zero
 
@@ -197,26 +200,29 @@ sunt tolerate până le repară cineva. Când repari una, coboară numărul. Nu-
 
 ### Pragurile de acoperire
 
-Măsurate pe arborele din 5 septembrie 2026 și fixate cu un punct sub valoarea
-reală — destul de sus cât să prindă ștergerea unei suite, destul de jos cât să
-nu pice pentru zgomot. Au fost urcate o dată chiar în aceeași zi, după ce
-împărțirea taburilor de admin a adus încă 21 de teste pe ajutoarele devenite
-testabile — exact mișcarea pe care o cere regula de mai jos:
+Pragurile și valorile măsurate pentru linii, instrucțiuni, funcții și ramuri sunt
+în comentariul datat din `vitest.config.ts`. `npm run test:coverage` măsoară codul
+web din `src/`, cu testele colocate excluse, și aplică toate cele patru praguri.
 
-| | măsurat | prag |
-|---|---|---|
-| linii | 68,87% | 68 |
-| instrucțiuni | 67,71% | 67 |
-| funcții | 62,46% | 61 |
-| ramuri | 60,44% | 59 |
+U13, finalul refactorului de structură, permite **o singură resetare deliberată**:
+după eliminarea testelor duplicate, se măsoară arborele integrat și fiecare prag
+se fixează imediat sub valoarea sa măsurată. Comentariul datat păstrează măsurarea
+și motivul resetării. Această excepție nu permite coborâri ulterioare sau praguri
+ajustate în tăcere pentru a trece un PR. După resetare, clichetul continuă să urce.
 
-Verificate că mușcă: ștergerea suitei `useRegistration.test.tsx` pică pragul de
-linii și pe cel de funcții.
+Resetarea a fost măsurată pe **13 octombrie 2026**, pe arborele final U13:
+
+| Metrică | Măsurată | Prag |
+|---|---:|---:|
+| Linii | 84,56% | 84% |
+| Instrucțiuni | 82,85% | 82% |
+| Funcții | 80,08% | 80% |
+| Ramuri | 77,93% | 77% |
 
 Când adaugi teste și acoperirea urcă, **urcă și pragurile** — altfel clichetul
 nu se strânge. Când un PR le pică, răspunsul implicit e „scrie testul", nu
 „coboară pragul".
 
-Punctele de intrare (`main.tsx`, `admin-preview.tsx`) sunt excluse: montează
-arborele și n-au logică proprie. `supabase/functions/` e exclus din toate trei —
+Punctele de intrare (`src/app/main.tsx`, `src/app/admin-preview.tsx`) și tipurile
+ambientale (`src/app/vite-env.d.ts`) sunt excluse: montează arborele sau declară tipuri. `supabase/functions/` e exclus din toate trei —
 e cod Deno, în afara lui `tsconfig.json`.

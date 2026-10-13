@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { eventVars, fillEventVars } from '../../src/shared/content/format';
-import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
+import { eventVars, fillEventVars } from './format';
+import { SNAPSHOT_CONFIG } from './eventConfig';
 
 /**
  * Variabilele de eveniment din șabloanele de email.

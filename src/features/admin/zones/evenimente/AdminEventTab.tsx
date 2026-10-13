@@ -2,6 +2,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAdminResource } from '../../data/useAdminResource';
 import { useAdminMutation } from '../../data/useAdminMutation';
 import shared1 from './EvenimenteStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './AdminEventTab.module.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listEventConfig, saveEventConfigDraft, publishEventConfig, restoreEventConfig, listEmailLog, type AdminEventConfigRow } from './api';
@@ -560,7 +562,7 @@ export const AdminEventTab = ({
 
   if (randuri === null) {
     return (
-      <section className="admin-table-section" data-css="admin-table-section">
+      <section className={adminStyles['admin-table-section']} data-css="admin-table-section">
         <div className={shared1['admin-empty']} data-css="admin-empty">Se încarcă…</div>
       </section>
     );
@@ -570,12 +572,12 @@ export const AdminEventTab = ({
     <>
           {ciorna === null ? (
             <>
-              <button type="button" className="admin-btn-ghost" data-css="admin-btn-ghost" onClick={porneteDinPublicat}>
+              <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={porneteDinPublicat}>
                 Editează ediția {publicat?.number ?? ''}
               </button>
               <button
                 type="button"
-                className="admin-btn-accent" data-css="admin-btn-accent"
+                className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
                 disabled={!publicat}
                 onClick={() => setDialogEditieNoua(true)}
               >
@@ -586,7 +588,7 @@ export const AdminEventTab = ({
             <>
               <button
                 type="button"
-                className="admin-btn-ghost" data-css="admin-btn-ghost"
+                className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                 // Abandonul demontează bara, deci un refuz apărut după el n-ar
                 // avea unde să se afișeze — exact garanția pe care o dăm.
                 disabled={ocupat}
@@ -612,28 +614,28 @@ export const AdminEventTab = ({
   );
 
   const rezumat = publicat && (
-        <div className="admin-stats" data-css="admin-stats">
-          <div className="admin-stat" data-css="admin-stat">
-            <span className="admin-stat-label" data-css="admin-stat-label">Publicat acum</span>
-            <span className="admin-stat-value accent" data-css="admin-stat-value accent">Ediția {publicat.number}</span>
+        <div className={adminStyles['admin-stats']} data-css="admin-stats">
+          <div className={adminStyles['admin-stat']} data-css="admin-stat">
+            <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Publicat acum</span>
+            <span className={`${adminStyles['admin-stat-value']} ${adminStyles['accent']}`} data-css="admin-stat-value accent">Ediția {publicat.number}</span>
           </div>
-          <div className="admin-stat" data-css="admin-stat">
-            <span className="admin-stat-label" data-css="admin-stat-label">Start</span>
+          <div className={adminStyles['admin-stat']} data-css="admin-stat">
+            <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Start</span>
             {/* Scria „2026-08-22 07:00:00" — formatul în care o ține documentul,
                 nu unul în care cineva citește o dată. Ziua săptămânii e chiar
                 lucrul pe care organizatorul îl verifică: o cursă mutată din
                 greșeală de sâmbătă pe duminică arată identic în cifre. */}
-            <span className={'admin-stat-value ' + styles['admin-stat-value--text']} data-css="admin-stat-value admin-stat-value--text">
+            <span className={`${adminStyles['admin-stat-value']} ` + styles['admin-stat-value--text']} data-css="admin-stat-value admin-stat-value--text">
               {descrieMoment(publicat.start, publicat.tz, acum) || publicat.start}
             </span>
           </div>
-          <div className="admin-stat" data-css="admin-stat">
-            <span className="admin-stat-label" data-css="admin-stat-label">Locuri</span>
-            <span className="admin-stat-value" data-css="admin-stat-value">{publicat.slots.total}</span>
+          <div className={adminStyles['admin-stat']} data-css="admin-stat">
+            <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Locuri</span>
+            <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value">{publicat.slots.total}</span>
           </div>
-          <div className="admin-stat" data-css="admin-stat">
-            <span className="admin-stat-label" data-css="admin-stat-label">Pagina arată</span>
-            <span className="admin-stat-value" data-css="admin-stat-value">
+          <div className={adminStyles['admin-stat']} data-css="admin-stat">
+            <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Pagina arată</span>
+            <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value">
               {publicat.showComingSoon ? 'Coming Soon' : 'Landing'}
             </span>
           </div>
@@ -672,7 +674,7 @@ export const AdminEventTab = ({
           câmpul „Numărul ediției" — deci se putea lucra la una și publica
           alta, fără ca ceva să spună că a doua există. */}
       {ciorne.length > 1 && (
-        <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+        <div className={`${adminStyles['admin-banner']} warn`} data-css="admin-banner warn" role="status">
           <strong>Sunt {ciorne.length} ciorne deschise</strong> — pentru edițiile{' '}
           {ciorne.map((c) => c.editie).join(', ')}.
           {editieIncarcata !== null && ` Aici se editează ediția ${editieIncarcata}.`} O ciornă se
@@ -696,7 +698,7 @@ export const AdminEventTab = ({
       )}
 
       {campuriVechi.length > 0 && (
-        <div className="admin-banner" data-css="admin-banner" role="status">
+        <div className={adminStyles['admin-banner']} data-css="admin-banner" role="status">
           <strong>Share preview-ul e mai vechi decât configul publicat.</strong> Build-ul deployat
           încă poartă{' '}
           {campuriVechi.map((c, i) => (
@@ -717,7 +719,7 @@ export const AdminEventTab = ({
               tocmai butonul care se apasă de aici. Refuzul lui are nevoie de un
               loc al lui, altfel rămâne doar pe toast. */}
           {refuz && (
-            <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+            <div className={`${adminStyles['admin-banner']} warn`} data-css="admin-banner warn" role="status">
               {refuz}
             </div>
           )}
@@ -728,9 +730,9 @@ export const AdminEventTab = ({
         </>
       ) : (
         <Blocat.Provider value={ocupat}>
-        <div className="admin-config-form" data-css="admin-config-form">
+        <div className={adminStyles['admin-config-form']} data-css="admin-config-form">
           {probleme.length > 0 && (
-            <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+            <div className={`${adminStyles['admin-banner']} warn`} data-css="admin-banner warn" role="status">
               <strong>Configul nu se poate publica încă:</strong>
               <ul>
                 {probleme.map((p) => (
@@ -741,7 +743,7 @@ export const AdminEventTab = ({
           )}
 
           {avertismente.map((a) => (
-            <div className="admin-banner" data-css="admin-banner" role="status" key={a.mesaj}>
+            <div className={adminStyles['admin-banner']} data-css="admin-banner" role="status" key={a.mesaj}>
               {a.mesaj}
             </div>
           ))}
@@ -802,17 +804,17 @@ export const AdminEventTab = ({
       {versiuni.length > 0 && (
         <>
           <h3>Versiuni anterioare</h3>
-          <div className="admin-table-wrap" data-css="admin-table-wrap">
-            <div className="admin-table" data-css="admin-table">
+          <div className={adminStyles['admin-table-wrap']} data-css="admin-table-wrap">
+            <div className={adminStyles['admin-table']} data-css="admin-table">
               {versiuni.map((v) => (
-                <div key={v.id} className="admin-row" data-css="admin-row">
-                  <span className="admin-cell-name" data-css="admin-cell-name">Ediția {v.editie}</span>
-                  <span className="admin-cell-date" data-css="admin-cell-date">
+                <div key={v.id} className={adminStyles['admin-row']} data-css="admin-row">
+                  <span className={adminStyles['admin-cell-name']} data-css="admin-cell-name">Ediția {v.editie}</span>
+                  <span className={adminStyles['admin-cell-date']} data-css="admin-cell-date">
                     {v.published_at ? new Date(v.published_at).toLocaleString('ro-RO') : ''}
                   </span>
                   <button
                     type="button"
-                    className="admin-btn-ghost" data-css="admin-btn-ghost"
+                    className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                     // Republicare imediată — n-are ce căuta în paralel cu o
                     // salvare sau o publicare pe același rând.
                     disabled={ocupat}
@@ -852,17 +854,17 @@ export const AdminEventTab = ({
                 listă sub el: „vizitatorii vor vedea landing-ul" e adevărat și
                 când ai mutat cursa cu o săptămână din greșeală. */}
             {!esteComparabil(publicat, ciorna) ? (
-              <p className="admin-confirm-note" data-css="admin-confirm-note">
+              <p className={adminStyles['admin-confirm-note']} data-css="admin-confirm-note">
                 Prima publicare a ediției {ciorna.number} — nu există o versiune anterioară a ei cu
                 care să se compare.
               </p>
             ) : diferente.length === 0 ? (
-              <p className="admin-confirm-note" data-css="admin-confirm-note">
+              <p className={adminStyles['admin-confirm-note']} data-css="admin-confirm-note">
                 Nimic nu se schimbă față de ce e publicat acum.
               </p>
             ) : (
               <>
-                <p className="admin-confirm-note" data-css="admin-confirm-note">Față de ce e publicat acum se schimbă:</p>
+                <p className={adminStyles['admin-confirm-note']} data-css="admin-confirm-note">Față de ce e publicat acum se schimbă:</p>
                 <dl className={shared1['admin-mostenire'] + " " + styles['admin-diferente']} data-css="admin-mostenire admin-diferente">
                   {diferente.map((d) => (
                     <div key={d.eticheta}>
@@ -879,18 +881,18 @@ export const AdminEventTab = ({
                 </dl>
               </>
             )}
-            <p className="admin-confirm-note" data-css="admin-confirm-note">
+            <p className={adminStyles['admin-confirm-note']} data-css="admin-confirm-note">
               Share preview-ul (WhatsApp/Facebook) rămâne pe datele build-ului deployat până la
               următorul deploy — scraper-ele nu rulează JS, deci meta nu se poate schimba la
               runtime. Versiunea publicată acum rămâne salvată, deci poți reveni la ea.
             </p>
-            <div className="admin-confirm-actions" data-css="admin-confirm-actions">
-              <button type="button" className="admin-btn-accent" data-css="admin-btn-accent" onClick={publicaCiorna}>
+            <div className={adminStyles['admin-confirm-actions']} data-css="admin-confirm-actions">
+              <button type="button" className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent" onClick={publicaCiorna}>
                 Da, publică
               </button>
               <button
                 type="button"
-                className="admin-confirm-cancel" data-css="admin-confirm-cancel"
+                className={adminStyles['admin-confirm-cancel']} data-css="admin-confirm-cancel"
                 onClick={() => setConfirmPublicare(false)}
               >
                 Anulează

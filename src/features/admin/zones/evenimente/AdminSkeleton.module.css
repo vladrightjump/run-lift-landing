@@ -3,7 +3,7 @@
     height: 12px; border-radius: 2px;
     background: linear-gradient(90deg, var(--pa-line) 0%, var(--pa-surface-2) 50%, var(--pa-line) 100%);
     background-size: 200% 100%;
-    animation: global(admin-shimmer) 1.4s ease-in-out infinite;
+    animation: admin-shimmer 1.4s ease-in-out infinite;
   }
   .admin-sr {
     position: absolute; width: 1px; height: 1px;
@@ -13,3 +13,8 @@
 
 .dot { opacity: 0.3; }
 .feed { flex: 1; }
+
+@keyframes admin-shimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+  }

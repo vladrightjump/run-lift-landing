@@ -19,7 +19,7 @@ test('toate paginile existente răspund la acces direct pe build', async ({ page
   await page.addInitScript((now) => { Date.now = () => now; }, BEFORE_LAUNCH);
   const pages = [
     ['/?preview=landing', "[data-css~=\"e3-root\"]"],
-    ['/admin', '.admin-auth'],
+    ['/admin', '[data-css~="admin-auth"]'],
     ['/despre-noi', "[data-css~=\"dn-root\"]"],
     ['/confirmare', 'h1'],
     ['/inscriere?preview=landing', "[data-css~=\"e3-page-title\"]"],

@@ -7,7 +7,7 @@ import type { EventConfig } from '../../src/shared/content/eventConfig';
 /**
  * Contractul dintre cele două derivări ale variabilelor de eveniment.
  *
- * Site-ul și trimiterile din admin folosesc `src/content/format.ts`. Confirmarea
+ * Site-ul și trimiterile din admin folosesc `src/shared/content/format.ts`. Confirmarea
  * automată pleacă din funcția Edge, care rulează pe Deno, n-are niciun import
  * relativ în afara directorului ei și se deployează separat — deci își ține
  * propria derivare.

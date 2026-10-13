@@ -1,6 +1,6 @@
 import { SUPABASE } from '../../../shared/lib/config';
 import { normalizePhone, numeComplet, type FormData } from '../../../shared/lib/validation';
-import { logClientError } from '../../../lib/monitoring';
+import { logClientError } from '../../../shared/lib/monitoring';
 import { SubmitHttpError } from '../../../shared/lib/errors';
 export const SUBMIT_TIMEOUT_MS = 15_000;
 
@@ -27,7 +27,7 @@ const timeoutSignal = (externalSignal?: AbortSignal): { signal: AbortSignal; don
 
 /**
  * Dovezile anti-bot care însoțesc fiecare submit public.
- *  • `token`   — Turnstile, verificat server-side (vezi `src/lib/turnstile.ts`)
+ *  • `token`   — Turnstile, verificat server-side (vezi `src/shared/lib/turnstile.ts`)
  *  • `hp`      — honeypot; orice conținut = bot
  *  • `elapsed` — ms de la afișarea formularului; prea puțin = bot
  */

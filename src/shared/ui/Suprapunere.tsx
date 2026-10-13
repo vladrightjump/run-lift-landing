@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { useCapcanaFocus } from './useCapcanaFocus';
 import { useEsteTelefon } from './useEsteTelefon';
+import controlStyles from './ControlStyles.module.css';
 import styles from './Suprapunere.module.css';
 
 /**
@@ -155,7 +156,7 @@ export const Suprapunere = ({
               {titlu}
             </h2>
             {prezentare !== 'dialog' && (
-              <button type="button" className="admin-buton-icon" aria-label="Închide" onClick={onInchide}>
+              <button type="button" className={controlStyles['admin-buton-icon']} data-css="admin-buton-icon" aria-label="Închide" onClick={onInchide}>
                 <Icon nume="x" />
               </button>
             )}

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { submitLaunchNotification, isDuplicateError, isBotRejectedError } from '../data/api';
 import { isTimeoutError, isAbortError } from '../../../shared/lib/errors';
 import type { SursaInscriere } from '../data/api';
-import { logClientError } from '../../../lib/monitoring';
+import { logClientError } from '../../../shared/lib/monitoring';
 import { useAntiBot, antiBotErrorMessage, ANTIBOT_MESSAGES } from '../lib/antiBot';
 import { isTurnstileError } from '../../../shared/lib/turnstile';
 import {

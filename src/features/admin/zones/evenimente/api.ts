@@ -87,7 +87,7 @@ export const listEditions = (token: string, signal?: AbortSignal): Promise<Admin
 /**
  * Deschide ediția următoare (tab nou, gol): mută ediția curentă din `app_config`
  * pe max+1 și șterge reperele de timp ale ediției încheiate (deadline + start).
- * Codul din `src/content/edition.ts` NU se schimbă — rămâne de aliniat manual.
+ * Codul din `src/shared/content/edition.ts` NU se schimbă — rămâne de aliniat manual.
  */
 export const createEdition = (token: string): Promise<number> =>
   rpc<number>('admin_create_edition', { p_token: token });
@@ -386,7 +386,7 @@ export const sendBulkEmail = async (
     audience?: 'participanti' | 'asteptare';
     editie?: number;
     /**
-     * Cheie de idempotență (`src/admin/sendLock.ts`). Serverul trimite o singură
+     * Cheie de idempotență (`src/features/admin/zones/evenimente/sendLock.ts`). Serverul trimite o singură
      * dată per cheie; a doua oară întoarce `skipped: true`. Lipsa ei păstrează
      * comportamentul de dinainte de zăvor.
      */

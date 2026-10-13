@@ -12,7 +12,7 @@
     padding: clamp(20px, 4vw, 32px);
     background: var(--e3-surface);
     border: 1px solid var(--e3-border);
-    animation: global(fade-up) 0.6s ease-out 0.15s both;
+    animation: fade-up 0.6s ease-out 0.15s both;
   }
   /* Numărul săptămânii, deasupra titlului: cine deschide un link `#s1` trebuie
      să vadă imediat UNDE a aterizat în program, nu doar ce scrie acolo. */
@@ -35,4 +35,9 @@
     overflow-wrap: break-word;
     font-size: clamp(15px, 2.2vw, 17px); line-height: 1.6;
     color: var(--e3-text);
+  }
+
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
   }

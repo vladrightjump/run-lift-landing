@@ -9,6 +9,7 @@ import { listWeeklyWorkout, mesajRefuzAntrenament } from '../../src/features/adm
 import { InvalidTokenError } from '../../src/shared/lib/rpc';
 import * as sala from '../../src/features/admin/zones/antrenamente/api';
 import { SUPABASE } from '../../src/shared/lib/config';
+import { createFetchCapture } from '../support/fetchCapture';
 
 /**
  * Contractul cererilor către Supabase — păzește exact regresiile care au picat
@@ -17,7 +18,7 @@ import { SUPABASE } from '../../src/shared/lib/config';
  *     Fără ele, PostgREST caută în `public` și toate cererile pică.
  *  2. cererile merg spre URL-ul proiectului configurat (nu spre cel vechi).
  *
- * Toate testele mock-uiesc `fetch` — nu se atinge niciun backend real.
+ * Captura comună păstrează argumentele originale ale `fetch`; niciun backend real nu este atins.
  */
 
 const regData = {
@@ -37,8 +38,7 @@ const proofs = { token: 'tok-turnstile', hp: '', elapsed: 9000 };
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
-  fetchMock = vi.fn(async () => new Response('', { status: 201 }));
-  vi.stubGlobal('fetch', fetchMock);
+  fetchMock = createFetchCapture(async () => new Response('', { status: 201 }));
 });
 
 afterEach(() => {

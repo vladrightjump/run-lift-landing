@@ -2,7 +2,7 @@
   .admin-linie {
     border: 1px solid var(--pa-line); border-left: 3px solid var(--pa-accent-text);
     background: var(--pa-surface); display: grid; gap: 0;
-    animation: global(stat-pop) 0.45s ease-out both;
+    animation: stat-pop 0.45s ease-out both;
   }
   .admin-linie-antet {
     display: flex; align-items: center; justify-content: space-between;
@@ -24,7 +24,7 @@
   }
   .faza-landing .admin-linie-punct-faza { background: var(--pa-accent); }
   .faza-cine-vine .admin-linie-punct-faza {
-    background: var(--pa-accent); animation: global(dot-blink) 1.4s ease-in-out infinite;
+    background: var(--pa-accent); animation: dot-blink 1.4s ease-in-out infinite;
   }
 
   .admin-linie-gol { margin: 0; padding: 20px 24px; font-size: 14px; color: var(--pa-text-2); }
@@ -102,4 +102,14 @@
     .admin-linie-nod { grid-template-columns: 14px minmax(0, 1fr); }
     .admin-linie-stare { grid-column: 2; grid-row: auto; justify-self: start; }
     .admin-linie-actiune { grid-column: 2; justify-self: start; }
+  }
+
+@keyframes stat-pop {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+@keyframes dot-blink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.35; transform: scale(0.75); }
   }

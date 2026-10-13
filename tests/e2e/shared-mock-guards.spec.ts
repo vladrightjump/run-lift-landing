@@ -1,16 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { SUPABASE } from '../../src/lib/backend';
-import { createMockNetwork } from '../support/playwright';
+import { SUPABASE } from '../../src/shared/lib/backend';
+import { createMockNetwork, installBackendEscapeSentinel } from '../support/playwright';
 
 test('an unmatched RPC aborts before reaching the backend route', async ({ context, page }) => {
   const url = `${SUPABASE.url}/rest/v1/rpc/unmocked_guard_probe`;
   let escaped = 0;
   // Installed first, this sentinel catches a fallback from MSW without ever
   // contacting Supabase. MSW's later context route runs before this one.
-  await context.route(`${SUPABASE.url}/**`, async (route) => {
-    escaped++;
-    await route.fulfill({ status: 200, body: 'escaped', headers: { 'Access-Control-Allow-Origin': '*' } });
-  });
+  await installBackendEscapeSentinel(context, () => { escaped++; });
   const { network, unhandled } = createMockNetwork(context, []);
   await network.enable();
   try {

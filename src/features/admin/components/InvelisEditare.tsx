@@ -1,4 +1,5 @@
 import shared1 from './AdminStyles.module.css';
+import adminRoot from './RadacinaAdmin.module.css';
 import styles from './InvelisEditare.module.css';
 import type { ReactNode } from 'react';
 
@@ -74,13 +75,13 @@ export const InvelisEditare = ({
   children,
   bara,
 }: Props) => (
-  <section className="admin-table-section">
-    <div className="admin-table-head">
+  <section className={shared1['admin-table-section']} data-css="admin-table-section">
+    <div className={shared1['admin-table-head']} data-css="admin-table-head">
       <div className={shared1['admin-invelis-titlu']} data-css={"admin-invelis-titlu"}>
         <h2>{titlu}</h2>
-        {descriere && <p className="admin-config-hint">{descriere}</p>}
+        {descriere && <p className={shared1['admin-config-hint']} data-css="admin-config-hint">{descriere}</p>}
       </div>
-      {actiuni && <div className="admin-table-actions">{actiuni}</div>}
+      {actiuni && <div className={shared1['admin-table-actions']} data-css="admin-table-actions">{actiuni}</div>}
     </div>
 
     {rezumat}
@@ -134,7 +135,7 @@ export const InvelisEditare = ({
             (bara.nesalvat ? (
               <button
                 type="button"
-                className="admin-btn-ghost"
+                className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                 onClick={bara.onPreviz}
                 // Aceeași gardă ca „Salvează": previzualizarea unui document pe
                 // care serverul l-ar refuza n-are ce arăta.
@@ -144,7 +145,7 @@ export const InvelisEditare = ({
               </button>
             ) : (
               <a
-                className="admin-btn-ghost"
+                className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                 href={bara.urlPreviz}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -156,7 +157,7 @@ export const InvelisEditare = ({
           {bara.onSalveaza && (
             <button
               type="button"
-              className="admin-btn-ghost"
+              className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
               onClick={bara.onSalveaza}
               // `sePublica` la fel de mult ca `seSalveaza`: publicarea salvează
               // ea însăși, deci un al doilea „Salvează" din zbor ar scrie peste.
@@ -168,7 +169,7 @@ export const InvelisEditare = ({
 
           <button
             type="button"
-            className="admin-btn-accent"
+            className={shared1['admin-btn-accent']} data-css="admin-btn-accent"
             onClick={bara.onPublica}
             disabled={bara.ocupat || !bara.poatePublica}
           >

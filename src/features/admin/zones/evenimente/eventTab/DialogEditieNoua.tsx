@@ -1,4 +1,5 @@
 import shared1 from '../EvenimenteStyles.module.css';
+import adminStyles from '../../../components/AdminStyles.module.css';
 import styles from './DialogEditieNoua.module.css';
 import { useMemo, useState } from 'react';
 import type { EventConfig } from '../../../../../shared/content/eventConfig';
@@ -76,7 +77,7 @@ export const DialogEditieNoua = ({
   return (
     <Dialog
       titlu={`Ediția ${publicat.number + 1}`}
-      clasa="admin-confirm--neutru"
+      clasa={adminStyles['admin-confirm--neutru']}
       onInchide={onAnuleaza}
     >
         <p>
@@ -115,7 +116,7 @@ export const DialogEditieNoua = ({
         </div>
 
         {altele.length > 0 && (
-          <div className="admin-banner warn" data-css="admin-banner warn" role="status">
+          <div className={`${adminStyles['admin-banner']} warn`} data-css="admin-banner warn" role="status">
             Ediția {publicat.number} are probleme pe care ciorna le-ar moșteni:{' '}
             {altele.map((p) => p.mesaj).join(' ')} Deschide „Editează ediția {publicat.number}" și
             repară-le mai întâi.
@@ -124,7 +125,7 @@ export const DialogEditieNoua = ({
 
         {rezumat.length > 0 && (
           <>
-            <p className="admin-confirm-note" data-css="admin-confirm-note">Ciorna va porni așa:</p>
+            <p className={adminStyles['admin-confirm-note']} data-css="admin-confirm-note">Ciorna va porni așa:</p>
             <dl className={shared1['admin-mostenire']} data-css="admin-mostenire">
               {rezumat.map((c) => (
                 <div key={c.eticheta} className={c.recalculat ? 'recalculat' : undefined}>
@@ -139,16 +140,16 @@ export const DialogEditieNoua = ({
           </>
         )}
 
-        <div className="admin-confirm-actions" data-css="admin-confirm-actions">
+        <div className={adminStyles['admin-confirm-actions']} data-css="admin-confirm-actions">
           <button
             type="button"
-            className="admin-btn-accent" data-css="admin-btn-accent"
+            className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
             disabled={!gata}
             onClick={() => onCreeaza(ciorna)}
           >
             Creează ciorna
           </button>
-          <button type="button" className="admin-confirm-cancel" data-css="admin-confirm-cancel" onClick={onAnuleaza}>
+          <button type="button" className={adminStyles['admin-confirm-cancel']} data-css="admin-confirm-cancel" onClick={onAnuleaza}>
             Anulează
           </button>
         </div>

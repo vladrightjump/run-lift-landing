@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAdminMutation } from '../data/useAdminMutation';
+import adminStyles from '../components/AdminStyles.module.css';
+import publicForm from '../../../shared/ui/PublicForm.module.css';
 import styles from './AdminApp.module.css';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { AdminLogin } from './AdminLogin';
@@ -64,10 +66,10 @@ const SesiuneAdmin = () => {
 
   if (session.status === 'checking') {
     return (
-      <main className="admin-auth" data-css="admin-auth">
-        <div className={'form-loading ' + styles['admin-checking']} data-css="form-loading admin-checking">
-          <div className="spinner" />
-          <div className="label">Se verifică sesiunea…</div>
+      <main className={adminStyles['admin-auth']} data-css="admin-auth">
+        <div className={`${publicForm['form-loading']} ` + styles['admin-checking']} data-css="form-loading admin-checking">
+          <div className={publicForm['spinner']} data-css="spinner" />
+          <div className={publicForm['label']} data-css="label">Se verifică sesiunea…</div>
         </div>
       </main>
     );

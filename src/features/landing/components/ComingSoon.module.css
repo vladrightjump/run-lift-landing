@@ -31,7 +31,7 @@
     letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--e3-accent);
-    animation: global(fade-up) 0.6s ease-out both;
+    animation: fade-up 0.6s ease-out both;
   }
   .cs-title {
     margin: 0;
@@ -42,7 +42,7 @@
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--e3-text);
-    animation: global(fade-up) 0.6s ease-out 0.1s both;
+    animation: fade-up 0.6s ease-out 0.1s both;
   }
   .cs-title--diacritice {
     line-height: 1.04;
@@ -51,7 +51,7 @@
     display: flex;
     gap: 12px;
     margin-top: 8px;
-    animation: global(fade-up) 0.6s ease-out 0.35s both;
+    animation: fade-up 0.6s ease-out 0.35s both;
   }
   .cs-cd-unit {
     min-width: 74px;
@@ -108,7 +108,7 @@
     justify-content: center;
     padding: 20px;
     background: rgba(6, 7, 5, 0.78);
-    animation: global(fade-up) 0.2s ease-out;
+    animation: fade-up 0.2s ease-out;
   }
   .cs-modal {
     position: relative;
@@ -117,7 +117,7 @@
     background: var(--e3-bg-deep);
     border: 1px solid var(--e3-border);
     padding: 32px 28px 28px;
-    animation: global(pop-in) 0.28s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+    animation: pop-in 0.28s cubic-bezier(0.34, 1.4, 0.64, 1) both;
   }
   .cs-modal-close {
     position: absolute;
@@ -196,7 +196,7 @@
     align-items: center;
     justify-content: center;
     font-size: 28px;
-    animation: global(pop-in) 0.35s ease-out both;
+    animation: pop-in 0.35s ease-out both;
   }
   @media (max-width: 520px) {
     .cs-form-row { grid-template-columns: 1fr; }
@@ -217,4 +217,15 @@
   @keyframes marquee {
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }
+  }
+
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+@keyframes pop-in {
+    0%   { transform: scale(0); }
+    70%  { transform: scale(1.15); }
+    100% { transform: scale(1); }
   }

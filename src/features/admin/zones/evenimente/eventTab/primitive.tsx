@@ -1,4 +1,5 @@
 import shared1 from '../EvenimenteStyles.module.css';
+import adminStyles from '../../../components/AdminStyles.module.css';
 import styles from './primitive.module.css';
 import { createContext, useContext, useId, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -53,7 +54,7 @@ export const Grup = ({
   const idCorp = useId();
 
   return (
-    <section className={`admin-config-grup${deschis ? ' deschis' : ''}${areEroare ? ' invalid' : ''}`} data-css={`admin-config-grup${deschis ? ' deschis' : ''}${areEroare ? ' invalid' : ''}`}>
+    <section className={`${adminStyles['admin-config-grup']}${deschis ? ' deschis' : ''}${areEroare ? ' invalid' : ''}`} data-css={`admin-config-grup${deschis ? ' deschis' : ''}${areEroare ? ' invalid' : ''}`}>
       <button
         type="button"
         className={styles['admin-config-grup-cap']} data-css="admin-config-grup-cap"
@@ -67,11 +68,11 @@ export const Grup = ({
         </span>
         <span className={styles['admin-config-grup-titlu']} data-css="admin-config-grup-titlu">{titlu}</span>
         {!deschis && rezumat && <span className={styles['admin-config-grup-rezumat']} data-css="admin-config-grup-rezumat">{rezumat}</span>}
-        {areEroare && <span className="admin-tab-alert" data-css="admin-tab-alert">!</span>}
+        {areEroare && <span className={adminStyles['admin-tab-alert']} data-css="admin-tab-alert">!</span>}
       </button>
       {deschis && (
         <div className={styles['admin-config-grup-corp']} data-css="admin-config-grup-corp" id={idCorp}>
-          {ajutor && <p className="admin-config-hint" data-css="admin-config-hint">{ajutor}</p>}
+          {ajutor && <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">{ajutor}</p>}
           <div className={shared1['admin-config-grup-campuri']} data-css="admin-config-grup-campuri">{children}</div>
         </div>
       )}
@@ -147,10 +148,10 @@ export const Camp = ({
 
   return (
     <div
-      className={`admin-config-camp${eroare ? ' invalid' : ''}${atentie ? ' atentie' : ''}`} data-css={`admin-config-camp${eroare ? ' invalid' : ''}${atentie ? ' atentie' : ''}`}
+      className={`${adminStyles['admin-config-camp']}${eroare ? ' invalid' : ''}${atentie ? ' atentie' : ''}`} data-css={`admin-config-camp${eroare ? ' invalid' : ''}${atentie ? ' atentie' : ''}`}
       data-camp={cheie}
     >
-      <label className="admin-config-eticheta" data-css="admin-config-eticheta" htmlFor={id}>
+      <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor={id}>
         {eticheta}
       </label>
       {children({
@@ -167,7 +168,7 @@ export const Camp = ({
           {eroare}
         </span>
       ) : (
-        ecou && <span className="admin-config-ecou" data-css="admin-config-ecou">{ecou}</span>
+        ecou && <span className={adminStyles['admin-config-ecou']} data-css="admin-config-ecou">{ecou}</span>
       )}
       {atentie && (
         <span id={idAtentie} className={styles['admin-config-atentie']} data-css="admin-config-atentie" role="status">
@@ -175,7 +176,7 @@ export const Camp = ({
         </span>
       )}
       {ajutor && (
-        <span id={idAjutor} className="admin-config-ajutor" data-css="admin-config-ajutor">
+        <span id={idAjutor} className={adminStyles['admin-config-ajutor']} data-css="admin-config-ajutor">
           {ajutor}
         </span>
       )}

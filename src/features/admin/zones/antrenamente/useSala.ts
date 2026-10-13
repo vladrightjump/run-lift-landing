@@ -5,7 +5,7 @@ import { useAdminResource } from '../../data/useAdminResource';
 import { ADMIN_REFRESH_MS } from '../../data/constants';
 import { useSesiuneAdmin } from '../../data/adminSession';
 import { useAdminMutation } from '../../data/useAdminMutation';
-import { logClientError } from '../../../../lib/monitoring';
+import { logClientError } from '../../../../shared/lib/monitoring';
 import { isNetworkOrCspError, isTimeoutError } from '../../../../shared/lib/errors';
 
 const NU_STIM =

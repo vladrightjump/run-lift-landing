@@ -1,3 +1,4 @@
+:global(html.admin-pagina), :global(html.admin-pagina) body { background: var(--pa-bg); color: var(--pa-text); }
 
   :global(.admin-pagina), .admin-app {
     --pa-bg: #eeede4;
@@ -67,7 +68,7 @@
   .admin-app :where(input, textarea, select)::placeholder { color: var(--pa-muted-2); }
   .admin-app { color-scheme: light; }
   .admin-app :where(input:not([type=checkbox], [type=radio], [type=hidden], [type=file], [type=range], [type=color]), select:not([multiple]), textarea),
-  .admin-app :global(.field) input {
+  .admin-app :global([data-css~="field"]) input {
     box-sizing: border-box; min-width: 0; height: var(--pa-control-h); margin: 0;
     padding: 0 var(--pa-control-px);
     background-color: var(--pa-input); color: var(--pa-text);
@@ -87,22 +88,22 @@
   }
   .admin-app option { background: var(--pa-input); color: var(--pa-text); }
   .admin-app :where(input:not([type=checkbox], [type=radio], [type=hidden], [type=file], [type=range], [type=color]), select:not([multiple]), textarea):where(:hover:not(:disabled, [readonly], :focus)),
-  .admin-app :global(.field):not(:global(.invalid)) input:hover:not(:focus) {
+  .admin-app :global([data-css~="field"]):not(:global(.invalid)) input:hover:not(:focus) {
     border-color: var(--pa-text-2);
   }
   .admin-app :where(input:not([type=checkbox], [type=radio], [type=hidden], [type=file], [type=range], [type=color]), select:not([multiple]), textarea):focus,
-  .admin-app :global(.field) input:focus {
+  .admin-app :global([data-css~="field"]) input:focus {
     border-color: var(--pa-accent-text); box-shadow: 0 0 0 3px var(--pa-focus-soft); transform: none;
   }
 
   .admin-app :is(input:not([type=checkbox], [type=radio], [type=hidden], [type=file], [type=range], [type=color]), select:not([multiple]), textarea):focus-visible { outline: none; }
-  .admin-app :where(:global(.admin-config-camp):global(.atentie)) :where(input, select, textarea) { border-color: var(--pa-graph-warn); }
-  .admin-app :where([aria-invalid='true'], :is(:global(.admin-config-camp), :global(.field)):global(.invalid) :is(input, select, textarea)),
-  .admin-app :global(.field):global(.invalid) input {
+  .admin-app :where(:global([data-css~="admin-config-camp"]):global(.atentie)) :where(input, select, textarea) { border-color: var(--pa-graph-warn); }
+  .admin-app :where([aria-invalid='true'], :is(:global([data-css~="admin-config-camp"]), :global([data-css~="field"])):global(.invalid) :is(input, select, textarea)),
+  .admin-app :global([data-css~="field"]):global(.invalid) input {
     border-color: var(--pa-danger);
   }
-  .admin-app :where([aria-invalid='true'], :is(:global(.admin-config-camp), :global(.field)):global(.invalid) :is(input, select, textarea)):focus,
-  .admin-app :global(.field):global(.invalid) input:focus {
+  .admin-app :where([aria-invalid='true'], :is(:global([data-css~="admin-config-camp"]), :global([data-css~="field"])):global(.invalid) :is(input, select, textarea)):focus,
+  .admin-app :global([data-css~="field"]):global(.invalid) input:focus {
     border-color: var(--pa-danger); box-shadow: 0 0 0 3px var(--pa-danger-soft);
   }
   .admin-app :where(input, select, textarea):disabled {
@@ -113,11 +114,11 @@
   .admin-app :where(input[type=checkbox], input[type=radio]) { accent-color: var(--pa-accent-text); }
   @media (max-width: 760px) {
     .admin-app :where(input:not([type=checkbox], [type=radio], [type=hidden], [type=file], [type=range], [type=color]), select:not([multiple]), textarea),
-    .admin-app :global(.field) input {
+    .admin-app :global([data-css~="field"]) input {
       font-size: 16px;
     }
   }
-  .admin-app :where(:global(.admin-btn-accent), :global([data-css~="admin-btn-outline"]), :global(.admin-btn-ghost), :global([data-css~="admin-btn-delete"]), :global([data-css~="admin-btn-promote"]), :global(.admin-table-actions) > button:not([class])) {
+  .admin-app :where(:global([data-css~="admin-btn-accent"]), :global([data-css~="admin-btn-outline"]), :global([data-css~="admin-btn-ghost"]), :global([data-css~="admin-btn-delete"]), :global([data-css~="admin-btn-promote"]), :global([data-css~="admin-table-actions"]) > button:not([class])) {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     box-sizing: border-box; min-height: var(--pa-control-h); padding: 0 16px;
     border: 1px solid transparent; border-radius: var(--pa-r); cursor: pointer;
@@ -125,30 +126,30 @@
     text-decoration: none; white-space: nowrap;
     transition: background-color var(--pa-dur-fast) var(--pa-ease), border-color var(--pa-dur-fast) var(--pa-ease), color var(--pa-dur-fast) var(--pa-ease), translate var(--pa-dur-fast) var(--pa-ease);
   }
-  .admin-app :where(:global([data-css~="admin-btn-delete"]), :global([data-css~="admin-btn-promote"]), :global(.admin-table-actions) > button:not([class])) {
+  .admin-app :where(:global([data-css~="admin-btn-delete"]), :global([data-css~="admin-btn-promote"]), :global([data-css~="admin-table-actions"]) > button:not([class])) {
     min-height: var(--pa-control-h-sm); padding: 0 12px; font-size: 13px;
   }
-  .admin-app :global(.admin-table-actions) > button:not([class]) { background: transparent; border-color: var(--pa-line); color: var(--pa-text-2); }
-  .admin-app :global(.admin-table-actions) > button:not([class]):hover:not(:disabled) { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
-  .admin-app :is(:global(.admin-btn-accent), :global([data-css~="admin-btn-outline"]), :global(.admin-btn-ghost), :global([data-css~="admin-btn-delete"]), :global([data-css~="admin-btn-promote"]), :global(.btn-submit), :global(.admin-table-actions) > button:not([class])):disabled {
+  .admin-app :global([data-css~="admin-table-actions"]) > button:not([class]) { background: transparent; border-color: var(--pa-line); color: var(--pa-text-2); }
+  .admin-app :global([data-css~="admin-table-actions"]) > button:not([class]):hover:not(:disabled) { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
+  .admin-app :is(:global([data-css~="admin-btn-accent"]), :global([data-css~="admin-btn-outline"]), :global([data-css~="admin-btn-ghost"]), :global([data-css~="admin-btn-delete"]), :global([data-css~="admin-btn-promote"]), :global([data-css~="btn-submit"]), :global([data-css~="admin-table-actions"]) > button:not([class])):disabled {
     background: var(--pa-surface-3); color: var(--pa-muted-2); border-color: var(--pa-line);
     cursor: not-allowed; box-shadow: none; transform: none;
   }
-  .admin-app :global(.admin-btn-link):disabled { color: var(--pa-muted-2); text-decoration: none; cursor: not-allowed; }
-  .admin-app :global(.btn-submit) {
+  .admin-app :global([data-css~="admin-btn-link"]):disabled { color: var(--pa-muted-2); text-decoration: none; cursor: not-allowed; }
+  .admin-app :global([data-css~="btn-submit"]) {
     background: var(--pa-accent); color: var(--pa-accent-ink); border-radius: var(--pa-r);
     font-family: var(--pa-font); font-weight: 700; letter-spacing: 0; text-transform: none;
   }
-  .admin-app :global(.btn-submit):hover:not(:disabled) { background: var(--pa-accent-hover); box-shadow: none; transform: none; }
-  .admin-app :global(.btn-submit):active { transform: none; }
-  .admin-app :global(.field) > :global(.label) { color: var(--pa-text); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
-  .admin-app :global(.field) :global(.muted) { color: var(--pa-muted); }
-  .admin-app :global(.countdown-dot) { background: var(--pa-graph); }
-  .admin-app :global(.spinner) { border-color: var(--pa-line); border-top-color: var(--pa-graph); }
-  .admin-app :global(.form-loading) :global(.label) { color: var(--pa-muted); letter-spacing: 0; text-transform: none; }
-  .admin-app :global(.checkbox) { color: var(--pa-text); }
-  .admin-app :global(.checkbox) input[type="checkbox"] { accent-color: var(--pa-graph); }
-  .admin-app :global(.slots-label) { color: var(--pa-muted); letter-spacing: 0; text-transform: none; }
+  .admin-app :global([data-css~="btn-submit"]):hover:not(:disabled) { background: var(--pa-accent-hover); box-shadow: none; transform: none; }
+  .admin-app :global([data-css~="btn-submit"]):active { transform: none; }
+  .admin-app :global([data-css~="field"]) > :global([data-css~="label"]) { color: var(--pa-text); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+  .admin-app :global([data-css~="field"]) :global([data-css~="muted"]) { color: var(--pa-muted); }
+  .admin-app :global([data-css~="countdown-dot"]) { background: var(--pa-graph); }
+  .admin-app :global([data-css~="spinner"]) { border-color: var(--pa-line); border-top-color: var(--pa-graph); }
+  .admin-app :global([data-css~="form-loading"]) :global([data-css~="label"]) { color: var(--pa-muted); letter-spacing: 0; text-transform: none; }
+  .admin-app :global([data-css~="checkbox"]) { color: var(--pa-text); }
+  .admin-app :global([data-css~="checkbox"]) input[type="checkbox"] { accent-color: var(--pa-graph); }
+  .admin-app :global([data-css~="slots-label"]) { color: var(--pa-muted); letter-spacing: 0; text-transform: none; }
   @media (prefers-reduced-motion: reduce) {
     .admin-app *, .admin-app *::before, .admin-app *::after {
       animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
@@ -156,5 +157,5 @@
     }
   }
   /* Rolul terțiar. */
-  :global(.admin-btn-ghost) { background: transparent; border-color: var(--pa-line); color: var(--pa-text-2); }
-  :global(.admin-btn-ghost):hover:not(:disabled) { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
+  .admin-btn-ghost { background: transparent; border-color: var(--pa-line); color: var(--pa-text-2); }
+  .admin-btn-ghost:hover:not(:disabled) { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }

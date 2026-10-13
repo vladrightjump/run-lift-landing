@@ -1,4 +1,5 @@
 import shared1 from '../../EvenimenteStyles.module.css';
+import adminStyles from '../../../../components/AdminStyles.module.css';
 import styles from './GrupUnde.module.css';
 import type { EventConfig } from '../../../../../../shared/content/eventConfig';
 import { useContext } from 'react';
@@ -30,7 +31,7 @@ export const GrupUnde = ({ ciorna, seteaza, erori, areEroare }: Props) => {
         întorc în aceleași două-trei parcuri: cel mai des, „alegerea
         locului" e de fapt o recunoaștere, nu o introducere. */}
     <div className={styles['admin-config-locuri']} data-css="admin-config-locuri">
-      <span className="admin-config-eticheta" data-css="admin-config-eticheta">Locuri folosite până acum</span>
+      <span className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta">Locuri folosite până acum</span>
       <span className={shared1['admin-presetari']} data-css="admin-presetari">
         {LOCURI_SALVATE.map((l) => (
           <button

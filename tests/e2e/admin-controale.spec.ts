@@ -149,17 +149,17 @@ test.describe('câmpurile și listele, pe fiecare ecran', () => {
 });
 
 test.describe('stările unui câmp', () => {
-  // Marcajul e cel din `src/admin/eventTab/primitive.tsx`: grupul primește
+  // Marcajul e cel din `src/features/admin/zones/evenimente/eventTab/primitive.tsx`: grupul primește
   // `invalid` când oricare câmp din el greșește, câmpul primește `invalid` sau
   // `atentie`. Doar câmpul greșit se înroșește, nu tot grupul.
   test('eroarea și atenția colorează doar câmpul lor', async ({ page, network }) => {
     await deschideAdminul(page, network, '#grup-bot');
     // Doar câmpurile cu un control de text: zilele sondajului sînt butoane.
-    const CU_CONTROL = '.admin-config-camp:has(input:not([type=checkbox]):not([type=radio]), select, textarea)';
-    const campuri = page.locator('.admin-config-grup').first().locator(CU_CONTROL);
+    const CU_CONTROL = '[data-css~="admin-config-camp"]:has(input:not([type=checkbox]):not([type=radio]), select, textarea)';
+    const campuri = page.locator('[data-css~="admin-config-grup"]').first().locator(CU_CONTROL);
     expect(await campuri.count(), 'grupul simulat are prea puține câmpuri').toBeGreaterThanOrEqual(3);
     await page.evaluate((selector) => {
-      const grup = document.querySelector('.admin-config-grup');
+      const grup = document.querySelector('[data-css~="admin-config-grup"]');
       const [gresit, atentie] = [...(grup?.querySelectorAll(selector) ?? [])];
       grup?.classList.add('invalid');
       gresit?.classList.add('invalid');
@@ -256,7 +256,7 @@ test.describe('butoanele', () => {
 
   test('butoanele fără rol de pe rândurile clipurilor nu mai sînt native', async ({ page, network }) => {
     await deschideAdminul(page, network, '#clipuri');
-    const randuri = page.locator('.admin-table-actions > button:not([class])');
+    const randuri = page.locator('[data-css~="admin-table-actions"] > button:not([class])');
     expect(await randuri.count(), 'lista simulată n-a randat clipuri').toBeGreaterThan(0);
     const linie = await jeton(page, '--pa-line');
     for (const buton of await randuri.all()) {
@@ -269,8 +269,8 @@ test.describe('butoanele', () => {
     let vazute = 0;
     for (const ecran of ['#email', '#participanti', '#eveniment', '#antrenament', '#grup-bot']) {
       await deschideAdminul(page, network, ecran);
-      for (const buton of await page.locator(':is(.admin-btn-accent, [data-css~="admin-btn-accent"]):visible').all()) {
-        if (await buton.evaluate((el) => !!el.closest('.admin-config-mutare'))) continue;
+      for (const buton of await page.locator('[data-css~="admin-btn-accent"]:visible').all()) {
+        if (await buton.evaluate((el) => !!el.closest('[data-css~="admin-config-mutare"]'))) continue;
         vazute++;
         const inaltime = await buton.evaluate((el) => el.getBoundingClientRect().height);
         expect(inaltime, `${ecran}: butonul principal are ${inaltime}px`).toBeGreaterThanOrEqual(43.5);
@@ -285,7 +285,7 @@ test.describe('butoanele', () => {
     for (const ecran of ['#clipuri', '#antrenament', '#grup-membri', '#grup-bot', '#eveniment']) {
       await deschideAdminul(page, network, ecran);
       // Link-ul e text în rând, fără umplere: nu intră în comparație.
-      for (const buton of await page.locator(':is([class*="admin-btn-"], [data-css*="admin-btn-"]):not(.admin-btn-link):not([data-css~="admin-btn-link"]):disabled:visible').all()) {
+      for (const buton of await page.locator('[data-css*="admin-btn-"]:not([data-css~="admin-btn-link"]):disabled:visible').all()) {
         const stil = await buton.evaluate((el) => ({
           fundal: getComputedStyle(el).backgroundColor,
           opacitate: getComputedStyle(el).opacity,

@@ -1,5 +1,5 @@
 
-  :global(.admin-config-grup):has(> .admin-config-grup-cap) { padding: 0; }
+  :global([data-css~="admin-config-grup"]):has(> .admin-config-grup-cap) { padding: 0; }
   .admin-config-grup-cap {
     display: flex; align-items: baseline; gap: 12px; width: 100%;
     background: transparent; border: none; cursor: pointer; text-align: left;
@@ -18,7 +18,7 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .admin-config-grup-corp { padding: 0 20px 22px; }
-  .admin-config-grup-corp > :global(.admin-config-hint) { margin: 0 0 18px; max-width: 62ch; }
+  .admin-config-grup-corp > :global([data-css~="admin-config-hint"]) { margin: 0 0 18px; max-width: 62ch; }
   .admin-config-atentie {
     font-size: 13px; color: var(--pa-warn); line-height: 1.4;
     display: flex; gap: 7px;

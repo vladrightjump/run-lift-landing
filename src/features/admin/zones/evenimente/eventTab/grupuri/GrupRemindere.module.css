@@ -12,5 +12,5 @@
   .admin-reels-rand { display: flex; align-items: flex-start; gap: 12px; }
   .admin-reels-campuri { flex: 1; display: grid; gap: 4px; min-width: 0; }
   .admin-reels-campuri input { width: 100%; }
-  .admin-reels-campuri :global(.admin-config-eticheta):not(:first-child) { margin-top: 8px; }
+  .admin-reels-campuri :global([data-css~="admin-config-eticheta"]):not(:first-child) { margin-top: 8px; }
   .admin-reels-actiuni { display: grid; gap: 6px; }

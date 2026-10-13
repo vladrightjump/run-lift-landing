@@ -1,3 +1,16 @@
+const { readdirSync } = require('node:fs');
+const { join } = require('node:path');
+
+// dependency-cruiser vede modulele; verificarea de mai jos vede și fișierele
+// neimportate sau fără cod (CSS, imagini, text). Orice descendent trebuie să
+// stea într-unul dintre cele trei directoare ale aplicației.
+const inAfaraStructurii = readdirSync(join(__dirname, 'src'), { withFileTypes: true })
+  .filter((entry) => !entry.isDirectory() || !['app', 'features', 'shared'].includes(entry.name))
+  .map((entry) => `src/${entry.name}`);
+if (inAfaraStructurii.length) {
+  throw new Error(`Structură src invalidă: ${inAfaraStructurii.join(', ')}. Folosește src/app, src/features sau src/shared.`);
+}
+
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
   forbidden: [
@@ -10,14 +23,6 @@ module.exports = {
         path: '^src/features/',
         pathNot: ['^src/features/$1/', '^src/features/[^/]+/index\\.ts$'],
       },
-    },
-    {
-      name: 'legacy-via-index',
-      severity: 'error',
-      comment:
-        'Codul încă nemutat (src/admin, src/components, …) și app/ folosesc o funcționalitate numai prin index.ts.',
-      from: { path: '^src/', pathNot: '^src/features/' },
-      to: { path: '^src/features/', pathNot: '^src/features/[^/]+/index\\.ts$' },
     },
     {
       name: 'shared-no-features',
@@ -35,8 +40,7 @@ module.exports = {
     },
   ],
   options: {
-    // Tot `src/`: regulile constrâng doar structura nouă, dar și codul vechi
-    // trebuie să intre într-o funcționalitate prin `index.ts`.
+    // Toate modulele din src, inclusiv cele fără importatori. app poate importa orice.
     includeOnly: '^src/',
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,

@@ -2,9 +2,9 @@
  * Suprapunerea comună: fundal, cutie, antet și cele patru prezentări.
  *
  * Fiecare regulă e în `:where()`, deci are specificitate zero. Stilul unei
- * funcționalități care trece o clasă proprie (`clasa="admin-meniu"`) câștigă
+ * funcționalități care trece o clasă proprie (`clasa={styles.meniu}`) câștigă
  * mereu, indiferent în ce ordine se încarcă fișierele: CSS-ul unui chunk lazy
- * ajunge după `index.css`, iar fără `:where()` ordinea ar decide în locul
+ * se încarcă la cerere, iar fără `:where()` ordinea ar decide în locul
  * autorului. Între ele, regulile de aici se ordonează după sursă, deci variantele
  * stau după regula de bază pe care o modifică.
  *
@@ -61,3 +61,6 @@
 @keyframes admin-pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
 @keyframes admin-sheet-in { from { transform: translateY(100%); } }
 @keyframes admin-panel-in { from { transform: translateX(100%); } }
+
+.dialog p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--pa-muted); overflow-wrap: anywhere; }
+.dialog p strong { color: var(--pa-text); }

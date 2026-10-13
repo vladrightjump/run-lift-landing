@@ -1,0 +1,10 @@
+.admin-control { display: grid; gap: 6px; }
+.admin-control-eticheta {
+    font-size: 11px; font-weight: 700; color: var(--pa-muted-2); padding: 0;
+  }
+.admin-buton-icon {
+    width: 44px; height: 44px; flex: none; display: inline-grid; place-items: center;
+    padding: 0; border: 0; background: transparent; color: var(--pa-muted); cursor: pointer;
+  }
+.admin-buton-icon:hover { background: var(--pa-surface-2); color: var(--pa-text); }
+.admin-buton-icon[aria-expanded="true"] { background: var(--pa-surface-3); color: var(--pa-text); }

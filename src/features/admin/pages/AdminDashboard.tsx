@@ -1,4 +1,5 @@
 import shared1 from '../zones/evenimente/EvenimenteStyles.module.css';
+import adminStyles from '../components/AdminStyles.module.css';
 import styles from './AdminDashboard.module.css';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAdminResource } from '../data/useAdminResource';
@@ -7,7 +8,7 @@ import { useSesiuneAdmin } from '../data/adminSession';
 import { useDashboardData } from '../zones/evenimente/useDashboardData';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { toCsv, durataCsv } from '../../../lib/csv';
+import { toCsv, durataCsv } from '../../../shared/lib/csv';
 import { addRegistration, updateRegistration, deleteRegistration, undeleteRegistration, deleteWaitlist, undeleteWaitlist, promoteWaitlist, listEditions, createEdition, listEventConfig, setPrezenta, refuzPrezenta, InvalidTokenError } from '../zones/evenimente/api';
 import type { AdminRegistration, AdminWaitlistEntry, Prezenta } from '../zones/evenimente/api';
 import { AdminEmailTab } from '../zones/evenimente/AdminEmailTab';
@@ -51,7 +52,7 @@ import { fazaSite, type EcranAdmin } from '../data/stareCurenta';
 import { fetchBuildInfo, campuriVechiInBuild } from '../zones/evenimente/buildFingerprint';
 import { parseEventConfig } from '../../../shared/content/eventConfig';
 import { ziSiLuna } from '../../../shared/lib/formatare';
-import { Toast, useToast } from '../../../admin/controale/Toast';
+import { Toast, useToast } from '../../../shared/ui/ToastAdmin';
 import { rezumaAcoperire, motivUndoEsuat } from '../zones/evenimente/dashboardRezumate';
 import { Dialog } from '../../../shared/ui/Dialog';
 
@@ -565,7 +566,7 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
         }
       >
         {arhiva && estePeEditie(tab) && (
-          <div className="admin-banner" data-css="admin-banner" role="status">
+          <div className={adminStyles['admin-banner']} data-css="admin-banner" role="status">
             <strong>Ediția {editie} e încheiată.</strong> O vezi ca arhivă: datele rămân
             întregi, dar nu se mai poate adăuga, edita sau șterge nimic. Exportul CSV
             funcționează. Ediția activă acum e {editieCurenta}.
@@ -665,10 +666,10 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
           arhiva={arhiva}
         />
 
-        <section className="admin-table-section" data-css="admin-table-section">
-          <div className={'admin-table-head ' + styles['admin-participanti-head']} data-css="admin-table-head admin-participanti-head">
+        <section className={adminStyles['admin-table-section']} data-css="admin-table-section">
+          <div className={`${adminStyles['admin-table-head']} ` + styles['admin-participanti-head']} data-css="admin-table-head admin-participanti-head">
             <h2>Participanți · ediția {editie ?? CURRENT_EDITION}</h2>
-            <div className="admin-table-actions" data-css="admin-table-actions">
+            <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
               <input
                 // `search`, nu `text`: aduce butonul nativ de golire și
                 // tastatura potrivită pe mobil. Nici corectorul, nici
@@ -702,7 +703,7 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
                   + Adaugă
                 </button>
               )}
-              <button type="button" className="admin-btn-accent" data-css="admin-btn-accent" onClick={exportCsv}>
+              <button type="button" className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent" onClick={exportCsv}>
                 Export CSV
               </button>
             </div>
@@ -721,9 +722,9 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
               setEditId(null);
             }}
           />
-          <div className="admin-table-wrap" data-css="admin-table-wrap">
-            <div className={`admin-table ${styles['admin-participanti']}${arhiva ? ' arhiva' : ''}`} data-css={`admin-table admin-participanti${arhiva ? ' arhiva' : ''}`}>
-              <div className={'admin-row ' + shared1['admin-row-head']} data-css="admin-row admin-row-head">
+          <div className={adminStyles['admin-table-wrap']} data-css="admin-table-wrap">
+            <div className={`${adminStyles['admin-table']} ${styles['admin-participanti']}${arhiva ? ' arhiva' : ''}`} data-css={`admin-table admin-participanti${arhiva ? ' arhiva' : ''}`}>
+              <div className={`${adminStyles['admin-row']} ` + shared1['admin-row-head']} data-css="admin-row admin-row-head">
                 <span>#</span>
                 <span>Nume</span>
                 <span>Telefon</span>
@@ -736,16 +737,16 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
                 const celule = acoperirePerId.get(r.id) ?? {};
                 const rezumat = rezumaAcoperire(celule);
                 return (
-                <div key={r.id} className="admin-row" data-css="admin-row" style={{ '--i': i } as CSSProperties}>
+                <div key={r.id} className={adminStyles['admin-row']} data-css="admin-row" style={{ '--i': i } as CSSProperties}>
                   <span className={shared1['admin-cell-nr']} data-css="admin-cell-nr">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="admin-cell-name" data-css="admin-cell-name">{r.nume}</span>
+                  <span className={adminStyles['admin-cell-name']} data-css="admin-cell-name">{r.nume}</span>
                   <a className={shared1['admin-cell-link']} data-css="admin-cell-link" href={`tel:${r.telefon}`}>
                     {r.telefon}
                   </a>
                   <a className={shared1['admin-cell-link'] + ' ellipsis'} data-css="admin-cell-link ellipsis" href={`mailto:${r.email}`}>
                     {r.email}
                   </a>
-                  <span className="admin-cell-date" data-css="admin-cell-date">{ziSiLuna(r.created_at)}</span>
+                  <span className={adminStyles['admin-cell-date']} data-css="admin-cell-date">{ziSiLuna(r.created_at)}</span>
                   <span>
                     <button
                       type="button"
@@ -832,7 +833,7 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
             <strong>{confirmRow.nume}</strong> ({confirmRow.email}) va fi șters din listă.
             Poți anula imediat după, din notificarea de jos.
           </p>
-          <div className="admin-confirm-actions" data-css="admin-confirm-actions">
+          <div className={adminStyles['admin-confirm-actions']} data-css="admin-confirm-actions">
             <button
               type="button"
               className={shared1['admin-confirm-delete']} data-css="admin-confirm-delete"
@@ -843,7 +844,7 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
             >
               Da, șterge
             </button>
-            <button type="button" className="admin-confirm-cancel" data-css="admin-confirm-cancel" onClick={() => setConfirmRow(null)}>
+            <button type="button" className={adminStyles['admin-confirm-cancel']} data-css="admin-confirm-cancel" onClick={() => setConfirmRow(null)}>
               Anulează
             </button>
           </div>

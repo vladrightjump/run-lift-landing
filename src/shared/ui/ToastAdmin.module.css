@@ -1,0 +1,22 @@
+
+[data-css~="admin-cadru--telefon"] ~ .admin-toast-zona { bottom: calc(76px + env(safe-area-inset-bottom)); }
+.admin-toast-zona {
+    position: fixed; left: 0; right: 0; bottom: 24px; z-index: 70;
+    display: flex; justify-content: center; padding: 0 12px; pointer-events: none;
+  }
+.admin-toast {
+    pointer-events: auto; display: flex; align-items: center; gap: 12px;
+    min-height: 52px; max-width: min(520px, 100%); padding: 6px 6px 6px 16px;
+    background: var(--pa-ink); color: var(--pa-ink-text); border-radius: var(--pa-r-lg);
+    box-shadow: var(--pa-shadow); animation: admin-toast-in var(--pa-dur-slow) var(--pa-ease-arc) both;
+  }
+.admin-toast-punct { width: 8px; height: 8px; border-radius: 50%; background: var(--pa-accent); flex: none; }
+.admin-toast:global(.error) .admin-toast-punct { background: #ff8f80; }
+.admin-toast-text { font-size: 14.5px; font-weight: 600; }
+.admin-toast-actiune {
+    min-height: 40px; padding: 0 14px; border: 0; background: transparent; cursor: pointer;
+    color: var(--pa-accent); font-family: var(--pa-font); font-size: 14.5px; font-weight: 700;
+  }
+.admin-toast-actiune:hover { background: rgba(201, 242, 75, 0.12); }
+.admin-toast-actiune:focus-visible { outline-color: var(--pa-accent); }
+  @keyframes admin-toast-in { from { opacity: 0; transform: translateY(16px) scale(0.96); } }

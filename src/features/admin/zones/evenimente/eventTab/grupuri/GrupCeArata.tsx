@@ -1,3 +1,5 @@
+import adminStyles from '../../../../components/AdminStyles.module.css';
+import adminRoot from '../../../../components/RadacinaAdmin.module.css';
 import styles from './GrupCeArata.module.css';
 import { useContext } from 'react';
 import type { EventConfig } from '../../../../../../shared/content/eventConfig';
@@ -44,15 +46,15 @@ export const GrupCeArata = ({ ciorna, seteaza }: Props) => {
       </Camp>
 
       <div className={styles['admin-config-lista']} data-css="admin-config-lista">
-        <span className="admin-config-eticheta" data-css="admin-config-eticheta">Secțiunile paginii</span>
-        <p className="admin-config-hint" data-css="admin-config-hint">
+        <span className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta">Secțiunile paginii</span>
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
           Ordinea de aici e ordinea de pe pagină. Numerele (01, 02…) se recalculează singure — o
           secțiune ascunsă nu lasă gaură.
         </p>
-        <ol className="admin-layout-list" data-css="admin-layout-list">
+        <ol className={adminStyles['admin-layout-list']} data-css="admin-layout-list">
           {ciorna.layout.map((s, i) => (
             <li key={s.key} className={s.visible ? '' : 'ascunsa'}>
-              <span className="admin-layout-nr" data-css="admin-layout-nr">
+              <span className={adminStyles['admin-layout-nr']} data-css="admin-layout-nr">
                 {s.visible
                   ? String(ciorna.layout.filter((x, j) => x.visible && j <= i).length).padStart(
                       2,
@@ -60,10 +62,10 @@ export const GrupCeArata = ({ ciorna, seteaza }: Props) => {
                     )
                   : '—'}
               </span>
-              <span className="admin-layout-nume" data-css="admin-layout-nume">{ETICHETE_SECTIUNI[s.key]}</span>
+              <span className={adminStyles['admin-layout-nume']} data-css="admin-layout-nume">{ETICHETE_SECTIUNI[s.key]}</span>
               <button
                 type="button"
-                className="admin-btn-ghost" data-css="admin-btn-ghost"
+                className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                 onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, -1))}
                 disabled={ocupat || i === 0}
                 aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai sus`}
@@ -72,7 +74,7 @@ export const GrupCeArata = ({ ciorna, seteaza }: Props) => {
               </button>
               <button
                 type="button"
-                className="admin-btn-ghost" data-css="admin-btn-ghost"
+                className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                 onClick={() => seteaza('layout', mutaSectiune(ciorna.layout, s.key, 1))}
                 disabled={ocupat || i === ciorna.layout.length - 1}
                 aria-label={`Mută „${ETICHETE_SECTIUNI[s.key]}” mai jos`}
@@ -81,7 +83,7 @@ export const GrupCeArata = ({ ciorna, seteaza }: Props) => {
               </button>
               <button
                 type="button"
-                className="admin-btn-ghost" data-css="admin-btn-ghost"
+                className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                 onClick={() => seteaza('layout', comutaVizibilitatea(ciorna.layout, s.key))}
                 disabled={ocupat}
               >

@@ -1,6 +1,8 @@
+import controlStyles from './ControlStyles.module.css';
+import styles from './MeniuActiuni.module.css';
 import { Fragment, useState, type KeyboardEvent } from 'react';
-import { Icon, type NumeIcon } from '../../shared/ui/Icon';
-import { Suprapunere } from '../../shared/ui/Suprapunere';
+import { Icon, type NumeIcon } from './Icon';
+import { Suprapunere } from './Suprapunere';
 
 /**
  * Meniul „⋯" al unui rând (R26).
@@ -58,7 +60,7 @@ export const MeniuActiuni = ({
       <button
         ref={setAncora}
         type="button"
-        className="admin-buton-icon"
+        className={controlStyles['admin-buton-icon']} data-css="admin-buton-icon"
         aria-label={eticheta}
         aria-haspopup="menu"
         aria-expanded={deschis}
@@ -72,18 +74,18 @@ export const MeniuActiuni = ({
           titlu={eticheta}
           ancora={ancora}
           rol="menu"
-          clasa="admin-meniu"
+          clasa={styles['admin-meniu']}
           onInchide={() => setDeschis(false)}
           onTasta={muta}
         >
           {elemente.map((el) => (
             <Fragment key={el.eticheta}>
-              {el.separatInainte && <hr className="admin-meniu-sep" />}
+              {el.separatInainte && <hr className={styles['admin-meniu-sep']} data-css="admin-meniu-sep" />}
               <button
                 type="button"
                 role="menuitem"
                 disabled={el.dezactivat}
-                className={`admin-meniu-item${el.distructiv ? ' admin-meniu-item--distructiv' : ''}`}
+                className={`${styles['admin-meniu-item']}${el.distructiv ? ` ${styles['admin-meniu-item--distructiv']}` : ''}`} data-css={`admin-meniu-item${el.distructiv ? ' admin-meniu-item--distructiv' : ''}`}
                 onClick={() => {
                   setDeschis(false);
                   el.onAlege();

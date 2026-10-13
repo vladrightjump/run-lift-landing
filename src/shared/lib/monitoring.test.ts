@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { logClientError, installGlobalMonitoring } from '../../src/lib/monitoring';
-import { SubmitHttpError, isNetworkOrCspError } from '../../src/shared/lib/errors';
+import { logClientError, installGlobalMonitoring } from './monitoring';
+import { createFetchCapture } from '../../../tests/support/fetchCapture';
+import { SubmitHttpError, isNetworkOrCspError } from './errors';
 
 /**
  * Monitoringul ușor: garantează că eșecurile lasă o urmă structurată în consolă
@@ -113,16 +114,14 @@ describe('pragul de escaladare — clientul nu trimite nimic nicăieri', () => {
   });
 
   it('o eroare de JS de client nu produce nicio cerere de rețea', () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal('fetch', fetchSpy);
+    const fetchSpy = createFetchCapture();
     logClientError('window-error', new Error('ceva a picat'));
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 
   it('o violare de CSP nu produce nicio cerere de rețea', () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal('fetch', fetchSpy);
+    const fetchSpy = createFetchCapture();
     logClientError('csp-violation', new Error('blocat'), { blockedURI: 'https://x.example' });
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();

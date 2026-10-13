@@ -1,3 +1,4 @@
+import adminRoot from './RadacinaAdmin.module.css';
 import styles from './LiniaDeTimp.module.css';
 import { useEventConfig, useEditionDates } from '../../../shared/lib/useEventConfig';
 import { useNow } from '../../../shared/lib/useNow';
@@ -130,7 +131,7 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
                 {oferaActiune && (
                   <button
                     type="button"
-                    className={'admin-btn-ghost ' + styles['admin-linie-actiune']} data-css={"admin-btn-ghost admin-linie-actiune"}
+                    className={`${adminRoot['admin-btn-ghost']} ` + styles['admin-linie-actiune']} data-css={"admin-btn-ghost admin-linie-actiune"}
                     onClick={() => onTab(actiune.ecran)}
                   >
                     {actiune.eticheta}
@@ -153,7 +154,7 @@ export const LiniaDeTimp = ({ semnale, onTab, onEditieNoua, arhiva }: Props) => 
             {!arhiva && (
               <button
                 type="button"
-                className={'admin-btn-ghost ' + styles['admin-linie-actiune']} data-css={"admin-btn-ghost admin-linie-actiune"}
+                className={`${adminRoot['admin-btn-ghost']} ` + styles['admin-linie-actiune']} data-css={"admin-btn-ghost admin-linie-actiune"}
                 onClick={onEditieNoua}
               >
                 Pornește ediția următoare

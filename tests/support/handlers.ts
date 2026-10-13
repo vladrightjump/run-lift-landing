@@ -1,10 +1,11 @@
 import { http, HttpResponse, passthrough, delay, type HttpResponseResolver } from 'msw';
-import { SUPABASE } from '../../src/lib/backend';
+import { SUPABASE } from '../../src/shared/lib/backend';
 import { editie } from './builders/edition';
 import { dateSala } from './builders/sala';
-import { trialConfig, trialData } from './builders/trial';
+import { trialData } from './builders/trial';
 import { reel } from './builders/reels';
 import { workout } from './builders/workouts';
+import { publicStats, publicHomepage, publicTrialConfig } from './builders/public';
 
 /** Override a named RPC without changing the shared endpoint matching. */
 export const rpcHandler = (name: string, resolver: HttpResponseResolver) =>
@@ -18,13 +19,12 @@ export const responseHandler = (response: Response) =>
   http.all(`${SUPABASE.url}/*`, () => response, { once: true });
 
 export function createHandlers(overrides: Record<string, unknown> = {}, latencyMs = 0) {
-  const trial = trialConfig();
   const defaults: Record<string, unknown> = {
     confirm_signup: 'confirmat',
     public_config: null,
-    public_stats: { count: 0, participants: [], waitlist: 0 },
-    public_homepage: { trial_first: false, training_location: null },
-    public_trial_config: { enabled: trial.enabled, bot_username: trial.bot_username, contact_text: trial.contact_text },
+    public_stats: publicStats(),
+    public_homepage: publicHomepage(),
+    public_trial_config: publicTrialConfig(),
     public_training_reels: [],
     public_weekly_workouts: [],
     admin_check_token: true,

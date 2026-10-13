@@ -1,5 +1,7 @@
-import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import { test, expect, createMockNetwork, type NetworkFixture } from '../support/playwright';
+import { createHandlers } from '../support/handlers';
+import { rpcResponse } from '../support/responses';
+import { publicStats } from '../support/builders/public';
 import { deriveEventStrings } from '../../src/shared/content/format';
 import { deriveEditionDates } from '../../src/shared/lib/config';
 import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
@@ -17,21 +19,18 @@ const TOTAL_SLOTS = SNAPSHOT_CONFIG.slots.total;
  * și înainte de eveniment (deci countdown-ul de start e activ).
  */
 
-const STATS_ROUTE = '**/rest/v1/rpc/public_stats';
-const EMPTY = { count: 0, participants: [], waitlist: 0 };
+const EMPTY = publicStats();
 
-const mockStats = (page: Page, body: unknown) =>
-  page.route(STATS_ROUTE, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
-  );
+const mockStats = (network: NetworkFixture, body: unknown) =>
+  network.use(rpcResponse('public_stats', body));
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, network }) => {
   await page.addInitScript(() => {
     const base = new Date('2026-08-06T10:00:00+03:00').getTime();
     const start = performance.now();
     Date.now = () => base + (performance.now() - start);
   });
-  await mockStats(page, EMPTY);
+  mockStats(network, EMPTY);
 });
 
 test.describe('App — comutarea Coming Soon ↔ landing', () => {
@@ -93,9 +92,8 @@ test.describe('Landing — conținut', () => {
       const start = performance.now();
       Date.now = () => base + (performance.now() - start);
     });
-    await page.route(STATS_ROUTE, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY) })
-    );
+    const { network, unhandled } = createMockNetwork(ctx, createHandlers({ public_stats: EMPTY }));
+    await network.enable();
     await page.goto('/?preview=landing');
     const repeat = page.getByRole('tab', { name: /REPEAT/ });
     await repeat.scrollIntoViewIfNeeded();
@@ -106,6 +104,8 @@ test.describe('Landing — conținut', () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth
     );
     expect(depasire).toBeLessThanOrEqual(0);
+    await network.disable();
+    expect(unhandled).toEqual([]);
     await ctx.close();
   });
 
@@ -139,8 +139,8 @@ test.describe('Landing — conținut', () => {
 });
 
 test.describe('Landing — lista de participanți (din public_stats)', () => {
-  test('afișează numele mascate și numărul când există înscriși', async ({ page }) => {
-    await mockStats(page, {
+  test('afișează numele mascate și numărul când există înscriși', async ({ page, network }) => {
+    mockStats(network, {
       count: 2,
       participants: [
         { nume: 'Vlad F.', echipa: '' },
@@ -159,8 +159,8 @@ test.describe('Landing — lista de participanți (din public_stats)', () => {
     await expect(page.getByText(`2 / ${TOTAL_SLOTS}`, { exact: true })).toBeVisible();
   });
 
-  test('gol → mesajul „fii primul"', async ({ page }) => {
-    await mockStats(page, EMPTY);
+  test('gol → mesajul „fii primul"', async ({ page, network }) => {
+    mockStats(network, EMPTY);
     await page.goto('/?preview=landing');
     await expect(page.getByText(/fii primul/i)).toBeVisible();
   });

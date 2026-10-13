@@ -7,7 +7,7 @@
  * `installGlobalMonitoring` — prinde ce scapă: violări CSP, erori globale,
  * promisiuni respinse. Se instalează o singură dată, în `app/main.tsx`.
  */
-import { SNAPSHOT_CONFIG } from '../shared/content/eventConfig';
+import { SNAPSHOT_CONFIG } from '../content/eventConfig';
 
 type Meta = Record<string, unknown>;
 

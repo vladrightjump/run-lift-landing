@@ -1,3 +1,4 @@
+import adminStyles from '../../components/AdminStyles.module.css';
 import styles from './PrevizualizareSondaj.module.css';
 import type { ReactNode } from 'react';
 import { antetSondaj, corpSondaj, textEfectiv, type TextSondaj } from './sondaj';
@@ -48,7 +49,7 @@ export const PrevizualizareSondaj = ({ text, ora, loc, data }: Props) => {
         <span>{t.da}</span>
         <span>{t.nu}</span>
       </div>
-      <figcaption className="admin-config-hint">
+      <figcaption className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
         Exemplu cu nume inventate. Ziua, data, ora și locul se pun singure.
       </figcaption>
     </figure>

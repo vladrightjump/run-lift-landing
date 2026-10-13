@@ -27,7 +27,7 @@ vi.mock('../../../shared/lib/publicConfig', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../shared/lib/publicConfig')>()),
   fetchPublicConfig: vi.fn().mockResolvedValue(null),
 }));
-vi.mock('../../../lib/monitoring', () => ({
+vi.mock('../../../shared/lib/monitoring', () => ({
   logClientError: vi.fn(),
   setMonitoringEdition: vi.fn(),
 }));

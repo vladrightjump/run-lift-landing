@@ -1,4 +1,6 @@
 import shared1 from '../../EvenimenteStyles.module.css';
+import adminStyles from '../../../../components/AdminStyles.module.css';
+import adminRoot from '../../../../components/RadacinaAdmin.module.css';
 import styles from './GrupCand.module.css';
 import type { EventConfig } from '../../../../../../shared/content/eventConfig';
 import type { Reper } from '../../reperele';
@@ -96,7 +98,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
         <span className={styles['admin-config-mutare-butoane']} data-css="admin-config-mutare-butoane">
           <button
             type="button"
-            className="admin-btn-accent" data-css="admin-btn-accent"
+            className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
             disabled={ocupat}
             onClick={onMutaTot}
           >
@@ -104,7 +106,7 @@ export const GrupCand = ({ ciorna, seteaza, erori, areEroare, acum, repere, muta
           </button>
           <button
             type="button"
-            className="admin-btn-ghost" data-css="admin-btn-ghost"
+            className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
             disabled={ocupat}
             onClick={() => onAncoreaza(ciorna.start)}
           >

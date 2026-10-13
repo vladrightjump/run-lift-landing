@@ -9,13 +9,13 @@
  * calendar) primesc configul ca argument — un hook nu le poate servi.
  *
  * Configul de backend (Supabase url/key/schema) e configurare de MEDIU, nu de
- * ediție: trăiește în `src/lib/backend.ts` și se re-exportă de aici.
+ * ediție: trăiește în `src/shared/lib/backend.ts` și se re-exportă de aici.
  */
 import { EDITION } from '../content/edition';
 import { type EventConfig } from '../content/eventConfig';
 
 // Re-export backend (Supabase) — configurare de mediu, nu de ediție.
-export { SUPABASE, isBackendConfigured } from '../../lib/backend';
+export { SUPABASE, isBackendConfigured } from './backend';
 
 // --- Social — NU ține de ediție, deci rămâne în cod (vezi `EDITION.urls`) ----
 export const INSTAGRAM_HANDLE = EDITION.urls.instagramHandle;

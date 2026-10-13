@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type NetworkFixture } from '../support/playwright';
+import { rpcResponse, functionReply, submitFormResponse } from '../support/responses';
+import { publicStats, publicHomepage, publicReel } from '../support/builders/public';
 import { deriveEditionDates } from '../../src/shared/lib/config';
 import {
   deriveEventStrings,
@@ -19,9 +21,6 @@ const { EVENT_WHERE } = deriveEventStrings(SNAPSHOT_CONFIG);
 
 // Formularul trece prin funcția Edge `submit-form` (verifică Turnstile înainte
 // de a scrie); emailul de bun venit îl trimite tot ea, server-side.
-const INSERT_ROUTE = '**/functions/v1/submit-form';
-const EMAIL_ROUTE = '**/functions/v1/send-email';
-const OK = { status: 200, contentType: 'application/json', body: '{"ok":true}' };
 
 const completeaza = async (page: import('@playwright/test').Page) => {
   await page.getByPlaceholder('Nume', { exact: true }).fill('Popescu');
@@ -34,12 +33,10 @@ const completeaza = async (page: import('@playwright/test').Page) => {
  * Locul antrenamentelor vine din `public_homepage()` (setările botului). Implicit
  * funcția „nu există" — cazul de dinainte de migrare — ca testele care verifică
  * locul din cod să nu depindă de ce e salvat în baza reală. Testele care vor un
- * loc de la server își pun propria rută, care are prioritate.
+ * loc de la server își pun propriul handler, care are prioritate.
  */
-test.beforeEach(async ({ page }) => {
-  await page.route('**/rest/v1/rpc/public_homepage', (route) =>
-    route.fulfill({ status: 404, contentType: 'application/json', body: '{"message":"not found"}' })
-  );
+test.beforeEach(async ({ network }) => {
+  network.use(rpcResponse('public_homepage', { message: 'not found' }, { status: 404 }));
 });
 
 test.describe('Despre noi — conținut', () => {
@@ -112,16 +109,17 @@ test.describe('Despre noi — conținut', () => {
     await expect(ig).toHaveAttribute('rel', /noopener/);
   });
 
-  test('cere de la Supabase EXACT două lucruri: clipurile și locul', async ({ page }) => {
+  test('cere de la Supabase EXACT două lucruri: clipurile și locul', async ({ page, network }) => {
     // Pagina a fost cândva complet fără backend. Acum banda cu clipuri se
     // administrează din `/admin`, iar locul vine din setările botului — și numai
     // atât. Testul păzește granița, nu absența: un provider de config pus din
     // greșeală peste pagină ar aduce `public_config` și ar cădea aici.
     const rute: string[] = [];
-    await page.route('**/rest/v1/**', (route) => {
-      rute.push(new URL(route.request().url()).pathname);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    page.on('request', (request) => {
+      const pathname = new URL(request.url()).pathname;
+      if (pathname.startsWith('/rest/v1/')) rute.push(pathname);
     });
+    network.use(rpcResponse('public_homepage', []), rpcResponse('public_training_reels', []));
     await page.goto('/despre-noi');
     await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
     await page.waitForTimeout(1000);
@@ -145,7 +143,7 @@ test.describe('Despre noi — conținut', () => {
     expect(cereri).toEqual([]);
   });
 
-  test('numerotarea secțiunilor e continuă, cu sau fără clipuri', async ({ page }) => {
+  test('numerotarea secțiunilor e continuă, cu sau fără clipuri', async ({ page, network }) => {
     // Banda dispare când nu are clipuri. Numerele NU sunt scrise de mână, deci
     // secțiunile de după ea se strâng singure în loc să lase 01, 02, 03, 05.
     //
@@ -153,9 +151,7 @@ test.describe('Despre noi — conținut', () => {
     // `.dn-section-num`, iar banda își aduce numărul în `.e3-title-num`. Un
     // test care le-ar citi doar pe primele ar începe să pice exact în ziua în
     // care se adaugă primul clip real.
-    await page.route('**/rest/v1/rpc/public_training_reels', (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
-    );
+    network.use(rpcResponse('public_training_reels', []));
     await page.goto('/despre-noi');
     const numere = await page.locator("[data-css~=\"dn-section-num\"], [data-css~=\"e3-reels\"] [data-css~=\"e3-title-num\"]").allTextContents();
     const asteptate = numere.map((_, i) => String(i + 1).padStart(2, '0'));
@@ -163,21 +159,9 @@ test.describe('Despre noi — conținut', () => {
   });
 
   test('cu clipuri, banda apare între „Cum arată un antrenament" și „Unde ne antrenăm"', async ({
-    page,
+    page, network,
   }) => {
-    await page.route('**/rest/v1/rpc/public_training_reels', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          {
-            youtube: 'dQw4w9WgXcQ',
-            caption: 'Marți în parc',
-            url: 'https://www.instagram.com/reel/AAAAA11111/',
-          },
-        ]),
-      })
-    );
+    network.use(rpcResponse('public_training_reels', [publicReel({ caption: 'Marți în parc' })]));
     await page.goto('/despre-noi');
 
     // Banda vine prin RPC, deci se randează asincron. Fără așteptarea asta,
@@ -199,20 +183,10 @@ test.describe('Despre noi — conținut', () => {
    * mai reia când lista sosește. Rezultatul, în producție: trei carduri cu
    * numerele desenate și niciun player, oricât ai derula.
    */
-  test('derularea până la bandă pornește exact un player', async ({ page }) => {
-    await page.route('**/rest/v1/rpc/public_training_reels', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(
-          ['dQw4w9WgXcQ', '_-Ab0123456', 'ZZZZ9999888'].map((youtube, i) => ({
-            youtube,
-            caption: `Clip ${i + 1}`,
-            url: 'https://www.instagram.com/reel/AAAAA11111/',
-          }))
-        ),
-      })
-    );
+  test('derularea până la bandă pornește exact un player', async ({ page, network }) => {
+    network.use(rpcResponse('public_training_reels',
+      ['dQw4w9WgXcQ', '_-Ab0123456', 'ZZZZ9999888'].map((youtube, i) =>
+        publicReel({ youtube, caption: `Clip ${i + 1}` }))));
     await page.goto('/despre-noi');
 
     await expect(page.locator("[data-css~=\"e3-reel\"]")).toHaveCount(3);
@@ -239,12 +213,9 @@ test.describe('Despre noi — conținut', () => {
 
 test.describe('Despre noi — formular', () => {
 
-  test('trimite sursa "despre-noi", dovezile anti-bot și NU trimite ediția', async ({ page }) => {
+  test('trimite sursa "despre-noi", dovezile anti-bot și NU trimite ediția', async ({ page, network }) => {
     let plic: Record<string, unknown> = {};
-    await page.route(INSERT_ROUTE, async (route) => {
-      plic = JSON.parse(route.request().postData() ?? '{}');
-      return route.fulfill(OK);
-    });
+    network.use(submitFormResponse({ onRequest: (p) => { plic = p; } }));
 
     await page.goto('/despre-noi');
     await completeaza(page);
@@ -263,17 +234,16 @@ test.describe('Despre noi — formular', () => {
   });
 
   test('emailul de bun venit NU mai pleacă din browser — îl trimite funcția Edge', async ({
-    page,
+    page, network,
   }) => {
     // Înainte, clientul apela `send-email` cu modul „info" folosind cheia
     // publishable, deci oricine putea declanșa trimiteri. Acum emailul pleacă
     // server-side, imediat după insert, în aceeași funcție care a validat captcha.
     let emailCerut = false;
-    await page.route(INSERT_ROUTE, (route) => route.fulfill(OK));
-    await page.route(EMAIL_ROUTE, (route) => {
-      emailCerut = true;
-      return route.fulfill({ status: 200, body: '{"sent":1}' });
-    });
+    network.use(
+      submitFormResponse(),
+      functionReply('send-email', { sent: 1 }, { onRequest: () => { emailCerut = true; } }),
+    );
 
     await page.goto('/despre-noi');
     await completeaza(page);
@@ -294,20 +264,14 @@ test.describe('Navigare între pagini', () => {
     await expect(page.locator("[data-css~=\"dn-root\"]")).toBeVisible();
   });
 
-  test('logoul din /despre-noi duce înapoi acasă (landing)', async ({ page }) => {
+  test('logoul din /despre-noi duce înapoi acasă (landing)', async ({ page, network }) => {
     // Logoul duce la „/" fără query. Fixăm ceasul după LAUNCH_DATE ca „/" să
     // arate landing-ul indiferent de faza curentă (Coming Soon vs. înscrieri).
     // Mock la stats ca să nu atingem DB-ul real.
     await page.addInitScript((fixed) => {
       Date.now = () => fixed;
     }, LAUNCH_DATE.getTime() + 1000);
-    await page.route('**/rest/v1/rpc/public_stats', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ count: 0, participants: [], waitlist: 0 }),
-      })
-    );
+    network.use(rpcResponse('public_stats', publicStats()));
     await page.goto('/despre-noi');
     await page.locator("[data-css~=\"dn-logo\"]").click();
     await expect(page).toHaveURL(/\/$/);
@@ -324,18 +288,12 @@ test.describe('Navigare între pagini', () => {
 });
 
 test.describe('Despre noi — locul din setările botului', () => {
-  const cuLoc = (page: import('@playwright/test').Page, loc: string | null) =>
-    page.route('**/rest/v1/rpc/public_homepage', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ trial_first: false, training_location: loc }),
-      })
-    );
+  const cuLoc = (network: NetworkFixture, loc: string | null) =>
+    network.use(rpcResponse('public_homepage', publicHomepage({ training_location: loc })));
 
-  test('arată locul salvat pentru bot: în orar, pe hartă, în direcții și în bandă', async ({ page }) => {
+  test('arată locul salvat pentru bot: în orar, pe hartă, în direcții și în bandă', async ({ page, network }) => {
     const loc = 'Sala Ironworks, str. Ion Creangă';
-    await cuLoc(page, loc);
+    cuLoc(network, loc);
     await page.goto('/despre-noi');
     const orar = page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' });
 
@@ -350,8 +308,8 @@ test.describe('Despre noi — locul din setările botului', () => {
     await expect(page.locator("[data-css~=\"dn-root\"]")).toContainText(loc);
   });
 
-  test('nu mai promite „în parc" sau „în aer liber" în program, statistici și bandă', async ({ page }) => {
-    await cuLoc(page, 'Sala Ironworks');
+  test('nu mai promite „în parc" sau „în aer liber" în program, statistici și bandă', async ({ page, network }) => {
+    cuLoc(network, 'Sala Ironworks');
     await page.goto('/despre-noi');
     await expect(page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' })).toContainText('Sala Ironworks');
     await expect(page.locator("[data-css~=\"dn-root\"]")).not.toContainText('În aer liber, în parc');
@@ -360,15 +318,8 @@ test.describe('Despre noi — locul din setările botului', () => {
     await expect(page.locator("[data-css~=\"e3-marquee\"]").first()).not.toContainText(/aer liber/i);
   });
 
-  test('cât serverul n-a răspuns, nu arată niciun loc, nici pe cel vechi', async ({ page }) => {
-    await page.route('**/rest/v1/rpc/public_homepage', async (route) => {
-      await new Promise((r) => setTimeout(r, 1200));
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ trial_first: false, training_location: 'Sala Ironworks' }),
-      });
-    });
+  test('cât serverul n-a răspuns, nu arată niciun loc, nici pe cel vechi', async ({ page, network }) => {
+    network.use(rpcResponse('public_homepage', publicHomepage({ training_location: 'Sala Ironworks' }), { latencyMs: 1200 }));
     await page.goto('/despre-noi');
     const orar = page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' });
     await expect(orar).toBeVisible();
@@ -380,8 +331,8 @@ test.describe('Despre noi — locul din setările botului', () => {
     await expect(orar.locator('iframe')).toHaveCount(1);
   });
 
-  test('fără loc salvat: locul din cod, cu harta lui', async ({ page }) => {
-    await cuLoc(page, null);
+  test('fără loc salvat: locul din cod, cu harta lui', async ({ page, network }) => {
+    cuLoc(network, null);
     await page.goto('/despre-noi');
     const orar = page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' });
     await expect(orar).toContainText(TRAINING_WHERE);

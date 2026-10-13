@@ -1,3 +1,5 @@
+import adminStyles from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './AdminAntrenamentTab.module.css';
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -335,22 +337,22 @@ export const AdminAntrenamentTab = () => {
   const curenta = vizibile.length === 0 ? null : vizibile[vizibile.length - 1];
 
   const rezumat = (
-      <div className="admin-stats">
-        <div className="admin-stat">
-          <span className="admin-stat-label">Programul are</span>
-          <span className="admin-stat-value">
+      <div className={adminStyles['admin-stats']} data-css="admin-stats">
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Programul are</span>
+          <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value">
             {program.length} {program.length === 1 ? 'săptămână' : 'săptămâni'}
           </span>
         </div>
-        <div className="admin-stat">
-          <span className="admin-stat-label">Pe pagină se vede</span>
-          <span className={`admin-stat-value${curenta ? ' accent' : ''}`}>
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Pe pagină se vede</span>
+          <span className={`${adminStyles['admin-stat-value']}${curenta ? ` ${adminStyles['accent']}` : ''}`} data-css={`admin-stat-value${curenta ? ' accent' : ''}`}>
             {curenta ? `Săptămâna ${curenta.numar}` : 'nimic'}
           </span>
         </div>
-        <div className="admin-stat">
-          <span className="admin-stat-label">Ascunse</span>
-          <span className="admin-stat-value">{program.length - vizibile.length}</span>
+        <div className={adminStyles['admin-stat']} data-css="admin-stat">
+          <span className={adminStyles['admin-stat-label']} data-css="admin-stat-label">Ascunse</span>
+          <span className={adminStyles['admin-stat-value']} data-css="admin-stat-value">{program.length - vizibile.length}</span>
         </div>
       </div>
   );
@@ -362,10 +364,10 @@ export const AdminAntrenamentTab = () => {
       rezumat={rezumat}
       actiuni={
         <>
-          <button type="button" className="admin-btn-ghost" onClick={copiaza}>
+          <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={copiaza}>
             Copiază linkul
           </button>
-          <a className="admin-btn-ghost" href={LINK} target="_blank" rel="noopener noreferrer">
+          <a className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" href={LINK} target="_blank" rel="noopener noreferrer">
             Vezi pagina ↗
           </a>
         </>
@@ -397,23 +399,23 @@ export const AdminAntrenamentTab = () => {
       }}
     >
 
-      <div className="admin-config-form">
-        <fieldset className="admin-config-grup">
+      <div className={adminStyles['admin-config-form']} data-css="admin-config-form">
+        <fieldset className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
           <legend>Programul</legend>
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             Ordinea de aici e ordinea din care alege vizitatorul. Numerele se pun singure și
             rămân 1, 2, 3… fără goluri — o săptămână ascunsă își păstrează numărul, ca un link
             trimis spre ea să nu ducă altundeva.
           </p>
 
           {program.length > 0 && (
-            <ol className="admin-layout-list">
+            <ol className={adminStyles['admin-layout-list']} data-css="admin-layout-list">
               {program.map((s, i) => (
                 <li key={s.id} className={s.vizibil ? '' : 'ascunsa'}>
-                  <span className="admin-layout-nr">{String(s.numar).padStart(2, '0')}</span>
+                  <span className={adminStyles['admin-layout-nr']} data-css="admin-layout-nr">{String(s.numar).padStart(2, '0')}</span>
                   <button
                     type="button"
-                    className="admin-layout-nume admin-btn-link"
+                    className={`${adminStyles['admin-layout-nume']} ${adminStyles['admin-btn-link']}`} data-css="admin-layout-nume admin-btn-link"
                     onClick={() => cereDeschiderea(s)}
                     aria-current={
                       deschis.fel === 'existenta' && deschis.id === s.id ? 'true' : undefined
@@ -423,7 +425,7 @@ export const AdminAntrenamentTab = () => {
                   </button>
                   <button
                     type="button"
-                    className="admin-btn-ghost"
+                    className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                     onClick={() => void muta(s, -1)}
                     disabled={i === 0}
                     aria-label={`Mută săptămâna ${s.numar} mai sus`}
@@ -432,7 +434,7 @@ export const AdminAntrenamentTab = () => {
                   </button>
                   <button
                     type="button"
-                    className="admin-btn-ghost"
+                    className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                     onClick={() => void muta(s, 1)}
                     disabled={i === program.length - 1}
                     aria-label={`Mută săptămâna ${s.numar} mai jos`}
@@ -441,7 +443,7 @@ export const AdminAntrenamentTab = () => {
                   </button>
                   <button
                     type="button"
-                    className="admin-btn-ghost"
+                    className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                     onClick={() => void comutaVizibilitatea(s)}
                     aria-label={`${s.vizibil ? 'Ascunde' : 'Arată'} săptămâna ${s.numar}`}
                   >
@@ -449,7 +451,7 @@ export const AdminAntrenamentTab = () => {
                   </button>
                   <button
                     type="button"
-                    className="admin-btn-ghost"
+                    className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                     onClick={() => setDeSters(s)}
                     aria-label={`Șterge săptămâna ${s.numar}`}
                   >
@@ -460,10 +462,10 @@ export const AdminAntrenamentTab = () => {
             </ol>
           )}
 
-          <div className="admin-table-actions">
+          <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
             <button
               type="button"
-              className="admin-btn-ghost"
+              className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
               onClick={() => cereDeschiderea(null)}
               disabled={deschis.fel === 'noua'}
             >
@@ -472,17 +474,17 @@ export const AdminAntrenamentTab = () => {
           </div>
         </fieldset>
 
-        <fieldset className="admin-config-grup">
+        <fieldset className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
           <legend>
             {`Săptămâna ${numarDeschis}${deschis.fel === 'noua' ? ' (nouă)' : ''}`}
           </legend>
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             Rândurile pe care le scrii aici sunt rândurile de pe pagină — nu e nevoie de nicio
             formatare. Numărul îl pune serverul; tu scrii doar titlul și antrenamentul.
           </p>
 
-          <div className="admin-config-camp">
-            <label className="admin-config-eticheta" htmlFor="an-titlu">
+          <div className={adminStyles['admin-config-camp']} data-css="admin-config-camp">
+            <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="an-titlu">
               Titlu
             </label>
             <input
@@ -494,8 +496,8 @@ export const AdminAntrenamentTab = () => {
             />
           </div>
 
-          <div className="admin-config-camp">
-            <label className="admin-config-eticheta" htmlFor="an-corp">
+          <div className={adminStyles['admin-config-camp']} data-css="admin-config-camp">
+            <label className={adminStyles['admin-config-eticheta']} data-css="admin-config-eticheta" htmlFor="an-corp">
               Antrenamentul
             </label>
             <textarea
@@ -507,13 +509,13 @@ export const AdminAntrenamentTab = () => {
           </div>
         </fieldset>
 
-        <fieldset className="admin-config-grup">
+        <fieldset className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
           <legend>Vizibilitatea săptămânii</legend>
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             Ascunsă, textul rămâne salvat și săptămâna lipsește de pe pagină — așa scrii din
             timp antrenamentul de săptămâna viitoare. Vizibilă peste un text gol nu se poate.
           </p>
-          <div className="admin-cs-comutator">
+          <div className={adminStyles['admin-cs-comutator']} data-css="admin-cs-comutator">
             {(
               [
                 [true, 'Vizibilă'],
@@ -523,7 +525,7 @@ export const AdminAntrenamentTab = () => {
               <button
                 key={eticheta}
                 type="button"
-                className={`admin-sursa-tab${vizibil === val ? ' activ' : ''}`}
+                className={`${adminStyles['admin-sursa-tab']}${vizibil === val ? ' activ' : ''}`} data-css={`admin-sursa-tab${vizibil === val ? ' activ' : ''}`}
                 aria-pressed={vizibil === val}
                 onClick={() => atinge(setVizibil)(val)}
               >
@@ -537,8 +539,8 @@ export const AdminAntrenamentTab = () => {
             ca pe `/antrenament`. Pe o săptămână vizibilă e singurul loc în care
             vezi editarea înainte de „Publică", fiindcă n-are o ciornă separată. */}
         {(titlu.trim() !== '' || corp.trim() !== '') && (
-          <section className="admin-previz" aria-label="Așa se va vedea pe pagină">
-            <span className="admin-previz-eticheta" aria-hidden="true">
+          <section className={adminStyles['admin-previz']} data-css="admin-previz" aria-label="Așa se va vedea pe pagină">
+            <span className={adminStyles['admin-previz-eticheta']} data-css="admin-previz-eticheta" aria-hidden="true">
               Așa se va vedea pe pagină
             </span>
             <CardSaptamana numar={numarDeschis} titlu={titlu} corp={corp} nivelTitlu="h3" className={styles['admin-previz-saptamana']} data-css="admin-previz-saptamana" />
@@ -548,23 +550,23 @@ export const AdminAntrenamentTab = () => {
       </div>
 
       {istoric.length > 0 && saptamanaDeschisa && (
-        <div className="admin-config-grup">
+        <div className={adminStyles['admin-config-grup']} data-css="admin-config-grup">
           <h3>Versiuni anterioare ale Săptămânii {saptamanaDeschisa.numar}</h3>
-          <p className="admin-config-hint">
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">
             Doar editările de conținut lasă o versiune. Ascunderea și arătarea nu — altfel lista
             ar fi plină de rânduri identice.
           </p>
           {/* Aceleași clase ca istoricul ediției din tabul „Evenimentul" — e
               aceeași listă, cu aceeași treabă. */}
-          <div className="admin-table-wrap">
-            <div className="admin-table">
+          <div className={adminStyles['admin-table-wrap']} data-css="admin-table-wrap">
+            <div className={adminStyles['admin-table']} data-css="admin-table">
               {istoric.map((v) => (
-                <div key={v.id} className="admin-row">
-                  <span className="admin-cell-name">{v.titlu || '(fără titlu)'}</span>
-                  <span className="admin-cell-date">{candSalvat(v.creat_la)}</span>
+                <div key={v.id} className={adminStyles['admin-row']} data-css="admin-row">
+                  <span className={adminStyles['admin-cell-name']} data-css="admin-cell-name">{v.titlu || '(fără titlu)'}</span>
+                  <span className={adminStyles['admin-cell-date']} data-css="admin-cell-date">{candSalvat(v.creat_la)}</span>
                   <button
                     type="button"
-                    className="admin-btn-ghost"
+                    className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                     onClick={() => void revinoLa(v.id)}
                   >
                     Revino la ea
@@ -586,13 +588,13 @@ export const AdminAntrenamentTab = () => {
             „{deSters.titlu || '(fără titlu)'}" dispare cu tot cu versiunile ei, iar săptămânile
             de după se renumerotează. Nu se poate anula.
           </p>
-          <div className="admin-table-actions">
-            <button type="button" className="admin-btn-ghost" onClick={() => setDeSters(null)}>
+          <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+            <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => setDeSters(null)}>
               Nu șterge
             </button>
             <button
               type="button"
-              className="admin-btn-accent"
+              className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
               onClick={() => void confirmaStergerea()}
             >
               Șterge săptămâna
@@ -610,11 +612,11 @@ export const AdminAntrenamentTab = () => {
           <p>
             Ce-ai scris în editor nu e salvat. Dacă deschizi altă săptămână acum, se pierde.
           </p>
-          <div className="admin-table-actions">
-            <button type="button" className="admin-btn-ghost" onClick={() => setDeParasit(null)}>
+          <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+            <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => setDeParasit(null)}>
               Rămân aici
             </button>
-            <button type="button" className="admin-btn-accent" onClick={confirmaParasirea}>
+            <button type="button" className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent" onClick={confirmaParasirea}>
               Renunț la text
             </button>
           </div>

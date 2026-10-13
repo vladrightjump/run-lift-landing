@@ -6,7 +6,7 @@ import { msw } from 'msw/vite';
 import { META_PLACEHOLDERS, META_PER_SHELL } from './src/shared/content/meta';
 
 // Injectează meta (title/description/Open Graph) în shell-urile HTML la build ȘI
-// în dev, din `src/content/meta.ts` (derivat din EDITION). Astfel meta de share e
+// în dev, din `src/shared/content/meta.ts` (derivat din EDITION). Astfel meta de share e
 // mereu în sincron cu ediția, fără editări manuale în HTML.
 // Vezi README.md („Decizii de arhitectură").
 //
@@ -53,7 +53,7 @@ export default defineConfig(({ command }) => ({
   ],
   define: {
     // Ștampilează mediul Vercel în bundle, ca pagina să știe dacă e producție.
-    // O folosește `lib/canonicalHost.ts`: doar producția mută vizitatorii de pe
+    // O folosește `shared/lib/canonicalHost.ts`: doar producția mută vizitatorii de pe
     // `*.vercel.app` pe domeniul evenimentului; preview-urile de PR rămân unde
     // sunt, altfel n-ar mai exista cum să verifici o schimbare înainte de merge.
     // Local și în teste variabila lipsește → 'development' → nu se redirectează.

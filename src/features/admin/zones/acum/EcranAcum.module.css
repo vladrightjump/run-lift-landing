@@ -159,7 +159,7 @@
   }
   button.admin-agenda-buton { cursor: pointer; }
   button.admin-agenda-buton:hover { background: var(--pa-surface-2); }
-  button.admin-agenda-buton > [class~="admin-icon"] { color: var(--pa-muted); }
+  button.admin-agenda-buton > [data-css~="admin-icon"] { color: var(--pa-muted); }
   .admin-agenda-cand { width: 52px; flex: none; font-size: 13px; color: var(--pa-muted); }
   .admin-agenda-cand b { color: var(--pa-text); font-size: 14px; }
   .admin-agenda-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }

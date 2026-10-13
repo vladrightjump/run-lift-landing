@@ -12,7 +12,7 @@ import { deriveEditionDates, type EditionDates } from './config';
 import { fetchPublicConfig } from './publicConfig';
 import { isAbortError } from './errors';
 import { usePublicQuery } from './usePublicQuery';
-import { logClientError, setMonitoringEdition } from '../../lib/monitoring';
+import { logClientError, setMonitoringEdition } from './monitoring';
 
 /**
  * Configurația ediției, la runtime.

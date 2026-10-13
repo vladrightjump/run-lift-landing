@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { EDITION } from '../../src/shared/content/edition';
-import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
-import { deriveEditionDates, INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../src/shared/lib/config';
+import { EDITION } from './edition';
+import { SNAPSHOT_CONFIG } from './eventConfig';
+import { deriveEditionDates, INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../lib/config';
 
 /**
  * Gardă anti-drift — cu direcția INVERSATĂ față de cum arăta înainte.

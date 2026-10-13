@@ -1,4 +1,6 @@
 import sharedSala from './SalaStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
+import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './EcranAnaliza.module.css';
 import { useMemo, useState } from 'react';
 import {
@@ -96,7 +98,7 @@ export const EcranAnaliza = () => {
 
   if (!date || !calc) {
     return (
-      <p className="admin-config-hint" role="status">
+      <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint" role="status">
         {eroare ? 'Nu s-a putut încărca analiza. Reîncearcă peste câteva secunde.' : 'Se încarcă…'}
       </p>
     );
@@ -126,7 +128,7 @@ export const EcranAnaliza = () => {
 
   return (
     <div className={sharedSala['admin-sala']} data-css="admin-sala">
-      <div className="admin-cs-comutator" role="group" aria-label="Perioada">
+      <div className={adminStyles['admin-cs-comutator']} data-css="admin-cs-comutator" role="group" aria-label="Perioada">
         {PERIOADE.map(([p, eticheta]) => (
           <button
             key={p}
@@ -171,10 +173,10 @@ export const EcranAnaliza = () => {
       </dl>
 
       {felie.length === 0 ? (
-        <p className="admin-config-hint">Niciun antrenament în perioada asta.</p>
+        <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Niciun antrenament în perioada asta.</p>
       ) : (
         <>
-          <section className="admin-config-grup" aria-labelledby="sala-bare">
+          <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-bare">
             <h3 id="sala-bare">Fiecare antrenament</h3>
             <div className={styles['admin-sala-bare']} data-css="admin-sala-bare" role="list">
               {felie.map((s, i) => {
@@ -206,11 +208,11 @@ export const EcranAnaliza = () => {
             <svg className={styles['admin-sala-curba']} data-css="admin-sala-curba" viewBox="0 0 100 44" preserveAspectRatio="none" aria-hidden="true">
               <polyline points={puncte.join(' ')} />
             </svg>
-            <p className="admin-config-hint">Curba: procentul celor care vin, de la primul antrenament din perioadă la ultimul.</p>
+            <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Curba: procentul celor care vin, de la primul antrenament din perioadă la ultimul.</p>
           </section>
 
           <div className={sharedSala['admin-sala-coloane'] + ' ' + styles['admin-sala-coloane--doua']} data-css="admin-sala-coloane admin-sala-coloane--doua">
-            <section className="admin-config-grup" aria-labelledby="sala-zile">
+            <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-zile">
               <h3 id="sala-zile">Pe zile</h3>
               <ul className={sharedSala['admin-sala-lista']} data-css="admin-sala-lista">
                 {calc.zile.map((z) => (
@@ -225,7 +227,7 @@ export const EcranAnaliza = () => {
               </ul>
             </section>
 
-            <section className="admin-config-grup" aria-labelledby="sala-mix">
+            <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-mix">
               <h3 id="sala-mix">Toate răspunsurile</h3>
               <div className={styles['admin-sala-mix']} data-css="admin-sala-mix" aria-hidden="true">
                 <span className={styles['admin-sala-bara-vin']} data-css="admin-sala-bara-vin" style={{ width: `${(calc.totalVin / totalMix) * 100}%` }} />
@@ -240,10 +242,10 @@ export const EcranAnaliza = () => {
         </>
       )}
 
-      <section className="admin-config-grup" aria-labelledby="sala-frecventa">
+      <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-frecventa">
         <h3 id="sala-frecventa">Membrii</h3>
         <div className={sharedSala['admin-sala-filtre']} data-css="admin-sala-filtre">
-          <div className="admin-cs-comutator" role="group" aria-label="Filtrează membrii">
+          <div className={adminStyles['admin-cs-comutator']} data-css="admin-cs-comutator" role="group" aria-label="Filtrează membrii">
             {FILTRE.map(([f, eticheta]) => (
               <button
                 key={f}
@@ -267,7 +269,7 @@ export const EcranAnaliza = () => {
         </div>
 
         {randuri.length === 0 ? (
-          <p className="admin-config-hint">Niciun membru în categoria asta.</p>
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Niciun membru în categoria asta.</p>
         ) : (
           <ul className={sharedSala['admin-sala-lista']} data-css="admin-sala-lista">
             {randuri.map((r) => {
@@ -287,7 +289,7 @@ export const EcranAnaliza = () => {
                   <span className={sharedSala['admin-sala-actiuni']} data-css="admin-sala-actiuni">
                     <button
                       type="button"
-                      className="admin-btn-ghost"
+                      className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
                       aria-expanded={deschis === r.membru.id}
                       onClick={() => setDeschis(deschis === r.membru.id ? null : r.membru.id)}
                     >

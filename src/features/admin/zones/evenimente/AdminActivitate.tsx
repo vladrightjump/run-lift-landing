@@ -1,4 +1,5 @@
 import shared1 from './EvenimenteStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
 import styles from './AdminActivitate.module.css';
 import type { AdminEvent } from './api';
 import { AdminFeedSkeleton } from './AdminSkeleton';
@@ -15,8 +16,8 @@ import { ziLunaOra } from '../../../../shared/lib/formatare';
  * Feed-ul e comun tuturor edițiilor, deci nu primește `editie`.
  */
 export const AdminActivitate = ({ events }: { events: AdminEvent[] | null }) => (
-    <section className="admin-table-section" data-css="admin-table-section">
-      <div className={'admin-table-head ' + shared1['admin-wait-head']} data-css="admin-table-head admin-wait-head">
+    <section className={adminStyles['admin-table-section']} data-css="admin-table-section">
+      <div className={`${adminStyles['admin-table-head']} ` + shared1['admin-wait-head']} data-css="admin-table-head admin-wait-head">
         <h2>
           Activitate recentă{' '}
           <span className={shared1['admin-wait-count']} data-css="admin-wait-count">{(events ?? []).filter(activitateVizibila).length}</span>

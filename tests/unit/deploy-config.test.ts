@@ -9,8 +9,8 @@ import {
   currentSupabaseRef,
   extractDirective,
   TURNSTILE_ORIGIN,
-} from '../../src/lib/deployConfig';
-import type { VercelJson } from '../../src/lib/deployConfig';
+} from '../../src/shared/lib/deployConfig';
+import type { VercelJson } from '../../src/shared/lib/deployConfig';
 
 /**
  * Consistența configului de deploy — păzește regresia care a blocat înscrierile

@@ -10,6 +10,8 @@ import { useRegistration } from '../../src/features/inscriere/hooks/useRegistrat
 import { RegistrationSection } from '../../src/features/inscriere/components/RegistrationSection';
 import { RegistrationForm } from '../../src/features/inscriere/components/RegistrationForm';
 import { ComingSoon } from '../../src/features/landing/components/ComingSoon';
+import { server } from '../support/vitest.setup';
+import { rpcResponse } from '../support/responses';
 import { DespreNoi } from '../../src/features/despre-noi/pages/DespreNoiPage';
 
 /**
@@ -130,7 +132,7 @@ describe('capcana anti-bot e pe toate formularele publice', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(SNAPSHOT_CONFIG.start).getTime() - 7 * 24 * 3600 * 1000);
     acum = Date.now();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
+    server.use(rpcResponse('public_homepage', {}), rpcResponse('public_training_reels', {}));
     // jsdom n-are `matchMedia`; `heroVideoSrc` și efectele de mișcare îl cer.
     vi.stubGlobal(
       'matchMedia',

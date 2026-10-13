@@ -5,8 +5,8 @@ import { EcranBot } from './EcranBot';
 import { comandaSala, dateSala } from '../../../../../tests/support/builders/sala';
 
 const monitorizare = vi.hoisted(() => ({ logClientError: vi.fn() }));
-vi.mock('../../../../lib/monitoring', async (orig) => ({
-  ...(await orig<typeof import('../../../../lib/monitoring')>()),
+vi.mock('../../../../shared/lib/monitoring', async (orig) => ({
+  ...(await orig<typeof import('../../../../shared/lib/monitoring')>()),
   ...monitorizare,
 }));
 

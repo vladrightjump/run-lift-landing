@@ -1,4 +1,5 @@
 import shared1 from './EvenimenteStyles.module.css';
+import adminStyles from '../../components/AdminStyles.module.css';
 import styles from './AdminEditionTabs.module.css';
 import { useId, useState } from 'react';
 import type { AdminEdition } from './api';
@@ -97,22 +98,22 @@ export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creat
       </div>
 
       {confirmOpen && (
-        <Dialog titlu={`Deschizi ediția ${urmatoarea ?? 'următoare'}?`} rol="alertdialog" clasa="admin-confirm--neutru" onInchide={() => setConfirmOpen(false)}>
+        <Dialog titlu={`Deschizi ediția ${urmatoarea ?? 'următoare'}?`} rol="alertdialog" clasa={adminStyles['admin-confirm--neutru']} onInchide={() => setConfirmOpen(false)}>
           <p>
             Ediția {curenta} se închide și rămâne în arhivă — nimic nu se șterge. Înscrierile
             noi vor intra pe ediția {urmatoarea ?? 'următoare'}, iar ediția nouă pornește goală.
           </p>
-          <p className="admin-confirm-note" data-css="admin-confirm-note">
+          <p className={adminStyles['admin-confirm-note']} data-css="admin-confirm-note">
             Se șterg și reperele de timp ale ediției încheiate (deadline de înscriere + data
             startului), ca să nu blocheze înscrierile și să nu declanșeze reminderul vechi.
             Butonul ăsta mută doar unde intră înscrierile noi — datele ediției (dată, loc,
             locuri, secțiuni) le pui din <strong>Setup → Evenimentul</strong> și le publici de
             acolo. Fără editări în cod, fără deploy.
           </p>
-          <div className="admin-confirm-actions" data-css="admin-confirm-actions">
+          <div className={adminStyles['admin-confirm-actions']} data-css="admin-confirm-actions">
             <button
               type="button"
-              className="admin-btn-accent" data-css="admin-btn-accent"
+              className={adminStyles['admin-btn-accent']} data-css="admin-btn-accent"
               onClick={() => {
                 setConfirmOpen(false);
                 onCreate();
@@ -122,7 +123,7 @@ export const AdminEditionTabs = ({ editions, selected, onSelect, onCreate, creat
             </button>
             <button
               type="button"
-              className="admin-confirm-cancel" data-css="admin-confirm-cancel"
+              className={adminStyles['admin-confirm-cancel']} data-css="admin-confirm-cancel"
               onClick={() => setConfirmOpen(false)}
             >
               Anulează
