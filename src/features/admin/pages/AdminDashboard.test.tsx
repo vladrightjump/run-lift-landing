@@ -5,7 +5,7 @@ import { logEntry, type adminApiMock } from '../../../../tests/support/adminHarn
 import type { AdminEdition, AdminEmailLogEntry } from '../zones/evenimente/api';
 
 /**
- * Primul test de componentă din backoffice. Până acum `src/admin/` avea zero
+ * Primul test de componentă din backoffice. Până la el, backoffice-ul avea zero
  * acoperire: doar `emailAudience.ts` și `deliveryLog.ts` erau testate, iar ele
  * sunt logică pură scoasă din componente.
  */
@@ -118,6 +118,19 @@ describe('AdminDashboard', () => {
     expect(aleiAna.textContent).toBe('1/2');
     expect(aleiAna.getAttribute('title')).toContain('Confirmare: trimis');
     expect(aleiAna.getAttribute('title')).toContain('Reminder: lipsă');
+  });
+});
+
+describe('AdminDashboard — selectorul de ediție', () => {
+  it('apare pe ecranele care filtrează pe ediție', async () => {
+    randeaza('participanti');
+    expect(await screen.findByLabelText('Ediția')).toBeDefined();
+  });
+
+  it('lipsește pe ecranele comune tuturor edițiilor', async () => {
+    randeaza('sabloane');
+    await screen.findByText('Șabloane de email');
+    expect(screen.queryByLabelText('Ediția')).toBeNull();
   });
 });
 

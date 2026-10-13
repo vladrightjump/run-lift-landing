@@ -33,7 +33,7 @@ Ultima actualizare: 4 august 2026.
 
 ## Igienă / ops
 - [ ] **Reminder automat** (cron programat) în loc de broadcast manual.
-- [x] **Vercel Analytics** — pornit din `src/lib/analytics.ts` (pachetul `@vercel/analytics`), nu
+- [x] **Vercel Analytics** — pornit din `src/shared/lib/analytics.ts` (pachetul `@vercel/analytics`), nu
       din `index.html`: blocurile comentate de acolo au fost șterse, iar un test le ține șterse.
       Mai rămâne **o singură acțiune de operator**: activarea din dashboard-ul Vercel
       (Analytics → Enable), sau `vercel project web-analytics enable` dintr-un terminal
@@ -64,6 +64,6 @@ Ultima actualizare: 4 august 2026.
 - Migrare pe proiectul Supabase nou (`whyndrjcezmtajbykeil`, schema `runlift`) + CSP corectat +
   schema expusă în API.
 - Emailuri **de-hardcodate** (DB-driven din `email_templates`, editabile din `/admin`).
-- **Refactor SSOT** (`src/content/edition.ts`) + meta din build + teste anti-drift.
+- **Refactor SSOT** (`src/shared/content/edition.ts`) + meta din build + teste anti-drift.
 - Securitate (audit 18 iul): lockout brute-force pe login admin, CORS restrâns la
   `parktraining.fit`, secret de broadcast rotit, cooldown la retrimiterea emailului, RLS verificat.

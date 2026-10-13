@@ -19,7 +19,7 @@ Cele două lecții au produs cele două apărări de mai jos: **monitoring** (ca
 eșecurile să lase urmă) și **gardă la build** (ca driftul CSP să nu mai poată fi
 deployat).
 
-## 1. Clasificarea erorilor (`src/lib/supabase.ts`)
+## 1. Clasificarea erorilor (`src/shared/lib/errors.ts`, `src/features/inscriere/data/api.ts`)
 
 Toate cererile trec prin `fetch`. Erorile se clasifică prin type-guards, ca UI-ul
 să dea mesajul potrivit și logging-ul să distingă cauzele:
@@ -36,7 +36,7 @@ să dea mesajul potrivit și logging-ul să distingă cauzele:
 `isNetworkOrCspError` e cheia lecției din incident: acum cazul „fetch a picat de
 tot" e distinct de un răspuns HTTP de eroare și primește mesaj propriu.
 
-## 2. Monitoring (`src/lib/monitoring.ts`)
+## 2. Monitoring (`src/shared/lib/monitoring.ts`)
 
 Fără backend/serviciu extern — doar `console.error` structurat + listenere globale.
 
@@ -51,11 +51,11 @@ Apelat în **toate** `catch`-urile care înainte înghițeau eroarea:
 | `registration` / `waitlist` | `Edition3Landing.tsx` (handleSubmit) |
 | `launch-notification:coming-soon` | `ComingSoon.tsx` |
 | `launch-notification:despre-noi` | `DespreNoi.tsx` |
-| `fetch-stats` | `hooks/useStats.ts` (mai puțin abort, care e normal) |
-| `send-confirmation-email` / `send-info-email` | `supabase.ts` (best-effort) |
+| `fetch-stats` | `src/features/inscriere/hooks/useStats.ts` (mai puțin abort, care e normal) |
+| `send-confirmation-email` / `send-info-email` | `src/features/inscriere/data/api.ts` (best-effort) |
 
 ### `installGlobalMonitoring()`
-Instalat o singură dată în `src/main.tsx`, înainte de render. Prinde ce scapă:
+Instalat o singură dată în `src/app/main.tsx`, înainte de render. Prinde ce scapă:
 
 - **`securitypolicyviolation`** → logează `blockedURI` + `violatedDirective`.
   **Exact semnalul care lipsea în 4 aug.** Dacă `connect-src` e desincronizat,
@@ -65,9 +65,9 @@ Instalat o singură dată în `src/main.tsx`, înainte de render. Prinde ce scap
 ## 3. Gardă la build (`scripts/check-deploy-config.ts`)
 
 Regula: CSP `connect-src` din `vercel.json` **trebuie** să conțină originul din
-`SUPABASE.url` (`src/lib/backend.ts`) și nicio referință la alt proiect Supabase.
+`SUPABASE.url` (`src/shared/lib/backend.ts`) și nicio referință la alt proiect Supabase.
 
-Logica e în `src/lib/deployConfig.ts` (partajată cu testul). Scriptul rulează în
+Logica e în `src/shared/lib/deployConfig.ts` (partajată cu testul). Scriptul rulează în
 `npm run build` **înainte** de `vite build`:
 
 ```json
@@ -78,7 +78,7 @@ Deci un drift CSP↔config **face build-ul (și deployul Vercel) să pice** cu m
 clar. Testat: cu `connect-src` greșit → `exit 1`; corect → `exit 0`. Vezi și
 `tests/unit/deploy-config.test.ts`.
 
-> Legat: la schimbarea backendului Supabase actualizezi **și** `src/lib/backend.ts`
+> Legat: la schimbarea backendului Supabase actualizezi **și** `src/shared/lib/backend.ts`
 > **și** `vercel.json` (connect-src). Garda prinde dacă uiți unul.
 
 ## Cum debughezi un incident viitor
@@ -116,8 +116,8 @@ clar. Testat: cu `connect-src` greșit → `exit 1`; corect → `exit 0`. Vezi �
 
 ## Fișiere
 
-- `src/lib/monitoring.ts` — logging + listenere globale
-- `src/lib/supabase.ts` — cereri + type-guards de eroare
-- `src/lib/deployConfig.ts` + `scripts/check-deploy-config.ts` — gardă CSP↔config
-- `src/main.tsx` — instalează monitoringul global
+- `src/shared/lib/monitoring.ts` — logging + listenere globale
+- `src/shared/lib/errors.ts` + `src/features/inscriere/data/api.ts` — cereri + type-guards de eroare
+- `src/shared/lib/deployConfig.ts` + `scripts/check-deploy-config.ts` — gardă CSP↔config
+- `src/app/main.tsx` — instalează monitoringul global
 - `tests/unit/monitoring.test.ts`, `tests/unit/deploy-config.test.ts` — teste
