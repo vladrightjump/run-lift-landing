@@ -1,0 +1,21 @@
+  /* Lista ordonabila: pozitia se alege, nu se ciocaneste rand cu rand.
+     Erau doua butoane pe FIECARE rand, unul mereu dezactivat la capete, iar
+     mutarea ultimului element pe primul loc cerea noua clicuri. */
+  .admin-ordonabila { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .admin-ordonabila-rand {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
+    padding: 10px 14px;
+  }
+  .admin-ordonabila-nr {
+    font-family: var(--pa-font); font-weight: 700; font-size: 14px; color: var(--pa-muted-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .admin-ordonabila-continut { flex: 1; min-width: 0; }
+  .admin-ordonabila-pozitie { display: flex; align-items: center; gap: 6px; }
+  .admin-ordonabila-eticheta {
+    font-size: 11px;
+    color: var(--pa-muted-2);
+  }
+  /* Poziția din listă: compactă, ca acțiunile de pe un rând. */
+  .admin-ordonabila-pozitie select { height: var(--pa-control-h-sm); font-weight: 600; }

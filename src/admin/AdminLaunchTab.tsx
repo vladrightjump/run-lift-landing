@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toCsv } from '../lib/csv';
 import { listLaunchNotifications } from '../lib/adminApi';
 import { useEventConfig } from '../shared/lib/useEventConfig';
-import { useAdminResource } from './useAdminResource';
+import { useAdminResource } from '../features/admin/index';
 import { ziSiLuna } from '../shared/lib/formatare';
 
 export const AdminLaunchTab = () => {

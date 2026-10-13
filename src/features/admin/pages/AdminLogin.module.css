@@ -1,0 +1,48 @@
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-5px); }
+    80%      { transform: translateX(5px); }
+  }
+  .admin-badge {
+    font-size: 11px; font-weight: 700; color: var(--pa-accent-ink); background: var(--pa-accent); padding: 4px 10px;
+  }
+  .admin-auth-box { width: 100%; max-width: 400px; }
+  .admin-auth-brand {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-bottom: 32px; animation: global(fade-up) 0.5s ease-out both;
+  }
+  .admin-auth-brand [data-css~="admin-logo"] { font-size: 26px; }
+  .admin-auth-form {
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
+    padding: clamp(28px, 6vw, 40px); display: grid; gap: 20px;
+    animation: global(fade-up) 0.5s ease-out 0.12s both;
+  }
+  .admin-auth-form.shake { animation: shake 0.4s ease-in-out; }
+  .admin-auth-head { display: grid; gap: 8px; }
+  .admin-auth-head h1 {
+    margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+    font-size: 26px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .admin-auth-head p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--pa-muted); }
+  .admin-password-wrap { position: relative; }
+  .admin-password-wrap input { padding-right: 88px !important; }
+  .admin-password-toggle {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    background: transparent; border: none; cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 11px; font-weight: 700; color: var(--pa-muted);
+    padding: 6px 8px; transition: color 0.2s ease;
+  }
+  .admin-password-toggle:hover { color: var(--pa-accent-text); }
+  .admin-auth-error {
+    margin: 0; font-size: 14px; color: var(--pa-danger);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .admin-auth-error .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pa-danger-solid); flex-shrink: 0; }
+  .admin-auth-submit { font-size: 17px; padding: 15px; margin-top: 0; }
+  .admin-auth-countdown {
+    margin: 24px 0 0; text-align: center; font-size: 13px; color: var(--pa-muted-2);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    animation: global(fade-up) 0.5s ease-out 0.24s both;
+  }

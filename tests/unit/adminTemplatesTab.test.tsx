@@ -33,7 +33,7 @@ vi.mock('../../src/lib/adminApi', () => ({
 }));
 
 const { AdminTemplatesTab } = await import('../../src/admin/AdminTemplatesTab');
-const { FurnizorSesiuneAdmin } = await import('../../src/admin/adminSession');
+const { FurnizorSesiuneAdmin } = await import('../../src/features/admin/data/adminSession');
 
 const SABLON = {
   cheie: 'bulk_participant_reminder',

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, within, waitFor } from '@testing-library/react';
-import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
+import { FurnizorSesiuneAdmin } from '../../src/features/admin/data/adminSession';
 import { EcranBot } from '../../src/admin/sala/EcranBot';
 import { comandaSala, dateSala } from './helpers/salaFixtures';
 

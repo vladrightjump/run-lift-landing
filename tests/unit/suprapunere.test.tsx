@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Suprapunere, pozitiePopover } from '../../src/shared/ui/Suprapunere';
 import { MeniuActiuni } from '../../src/admin/controale/MeniuActiuni';
 import { Toast, useToast } from '../../src/admin/controale/Toast';
-import { GrupRadio } from '../../src/admin/controale/GrupRadio';
+import { GrupRadio } from '../../src/shared/ui/GrupRadio';
 
 /**
  * Suprapunerea comună (U2, KTD5): popover, foaie de jos, panou, dialog.

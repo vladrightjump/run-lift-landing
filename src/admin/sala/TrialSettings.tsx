@@ -2,7 +2,7 @@ import { TRIAL_COPY, type TrialCopyKey } from '../../../bot/src/lib/trial-copy';
 import { useEffect, useState } from 'react';
 import { saveTrialConfig, type TrialConfig } from '../../lib/trialApi';
 import { trialLink } from '../../features/trial';
-import { useTrials } from './useTrials';
+import { useTrials } from '../../features/admin/index';
 import './probe.css';
 
 const TEXT_FIELDS = [

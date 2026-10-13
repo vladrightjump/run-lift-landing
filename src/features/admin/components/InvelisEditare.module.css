@@ -1,0 +1,40 @@
+  /* ---- Bara de actiuni lipita jos ----
+     „Salveaza" si „Publica" stateau doar in capul tabului, la doua ecrane si
+     jumatate deasupra locului in care editezi ultimul camp. */
+  .admin-bara-actiuni {
+    position: sticky; bottom: 0; z-index: 15;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px 18px; flex-wrap: wrap;
+    margin-top: 18px; padding: 12px 18px;
+    background: color-mix(in srgb, var(--pa-bg) 92%, transparent); backdrop-filter: blur(8px);
+    border: 1px solid var(--pa-line);
+    box-shadow: 0 -10px 28px rgba(40, 44, 20, 0.14);
+  }
+  .admin-bara-stare {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    font-size: 13px; color: var(--pa-muted); min-width: 0;
+  }
+  .admin-bara-detaliu { color: var(--pa-muted-2); }
+  .admin-bara-problema { color: var(--pa-danger); font-weight: 700; }
+  /* Numărul de câmpuri stricate duce LA primul dintre ele. Arată ca text,
+     se poartă ca un buton — și are focus vizibil, ca orice altceva. */
+  .admin-bara-problema--link {
+    font: inherit; font-weight: 700; padding: 0;
+    background: none; border: 0; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .admin-bara-problema--link:hover { color: var(--pa-text); }
+  /* „Nesalvat" nu e o eroare — e diferența dintre ce vezi și ce e pe server.
+     Chihlimbar, ca celelalte semnale de atenție din formular. */
+  .admin-bara-nesalvat {
+    font-size: 11px;
+    padding: 2px 7px; border: 1px solid var(--pa-warn); color: var(--pa-warn);
+  }
+  .admin-bara-butoane { display: flex; gap: 8px; flex-wrap: wrap; }
+  @media (max-width: 640px) {
+    /* Bara de actiuni ramane lipita, dar butoanele se intind pe toata latimea:
+       o tinta de atins cu degetul, nu una de nimerit cu cursorul. */
+    .admin-bara-actiuni { padding: 10px 12px; gap: 10px; }
+    .admin-bara-butoane { width: 100%; }
+    .admin-bara-butoane > * { flex: 1; text-align: center; min-height: 44px; }
+  }

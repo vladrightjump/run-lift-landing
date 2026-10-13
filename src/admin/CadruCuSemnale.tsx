@@ -1,7 +1,5 @@
 import { useNow } from '../shared/lib/useNow';
-import { deRezolvat } from './acum';
-import { AdminCadru, type PropsCadru } from './AdminCadru';
-import { useSala } from './sala/useSala';
+import { deRezolvat, AdminCadru, type PropsCadru, useSala } from '../features/admin/index';
 import type { SemnaleAdmin } from './stareCurenta';
 
 /**

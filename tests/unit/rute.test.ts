@@ -103,7 +103,8 @@ describe('legăturile interne duc spre rute reale', () => {
     const cunoscute = new Set([...ruteDinCod(), '/']);
     for (const f of fisiere) {
       const sursa = readFileSync(resolve(root, f), 'utf8');
-      for (const m of sursa.matchAll(/href="(\/[^"#]*)"/g)) {
+      // Query-ul nu face parte din rută: `/?preview=soon` (Site → Coming Soon) e tot `/`.
+      for (const m of sursa.matchAll(/href="(\/[^"#?]*)/g)) {
         const href = m[1];
         expect(cunoscute, `${f}: href="${href}" nu corespunde niciunei rute`).toContain(href);
       }

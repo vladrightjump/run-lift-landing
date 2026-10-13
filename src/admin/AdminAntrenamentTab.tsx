@@ -8,8 +8,7 @@ import {
   mesajRefuzAntrenament,
   type AdminWorkoutRow,
 } from '../lib/adminApi';
-import { InvelisEditare } from './continut/InvelisEditare';
-import { useSesiuneAdmin } from './adminSession';
+import { InvelisEditare, useSesiuneAdmin } from '../features/admin/index';
 import { CardSaptamana } from '../features/antrenament/index';
 import { Dialog } from '../shared/ui/Dialog';
 

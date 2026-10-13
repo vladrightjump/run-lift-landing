@@ -1,0 +1,5 @@
+  /* Inelul ocupării. */
+  .admin-inel { display: block; flex: none; }
+  .admin-inel-fond { fill: none; stroke: var(--pa-surface-3); }
+  .admin-inel-plin { fill: none; stroke: var(--pa-graph); transition: stroke-dashoffset 700ms var(--pa-ease); }
+  .admin-inel-text { font-family: var(--pa-font-display); font-size: 19px; fill: var(--pa-text); }

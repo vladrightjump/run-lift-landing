@@ -7,7 +7,7 @@ import {
   trimiteTestAnunt,
 } from '../lib/adminApi';
 import type { AdminEmailLogEntry, DestinatarAnunt } from '../lib/adminApi';
-import { useSesiuneAdmin } from './adminSession';
+import { useSesiuneAdmin } from '../features/admin/index';
 import { useEventConfig } from '../shared/lib/useEventConfig';
 import { fillTemplate } from './emailAudience';
 import { cheieDifuzare } from './sendLock';

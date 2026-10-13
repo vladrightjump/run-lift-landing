@@ -1,0 +1,152 @@
+  /* ---- Top bar ---- */
+  /* Chip-ul de faza din antetul lipit: ce vede un vizitator ACUM.
+     Culoarea e a fazei, nu decor - „Coming Soon" si „Landing cu inscrieri" sint
+     doua lumi diferite pentru cine intra pe site. */
+  .admin-faza {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 11px; border: 1px solid var(--pa-line);
+    background: var(--pa-input); text-decoration: none;
+    font-size: 12px; font-weight: 600; color: var(--pa-muted);
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .admin-faza:hover { border-color: var(--pa-line-strong); color: var(--pa-text); }
+  .admin-faza-eticheta {
+    font-size: 10px;
+    color: var(--pa-muted-2);
+  }
+  .admin-faza-valoare { color: var(--pa-text); }
+  .admin-faza-punct {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--pa-muted-2);
+    flex: none;
+  }
+  .admin-faza.faza-landing .admin-faza-punct { background: var(--pa-accent); }
+  .admin-faza.faza-landing .admin-faza-valoare { color: var(--pa-accent-text); }
+  .admin-faza.faza-cine-vine .admin-faza-punct { background: var(--pa-accent); }
+  .admin-faza.faza-coming-soon .admin-faza-punct { background: var(--pa-muted); }
+  .admin-cd {
+    margin: 0; display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--pa-accent-text); font-variant-numeric: tabular-nums;
+  }
+  .admin-logout {
+    min-height: 40px; white-space: nowrap;
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-muted); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 13px; font-weight: 600; padding: 8px 14px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .admin-logout:hover { border-color: var(--pa-danger); color: var(--pa-danger); }
+
+  /* ---- Dashboard layout ---- */
+  .admin-main {
+    min-width: 0; max-width: 1160px; padding: 24px 28px 48px;
+    display: grid; gap: clamp(18px, 3vw, 28px); align-content: start;
+  }
+  .admin-main:focus { outline: none; }
+
+  /* ---- Cadrul: antet, șină, file, bară de jos (U7) ----
+     Desktop: șina stângă arată toate zonele și filele deodată. Telefon:
+     zonele stau jos, unde ajunge degetul mare, iar filele sub titlu. */
+  .admin-cadru {
+    min-height: 100dvh; display: grid;
+    grid-template-columns: 248px minmax(0, 1fr); grid-template-rows: auto 1fr;
+  }
+  .admin-cadru--telefon { display: block; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .admin-cadru--telefon .admin-main { padding: 16px 16px 28px; }
+  .admin-antet {
+    grid-column: 1 / -1; position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 56px; padding: 8px 20px;
+    background: color-mix(in srgb, var(--pa-bg) 92%, transparent); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--pa-line);
+  }
+  .admin-cadru--telefon .admin-antet { padding: 6px 12px 6px 16px; }
+  .admin-antet [data-css~="admin-logo"] { font-size: 19px; white-space: nowrap; }
+  .admin-antet [data-css~="admin-logo"] [data-css~="accent"] { color: var(--pa-accent-ink); background: var(--pa-accent); padding: 0 4px; border-radius: 3px; }
+  .admin-antet-dreapta { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .admin-sina {
+    position: sticky; top: 56px; align-self: start; height: calc(100dvh - 56px); overflow: auto;
+    padding: 18px 12px; border-right: 1px solid var(--pa-line); background: var(--pa-surface-2);
+  }
+  .admin-sina-zona { margin-bottom: 10px; }
+  .admin-sina-zona-buton {
+    display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 10px;
+    border: 0; background: none; cursor: pointer; text-align: left;
+    font-family: var(--pa-font); font-weight: 700; font-size: 14.5px; color: var(--pa-text);
+  }
+  .admin-sina-zona-buton:hover { background: var(--pa-surface-3); }
+  .admin-sina-zona-buton[aria-current="page"] { background: var(--pa-surface); box-shadow: 0 0 0 1px var(--pa-line); }
+  .admin-sina-file { list-style: none; margin: 2px 0 0 20px; padding: 0 0 0 10px; border-left: 1px solid var(--pa-line); }
+  .admin-sina-fila {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; min-height: 36px; padding: 0 10px; border: 0; background: none; cursor: pointer;
+    text-align: left; font-family: var(--pa-font); font-size: 14px; font-weight: 500; color: var(--pa-muted);
+  }
+  .admin-sina-fila:hover { color: var(--pa-text); background: var(--pa-surface-3); }
+  .admin-sina-fila[aria-current="page"] { background: var(--pa-accent); color: var(--pa-accent-ink); font-weight: 700; }
+  .admin-sina-contor { font-size: 12.5px; font-weight: 600; opacity: 0.8; }
+  .admin-sina-nota {
+    margin: 18px 0 0; padding: 12px 10px 0; border-top: 1px solid var(--pa-line);
+    font-size: 12.5px; line-height: 1.45; color: var(--pa-muted);
+  }
+  .admin-zona-cap { display: grid; gap: 6px; }
+  .admin-zona-titlu {
+    margin: 0; font-family: var(--pa-font-display); font-weight: 400; font-size: 32px; line-height: 1;
+    letter-spacing: 0.5px; text-transform: uppercase; color: var(--pa-text);
+  }
+  .admin-cadru--telefon .admin-zona-titlu { font-size: 28px; }
+  .admin-zona-sub { margin: 0; max-width: 70ch; font-size: 14px; font-weight: 500; color: var(--pa-muted); }
+  .admin-file {
+    display: flex; overflow-x: auto; scrollbar-width: none;
+    margin: 0 -16px; padding: 0 16px; border-bottom: 1px solid var(--pa-line);
+  }
+  .admin-file::-webkit-scrollbar { display: none; }
+  .admin-fila {
+    flex: none; min-height: 44px; padding: 0 12px; margin-bottom: -1px; cursor: pointer;
+    border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; white-space: nowrap;
+    font-family: var(--pa-font); font-size: 14.5px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-fila[aria-current="page"] { color: var(--pa-text); border-bottom-color: var(--pa-text); }
+  .admin-subfile {
+    justify-self: start; max-width: 100%; overflow-x: auto; display: inline-flex; gap: 2px; padding: 3px;
+    background: var(--pa-surface-2); border: 1px solid var(--pa-line); border-radius: calc(var(--pa-r) + 3px);
+  }
+  .admin-subfila {
+    flex: none; min-height: 40px; padding: 0 14px; border: 0; background: transparent; cursor: pointer;
+    white-space: nowrap; font-family: var(--pa-font); font-size: 14.5px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-subfila:hover { color: var(--pa-text); }
+  .admin-subfila[aria-current="page"] { background: var(--pa-ink); color: var(--pa-ink-text); }
+  .admin-bara-jos {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--pa-surface); border-top: 1px solid var(--pa-line); padding-bottom: env(safe-area-inset-bottom);
+  }
+  .admin-bara-jos-zona {
+    position: relative; min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; border: 0; border-radius: 0; background: none; cursor: pointer;
+    font-family: var(--pa-font); font-size: 12px; font-weight: 600; color: var(--pa-muted);
+  }
+  .admin-bara-jos-zona[aria-current="page"] { color: var(--pa-text); }
+  .admin-bara-jos-icon {
+    display: grid; place-items: center; width: 52px; height: 30px; border-radius: var(--pa-r-pill);
+    transition: background-color var(--pa-dur) ease, color var(--pa-dur) ease;
+  }
+  .admin-bara-jos-zona[aria-current="page"] .admin-bara-jos-icon { background: var(--pa-accent); color: var(--pa-accent-ink); }
+  .admin-numar--bara { position: absolute; top: 6px; left: calc(50% + 10px); margin: 0; background: var(--pa-warn); color: #fff; }
+
+  /* Saritura peste antet. Antetul are acum faza, numaratoarea, alerta,
+     comutatorul de ecrane si iesirea din cont — cinci opriri de tabulare
+     inaintea ecranului, pe fiecare ecran. */
+  .admin-sari {
+    position: absolute; left: -9999px;
+    background: var(--pa-accent); color: var(--pa-accent-ink);
+    padding: 10px 16px; font-family: Archivo, sans-serif;
+    font-size: 13px; font-weight: 700; text-decoration: none;
+  }
+  .admin-sari:focus {
+    left: 12px; top: 12px; z-index: 10;
+  }
+  @media (max-width: 640px) {
+    /* Antetul: chip-ul de faza ramane, countdown-ul la secunda dispare - pe
+       telefon nu incap amandoua, iar faza e cea care conteaza. */
+    .admin-cd { display: none; }
+  }

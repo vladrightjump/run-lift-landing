@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
 import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
-import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
+import { FurnizorSesiuneAdmin } from '../../src/features/admin/data/adminSession';
 import { AdminEventTab } from '../../src/admin/AdminEventTab';
 import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
 import { formatRoDate } from '../../src/shared/content/format';
@@ -55,6 +55,26 @@ const fataDeStart = (ore: number): string => {
   const d = new Date(`${SNAPSHOT_CONFIG.start}Z`);
   d.setUTCMinutes(d.getUTCMinutes() + Math.round(ore * 60));
   return d.toISOString().slice(0, 16);
+};
+
+/**
+ * Bara lipită de jos: regiunea `status` care ține „Publică" (și „Se publică…").
+ * Aruncă dacă bara lipsește, ca o aserțiune negativă pe conținutul ei să nu
+ * treacă degeaba.
+ */
+const baraActiuni = (): HTMLElement => {
+  const bara = screen.queryAllByRole('status').find((r) => within(r).queryByRole('button', { name: /publică/i }));
+  if (!bara) throw new Error('Bara de acțiuni lipsește');
+  return bara;
+};
+
+/** Ce problemă arată bara: refuzul serverului (`alert`) sau câmpurile de reparat. */
+const problemaDinBara = (): string => {
+  const bara = baraActiuni();
+  return (
+    (within(bara).queryByRole('alert') ?? within(bara).queryByRole('button', { name: /de reparat/ }))
+      ?.textContent ?? ''
+  );
 };
 
 const showToast = vi.fn();
@@ -737,8 +757,8 @@ describe('formularul e blocat cât ține publicarea', () => {
  * salva" pentru ORICE nu recunoaște — inclusiv pentru o publicare refuzată.
  */
 describe('refuzul rămâne citibil după ce trece toastul', () => {
-  const bara = () => document.querySelector('.admin-bara-actiuni') as HTMLElement;
-  const refuz = () => bara().querySelector('.admin-bara-problema')?.textContent ?? '';
+  const bara = baraActiuni;
+  const refuz = problemaDinBara;
 
   const publica = async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Publică' }));
@@ -893,8 +913,7 @@ describe('lacătul acoperă ambele scrieri, nu doar publicarea', () => {
 });
 
 describe('refuzurile celorlalte scrieri ajung tot în bară', () => {
-  const bara = () => document.querySelector('.admin-bara-actiuni') as HTMLElement;
-  const refuz = () => bara().querySelector('.admin-bara-problema')?.textContent ?? '';
+  const refuz = problemaDinBara;
 
   it('un „Salvează" refuzat lasă motivul în bară, nu doar în toast', async () => {
     saveEventConfigDraft.mockRejectedValue(new Error('boom necunoscut'));
@@ -1041,8 +1060,7 @@ describe('erorile indexate deschid grupul care le conține', () => {
  */
 describe('ciorna nesalvată nu dispare tăcut', () => {
   /** Textul barei lipite de jos. */
-  const bara = (): string =>
-    document.querySelector('.admin-bara-stare')?.textContent ?? '';
+  const bara = (): string => baraActiuni().textContent ?? '';
 
   it('o ciornă pornită din publicat e nesalvată din prima clipă', async () => {
     await deschideCiorna();
@@ -1168,8 +1186,7 @@ describe('ciorna nesalvată nu dispare tăcut', () => {
  * nimic nu spunea asta. Contractul păzit aici: ce se deschide e ce e pe ecran.
  */
 describe('previzualizarea arată ce e pe ecran', () => {
-  const refuz = (): string =>
-    document.querySelector('.admin-bara-problema')?.textContent ?? '';
+  const refuz = problemaDinBara;
 
   /** `window.open` care întoarce o fereastră falsă, ca s-o putem interoga. */
   const fereastraFalsa = () => {
@@ -1236,7 +1253,7 @@ describe('previzualizarea arată ce e pe ecran', () => {
     fireEvent.click(screen.getByRole('button', { name: /Salvează și previzualizează/ }));
 
     await waitFor(() =>
-      expect(document.querySelector('.admin-bara-stare')?.textContent).not.toContain('Nesalvat')
+      expect(baraActiuni().textContent).not.toContain('Nesalvat')
     );
   });
 });

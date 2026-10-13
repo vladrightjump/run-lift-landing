@@ -4,7 +4,7 @@ import { TrialTraining } from '../../src/features/trial/components/TrialTraining
 import { trialLink } from '../../src/features/trial/data/api';
 import { EcranProbe } from '../../src/admin/sala/EcranProbe';
 import { TrialSettings } from '../../src/admin/sala/TrialSettings';
-import { FurnizorSesiuneAdmin } from '../../src/admin/adminSession';
+import { FurnizorSesiuneAdmin } from '../../src/features/admin/data/adminSession';
 import type { TrialData } from '../../src/lib/trialApi';
 
 const api = vi.hoisted(() => ({ loadTrials: vi.fn(), saveTrialConfig: vi.fn(), trialAttendance: vi.fn(), trialReply: vi.fn(), retryTrialMessage: vi.fn() }));

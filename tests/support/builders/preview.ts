@@ -1,5 +1,5 @@
 import { SNAPSHOT_CONFIG } from '../../../src/shared/content/eventConfig';
-import type { AdminReelRow } from '../../../src/lib/adminApi';
+import type { AdminReelRow } from '../../../src/features/admin/zones/site/api';
 
 /** Existing preview dataset; the clock is injectable for repeatable screenshots. */
 export function adminPreviewData(now = Date.now()): Record<string, unknown> {

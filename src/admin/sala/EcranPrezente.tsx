@@ -9,7 +9,7 @@ import {
 import { Dialog } from '../../shared/ui/Dialog';
 import { antrenamentulUrmator, cineVine, deMarcatDeMana, raspunsul, zileAnulate } from './model';
 import { dataLunga, frazaSondaj, urmatorulSondaj } from './sondaj';
-import { useSala } from './useSala';
+import { useSala } from '../../features/admin/index';
 import { citesteFiltruUrmatorul, uitaFiltruUrmatorul, type FiltruUrmatorul } from './filtruUrmatorul';
 
 /**

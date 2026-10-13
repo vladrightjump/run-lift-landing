@@ -16,7 +16,7 @@ import {
   type StareReminder,
 } from '../../remindere';
 import { ETICHETE_SABLOANE, areEroareIndexata } from '../ajutoare';
-import { useSesiuneAdmin } from '../../adminSession';
+import { useSesiuneAdmin } from '../../../features/admin/index';
 
 /**
  * Semnul din dreptul fiecărui rând.

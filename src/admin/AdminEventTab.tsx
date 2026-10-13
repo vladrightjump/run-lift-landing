@@ -15,7 +15,7 @@ import {
   layoutComplet,
   type CampInvalid,
 } from './eventConfigForm';
-import { useSesiuneAdmin } from './adminSession';
+import { useSesiuneAdmin } from '../features/admin/index';
 import { Blocat } from './eventTab/primitive';
 import { DialogEditieNoua } from './eventTab/DialogEditieNoua';
 import { Dialog } from '../shared/ui/Dialog';
@@ -30,7 +30,7 @@ import { GrupRemindere } from './eventTab/grupuri/GrupRemindere';
 import { GrupInstagram } from './eventTab/grupuri/GrupInstagram';
 import { GrupCand } from './eventTab/grupuri/GrupCand';
 import { fetchBuildInfo, campuriVechiInBuild, type BuildInfo } from './buildFingerprint';
-import { InvelisEditare } from './continut/InvelisEditare';
+import { InvelisEditare } from '../features/admin/index';
 import { descrieMoment, problemePeCamp } from './eventConfigFields';
 import {
   reperele,

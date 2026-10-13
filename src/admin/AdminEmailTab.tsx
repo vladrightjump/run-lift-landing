@@ -14,11 +14,11 @@ import type {
 } from '../lib/adminApi';
 import { cheieDifuzare, ultimaDifuzare, audienteAmbigue } from './sendLock';
 import { recipientsFor, audientaLog, fillTemplate } from './emailAudience';
-import { GrupRadio } from './controale/GrupRadio';
+import { GrupRadio } from '../shared/ui/GrupRadio';
 import type { Audience, Recipient } from './emailAudience';
 import { useEventConfig } from '../shared/lib/useEventConfig';
 import { ziLunaOra, ziSiLuna } from '../shared/lib/formatare';
-import { useSesiuneAdmin } from './adminSession';
+import { useSesiuneAdmin } from '../features/admin/index';
 import { AnuntIstoric } from './AnuntIstoric';
 
 type Props = {

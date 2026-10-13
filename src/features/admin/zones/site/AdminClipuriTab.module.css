@@ -1,0 +1,8 @@
+  .admin-previz-card {
+    display: grid; gap: 8px; max-width: 280px;
+    border: 1px solid var(--pa-line); background: var(--pa-surface); padding: 10px;
+  }
+  .admin-previz-card iframe {
+    width: 100%; aspect-ratio: 9 / 16; border: 0; display: block; background: var(--pa-input);
+  }
+  .admin-previz-legenda { font-size: 13px; color: var(--pa-text); }

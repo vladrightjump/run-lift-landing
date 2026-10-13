@@ -1,0 +1,14 @@
+  .admin-logo { font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1px; text-transform: uppercase; }
+  .admin-logo .accent { color: var(--pa-accent-text); }
+  .admin-numar {
+    margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px;
+    display: inline-grid; place-items: center; border-radius: var(--pa-r-pill);
+    background: var(--pa-warn-soft); color: var(--pa-warn); font-size: 12px; font-weight: 700;
+  }
+
+  /* ---- Invelisul de editare ----
+     Cele patru ecrane care schimba ce vede vizitatorul se comportau ca trei
+     lucruri diferite. Invelisul tine succesiunea si verbele; cimpurile raman
+     ale fiecarui ecran. */
+  .admin-invelis-titlu { display: grid; gap: 4px; }
+  .admin-invelis-titlu h2 { margin: 0; }
