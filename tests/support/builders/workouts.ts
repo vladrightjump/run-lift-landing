@@ -1,5 +1,5 @@
 import type { WeeklyWorkout } from '../../../src/features/antrenament/data/api';
-import type { AdminWorkoutRow } from '../../../src/lib/workoutApi';
+import type { AdminWorkoutRow } from '../../../src/features/admin/zones/antrenamente/api';
 
 export const workout = (over: Partial<AdminWorkoutRow> = {}): AdminWorkoutRow => ({
   id: 'w1', numar: 1, status: 'published', titlu: 'Bază aerobă',

@@ -1,0 +1,34 @@
+
+  .admin-sala-cifre--patru { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .admin-sala-sub { order: 3; font-size: 12px; color: var(--pa-muted); }
+  .admin-sala-coloane--doua { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-sala-bare {
+    display: flex; align-items: flex-end; gap: 3px; height: 150px;
+    padding: 8px 0; border-bottom: 1px solid var(--pa-line); overflow-x: auto;
+  }
+  .admin-sala-bara {
+    flex: 1 1 10px; max-width: 56px; height: 100%; padding: 0; border: 0; background: transparent;
+    display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; opacity: 0.7;
+  }
+  .admin-sala-bara:global(.activ), .admin-sala-bara:hover { opacity: 1; outline: 1px solid var(--pa-muted-2); }
+  .admin-sala-bara-vin { display: block; background: var(--pa-accent); }
+  .admin-sala-bara-nu { display: block; background: var(--pa-graph-warn); }
+  .admin-sala-bara-tacere { display: block; background: var(--pa-muted-2); }
+  .admin-sala-curba { width: 100%; height: 56px; margin-top: 8px; }
+  .admin-sala-curba polyline { fill: none; stroke: var(--pa-accent-text); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+  .admin-sala-mix { display: flex; height: 14px; border: 1px solid var(--pa-line); }
+  .admin-sala-progres { flex: 0 0 96px; height: 6px; background: var(--pa-line-soft); }
+  .admin-sala-progres span { display: block; height: 100%; background: var(--pa-accent); }
+  .admin-sala-stare--activ { color: var(--pa-accent-text); }
+  .admin-sala-stare--inactiv { color: var(--pa-warn); }
+  .admin-sala-stare--niciodata { color: var(--pa-muted); }
+  .admin-sala-istoric { flex-basis: 100%; display: grid; gap: 8px; padding: 4px 0 6px; }
+  .admin-sala-puncte { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+  .admin-sala-punct { width: 12px; height: 12px; background: var(--pa-muted-2); }
+  .admin-sala-punct--yes { background: var(--pa-accent); }
+  .admin-sala-punct--no { background: var(--pa-graph-warn); }
+  @media (max-width: 720px) {
+    .admin-sala-cifre--patru { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-sala-progres { flex-basis: 64px; }
+    .admin-sala-coloane--doua { grid-template-columns: minmax(0, 1fr); }
+  }

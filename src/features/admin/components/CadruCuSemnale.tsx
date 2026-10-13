@@ -2,7 +2,7 @@ import { useNow } from '../../../shared/lib/useNow';
 import { deRezolvat } from '../zones/acum/acum';
 import { AdminCadru } from './AdminCadru';
 import { type PropsCadru } from './AdminCadru';
-import { useSala } from '../data/useSala';
+import { useSala } from '../zones/antrenamente';
 import type { SemnaleAdmin } from '../data/stareCurenta';
 
 /**

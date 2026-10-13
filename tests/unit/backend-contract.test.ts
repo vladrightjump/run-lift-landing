@@ -5,8 +5,9 @@ import { confirmSignup } from '../../src/features/confirmare/data/api';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fetchWeeklyWorkouts } from '../../src/features/antrenament/data/api';
-import { listWeeklyWorkout, mesajRefuzAntrenament, InvalidTokenError } from '../../src/lib/adminApi';
-import * as sala from '../../src/lib/salaApi';
+import { listWeeklyWorkout, mesajRefuzAntrenament } from '../../src/features/admin/zones/antrenamente/api';
+import { InvalidTokenError } from '../../src/shared/lib/rpc';
+import * as sala from '../../src/features/admin/zones/antrenamente/api';
 import { SUPABASE } from '../../src/shared/lib/config';
 
 /**

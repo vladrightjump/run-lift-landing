@@ -1,0 +1,5 @@
+
+  .admin-sala-comanda { font-size: 12px; color: var(--pa-muted); }
+  .admin-sala-comanda--done { color: var(--pa-accent-text); }
+  .admin-sala-comanda--failed { color: var(--pa-danger); }
+  .admin-sala-comanda--pending { color: var(--pa-warn); }

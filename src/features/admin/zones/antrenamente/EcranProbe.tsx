@@ -1,0 +1,110 @@
+import sharedProbe from './ProbeStyles.module.css';
+import styles from './EcranProbe.module.css';
+import { useState } from 'react';
+import { retryTrialMessage, trialAttendance, trialReply, type TrialEvent, type TrialProspect } from './api';
+import { ziLunaOra } from '../../../../shared/lib/formatare';
+import { Dialog } from '../../../../shared/ui/Dialog';
+import { useTrials } from './useTrials';
+
+const TRIAL_STAGE: Record<string, string> = {
+  interested: 'Interesat', scheduled: 'Probă programată', awaiting_attendance: 'De confirmat',
+  attended: 'A venit', absent: 'Nu a venit', invited: 'Invitat', in_group: 'În grup', closed: 'Închis', cancelled: 'Anulat',
+};
+const MESSAGE_KIND: Record<string, string> = { booking_confirmed: 'Confirmarea probei', organizer_booking: 'Rezervare nouă', reminder: 'Reminder', attendance_request: 'Confirmarea prezenței', cancelled: 'Anularea sesiunii', self_cancelled: 'Anularea rezervării', organizer_cancelled: 'Anulare către organizator', continuation: 'Continuarea antrenamentelor', rebook: 'Reprogramare', invite: 'Invitație în grup', question: 'Întrebare', answer: 'Răspuns', session_changed: 'Program modificat' };
+const MESSAGE_STATUS: Record<string, string> = { pending: 'În așteptare', processing: 'Se trimite', sent: 'Trimis', failed: 'Nelivrat', ambiguous: 'Livrare neconfirmată', cancelled: 'Anulat' };
+const nameOf = (p: TrialProspect) => p.full_name || p.telegram_username || String(p.telegram_user_id);
+const SOURCE: Record<string, string> = { direct: 'link direct', trial_home: 'site', trial_share: 'link distribuit', trial_instagram: 'Instagram' };
+const EVENT: Record<string, string> = {
+  started: 'A pornit botul', name_set: 'Și-a scris numele', question: 'A pus o întrebare', booked: 'A ales proba',
+  session_changed: 'Proba s-a mutat', cancelled: 'Probă anulată', attended: 'A venit', absent: 'Nu a venit',
+  attendance_corrected: 'Prezență corectată', continuation_yes: 'Vrea să continue', continuation_no: 'Nu vrea să continue',
+  invite_sent: 'A primit invitația în grup', joined_group: 'A intrat în grup', closed: 'Închis',
+  dm_off: 'A oprit mesajele botului', dm_on: 'A repornit mesajele botului',
+};
+const text = (v: unknown) => (typeof v === 'string' ? v : '');
+/** Detaliul unui pas: sursa, numele, proba aleasă, întrebarea. */
+function eventDetail(e: TrialEvent): string {
+  const d = e.detail ?? {};
+  if (e.kind === 'started') return SOURCE[text(d.source)] ?? text(d.source);
+  if (e.kind === 'name_set') return text(d.name);
+  if (e.kind === 'question') return text(d.body);
+  if (e.kind === 'booked' || e.kind === 'session_changed') return [text(d.session_start) && ziLunaOra(text(d.session_start)), text(d.location)].filter(Boolean).join(' · ');
+  if (e.kind === 'attendance_corrected') return d.attended ? 'a venit' : 'nu a venit';
+  return '';
+}
+const telegramLine = (p: TrialProspect) => [
+  p.telegram_username ? `@${p.telegram_username}` : `Telegram ${p.telegram_user_id}`,
+  [p.telegram_first_name, p.telegram_last_name].filter(Boolean).join(' '),
+].filter(Boolean).join(' · ');
+
+/** Drumul persoanei de la /start, pas cu pas, cu data și ora (R12, R14). */
+function Cronologie({ events }: { events: TrialEvent[] }) {
+  if (events.length === 0) return null;
+  return <>
+    <h4>Cronologie</h4>
+    {events.some(e => e.backfilled) && <p className="admin-config-hint">Persoană venită înainte de istoric: vedem doar când a pornit botul. Istoricul complet începe de la lansarea lui.</p>}
+    <ol className={styles['admin-probe-timeline']} data-css="admin-probe-timeline">
+      {events.map(e => <li key={e.id}>
+        <time dateTime={e.occurred_at}>{ziLunaOra(e.occurred_at)}</time>
+        <span><strong>{EVENT[e.kind] ?? e.kind}</strong>{eventDetail(e) && <> · {eventDetail(e)}</>}</span>
+      </li>)}
+    </ol>
+  </>;
+}
+
+export function EcranProbe() {
+  const { date, eroare, busy, act, reincarca } = useTrials();
+  const [filter, setFilter] = useState('all');
+  const [selected, select] = useState<string | null>(null);
+  const [replies, setReplies] = useState<Record<string, string>>({});
+  const [confirm, setConfirm] = useState<{ title: string; text: string; work: (token: string) => Promise<unknown>; questionId?: string } | null>(null);
+  if (!date) return <p role="status">{eroare ? 'Nu s-au putut încărca persoanele noi.' : 'Se încarcă…'} {eroare && <button className="admin-btn-ghost" onClick={() => void reincarca()}>Reîncearcă</button>}</p>;
+  const people = date.prospects.filter(p => filter === 'all' || p.stage === filter);
+  const person = date.prospects.find(p => p.id === selected);
+  return <div className={sharedProbe['admin-probe']} data-css="admin-probe">
+    <p className="admin-config-hint">Botul pregătește proba. Confirmi prezența; invitația în grup pleacă numai după răspunsul „Da” al persoanei privind continuarea.</p>
+    <label className="admin-config-camp">Starea persoanei
+      <select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Toate persoanele noi</option>{Object.entries(TRIAL_STAGE).filter(([key]) => key !== 'cancelled').map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
+    </label>
+    <div className={styles['admin-probe-layout']} data-css="admin-probe-layout">
+      <div className={styles['admin-probe-list']} data-css="admin-probe-list">
+        {people.length === 0 && <p>Nicio persoană în această categorie.</p>}
+        {people.map(p => <button className={`${styles['admin-probe-person']}${selected === p.id ? ' activ' : ''}`} data-css="admin-probe-person" key={p.id} onClick={() => { select(p.id); }} aria-pressed={selected === p.id}>
+          <strong>{nameOf(p)}</strong><span>{TRIAL_STAGE[p.stage] ?? p.stage}</span>
+          <small>{p.telegram_username ? `@${p.telegram_username}` : `Telegram ${p.telegram_user_id}`}{!p.dm_enabled && ' · Mesaje oprite'}</small>
+        </button>)}
+      </div>
+      <section className={'admin-config-grup ' + styles['admin-probe-detail']} data-css="admin-config-grup admin-probe-detail" aria-label="Detaliile persoanei">
+        {!person ? <p>Alege o persoană pentru a vedea proba, întrebările și istoricul.</p> : <>
+          <h3>{nameOf(person)}</h3><p className="admin-config-hint">{TRIAL_STAGE[person.stage] ?? person.stage} · Sursă: {SOURCE[person.source] ?? person.source}</p>
+          <p className="admin-config-hint">Telegram: {telegramLine(person)}</p>
+          <Cronologie events={(date.events ?? []).filter(e => e.prospect_id === person.id)} />
+          <h4>Antrenamente de probă</h4>
+          {date.bookings.filter(b => b.prospect_id === person.id).map(b => <article className={styles['admin-probe-item']} data-css="admin-probe-item" key={b.id}>
+            <strong>{ziLunaOra(b.session_start)}</strong><p>{b.session_location} · {TRIAL_STAGE[b.status] ?? b.status}</p>
+            {b.status === 'attended' && <p>{b.continuation === 'yes' ? 'A confirmat că vrea să continue.' : b.continuation === 'no' ? 'Nu dorește să continue acum.' : 'Așteaptă răspunsul privind continuarea.'}</p>}
+            {['awaiting_attendance', 'attended', 'absent'].includes(b.status) && <div className="admin-table-actions">
+              {[true, false].map(attended => <button className="admin-btn-ghost" key={String(attended)} disabled={busy || (attended ? b.status === 'attended' : b.status === 'absent')} onClick={() => setConfirm({
+                title: b.attendance_at ? 'Corectezi prezența?' : 'Confirmi prezența?',
+                text: `${nameOf(person)} · ${ziLunaOra(b.session_start)}: ${attended ? 'a venit' : 'nu a venit'}. ${b.attendance_at ? 'Corecția rămâne în istoric.' : attended ? 'Botul va întreba dacă dorește să continue.' : 'Botul va oferi reprogramarea.'}`,
+                work: token => trialAttendance(token, b.id, attended, b.version, !!b.attendance_at),
+              })}>{attended ? 'A venit' : 'Nu a venit'}</button>)}
+            </div>}
+          </article>)}
+          <h4>Întrebări</h4>
+          {date.questions.filter(q => q.prospect_id === person.id).map(q => <article className={styles['admin-probe-item']} data-css="admin-probe-item" key={q.id}><p>{q.body}</p>
+            {q.response && <p><strong>Răspuns {q.status === 'queued' ? '(în așteptare)' : ''}:</strong> {q.response}</p>}
+            {q.status === 'open' && <><label className="admin-config-camp">Răspuns pentru {nameOf(person)}<textarea rows={3} maxLength={3000} value={replies[q.id] ?? ''} disabled={busy} onChange={e => setReplies(previous => ({ ...previous, [q.id]: e.target.value }))} /></label>
+              <button className="admin-btn-accent" disabled={busy || !replies[q.id]?.trim()} onClick={() => setConfirm({ title: `Trimiți răspunsul către ${nameOf(person)}?`, questionId: q.id, text: replies[q.id].trim(), work: token => trialReply(token, q.id, replies[q.id].trim()) })}>Previzualizează răspunsul</button></>}
+          </article>)}
+          <h4>Istoricul mesajelor</h4>
+          {date.messages.filter(m => m.prospect_id === person.id).map(m => <article className={styles['admin-probe-item']} data-css="admin-probe-item" key={m.id}>
+            <p>{MESSAGE_KIND[m.kind] ?? m.kind} · {MESSAGE_STATUS[m.status] ?? m.status} · {ziLunaOra(m.created_at)}</p>{m.result && <p className="admin-config-hint">{m.result}</p>}
+            {['failed', 'ambiguous'].includes(m.status) && <button className="admin-btn-ghost" disabled={busy} onClick={() => setConfirm({ title: 'Reîncerci trimiterea?', text: m.status === 'ambiguous' ? 'Telegram nu a confirmat rezultatul. Mesajul poate să fi ajuns deja; reîncercarea îl poate dubla.' : 'Botul va verifica dacă mesajul mai este relevant înainte să îl trimită.', work: token => retryTrialMessage(token, m.id) })}>Reîncearcă mesajul</button>}
+          </article>)}
+        </>}
+      </section>
+    </div>
+    {confirm && <Dialog titlu={confirm.title} rol="alertdialog" onInchide={() => !busy && setConfirm(null)}><p className={sharedProbe['admin-probe-preview']} data-css="admin-probe-preview">{confirm.text}</p><div className="admin-table-actions"><button className="admin-btn-ghost" disabled={busy} onClick={() => setConfirm(null)}>Renunță</button><button className="admin-btn-accent" disabled={busy} onClick={() => void act(confirm.work, 'Acțiunea a fost salvată.').then(ok => { if (ok) { setConfirm(null); if (confirm.questionId) setReplies(previous => { const next = { ...previous }; delete next[confirm.questionId!]; return next; }); } })}>Confirmă</button></div></Dialog>}
+  </div>;
+}

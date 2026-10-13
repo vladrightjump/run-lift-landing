@@ -1,0 +1,18 @@
+
+  .admin-probe-layout { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.6fr); gap: 24px; margin-top: 24px; }
+  .admin-probe-list { display: flex; flex-direction: column; gap: 8px; }
+  .admin-probe-person { text-align: left; padding: 16px; display: grid; gap: 6px; border: 1px solid var(--admin-border, #ddd); border-radius: 10px; background: transparent; color: inherit; cursor: pointer; overflow-wrap: anywhere; }
+  .admin-probe-person:global(.activ) { border-color: currentColor; background: rgba(120, 140, 80, .1); }
+  .admin-probe-person small { opacity: .7; }
+  .admin-probe-detail { min-width: 0; }
+  .admin-probe-item { padding: 16px 0; border-bottom: 1px solid var(--admin-border, #ddd); overflow-wrap: anywhere; }
+  .admin-probe-item p { margin: 8px 0; }
+  @media (max-width: 700px) {
+    .admin-probe-layout { grid-template-columns: minmax(0, 1fr); }
+  }
+  .admin-probe-timeline { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+  .admin-probe-timeline li { display: grid; grid-template-columns: minmax(96px, auto) minmax(0, 1fr); gap: 12px; overflow-wrap: anywhere; }
+  .admin-probe-timeline time { opacity: .7; font-variant-numeric: tabular-nums; }
+  @media (max-width: 520px) {
+    .admin-probe-timeline li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  }

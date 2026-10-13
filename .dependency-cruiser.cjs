@@ -16,19 +16,8 @@ module.exports = {
       severity: 'error',
       comment:
         'Codul încă nemutat (src/admin, src/components, …) și app/ folosesc o funcționalitate numai prin index.ts.',
-      from: { path: '^src/', pathNot: ['^src/features/', '^src/admin/'] },
+      from: { path: '^src/', pathNot: '^src/features/' },
       to: { path: '^src/features/', pathNot: '^src/features/[^/]+/index\\.ts$' },
-    },
-    {
-      name: 'legacy-admin-public-api',
-      severity: 'error',
-      // U11 -> U12 only: old training screens belong to this same admin feature.
-      // Direct admin imports avoid cycles through its lazy route barrel.
-      from: { path: '^src/admin/' },
-      to: {
-        path: '^src/features/',
-        pathNot: ['^src/features/admin/', '^src/features/[^/]+/index\\.ts$'],
-      },
     },
     {
       name: 'shared-no-features',

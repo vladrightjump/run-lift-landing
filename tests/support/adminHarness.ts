@@ -66,7 +66,7 @@ export const adminApiMock = (
     storeToken: vi.fn(),
     clearStoredToken: vi.fn(),
     checkToken: vi.fn(async () => true),
-    // `src/lib/salaApi.ts` (grupul din parc) cheamă serverul prin `rpc` din
+    // `src/features/admin/zones/antrenamente/api.ts` (grupul din parc) cheamă serverul prin `rpc` din
     // modulul ăsta. Fără el, cardul grupului de pe pornire ar arunca la import.
     // `null` = nicio dată: cardul tace, exact ca la o cerere picată.
     rpc: vi.fn(async () => null),

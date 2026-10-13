@@ -703,11 +703,7 @@
   .admin-previz-eticheta {
     font-size: 11px; font-weight: 700; color: var(--pa-muted-2);
   }
-  /* Cardul de pe /antrenament, randat in editor. Fara animatia de intrare:
-     aici se re-randeaza la fiecare tasta. Latimea urmeaza coloana editorului,
-     nu cei 680px ai paginii, ca pe telefon sa nu impinga ecranul in lateral.
-     Doua clase (0,2,0) bat clasa cardului din modulul lui (0,1,0). */
-  .admin-previz .admin-previz-saptamana { width: auto; max-width: 680px; margin: 0; animation: none; }
+
 
   /* Alerta de livrare, in antet: un email care n-a ajuns trebuie sa te
      gaseasca pe orice ecran, nu doar daca te intorci acasa. */
@@ -773,7 +769,7 @@
     font-size: 16px; font-weight: 700; line-height: 1.5; color: var(--pa-text);
   }
   .admin-config-grup > :where(h2, h3) { margin: 0 0 12px; line-height: 1.35; }
-  .admin-config-grup > :where(.admin-config-camp, .admin-table-actions, .admin-cs-comutator, .admin-sala-filtre, .admin-sala-text-sondaj) {
+  .admin-config-grup > :where(.admin-config-camp, .admin-table-actions, .admin-cs-comutator) {
     margin-top: 16px;
   }
   .admin-config-grup > :first-child:not(legend) { margin-top: 0; }
@@ -1052,175 +1048,3 @@
     border: 1px solid var(--pa-line); background: var(--pa-surface);
     display: grid; gap: 0;
   }
-  .admin-saptamanal-eticheta {
-    font-size: 11px; font-weight: 700; color: var(--pa-muted);
-  }
-
-
-  /* ---- Grupul din parc (botul de Telegram, prezențele, membrii) ----
-     Aceleași straturi ca restul adminului — suprafață, chenar, lime ca semnal —
-     cu o singură excepție deliberată: cifrele de pe „Prezențe" sînt mari, în
-     Anton, fiindcă se citesc de pe telefon, în parc, la 6 dimineața. */
-  .admin-sala { display: grid; gap: 20px; min-width: 0; }
-
-  .admin-sala-urmator {
-    border: 1px solid var(--pa-line); background: var(--pa-surface);
-    padding: 20px 24px; display: grid; gap: 10px; min-width: 0;
-  }
-  .admin-sala-zi {
-    margin: 0; font-family: var(--pa-font); font-weight: 700; font-size: 34px; line-height: 1.05; color: var(--pa-text);
-  }
-  .admin-sala-cand { margin: 0; font-size: 14px; color: var(--pa-text-2); line-height: 1.45; }
-
-  .admin-sala-cifre {
-    margin: 6px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
-    background: var(--pa-line); border: 1px solid var(--pa-line);
-  }
-  .admin-sala-cifre--patru { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .admin-sala-cifra { background: var(--pa-surface-3); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
-  .admin-sala-cifra dt {
-    order: 2; font-size: 11px; font-weight: 700; color: var(--pa-muted);
-  }
-  .admin-sala-cifra dd {
-    order: 1; margin: 0; font-family: Anton, sans-serif; font-size: 44px; line-height: 1; color: var(--pa-text);
-  }
-  .admin-sala-cifra--vin dd { color: var(--pa-accent-text); }
-  .admin-sala-sub { order: 3; font-size: 12px; color: var(--pa-muted); }
-
-  .admin-sala-coloane { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-  .admin-sala-coloane--doua { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .admin-sala-coloana { min-width: 0; }
-  .admin-sala-coloana-titlu {
-    margin: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--pa-text-2);
-  }
-
-  .admin-sala-lista { list-style: none; margin: 0; padding: 0; display: grid; }
-  .admin-sala-rand {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
-    padding: 14px 0; border-bottom: 1px solid var(--pa-line-soft); min-width: 0;
-  }
-  .admin-sala-rand:last-child { border-bottom: 0; }
-  .admin-sala-nume { flex: 1 1 140px; min-width: 0; font-size: 14px; line-height: 1.5; color: var(--pa-text); overflow-wrap: anywhere; }
-  .admin-sala-detaliu { line-height: 1.6; font-size: 12px; color: var(--pa-muted); overflow-wrap: anywhere; }
-  .admin-sala-actiuni { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .admin-sala-membru .admin-sala-detaliu { flex: 1 1 220px; }
-  .admin-sala-motiv { flex-basis: 100%; font-size: 12px; color: var(--pa-warn); }
-  .admin-sala-eticheta-mica {
-    margin-left: 8px; padding: 1px 6px; font-size: 10px; font-weight: 700; color: var(--pa-accent-text); background: var(--pa-accent-soft);
-  }
-
-  .admin-sala-marcaj { display: inline-flex; gap: 4px; }
-  .admin-sala-buton, .admin-sala-filtru {
-    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-text-2); cursor: pointer;
-    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600; padding: 7px 11px; min-height: 34px;
-    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-  }
-  .admin-sala-buton:hover:not(:disabled), .admin-sala-filtru:hover { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
-  .admin-sala-buton.activ, .admin-sala-filtru.activ { background: var(--pa-accent); border-color: var(--pa-accent-text); color: var(--pa-accent-ink); }
-  .admin-sala-buton:disabled:not(.activ) { opacity: 0.45; cursor: default; }
-
-  .admin-ghid-bot { display: grid; gap: 24px; max-width: 1080px; }
-  .admin-ghid-bot h2, .admin-ghid-bot h3, .admin-ghid-bot h4 { margin: 0 0 12px; }
-  .admin-ghid-bot p, .admin-ghid-bot li, .admin-ghid-bot dd { line-height: 1.65; }
-  .admin-ghid-bot p { margin: 0 0 12px; }
-  .admin-ghid-bot p:last-child { margin-bottom: 0; }
-  .admin-ghid-bot ul, .admin-ghid-bot ol { padding-left: 22px; margin: 12px 0; }
-  .admin-ghid-bot li + li { margin-top: 8px; }
-  .admin-ghid-bot dl { margin: 0; }
-  .admin-ghid-bot dt { font-weight: 600; margin-top: 16px; }
-  .admin-ghid-bot dd { margin: 4px 0 0; }
-  .admin-ghid-comenzi { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; }
-  .admin-ghid-bot .admin-config-grup { margin: 0; min-width: 0; padding: 20px; }
-  .admin-ghid-exemplu { display: block; padding: 10px 12px; margin-bottom: 12px; background: var(--pa-input); border-radius: 6px; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 13px; }
-  .admin-sala-filtre { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
-  .admin-sala-cauta { flex: 1 1 220px; min-width: 0; }
-  .admin-sala-anulare { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
-
-  .admin-sala-trecut { border-bottom: 1px solid var(--pa-line-soft); padding: 8px 0; }
-  .admin-sala-trecut summary { display: flex; gap: 12px; align-items: baseline; cursor: pointer; list-style: none; }
-  .admin-sala-trecut summary::-webkit-details-marker { display: none; }
-  .admin-sala-trecut[open] .admin-sala-coloane { margin-top: 12px; }
-
-  .admin-sala-comanda { font-size: 12px; color: var(--pa-muted); }
-  .admin-sala-comanda--done { color: var(--pa-accent-text); }
-  .admin-sala-comanda--failed { color: var(--pa-danger); }
-  .admin-sala-comanda--pending { color: var(--pa-warn); }
-
-  .admin-sala-necunoscuti { border-color: var(--pa-warn); }
-  .admin-sala-cont select { max-width: 220px; }
-  .admin-sala-formular { display: grid; gap: 8px; min-width: 0; }
-  .admin-sala-formular > .admin-config-eticheta:not(:first-child) { margin-top: 10px; }
-  .admin-sala-formular > :where(.admin-sala-bifa, .admin-table-actions) { margin-top: 12px; }
-  .admin-sala-text-sondaj > div:first-child { display: grid; gap: 18px; min-width: 0; }
-  .admin-sala-text-sondaj > div:first-child > * { min-width: 0; }
-  .admin-sala-bifa { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--pa-text); }
-
-  /* Analiza */
-  .admin-sala-bare {
-    display: flex; align-items: flex-end; gap: 3px; height: 150px;
-    padding: 8px 0; border-bottom: 1px solid var(--pa-line); overflow-x: auto;
-  }
-  .admin-sala-bara {
-    flex: 1 1 10px; max-width: 56px; height: 100%; padding: 0; border: 0; background: transparent;
-    display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; opacity: 0.7;
-  }
-  .admin-sala-bara.activ, .admin-sala-bara:hover { opacity: 1; outline: 1px solid var(--pa-muted-2); }
-  .admin-sala-bara-vin { display: block; background: var(--pa-accent); }
-  .admin-sala-bara-nu { display: block; background: var(--pa-graph-warn); }
-  .admin-sala-bara-tacere { display: block; background: var(--pa-muted-2); }
-  .admin-sala-curba { width: 100%; height: 56px; margin-top: 8px; }
-  .admin-sala-curba polyline { fill: none; stroke: var(--pa-accent-text); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
-  .admin-sala-mix { display: flex; height: 14px; border: 1px solid var(--pa-line); }
-  .admin-sala-progres { flex: 0 0 96px; height: 6px; background: var(--pa-line-soft); }
-  .admin-sala-progres span { display: block; height: 100%; background: var(--pa-accent); }
-  .admin-sala-stare--activ { color: var(--pa-accent-text); }
-  .admin-sala-stare--inactiv { color: var(--pa-warn); }
-  .admin-sala-stare--niciodata { color: var(--pa-muted); }
-  .admin-sala-istoric { flex-basis: 100%; display: grid; gap: 8px; padding: 4px 0 6px; }
-  .admin-sala-puncte { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
-  .admin-sala-punct { width: 12px; height: 12px; background: var(--pa-muted-2); }
-  .admin-sala-punct--yes { background: var(--pa-accent); }
-  .admin-sala-punct--no { background: var(--pa-graph-warn); }
-
-  /* Botul */
-  .admin-sala-stare-bot {
-    border: 1px solid var(--pa-line); background: var(--pa-surface); padding: 18px 24px;
-    display: grid; gap: 8px; justify-items: start;
-  }
-  .admin-sala-stare-bot--normal { border-left: 4px solid var(--pa-accent-text); }
-  .admin-sala-stare-bot--oprit { border-left: 4px solid var(--pa-muted-2); }
-  .admin-sala-stare-bot--nu-raspunde { border-left: 4px solid var(--pa-danger); }
-  .admin-sala-stare-bot .admin-sala-zi { font-size: 26px; }
-
-  .admin-sala-text-sondaj { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-  .admin-sala-telegram { margin: 0; display: grid; gap: 6px; max-width: 360px; }
-  .admin-sala-telegram-mesaj {
-    background: var(--pa-accent-soft); border: 1px solid var(--pa-line); padding: 10px 12px;
-    font-size: 14px; line-height: 1.4; color: var(--pa-text);
-  }
-  .admin-sala-telegram-mesaj p { margin: 0; }
-  .admin-sala-telegram-butoane { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-  .admin-sala-telegram-butoane span {
-    text-align: center; padding: 8px; font-size: 13px; font-weight: 600;
-    background: var(--pa-surface); border: 1px solid var(--pa-line); overflow-wrap: anywhere;
-  }
-  .admin-sala-probleme { margin: 0; padding: 10px 14px 10px 30px; border: 1px solid var(--pa-danger); color: var(--pa-danger); font-size: 13px; }
-  .admin-sala-nesalvat { font-size: 12px; font-weight: 700; color: var(--pa-warn); }
-  .admin-sala-comenzi { justify-content: flex-start; }
-  .admin-sala-citat { white-space: pre-wrap; border-left: 3px solid var(--pa-line); padding-left: 12px; color: var(--pa-text); }
-
-  @media (max-width: 720px) {
-    /* Pe telefon, cele trei liste stau una sub alta, iar cifrele rămân pe un
-       rând: sînt primul lucru căutat pe ecran. */
-    .admin-sala-coloane, .admin-sala-coloane--doua, .admin-sala-text-sondaj { grid-template-columns: minmax(0, 1fr); }
-    .admin-sala-cifre--patru { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .admin-sala-cifra { padding: 12px; }
-    .admin-sala-cifra dd { font-size: 34px; }
-    .admin-sala-zi { font-size: 26px; }
-    .admin-sala-urmator, .admin-sala-stare-bot { padding: 16px; }
-    .admin-sala-progres { flex-basis: 64px; }
-  }
-
-  /* Câmpurile din ecranele grupului au aspectul din baza controalelor; aici
-     rămâne doar lățimea mesajului liber. */
-  .admin-sala textarea { width: 100%; }

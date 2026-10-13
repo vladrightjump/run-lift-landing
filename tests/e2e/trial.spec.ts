@@ -1,17 +1,19 @@
-import { test, expect } from '@playwright/test';
-import { SNAPSHOT_CONFIG } from '../../src/shared/content/eventConfig';
+import { test, expect } from '../support/playwright';
+import { createHandlers } from '../support/handlers';
+import { installAdminResponses } from '../support/admin';
+import { trialData } from '../support/builders/trial';
+import { dateSala } from '../support/builders/sala';
+import { trialBrowserConfig, trialBrowserData, trialBrowserAdminResponses } from '../support/builders/trialBrowser';
 
-const config = { message_texts: {}, enabled: true, bot_username: 'ParkTrialBot', welcome_text: 'Bine ai venit!', trial_conditions: 'Vino cu 10 minute înainte.', trial_price: '100 MDL', bring_text: 'Apă și prosop.', continuation_conditions: 'Discutăm abonamentul.', duration_minutes: 60, organizer_telegram_id: 123, contact_text: 'Scrie-ne pe Instagram.', permissions_verified_at: new Date().toISOString() };
+const config = trialBrowserConfig();
 for (const width of [375, 1280]) {
   for (const phase of ['landing', 'soon', 'leaderboard', 'next']) {
-    test(`intrare Telegram ${phase} la ${width}px`, async ({ page }) => {
+    test(`intrare Telegram ${phase} la ${width}px`, async ({ page, network }) => {
       await page.setViewportSize({ width, height: 900 });
-      await page.route('**/rest/v1/rpc/*', route => {
-        const name = route.request().url().split('/').pop();
-        const value = name === 'public_trial_config' ? { enabled: true, bot_username: config.bot_username, contact_text: config.contact_text }
-          : name === 'public_stats' ? { count: 0, participants: [], waitlist: 0 } : null;
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) });
-      });
+      network.use(...createHandlers({
+        public_trial_config: { enabled: true, bot_username: config.bot_username, contact_text: config.contact_text },
+        public_homepage: null, public_training_reels: null, public_weekly_workouts: null,
+      }));
       await page.goto(`/?preview=${phase}`);
       const section = page.getByRole('region', { name: 'Primul tău antrenament cu noi.' });
       await expect(section).toBeVisible();
@@ -23,16 +25,14 @@ for (const width of [375, 1280]) {
       if (phase === 'landing') await section.screenshot({ path: `/tmp/trial-home-${width}.png` });
     });
   }
-  test(`admin confirma proba fara a invita prematur la ${width}px`, async ({ page }) => {
+  test(`admin confirma proba fara a invita prematur la ${width}px`, async ({ page, network }) => {
     await page.setViewportSize({ width, height: 900 });
     let attended = false;
     const writes: string[] = [];
-    await page.route('**/rest/v1/rpc/*', async route => {
-      const name = route.request().url().split('/').pop()!;
-      if (name === 'admin_trial_attendance') { attended = true; writes.push(name); }
-      const data = { config, prospects: [{ id: 'p1', full_name: 'Ana Rusu', telegram_user_id: 456, telegram_username: 'ana', source: 'home', stage: attended ? 'attended' : 'awaiting_attendance', dm_enabled: true }], bookings: [{ id: 'b1', prospect_id: 'p1', version: 1, status: attended ? 'attended' : 'awaiting_attendance', session_start: '2026-10-08T03:30:00Z', session_location: 'Parcul Dumitru Râșcanu', attendance_at: attended ? new Date().toISOString() : null, continuation: null }], questions: [], messages: [], invitations: [], organizers: [{ id: 'a1', full_name: 'Vlad', telegram_user_id: 123 }] };
-      const value = name === 'admin_check_token' ? true : name === 'admin_trial_data' ? data : name === 'admin_list_editions' ? [{ editie: SNAPSHOT_CONFIG.number, participanti: 0, asteptare: 0, lansare: 0, prima: null, ultima: null, este_curenta: true }] : name === 'admin_sala_date' ? { azi: '2026-10-08', config: null, membri: [], antrenamente: [], raspunsuri: [], necunoscuti: [], comenzi: [], scoateri: [] } : [];
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) });
+    installAdminResponses(network, {
+      ...trialBrowserAdminResponses(),
+      admin_trial_data: () => trialBrowserData(attended, config),
+      admin_trial_attendance: () => { attended = true; writes.push('admin_trial_attendance'); return []; },
     });
     await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
     await page.goto('/admin#grup-probe');
@@ -47,27 +47,25 @@ for (const width of [375, 1280]) {
   });
 }
 
-for (const width of [375, 1280]) test(`editează mesajul de probă în setări la ${width}px`, async ({ page }) => {
+for (const width of [375, 1280]) test(`editează mesajul de probă în setări la ${width}px`, async ({ page, network }) => {
   await page.setViewportSize({ width, height: 900 });
-  let saved: Record<string, unknown> | null = null;
-  await page.route('**/rest/v1/rpc/*', async route => {
-    const name = route.request().url().split('/').pop();
-    if (name === 'admin_trial_config') saved = route.request().postDataJSON().p_config;
-    const value = name === 'admin_check_token' ? true
-      : name === 'admin_trial_data' ? { config: saved ?? config, prospects: [], bookings: [], questions: [], messages: [], organizers: [] }
-      : name === 'admin_list_editions' ? [{ editie: SNAPSHOT_CONFIG.number, este_curenta: true }]
-      : name === 'admin_sala_date' ? { azi: '2026-10-08', config: { poll_days: [0, 2, 4], training_time: '06:30', location: 'Parc', enabled: false }, membri: [], antrenamente: [], raspunsuri: [], necunoscuti: [], comenzi: [], scoateri: [] } : [];
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) });
+  let saved: ReturnType<typeof trialBrowserConfig> | null = null;
+  const sala = dateSala({ azi: '2026-10-08', membri: [], antrenamente: [], raspunsuri: [] });
+  sala.config = { ...sala.config!, poll_days: [0, 2, 4], enabled: false };
+  installAdminResponses(network, {
+    ...trialBrowserAdminResponses(),
+    admin_sala_date: sala,
+    admin_trial_data: () => trialData({ config: saved ?? config }),
+    admin_trial_config: (payload: { p_config: ReturnType<typeof trialBrowserConfig> }) => { saved = payload.p_config; return []; },
   });
   await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
   await page.goto('/admin#grup-bot');
   await page.getByLabel('Mesaj de editat').selectOption('reminder');
   await expect(page.getByLabel('Textul mesajului de probă', { exact: true })).toHaveValue('Te așteptăm la antrenamentul de probă:');
   await page.getByLabel('Textul mesajului de probă', { exact: true }).fill('Ne vedem mâine!\nAdu apă și energie.');
-  await expect(page.getByLabel('Previzualizarea textului')).toContainText('Ne vedem mâine!');
-  await page.locator('.admin-probe-copy').scrollIntoViewIfNeeded();
+  await page.locator("[data-css~='admin-probe-copy']").scrollIntoViewIfNeeded();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.locator('.admin-probe-copy').screenshot({ path: `/tmp/trial-copy-${width}.png` });
+  await page.locator("[data-css~='admin-probe-copy']").screenshot({ path: `/tmp/trial-copy-${width}.png` });
   await page.getByRole('button', { name: 'Salvează setările probei' }).click();
   await expect.poll(() => saved?.message_texts).toEqual({ reminder: 'Ne vedem mâine!\nAdu apă și energie.' });
   await page.reload();

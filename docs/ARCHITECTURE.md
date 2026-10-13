@@ -206,7 +206,8 @@ U10 mută în `features/admin/` cadrul adminului și zonele Acum și Site: `page
 `components/` cadrul cu navigarea, linia de timp și învelișul de editare (folosit de mai
 multe zone), `navigatie/` registrul și `useEcranCurent` (care rămâne proprietarul
 fragmentului `#cheie`, cu garda de ieșire), `data/` sesiunea, `useAdminResource`,
-poll-ul și datele grupului și ale probelor, citite și de Acum, și de Antrenamente.
+poll-ul și, temporar până la U12, datele grupului și ale probelor, citite și de Acum,
+și de Antrenamente.
 `zones/acum/` și `zones/site/` țin ecranele lor; Site are `api.ts` cu RPC-urile proprii,
 iar login-ul are `data/api.ts`. `GrupRadio`, folosit de Site și de Evenimente, trece în
 `shared/ui/`.
@@ -228,13 +229,32 @@ numărul de atenție, titlul învelișului) stau în `components/AdminStyles.mod
 importat înaintea modulului propriu. Clasele pe care le poartă și ecranele încă nemutate
 (`admin-btn-*`, `admin-config-*`, `admin-table-*`, `admin-stat*`, `admin-banner`,
 `admin-control`, `admin-confirm-*` și celelalte) rămân globale în `index.css` până la
-U11 și U12, iar componentele mutate le folosesc ca șiruri simple, lângă clasele de modul.
+curățarea comună din U13, iar componentele mutate le folosesc ca șiruri simple,
+lângă clasele de modul.
 
-Între U11 și U12, regula `legacy-admin-public-api` permite numai fișierelor din
-`src/admin/` să importe direct interiorul aceleiași funcționalități admin. Ecranele
-Antrenamente rămase acolo nu pot trece prin barrel-ul care încarcă dashboardul ce le
-compune, fiindcă ar crea un ciclu. Importurile spre orice altă funcționalitate rămân
-limitate la `index.ts`, iar `no-circular` rămâne activ peste tot. U12 elimină excepția
-odată cu mutarea acelor ecrane și mută `src/lib/workoutApi.ts` în zona sa. Facade-ul
-`src/lib/adminApi.ts` păstrează numai cele trei exporturi ale testului de contract
-backend nemodificat și dispare la U13.
+U12 mută programul săptămânal, prezențele, membrii, analiza, botul, ghidul și probele
+în `zones/antrenamente/`, împreună cu testele lor. `api.ts` deține transporturile
+fostelor `salaApi`, `trialApi` și `workoutApi`; mesajele de refuz rămân lângă
+RPC-urile care le produc. `useSala` și `useTrials` aparțin zonei; cadrul adminului
+și Acum consumă datele, transformările și semnalul `trialNeedsAttention` prin
+`zones/antrenamente/index.ts`. Acest API nu exportă ecranele, ca să păstreze
+dependențele fără cicluri.
+
+Citirile Query au familii separate pentru `sala`, `trials` și `weekly`.
+Scrierile folosesc mutații Query și invalidează familia afectată: marcarea unei
+prezențe reîmprospătează citirile grupului, fără probe, ediții sau config.
+Botul și membrii citesc același răspuns `admin_sala_date`, deci rămân în familia
+grupului. Starea ocupată a grupului durează până la refresh; probele păstrează
+ciorna dacă refresh-ul de după scriere eșuează. Poll-ul păstrează anularea și
+înlocuirea cererii la 15 secunde și la revenirea în tab.
+
+Stilurile proprii au module lângă componente; `SalaStyles.module.css` și
+`ProbeStyles.module.css` țin piesele folosite de mai multe ecrane ale zonei.
+Modulul propriu se importă după cele comune. Selectorii care traversează un modul
+folosesc `data-css`, iar modificatorii globali sunt ancorați în clasele locale.
+Valorile și specificitatea rămân cele existente. Excepția temporară
+`legacy-admin-public-api` a fost eliminată; fișierele rămase în `src/admin/`
+urmează aceeași regulă de API public. Facade-ul `src/lib/adminApi.ts` a fost
+eliminat: testul de contract importă API-ul zonei, iar indexul adminului expune
+doar intrările încărcate la cerere și rădăcina vizuală. Re-exportarea API-ului
+autentificat prin acel index ar încărca zona și în bundle-ul public.

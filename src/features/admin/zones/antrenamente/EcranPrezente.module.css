@@ -1,0 +1,29 @@
+
+  .admin-saptamanal-eticheta {
+    font-size: 11px; font-weight: 700; color: var(--pa-muted);
+  }
+  .admin-sala-urmator {
+    border: 1px solid var(--pa-line); background: var(--pa-surface);
+    padding: 20px 24px; display: grid; gap: 10px; min-width: 0;
+  }
+  .admin-sala-coloana { min-width: 0; }
+  .admin-sala-coloana-titlu {
+    margin: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--pa-text-2);
+  }
+  .admin-sala-marcaj { display: inline-flex; gap: 4px; }
+  .admin-sala-buton {
+    background: transparent; border: 1px solid var(--pa-line); color: var(--pa-text-2); cursor: pointer;
+    font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600; padding: 7px 11px; min-height: 34px;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .admin-sala-buton:hover:not(:disabled) { border-color: var(--pa-accent-text); color: var(--pa-accent-text); }
+  .admin-sala-buton:global(.activ) { background: var(--pa-accent); border-color: var(--pa-accent-text); color: var(--pa-accent-ink); }
+  .admin-sala-buton:disabled:not(:global(.activ)) { opacity: 0.45; cursor: default; }
+  .admin-sala-anulare { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+  .admin-sala-trecut { border-bottom: 1px solid var(--pa-line-soft); padding: 8px 0; }
+  .admin-sala-trecut summary { display: flex; gap: 12px; align-items: baseline; cursor: pointer; list-style: none; }
+  .admin-sala-trecut summary::-webkit-details-marker { display: none; }
+  .admin-sala-trecut[open] :global([data-css~="admin-sala-coloane"]) { margin-top: 12px; }
+  @media (max-width: 720px) {
+    .admin-sala-urmator { padding: 16px; }
+  }

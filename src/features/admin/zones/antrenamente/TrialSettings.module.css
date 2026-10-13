@@ -1,0 +1,10 @@
+
+  .admin-probe-fields { display: grid; gap: 16px; border: 0; margin: 0; padding: 0; min-width: 0; }
+  .admin-probe-share { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+  .admin-probe-share label { flex: 1; min-width: 180px; }
+  .admin-probe-settings details { margin-top: 20px; }
+  .admin-probe-settings summary { cursor: pointer; padding: 12px 0; }
+  .admin-probe-copy { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 20px 0; border: 0; border-block: 1px solid var(--admin-border, #ddd); }
+  .admin-probe-copy legend, .admin-probe-copy p { margin: 0; }
+  .admin-probe-copy :global(.admin-btn-ghost) { justify-self: start; }
+  .admin-probe-copy legend { font-weight: 700; padding: 0; }

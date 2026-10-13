@@ -1,0 +1,12 @@
+
+  .admin-sala-telegram { margin: 0; display: grid; gap: 6px; max-width: 360px; }
+  .admin-sala-telegram-mesaj {
+    background: var(--pa-accent-soft); border: 1px solid var(--pa-line); padding: 10px 12px;
+    font-size: 14px; line-height: 1.4; color: var(--pa-text);
+  }
+  .admin-sala-telegram-mesaj p { margin: 0; }
+  .admin-sala-telegram-butoane { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .admin-sala-telegram-butoane span {
+    text-align: center; padding: 8px; font-size: 13px; font-weight: 600;
+    background: var(--pa-surface); border: 1px solid var(--pa-line); overflow-wrap: anywhere;
+  }

@@ -1,11 +1,13 @@
 # Botul rulează pe Railway. Site-ul are nevoie doar de textele comune
-# importate de editorul mesajelor; păstrăm explicit fișierul și părinții lui.
+# importate de editorul mesajelor și de testul de paritate; păstrăm dependențele lor.
 bot/*
 !bot/src/
 bot/src/*
 !bot/src/lib/
 bot/src/lib/*
 !bot/src/lib/trial-copy.ts
+!bot/src/lib/poll-text.ts
+!bot/src/lib/sessions.ts
 
 # Configurația serviciului Railway al botului (Infrastructure as Code): o aplică
 # CLI-ul Railway, nu are ce căuta în build-ul site-ului.

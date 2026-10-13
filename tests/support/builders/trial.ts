@@ -1,4 +1,4 @@
-import type { TrialConfig, TrialData } from '../../../src/lib/trialApi';
+import type { TrialConfig, TrialData } from '../../../src/features/admin/zones/antrenamente/api';
 
 export const trialConfig = (over: Partial<TrialConfig> = {}): TrialConfig => ({
   enabled: false, bot_username: '', welcome_text: '', trial_conditions: '',

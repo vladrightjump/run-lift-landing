@@ -24,7 +24,6 @@ const css = [
   'src/shared/styles/tokens.css',
   'src/shared/styles/base.css',
   'src/index.css',
-  'src/admin/sala/probe.css',
 ]
   .map((f) => readFileSync(resolve(root, f), 'utf8'))
   .concat((readdirSync(resolve(root, 'src'), { recursive: true }) as string[])
