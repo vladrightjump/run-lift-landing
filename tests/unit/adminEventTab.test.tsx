@@ -57,14 +57,20 @@ const fataDeStart = (ore: number): string => {
   return d.toISOString().slice(0, 16);
 };
 
-/** Bara lipită de jos: regiunea `status` care ține „Publică" (și „Se publică…"). */
-const baraActiuni = (): HTMLElement | undefined =>
-  screen.queryAllByRole('status').find((r) => within(r).queryByRole('button', { name: /publică/i }));
+/**
+ * Bara lipită de jos: regiunea `status` care ține „Publică" (și „Se publică…").
+ * Aruncă dacă bara lipsește, ca o aserțiune negativă pe conținutul ei să nu
+ * treacă degeaba.
+ */
+const baraActiuni = (): HTMLElement => {
+  const bara = screen.queryAllByRole('status').find((r) => within(r).queryByRole('button', { name: /publică/i }));
+  if (!bara) throw new Error('Bara de acțiuni lipsește');
+  return bara;
+};
 
 /** Ce problemă arată bara: refuzul serverului (`alert`) sau câmpurile de reparat. */
 const problemaDinBara = (): string => {
   const bara = baraActiuni();
-  if (!bara) return '';
   return (
     (within(bara).queryByRole('alert') ?? within(bara).queryByRole('button', { name: /de reparat/ }))
       ?.textContent ?? ''
@@ -751,7 +757,7 @@ describe('formularul e blocat cât ține publicarea', () => {
  * salva" pentru ORICE nu recunoaște — inclusiv pentru o publicare refuzată.
  */
 describe('refuzul rămâne citibil după ce trece toastul', () => {
-  const bara = () => baraActiuni() as HTMLElement;
+  const bara = baraActiuni;
   const refuz = problemaDinBara;
 
   const publica = async () => {
@@ -1054,7 +1060,7 @@ describe('erorile indexate deschid grupul care le conține', () => {
  */
 describe('ciorna nesalvată nu dispare tăcut', () => {
   /** Textul barei lipite de jos. */
-  const bara = (): string => baraActiuni()?.textContent ?? '';
+  const bara = (): string => baraActiuni().textContent ?? '';
 
   it('o ciornă pornită din publicat e nesalvată din prima clipă', async () => {
     await deschideCiorna();
@@ -1247,7 +1253,7 @@ describe('previzualizarea arată ce e pe ecran', () => {
     fireEvent.click(screen.getByRole('button', { name: /Salvează și previzualizează/ }));
 
     await waitFor(() =>
-      expect(baraActiuni()?.textContent).not.toContain('Nesalvat')
+      expect(baraActiuni().textContent).not.toContain('Nesalvat')
     );
   });
 });
