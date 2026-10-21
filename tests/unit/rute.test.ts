@@ -110,4 +110,13 @@ describe('legăturile interne duc spre rute reale', () => {
       }
     }
   });
+
+  it('AE7: paginile publice nu importă Programare și nu cer funcțiile private', () => {
+    const publice = fisiere.filter(f => !f.startsWith('src/features/admin/') && !f.startsWith('src/features/programare/'));
+    for (const f of publice) {
+      const sursa = readFileSync(resolve(root, f), 'utf8');
+      expect(sursa, f).not.toMatch(/admin_prog_|(?:from\s*|import\s*\()["'][^"']*programare/);
+    }
+    expect(ROUTE_PATHS).not.toContain('/programare');
+  });
 });

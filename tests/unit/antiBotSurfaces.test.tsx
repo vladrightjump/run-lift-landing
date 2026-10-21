@@ -97,6 +97,8 @@ describe('niciun formular din src/ nu scapă fără capcană', () => {
     'src/features/admin/zones/antrenamente/EcranMembri.tsx',
     'src/features/admin/zones/antrenamente/EcranBot.tsx',
     'src/features/admin/zones/antrenamente/TrialSettings.tsx',
+    // Profilul și atribuirea cer tokenul verificat de admin_prog_*.
+    'src/features/programare/ecrane/EcranPrograme.tsx',
   ]);
 
   it('fiecare fișier cu <form> folosește hpProps', () => {

@@ -6,7 +6,7 @@ import { useAdminResource } from '../data/useAdminResource';
 import { useAdminMutation } from '../data/useAdminMutation';
 import { useSesiuneAdmin } from '../data/adminSession';
 import { useDashboardData } from '../zones/evenimente/useDashboardData';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { toCsv, durataCsv } from '../../../shared/lib/csv';
 import { addRegistration, updateRegistration, deleteRegistration, undeleteRegistration, deleteWaitlist, undeleteWaitlist, promoteWaitlist, listEditions, createEdition, listEventConfig, setPrezenta, refuzPrezenta, InvalidTokenError } from '../zones/evenimente/api';
@@ -61,6 +61,8 @@ type Props = {
   onLogout: () => void;
 };
 
+const EcranProgramare = lazy(() => import('../../programare').then(m => ({ default: m.EcranProgramare })));
+
 export const AdminDashboard = ({ token, onLogout }: Props) => {
   const { toast, arata: showToast, inchide: inchideToast } = useToast();
   const handleAuthError = useCallback((err: unknown): boolean => {
@@ -100,7 +102,7 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
   // în `useEcranCurent`: se navighează din trei locuri (registrul de ecrane,
   // acțiunile liniei de timp, semnalele de atenție), iar o gardă pusă pe unul
   // singur ar fi o gardă cu trei sferturi de gaură.
-  const { ecran: tab, schimba: schimbaTab, inregistreazaGardaIesire } =
+  const { ecran: tab, parametri, schimba: schimbaTab, inregistreazaGardaIesire } =
     useEcranCurent(ECRAN_IMPLICIT);
   // Cerere venită de pe linia de timp: deschide tabul „Evenimentul" cu dialogul
   // de ediție nouă pe ecran. Se stinge imediat ce tabul a onorat-o.
@@ -225,6 +227,11 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
     'grup-analiza': null,
     'grup-bot': null,
     'grup-ghid': null,
+    'prog-azi': null,
+    'prog-calendar': null,
+    'prog-programe': null,
+    'prog-exercitii': null,
+    'prog-rezultate': null,
   };
 
   /**
@@ -572,6 +579,10 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
             funcționează. Ediția activă acum e {editieCurenta}.
           </div>
         )}
+
+        {(tab === 'prog-azi' || tab === 'prog-calendar' || tab === 'prog-programe' || tab === 'prog-exercitii' || tab === 'prog-rezultate') && <Suspense fallback={<p role="status">Încărcăm Programare…</p>}>
+          <EcranProgramare ecran={tab} parametri={parametri} sesiune={{ token, onAuthError: handleAuthError, showToast }} onNavigare={schimbaTab} />
+        </Suspense>}
 
         {tab === 'acum' && (
           <EcranAcum

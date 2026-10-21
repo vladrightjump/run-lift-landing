@@ -22,6 +22,39 @@ afterEach(() => {
 });
 
 describe('ecranul curent se citește din adresă', () => {
+  it('păstrează parametrii și permite navigarea în același ecran', () => {
+    window.history.replaceState(null, '', '#prog-azi/2026-10-21/bloc-1');
+    const { result } = renderHook(() => useEcranCurent('acum'));
+    expect(result.current.ecran).toBe('prog-azi');
+    expect(result.current.parametri).toEqual(['2026-10-21', 'bloc-1']);
+    act(() => result.current.schimba('prog-azi', ['2026-10-22']));
+    expect(window.location.hash).toBe('#prog-azi/2026-10-22');
+    expect(result.current.parametri).toEqual(['2026-10-22']);
+    act(() => {
+      window.location.hash = '#prog-azi/2026-10-21/bloc-1';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(result.current.parametri).toEqual(['2026-10-21', 'bloc-1']);
+  });
+
+  it('garda refuză schimbarea parametrilor și restaurează adresa completă', () => {
+    window.history.replaceState(null, '', '#prog-programe/program-1');
+    const { result } = renderHook(() => useEcranCurent('acum'));
+    act(() => result.current.inregistreazaGardaIesire(() => false));
+    act(() => {
+      window.location.hash = '#prog-programe/program-2';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(window.location.hash).toBe('#prog-programe/program-1');
+    expect(result.current.parametri).toEqual(['program-1']);
+  });
+
+  it('păstrează vechea adresă pentru persoane noi', () => {
+    window.history.replaceState(null, '', '#grup-probe');
+    const { result } = renderHook(() => useEcranCurent('acum'));
+    expect(result.current.ecran).toBe('grup-probe');
+    expect(result.current.parametri).toEqual([]);
+  });
   it('pornește pe ecranul implicit când adresa nu spune nimic', () => {
     const { result } = renderHook(() => useEcranCurent('desfasurare'));
     expect(result.current.ecran).toBe('desfasurare');

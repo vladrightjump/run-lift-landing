@@ -45,7 +45,12 @@ export type EcranAdmin =
   | 'grup-probe'
   | 'grup-analiza'
   | 'grup-bot'
-  | 'grup-ghid';
+  | 'grup-ghid'
+  | 'prog-azi'
+  | 'prog-calendar'
+  | 'prog-programe'
+  | 'prog-exercitii'
+  | 'prog-rezultate';
 
 /**
  * Reperul pe care-l raportează panoul de stare vine acum din `reperele.ts`.

@@ -16,7 +16,7 @@ import type { EcranAdmin } from '../data/stareCurenta';
  * `descriere` nu e decorativă: o arată ecranul, sub titlu.
  */
 
-export type ZonaAdmin = 'acum' | 'antrenamente' | 'evenimente' | 'site';
+export type ZonaAdmin = 'acum' | 'antrenamente' | 'programare' | 'evenimente' | 'site';
 
 export type EcranRegistru = {
   cheie: EcranAdmin;
@@ -121,6 +121,18 @@ export const ZONE: ZonaRegistru[] = [
           descriere: 'Comenzile din Telegram, acțiunile automate și răspunsurile la întrebările organizatorilor',
         }],
       },
+    ],
+  },
+  {
+    cheie: 'programare',
+    eticheta: 'Programare',
+    intrebare: 'Ce antrenament urmezi?',
+    file: [
+      { cheie: 'azi', eticheta: 'Azi', ecrane: [{ cheie: 'prog-azi', eticheta: 'Azi', descriere: 'Antrenamentele tale pentru ziua aleasă' }] },
+      { cheie: 'calendar', eticheta: 'Calendar', ecrane: [{ cheie: 'prog-calendar', eticheta: 'Calendar', descriere: 'Zilele programului și totalurile tale' }] },
+      { cheie: 'programe', eticheta: 'Programe', ecrane: [{ cheie: 'prog-programe', eticheta: 'Programe', descriere: 'Profilul de sportiv, programele și atribuirile' }] },
+      { cheie: 'exercitii', eticheta: 'Exerciții', ecrane: [{ cheie: 'prog-exercitii', eticheta: 'Exerciții', descriere: 'Biblioteca de mișcări — disponibilă într-o etapă următoare' }] },
+      { cheie: 'rezultate', eticheta: 'Rezultate', ecrane: [{ cheie: 'prog-rezultate', eticheta: 'Rezultate', descriere: 'Rezultatele sportivilor — disponibile într-o etapă următoare' }] },
     ],
   },
   {

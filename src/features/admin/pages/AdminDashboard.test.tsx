@@ -80,6 +80,13 @@ const mergiLa = async (eticheta: string) => {
 };
 
 describe('AdminDashboard', () => {
+  it('deschide ecranul privat Programe din adresă', async () => {
+    randeaza('prog-programe');
+    expect(await screen.findByRole('heading', { name: 'Profilul tău de sportiv' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Programe disponibile' })).toBeDefined();
+    expect(window.location.hash).toBe('#prog-programe');
+  });
+
   it('randează un rând pentru fiecare participant al ediției', async () => {
     randeaza();
 

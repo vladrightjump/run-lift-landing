@@ -33,6 +33,7 @@ const CLASA_FAZA: Partial<Record<FazaSite, string>> = {
 const ICON_ZONA: Record<ZonaAdmin, NumeIcon> = {
   acum: 'acum',
   antrenamente: 'antrenamente',
+  programare: 'calendar',
   evenimente: 'evenimente',
   site: 'site',
 };

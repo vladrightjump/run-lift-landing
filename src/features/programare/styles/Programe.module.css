@@ -1,0 +1,35 @@
+.ecran { display: grid; gap: 24px; max-width: 1040px; min-width: 0; color: var(--pa-text); }
+.panel { padding: clamp(18px, 3vw, 28px); background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r); min-width: 0; }
+.panel h2 { margin: 0 0 12px; font-size: 20px; line-height: 1.3; }
+.panel p { line-height: 1.55; }
+.muted { color: var(--pa-muted); font-size: 14px; }
+.formular { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
+.camp { display: grid; gap: 8px; font-size: 14px; font-weight: 600; min-width: 0; }
+.camp input, .camp select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--pa-line-strong); border-radius: var(--pa-r); padding: 10px 12px; color: var(--pa-text); background: var(--pa-input); font: inherit; font-size: 16px; }
+.camp input[type="file"] { font-size: 14px; padding: 10px; }
+.camp input:focus-visible, .camp select:focus-visible, .ecran button:focus-visible { outline: 2px solid var(--pa-accent-text); outline-offset: 3px; }
+.camp select:disabled { opacity: .7; }
+.lat { grid-column: 1 / -1; margin: 0; }
+.principal, .secundar { min-height: 44px; padding: 10px 18px; font: inherit; font-size: 14px; font-weight: 700; border-radius: var(--pa-r); cursor: pointer; }
+.principal { background: var(--pa-accent); color: var(--pa-accent-ink); border: 1px solid transparent; }
+.principal:hover:not(:disabled) { background: var(--pa-accent-hover); }
+.secundar { justify-self: start; color: var(--pa-text); border: 1px solid var(--pa-line); background: var(--pa-surface); }
+.principal:disabled { opacity: .5; cursor: default; }
+.eroare { color: var(--pa-danger); }
+.rezumat { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--pa-line); overflow-wrap: anywhere; }
+.lista, .istoric { list-style: none; padding: 0; margin: 0; }
+.lista li, .istoric li { border-top: 1px solid var(--pa-line); padding: 20px 0; }
+.lista li:last-child, .istoric li:last-child { padding-bottom: 0; }
+.numeProgram, .legatura { border: 0; padding: 0; background: transparent; color: var(--pa-text); cursor: pointer; text-align: left; font: inherit; text-decoration: underline; text-underline-offset: 4px; }
+.numeProgram { font-size: 20px; font-weight: 700; min-height: 44px; overflow-wrap: anywhere; }
+.sursa { color: var(--pa-muted); font-size: 12px; margin-bottom: 0; }
+.titluProgram { margin-top: 12px !important; font-size: 28px !important; overflow-wrap: anywhere; }
+.descriere { white-space: pre-wrap; overflow-wrap: anywhere; }
+.atribuire { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; margin-top: 20px; }
+.atribuire p { flex-basis: 100%; margin: 0; }
+.istoric li { display: grid; gap: 8px; }
+.istoric span { font-size: 14px; color: var(--pa-muted); }
+@media (max-width: 639px) {
+  .formular { grid-template-columns: minmax(0, 1fr); }
+  .atribuire .camp, .atribuire button { width: 100%; }
+}
