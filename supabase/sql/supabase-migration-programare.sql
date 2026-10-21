@@ -41,9 +41,14 @@ create table if not exists runlift.prog_zi (
   zi integer not null check (zi between 1 and 7),
   titlu text,
   vizibil boolean not null default true,
-  unique (program_id, id_extern),
-  unique (program_id, saptamana, zi)
+  unique (program_id, id_extern)
 );
+
+-- Zilele arhivate păstrează identitatea externă, dar eliberează poziția pentru
+-- înlocuiri sau reordonări. Eliminăm și constrângerea din versiunile anterioare.
+alter table runlift.prog_zi drop constraint if exists prog_zi_program_id_saptamana_zi_key;
+create unique index if not exists prog_zi_pozitie_vizibila
+  on runlift.prog_zi(program_id, saptamana, zi) where vizibil;
 
 create table if not exists runlift.prog_bloc (
   id uuid primary key default gen_random_uuid(),
@@ -132,7 +137,8 @@ returns jsonb language sql stable set search_path to '' as $$
       select max(z.zi) - 1 from runlift.prog_zi z
       where z.program_id = p.id and z.vizibil and z.saptamana = p.saptamani
     ), 6),
-    'sportiv_nume', s.nume
+    'sportiv_nume', s.nume,
+    'sportiv_gen', s.gen
   ) from runlift.prog_atribuire a
   join runlift.prog_program p on p.id = a.program_id
   join runlift.prog_sportiv s on s.id = a.sportiv_id where a.id = p_id;

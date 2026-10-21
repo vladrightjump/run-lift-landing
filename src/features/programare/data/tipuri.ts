@@ -10,7 +10,7 @@ export type ProfilDeSalvat = Pick<ProfilSportiv, 'nume' | 'gen' | 'telegram_id'>
 export type Miscare = {
   id: string; id_extern: string; nume: string; categorie: string; masuratori: string[]; youtube_id: string | null; sursa: string;
 };
-export interface SetProgram extends SetPrescriptie {
+interface SetProgram extends SetPrescriptie {
   id: string; id_extern: string; miscare: Miscare; miscare_id_extern?: string;
 }
 export interface Bloc extends BlocPrescriptie {
@@ -18,7 +18,7 @@ export interface Bloc extends BlocPrescriptie {
 }
 export type ZiProgram = { id: string; id_extern: string; saptamana: number; zi: number; titlu: string | null; blocuri: Bloc[] };
 export type Atribuire = {
-  id: string; program_id: string; sportiv_id: number; sportiv_nume: string; data_start: string; data_sfarsit: string;
+  id: string; program_id: string; sportiv_id: number; sportiv_nume: string; sportiv_gen: ProfilSportiv['gen']; data_start: string; data_sfarsit: string;
 };
 export type Program = {
   id: string; id_extern: string; nume: string; descriere: string; saptamani: number; zile_pe_saptamana: number;

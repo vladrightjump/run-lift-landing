@@ -5,7 +5,7 @@ export const profilSportiv = (extra: Partial<ProfilSportiv> = {}): ProfilSportiv
   id: 1, nume: 'Sportiv demo', gen: 'masculin', unitate_greutate: 'kg', unitate_distanta: 'm', telegram_id: null, ...extra,
 });
 export const atribuire = (extra: Partial<Atribuire> = {}): Atribuire => ({
-  id: 'atribuire-1', program_id: 'program-1', sportiv_id: 1, sportiv_nume: 'Sportiv demo', data_start: '2026-10-21', data_sfarsit: '2026-10-28', ...extra,
+  id: 'atribuire-1', program_id: 'program-1', sportiv_id: 1, sportiv_nume: 'Sportiv demo', sportiv_gen: 'masculin', data_start: '2026-10-21', data_sfarsit: '2026-10-28', ...extra,
 });
 export const blocProgram = (extra: Partial<Bloc> = {}): Bloc => ({
   id: 'bloc-1', id_extern: 'bloc-demo', ordine: 1, tip: 'strength', nume: 'Forță demo', ascuns: false,

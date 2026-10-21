@@ -176,6 +176,40 @@ describe('importul structurat și citirea', () => {
     expect(revenit.zile.map((z) => z.id)).toEqual(initial.zile.map((z) => z.id));
   });
 
+  it('înlocuiește o zi externă în aceeași poziție și păstrează predecesorul arhivat', async () => {
+    const initial = await importa();
+    const document = documentSintetic();
+    const zi = document.zile[0];
+    const veche = initial.zile.find((z) => z.saptamana === zi.saptamana && z.zi === zi.zi)!;
+    zi.id_extern = 'zi-sintetica-inlocuitoare';
+    const actualizat = await importa(document);
+    const noua = actualizat.zile.find((z) => z.saptamana === zi.saptamana && z.zi === zi.zi)!;
+    expect(noua.id).not.toBe(veche.id);
+    expect(actualizat.zile).toHaveLength(initial.zile.length);
+    expect((await db.query<{ vizibil: boolean }>('select vizibil from runlift.prog_zi where id = $1', [veche.id])).rows)
+      .toEqual([{ vizibil: false }]);
+    expect((await db.query<{ n: number }>('select count(*)::int n from runlift.prog_zi')).rows[0].n).toBe(5);
+    expect((await db.query<{ n: number }>(
+      'select count(*)::int n from runlift.prog_bloc where zi_id = $1 and not vizibil', [veche.id],
+    )).rows[0].n).toBe(8);
+  });
+
+  it('schimbă între ele pozițiile zilelor existente fără să le înlocuiască id-urile', async () => {
+    const initial = await importa();
+    const document = documentSintetic();
+    const [prima, aDoua] = document.zile;
+    const primaInitiala = initial.zile.find((z) => z.saptamana === prima.saptamana && z.zi === prima.zi)!;
+    const aDouaInitiala = initial.zile.find((z) => z.saptamana === aDoua.saptamana && z.zi === aDoua.zi)!;
+    [prima.saptamana, aDoua.saptamana] = [aDoua.saptamana, prima.saptamana];
+    [prima.zi, aDoua.zi] = [aDoua.zi, prima.zi];
+    const actualizat = await importa(document);
+    expect(actualizat.zile.find((z) => z.id === primaInitiala.id))
+      .toMatchObject({ saptamana: aDouaInitiala.saptamana, zi: aDouaInitiala.zi });
+    expect(actualizat.zile.find((z) => z.id === aDouaInitiala.id))
+      .toMatchObject({ saptamana: primaInitiala.saptamana, zi: primaInitiala.zi });
+    expect(actualizat.zile).toHaveLength(initial.zile.length);
+  });
+
   it('constrângerea refuză un YouTube id de 10 caractere și importul rămâne atomic', async () => {
     const document = documentSintetic();
     document.miscari[0].youtube_id = 'abcdefghij';
@@ -183,18 +217,35 @@ describe('importul structurat și citirea', () => {
     expect(await rpc('admin_prog_programe($1)', [ADMIN_TOKEN])).toEqual([]);
   });
 
-  it('baza refuză un tip de bloc necunoscut și poziții duplicate de zi', async () => {
+  it('baza refuză un tip de bloc necunoscut', async () => {
     const document = documentSintetic();
     document.zile[0].blocuri[0].tip = 'necunoscut';
     await expect(importa(document)).rejects.toThrow(/check constraint/);
+  });
+
+  it('refuză două zile vizibile în aceeași poziție și păstrează importul anterior atomic', async () => {
+    const initial = await importa();
     const duplicat = documentSintetic();
     duplicat.zile.push({ ...duplicat.zile[0], id_extern: 'alta-zi-sintetica' });
     await expect(importa(duplicat)).rejects.toThrow(/unique constraint/);
+    expect(await rpc('admin_prog_program($1,$2)', [ADMIN_TOKEN, initial.id])).toEqual(initial);
+    expect((await db.query<{ n: number }>('select count(*)::int n from runlift.prog_zi')).rows[0].n).toBe(4);
   });
 });
 
 describe('atribuirea, Azi și calendarul', () => {
   beforeEach(() => profil());
+
+  it('păstrează genul proprietarului pentru citirea atribuirii de către alt admin', async () => {
+    const p = await importa();
+    await adaugaAlDoileaAdmin();
+    await rpc('admin_prog_profil_salveaza($1,$2,$3)', [tokenB, 'Sportivă sintetică', 'feminin']);
+    const a = await atribuie(p.id, '2026-09-07', tokenB);
+    const calendar = await rpc<{ atribuire: { sportiv_gen: string } }>('admin_prog_calendar($1,$2,$3)', [ADMIN_TOKEN, a.id, '2026-10-21']);
+    expect(calendar.atribuire.sportiv_gen).toBe('feminin');
+    expect(await rpc('admin_prog_profil($1)', [ADMIN_TOKEN])).toMatchObject({ gen: 'masculin' });
+    expect((await azi('2026-10-21')).antrenamente).toEqual([]);
+  });
 
   it('mapează exact zilele relative din AE5, inclusiv vizita în trecut', async () => {
     const p = await importa();
@@ -306,6 +357,19 @@ describe('drepturi și migrare', () => {
     const inainte = (await functii()).rows;
     await db.exec(migrare);
     expect((await functii()).rows).toEqual(inainte);
+    expect(await rpc('admin_prog_program($1,$2)', [ADMIN_TOKEN, initial.id])).toEqual(initial);
+  });
+
+  it('înlocuiește constrângerea veche de poziție la reaplicarea migrării', async () => {
+    const initial = await importa();
+    await db.exec(`drop index runlift.prog_zi_pozitie_vizibila;
+      alter table runlift.prog_zi add constraint prog_zi_program_id_saptamana_zi_key
+      unique (program_id, saptamana, zi)`);
+    await db.exec(migrare);
+    expect((await db.query<{ n: number }>(`select count(*)::int n from pg_constraint
+      where conrelid = 'runlift.prog_zi'::regclass and conname = 'prog_zi_program_id_saptamana_zi_key'`)).rows[0].n).toBe(0);
+    expect((await db.query<{ partial: boolean }>(`select indpred is not null as partial from pg_index
+      where indexrelid = 'runlift.prog_zi_pozitie_vizibila'::regclass`)).rows[0].partial).toBe(true);
     expect(await rpc('admin_prog_program($1,$2)', [ADMIN_TOKEN, initial.id])).toEqual(initial);
   });
 });
