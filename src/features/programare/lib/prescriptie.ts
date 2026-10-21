@@ -196,8 +196,7 @@ export const prescriptieBloc = (bloc: BlocPrescriptie, optiuni: OptiuniPrescript
   for (const [exercitiu, seturi] of exercitii) {
     numarSeturi = Math.max(numarSeturi, seturi.length);
     const etichetaRand = superset ? `${eticheta}${exercitiu}` : eticheta;
-    const grupuri: { rand: RandPrescriptie; tinta: string }[] = [];
-    let ultimaCheie: string | null = null;
+    const grupuri: { rand: RandPrescriptie; tinta: string; cheie: string }[] = [];
     for (const set of seturi) {
       const tinta = tinteSportiv(set, optiuni.gen);
       const detalii = detaliiTinta(tinta, optiuni.unuRm?.[set.miscare.id]);
@@ -216,16 +215,15 @@ export const prescriptieBloc = (bloc: BlocPrescriptie, optiuni: OptiuniPrescript
       const instructiuniDupa = set.provenienta?.componenta?.postInstructions || null;
       const cheie = JSON.stringify([set.miscare.id, text, pauza, note, instructiuniInainte, instructiuniDupa]);
       const ultim = grupuri.at(-1);
-      if (ultim && ultimaCheie === cheie) {
+      if (ultim?.cheie === cheie) {
         ultim.rand.seturi += 1;
         if (set.id) ultim.rand.iduriSet.push(set.id);
       } else {
-        grupuri.push({ tinta: textTinta, rand: {
+        grupuri.push({ tinta: textTinta, cheie, rand: {
           eticheta: etichetaRand, exercitiu, miscareId: set.miscare.id, text,
           seturi: 1, iduriSet: set.id ? [set.id] : [], pauza, note, instructiuniInainte, instructiuniDupa,
         } });
       }
-      ultimaCheie = cheie;
     }
     const primul = grupuri[0];
     if (primul) {

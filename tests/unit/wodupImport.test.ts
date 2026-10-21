@@ -50,4 +50,24 @@ describe('import WodUp (date sintetice)', () => {
     expect(b.parametri).toMatchObject({ interval_sec: 60, durata_sec: 1200, blocks: [[0]] });
     expect(b.seturi[0]).toMatchObject({ repetari: '15-20', incarcare: 70, unitate_incarcare: '%1rm', tinte_text: { calorii: 'X' } });
   });
+
+  it('păstrează instrucțiunile oficiale și metadatele tuturor componentelor', () => {
+    const first = componentaWodup();
+    const c = { ...first, workout: { ...first.workout, officialInstructions: 'Synthetic official instructions' } };
+    const b = transforma(raspunsWodup([c]), optiuni).zile[0].blocuri[0];
+    expect(b.instructiuni_inainte).toBe('Before\n\nSynthetic official instructions');
+    expect(b.parametri.detalii_componente).toMatchObject([{
+      id: 'component-1', notesForCoaches: 'Synthetic private note',
+      workout: { officialInstructions: 'Synthetic official instructions', type: 'Strength' },
+    }]);
+  });
+
+  it('nu înlocuiește un overlay cu un video generic la o apariție ulterioară', () => {
+    const first = componentaWodup();
+    const coach = { ...first, workout: { ...first.workout, movementData: [miscareWodup('101', {
+      currentUserMovementOverlays: [{ videosArray: [{ service: 'youtube', videoId: 'ZYXWVUTSRQP' }] }],
+    })] } };
+    const generic = componentaWodup({ id: 'component-2', prefix: 'B', rowOrder: 1 });
+    expect(transforma(raspunsWodup([coach, generic]), optiuni).miscari[0].youtube_id).toBe('ZYXWVUTSRQP');
+  });
 });

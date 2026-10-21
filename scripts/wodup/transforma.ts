@@ -1,4 +1,5 @@
 import { idYouTube } from '../../src/shared/lib/youtube';
+import { feetInMetri, inchInCm, livreInKg } from '../../src/features/programare/lib/unitati';
 
 type Obiect = Record<string, unknown>;
 const obiect = (v: unknown): Obiect => v && typeof v === 'object' && !Array.isArray(v) ? v as Obiect : {};
@@ -13,13 +14,13 @@ const TINTE = { reps: 'repetari', load: 'incarcare', distance: 'distanta_m', dur
 const converteste = (valoare: unknown, cheie: string, unitate: string): number | null => {
   const n = numar(valoare);
   if (n === null) return null;
-  if (cheie === 'load' && unitate === 'lbs') return rotunjeste(n * 0.45359237, 0.5);
+  if (cheie === 'load' && unitate === 'lbs') return rotunjeste(livreInKg(n), 0.5);
   if (cheie === 'distance') {
-    if (unitate === 'feet') return rotunjeste(n * 0.3048, 0.5);
+    if (unitate === 'feet') return rotunjeste(feetInMetri(n), 0.5);
     if (unitate === 'km') return n * 1000;
     if (unitate === 'miles') return rotunjeste(n * 1609.344, 0.5);
   }
-  if (cheie === 'height' && unitate === 'inches') return Math.round(n * 2.54);
+  if (cheie === 'height' && unitate === 'inches') return Math.round(inchInCm(n));
   if (cheie === 'duration' && unitate === 'minutes') return n * 60;
   return n;
 };
@@ -81,6 +82,7 @@ export const transforma = (raspuns: unknown, optiuni: { dataStart: string; sapta
   const primaClasa = obiect(wods[0].classType);
   const idProgram = text(primaSursa.id || primaClasa.id || primaSursa.name || primaClasa.name);
   const miscari = new Map<string, DocumentImport['miscari'][number]>();
+  const miscariCuOverlay = new Set<string>();
   const zile: DocumentImport['zile'] = [];
   for (const w of wods) {
     const sursa = obiect(w.fixedAssignmentSourceClassType);
@@ -99,9 +101,12 @@ export const transforma = (raspuns: unknown, optiuni: { dataStart: string; sapta
       for (const m of [...lista(workout.movementData), ...lista(c.additionalMovements)]) {
         const mid = text(m.id);
         const existent = miscari.get(mid);
+        const overlay = video({ ...m, videosArray: [] });
+        const youtubeId = overlay || (miscariCuOverlay.has(mid) ? existent?.youtube_id : null) || video(m) || existent?.youtube_id || null;
+        if (overlay) miscariCuOverlay.add(mid);
         miscari.set(mid, { id_extern: mid, nume: text(m.name), categorie: text(m.category),
           masuratori: Object.keys(TINTE).filter(k => m[`has${k === 'reps' ? 'Reps' : k[0].toUpperCase()+k.slice(1)}`] === true).map(k => TINTE[k as keyof typeof TINTE]),
-          youtube_id: video(m) || existent?.youtube_id || null, sursa: 'TTT / WodUp' });
+          youtube_id: youtubeId, sursa: 'TTT / WodUp' });
       }
       const prefix = text(c.prefix) || (tip === 'warm_up' ? 'Încălzire' : String.fromCharCode(65 + index));
       const grup = prefix.replace(/\d+$/, '');
@@ -112,6 +117,13 @@ export const transforma = (raspuns: unknown, optiuni: { dataStart: string; sapta
       const pozitii = new Map<string, number>();
       const repetitii = new Map<string, number>();
       const rest = obiect(d.rest);
+      const instructiuniInainte = [text(c.preInstructions), text(workout.officialInstructions)].filter(Boolean).join('\n\n');
+      const detaliiComponenta = {
+        id: c.id, prefix: c.prefix, name: c.name, notes: c.notes, notesForCoaches: c.notesForCoaches,
+        preInstructions: c.preInstructions, postInstructions: c.postInstructions,
+        hidden: c.hidden, isAlternating: c.isAlternating, rowOrder: c.rowOrder,
+        workout: { type: workout.type, name: workout.name, details: d, officialInstructions: workout.officialInstructions },
+      };
       const seturi: SetImportat[] = lista(d.movements).map((m, si) => {
         const mid = text(m.id);
         if (!miscari.has(mid)) throw new Error(`Mișcare fără metadate: ${mid}`);
@@ -123,17 +135,18 @@ export const transforma = (raspuns: unknown, optiuni: { dataStart: string; sapta
           ...masculin.valori, unitate_incarcare: m.loadUnit === '%1rm' ? '%1rm' : 'kg',
           tinte_feminine: feminin.valori,
           tinte_text: { ...masculin.neNumerice, ...Object.fromEntries(Object.entries(feminin.neNumerice).map(([k,v]) => [`${k}_feminin`,v])) },
-          provenienta: { ...m, componenta: { id: c.id, prefix: c.prefix, tip, notes: c.notes, notesForCoaches: c.notesForCoaches, preInstructions: c.preInstructions, postInstructions: c.postInstructions } },
+          provenienta: { ...m, pauza_originala: rest, componenta: { id: c.id, prefix: c.prefix, tip, notes: c.notes, notesForCoaches: c.notesForCoaches, preInstructions: instructiuniInainte, postInstructions: c.postInstructions } },
           pauza_tip: ODIHNA[text(rest.type)] ?? 'fara', pauza_sec: numar(rest.duration), note: text(c.notes) };
       });
       const parametri: Obiect = { prefix: grup, superset: Boolean(c.isAlternating), interval_sec: numar(d.interval), durata_sec: numar(d.duration), criteriu_scor: d.scoreBy ?? null,
         ...Object.fromEntries(Object.entries(d).filter(([k]) => !['movements','description','name','type','rest'].includes(k))),
-        componente: [text(c.id)], pauza_tip: ODIHNA[text(rest.type)] ?? 'fara', pauza_sec: numar(rest.duration) };
+        componente: [text(c.id)], detalii_componente: [detaliiComponenta], pauza_tip: ODIHNA[text(rest.type)] ?? 'fara', pauza_sec: numar(rest.duration) };
       if (seUneste) {
         anterior!.seturi.push(...seturi);
         anterior!.parametri.componente = [...anterior!.parametri.componente as string[], text(c.id)];
+        anterior!.parametri.detalii_componente = [...anterior!.parametri.detalii_componente as unknown[], detaliiComponenta];
       } else blocuri.push({ id_extern: text(c.id), ordine: index + 1, tip, nume: text(c.name || workout.name || d.name), ascuns: Boolean(c.hidden),
-        instructiuni_inainte: text(c.preInstructions), instructiuni_dupa: text(c.postInstructions), note_sportiv: text(c.notes), note_antrenor: text(c.notesForCoaches),
+        instructiuni_inainte: instructiuniInainte, instructiuni_dupa: text(c.postInstructions), note_sportiv: text(c.notes), note_antrenor: text(c.notesForCoaches),
         text: tip === 'generic' || tip === 'warm_up' ? text(d.description || workout.description) : '', parametri, seturi });
     }
     zile.push({ id_extern: text(w.id), saptamana: Math.floor(delta / 7) + 1, zi: delta % 7 + 1, titlu: text(w.name), blocuri });
