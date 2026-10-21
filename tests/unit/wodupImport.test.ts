@@ -1,9 +1,46 @@
 import { describe, expect, it } from 'vitest';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { transforma } from '../../scripts/wodup/transforma';
 import { componentaWodup, miscareWodup, raspunsWodup } from '../support/builders/wodup';
 
 const optiuni = { dataStart: '2026-09-07', saptamani: 12 };
 describe('import WodUp (date sintetice)', () => {
+  it('CLI-ul nu afișează credentialul nici dacă transportul îl include în eroare', async () => {
+    const rezultat = await promisify(execFile)(process.execPath, ['--import', 'tsx', '--input-type=module', '--eval',
+      "globalThis.fetch = async () => { throw new Error('cookie-sintetic-secret'); }; await import('./scripts/wodup/extrage.ts');",
+    ], { env: { ...process.env, WODUP_COOKIE: 'cookie-sintetic-secret' } }).then(
+      ({ stdout, stderr }) => ({ cod: 0, output: stdout + stderr }),
+      (err: { code: number; stdout: string; stderr: string }) => ({ cod: err.code, output: err.stdout + err.stderr }),
+    );
+    expect(rezultat.cod).toBe(1);
+    expect(rezultat.output).not.toContain('cookie-sintetic-secret');
+    expect(rezultat.output).toContain('Extragerea a eșuat');
+  });
+
+  it('respinge răspunsul cu identități de program diferite', () => {
+    const raspuns = raspunsWodup();
+    const altaZi = raspunsWodup([componentaWodup({ id: 'component-2' })], '2026-09-18').data.currentUser.activityTimeline[0];
+    altaZi.subscribedWods[0].classType.id = 'alt-program-sintetic';
+    raspuns.data.currentUser.activityTimeline.push(altaZi);
+    expect(() => transforma(raspuns, optiuni)).toThrow('Răspunsul include mai multe programe; extrage separat programul dorit.');
+  });
+
+  it.each([
+    { data: '2026-09-06', mesaj: 'Data de start nu corespunde zilelor importate.' },
+    { data: '2026-11-30', mesaj: 'Există zile în afara duratei programului.' },
+  ])('respinge ziua $data din afara duratei alese', ({ data, mesaj }) => {
+    expect(() => transforma(raspunsWodup([componentaWodup()], data), optiuni)).toThrow(mesaj);
+  });
+
+  it('respinge o mișcare fără metadate chiar după un set valid', () => {
+    const componenta = componentaWodup({ workout: {
+      type: 'Strength', movementData: [miscareWodup()],
+      details: { movements: [{ id: 101, reps: '5' }, { id: 202, reps: '5' }] },
+    } });
+    expect(() => transforma(raspunsWodup([componenta]), optiuni)).toThrow('Mișcare fără metadate: 202');
+  });
+
   it('convertește ambele ținte și păstrează proveniența, notele și seturile', () => {
     const doc = transforma(raspunsWodup(), optiuni);
     expect(doc.zile).toHaveLength(1);

@@ -10,7 +10,7 @@ export interface Pauza {
   pauza_raport?: number | null;
 }
 
-export interface TintePrescriptie {
+interface TintePrescriptie {
   repetari?: string | null;
   incarcare?: number | null;
   unitate_incarcare?: 'kg' | '%1rm' | null;
@@ -41,7 +41,7 @@ export interface SetPrescriptie extends TintePrescriptie, Pauza {
   note?: string | null;
 }
 
-export interface ParametriBloc extends Pauza {
+interface ParametriBloc extends Pauza {
   prefix?: string | null;
   interval_sec?: number | null;
   durata_sec?: number | null;
@@ -67,7 +67,7 @@ export interface OptiuniPrescriptie {
   unuRm?: Readonly<Record<string, number | null>>;
 }
 
-export interface RandPrescriptie {
+interface RandPrescriptie {
   eticheta: string;
   exercitiu: number;
   miscareId: string;

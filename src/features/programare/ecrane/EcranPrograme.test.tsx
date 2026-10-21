@@ -1,16 +1,25 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, within, cleanup } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within, cleanup } from '@testing-library/react';
 import { HttpResponse } from 'msw';
 import { server } from '../../../../tests/support/vitest.setup';
 import { rpcHandler } from '../../../../tests/support/handlers';
 import { atribuire, documentProgram, profilSportiv, program } from '../../../../tests/support/builders/programare';
 import { EcranProgramare } from '../index';
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const monteaza = (parametri: string[] = [], onAuthError = vi.fn(() => false)) => render(
   <EcranProgramare ecran="prog-programe" parametri={parametri} sesiune={{ token: 'token-test', onAuthError, showToast: vi.fn() }} />
 );
 const alegeFisier = (continut: unknown) => fireEvent.change(screen.getByLabelText('Fișier JSON de import'), { target: { files: [new File([JSON.stringify(continut)], 'demo.json', { type: 'application/json' })] } });
+const controleazaCitirile = () => {
+  const citiri: FileReader[] = [];
+  vi.spyOn(FileReader.prototype, 'readAsText').mockImplementation(function (this: FileReader) { citiri.push(this); });
+  return citiri;
+};
+const terminaCitirea = (citire: FileReader, continut: unknown) => act(() => {
+  Object.defineProperty(citire, 'result', { value: JSON.stringify(continut), configurable: true });
+  citire.dispatchEvent(new ProgressEvent('load'));
+});
 
 describe('Programe', () => {
   it('salvează profilul și explică lipsa alertelor fără Telegram', async () => {
@@ -68,6 +77,52 @@ describe('Programe', () => {
     alegeFisier({ versiune: 1 });
     expect(screen.queryByRole('button', { name: 'Confirmă importul' })).toBeNull();
     await screen.findByRole('alert');
+    expect(importa).not.toHaveBeenCalled();
+  });
+
+  it.each(['înainte', 'după'] as const)('confirmă doar ultimul fișier când citirea veche se termină %s', async ordine => {
+    const citiri = controleazaCitirile();
+    const importa = vi.fn();
+    server.use(rpcHandler('admin_prog_importa', async ({ request }) => {
+      importa(await request.json()); return HttpResponse.json(program());
+    }));
+    monteaza();
+    await screen.findByLabelText('Fișier JSON de import');
+    const vechi = documentProgram(); vechi.program.nume = 'Program sintetic vechi';
+    const recent = documentProgram(); recent.program.nume = 'Program sintetic recent'; recent.program.id_extern = 'program-recent';
+    alegeFisier(vechi);
+    alegeFisier(recent);
+    expect(citiri).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Confirmă importul' })).toBeNull();
+    if (ordine === 'înainte') {
+      terminaCitirea(citiri[0], vechi);
+      expect(screen.queryByRole('button', { name: 'Confirmă importul' })).toBeNull();
+      expect(screen.getByText('Citim fișierul…')).toBeDefined();
+    }
+    terminaCitirea(citiri[1], recent);
+    if (ordine === 'după') terminaCitirea(citiri[0], vechi);
+    expect(screen.getByText('Program sintetic recent')).toBeDefined();
+    expect(screen.queryByText('Program sintetic vechi')).toBeNull();
+    expect(importa).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmă importul' }));
+    await waitFor(() => expect(importa).toHaveBeenCalledExactlyOnceWith({ p_token: 'token-test', p_document: recent }));
+  });
+
+  it('o eroare la citirea curentă elimină rezumatul anterior și împiedică importul', async () => {
+    const citiri = controleazaCitirile();
+    const importa = vi.fn(() => HttpResponse.json(program()));
+    server.use(rpcHandler('admin_prog_importa', importa));
+    monteaza();
+    await screen.findByLabelText('Fișier JSON de import');
+    alegeFisier(documentProgram());
+    terminaCitirea(citiri[0], documentProgram());
+    expect(screen.getByRole('button', { name: 'Confirmă importul' })).toBeDefined();
+    alegeFisier(documentProgram());
+    act(() => { citiri[1].dispatchEvent(new ProgressEvent('error')); });
+    expect(screen.getByRole('alert').textContent).toBe('Nu am putut citi fișierul. Alege-l din nou.');
+    expect(screen.queryByRole('button', { name: 'Confirmă importul' })).toBeNull();
+    expect(screen.queryByText('Citim fișierul…')).toBeNull();
+    expect(screen.queryByText('2 săptămâni · 1 zile · 1 mișcări')).toBeNull();
     expect(importa).not.toHaveBeenCalled();
   });
 

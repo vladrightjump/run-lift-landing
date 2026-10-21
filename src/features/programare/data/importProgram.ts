@@ -1,3 +1,4 @@
+import { esteIdYouTube } from '../../../shared/lib/youtube';
 import type { TipBloc, TipPauza } from '../lib/prescriptie';
 
 type Obiect = Record<string, unknown>;
@@ -46,7 +47,7 @@ export const citesteDocumentImport = (continut: string): DocumentImport => {
   for (const m of miscari) {
     sir(m.id_extern, true); sir(m.nume, true); sir(m.categorie); sir(m.sursa);
     lista(m.masuratori).forEach(c => unaDin(c, ['repetari', 'incarcare', 'distanta_m', 'durata_sec', 'calorii', 'inaltime_cm', 'putere_w', 'tempo']));
-    if (m.youtube_id !== null && (typeof m.youtube_id !== 'string' || !/^[A-Za-z0-9_-]{11}$/.test(m.youtube_id))) invalid();
+    if (m.youtube_id !== null && (typeof m.youtube_id !== 'string' || !esteIdYouTube(m.youtube_id))) invalid();
   }
   unice(miscari.map(m => m.id_extern));
   const miscariId = new Set(miscari.map(m => m.id_extern));

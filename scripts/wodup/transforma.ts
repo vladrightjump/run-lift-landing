@@ -50,7 +50,7 @@ const video = (m: Obiect) => {
   return null;
 };
 
-export type SetImportat = {
+type SetImportat = {
   id_extern: string; exercitiu: number; ordine: number; miscare_id_extern: string;
   tinte_feminine: Record<string, string | number | null>; tinte_text: Record<string, string>;
   provenienta: Obiect; pauza_tip: string; pauza_sec: number | null; note: string;
@@ -59,7 +59,7 @@ export type SetImportat = {
   calorii?: string | number | null; inaltime_cm?: string | number | null; tempo?: string | number | null;
   putere_w?: string | number | null;
 };
-export type BlocImportat = {
+type BlocImportat = {
   id_extern: string; ordine: number; tip: string; nume: string; ascuns: boolean;
   instructiuni_inainte: string; instructiuni_dupa: string; note_sportiv: string;
   note_antrenor: string; text: string; parametri: Obiect; seturi: SetImportat[];

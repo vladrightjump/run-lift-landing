@@ -2,6 +2,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve, relative } from 'node:path';
 import { transforma } from './transforma';
 
+/** Only messages authored here may reach the terminal; transport errors can echo headers. */
+class EroareOperator extends Error {}
+
 // Same read-only GraphQL fields used by WodUp's Timeline operation.
 const query = `query Timeline($startDate: Date!, $endDate: Date!) {
   currentUser {
@@ -35,19 +38,19 @@ const query = `query Timeline($startDate: Date!, $endDate: Date!) {
 async function main() {
   const cookie = process.env.WODUP_COOKIE;
   delete process.env.WODUP_COOKIE;
-  if (!cookie) throw new Error('Setează WODUP_COOKIE doar în mediul procesului; nu îl salva în fișiere.');
+  if (!cookie) throw new EroareOperator('Setează WODUP_COOKIE doar în mediul procesului; nu îl salva în fișiere.');
   const [startDate = '2026-09-07', endDate = '2026-11-28', iesire = 'imports/hyrox-prep.json'] = process.argv.slice(2);
   const destinatie = resolve(iesire);
   const cale = relative(resolve('imports'), destinatie);
-  if (cale.startsWith('..') || cale === '' || resolve('imports', cale) !== destinatie) throw new Error('Fișierul trebuie să fie în imports/.');
+  if (cale.startsWith('..') || cale === '' || resolve('imports', cale) !== destinatie) throw new EroareOperator('Fișierul trebuie să fie în imports/.');
   const response = await fetch('https://www.wodup.com/api/graphql?op=Timeline', {
     method: 'POST', redirect: 'error',
     headers: { 'content-type': 'application/json', cookie },
     body: JSON.stringify({ operationName: 'Timeline', variables: { startDate, endDate }, query }),
   });
-  if (!response.ok) throw new Error(`WodUp a refuzat cererea (HTTP ${response.status}). Verifică sesiunea.`);
+  if (!response.ok) throw new EroareOperator(`WodUp a refuzat cererea (HTTP ${response.status}). Verifică sesiunea.`);
   const brut = await response.json() as { errors?: unknown[] };
-  if (brut.errors?.length) throw new Error('WodUp a întors o eroare GraphQL. Verifică sesiunea și accesul la program.');
+  if (brut.errors?.length) throw new EroareOperator('WodUp a întors o eroare GraphQL. Verifică sesiunea și accesul la program.');
   const document = transforma(brut, { dataStart: startDate, saptamani: 12 });
   await mkdir(dirname(destinatie), { recursive: true });
   await writeFile(destinatie, JSON.stringify(document, null, 2), { mode: 0o600 });
@@ -58,6 +61,6 @@ async function main() {
 
 main().catch((eroare: unknown) => {
   // Neither the credential, response body nor paid program content is logged.
-  console.error(eroare instanceof Error ? eroare.message : 'Extragerea a eșuat.');
+  console.error(eroare instanceof EroareOperator ? eroare.message : 'Extragerea a eșuat. Verifică sesiunea și datele programului.');
   process.exitCode = 1;
 });
