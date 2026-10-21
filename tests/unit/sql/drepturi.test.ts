@@ -186,6 +186,10 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
       'admin_sala_seteaza_antrenament', 'admin_sala_salveaza_config', 'admin_sala_porneste_bot',
       'admin_sala_comanda', 'admin_sala_scoate_din_grup', 'admin_sala_salveaza_membru',
       'admin_sala_leaga_cont', 'admin_sala_membru_din_cont', 'admin_sala_uneste',
+      // Programarea privată: anon poate chema RPC-ul, dar fiecare cere token.
+      'admin_prog_profil', 'admin_prog_profil_salveaza', 'admin_prog_importa',
+      'admin_prog_programe', 'admin_prog_program', 'admin_prog_atribuie',
+      'admin_prog_azi', 'admin_prog_calendar',
     ],
   ];
 
@@ -203,6 +207,7 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
     // Ajutoarele funcțiilor grupului: ziua la Chișinău și urma scrierilor.
     'sala_azi',
     'sala_jurnal',
+    '_prog_zi_json', '_prog_atribuire_json', '_prog_program_json',
   ];
 
   it('inventarul e complet — o funcție nouă nu poate trece neobservată', async () => {
