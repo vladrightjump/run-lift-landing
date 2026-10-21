@@ -103,6 +103,78 @@ describe('Azi', () => {
     expect(navigare).toHaveBeenLastCalledWith('prog-azi', [azi, 'bloc-1', '1', 'atribuire-1']);
   });
 
+  it('o adresă directă deschide toată prescripția supersetului și evidențiază A2 fără formular de logare', async () => {
+    const baza = blocProgram();
+    const superset = blocProgram({ instructiuni_inainte: 'Pregătește spațiul demo.', note_sportiv: 'Păstrează ritmul demo.', seturi: [baza.seturi[0], { ...baza.seturi[0], id: 'set-2', exercitiu: 2, ordine: 2, miscare: { ...baza.seturi[0].miscare, id: 'miscare-2', nume: 'Fandare demo' } }] });
+    raspunsAzi([antrenament({ zi: ziProgram({ blocuri: [superset] }) })]);
+    monteaza([azi, superset.id, '2', 'atribuire-1']);
+    const pagina = await screen.findByRole('region', { name: 'Antrenament: Program sintetic' });
+    const context = within(pagina).getByRole('region', { name: 'Bloc A' });
+    expect(within(context).getByText('5 Genuflexiune demo · 20 kg')).toBeDefined();
+    expect(within(context).getByText('5 Fandare demo · 20 kg').closest('li')?.getAttribute('aria-current')).toBe('true');
+    expect(within(context).getByText('Pregătește spațiul demo.')).toBeDefined();
+    expect(within(context).getByText('Păstrează ritmul demo.')).toBeDefined();
+    expect(within(pagina).getByRole('heading', { name: 'Istoric' })).toBeDefined();
+    expect(within(pagina).getByText('Nu există rezultate înregistrate pentru acest exercițiu.')).toBeDefined();
+    expect(within(pagina).queryByRole('form')).toBeNull();
+    expect(within(pagina).queryByRole('button', { name: /salvează|loghează/i })).toBeNull();
+  });
+
+  it('o atribuire aleasă din calendar citește ziua sportivului vizat, cu țintele sale feminine', async () => {
+    const alta = atribuire({ id: 'atribuire-alta', sportiv_id: 2, sportiv_nume: 'Sportivă demo', sportiv_gen: 'feminin' });
+    raspunsAzi([]);
+    server.use(
+      rpcHandler('admin_prog_programe', () => HttpResponse.json([program({ atribuiri: [alta] })])),
+      rpcHandler('admin_prog_calendar', () => HttpResponse.json({ atribuire: alta, zile: [{ ...ziProgram(), data: azi, stare: 'nefăcut' }], totaluri: { zile_antrenament: 1, rezultate: 0, pr: 0 } })),
+    );
+    const navigare = monteaza([azi, 'bloc-1', '1', alta.id]);
+    const pagina = await screen.findByRole('region', { name: 'Antrenament: Program sintetic' });
+    expect(within(pagina).getAllByText('5 Genuflexiune demo · 15 kg').length).toBeGreaterThan(0);
+    expect(within(pagina).queryByText('5 Genuflexiune demo · 20 kg')).toBeNull();
+    fireEvent.click(within(pagina).getByRole('button', { name: 'Închide antrenamentul' }));
+    expect(navigare).toHaveBeenLastCalledWith('prog-azi', [azi]);
+  });
+
+  it('A2 înlocuiește fragmentul curent fără pași suplimentari, iar închiderea unei foi deschise în admin revine înapoi', async () => {
+    const baza = blocProgram();
+    const superset = blocProgram({ seturi: [baza.seturi[0], { ...baza.seturi[0], id: 'set-2', exercitiu: 2, ordine: 2, miscare: { ...baza.seturi[0].miscare, id: 'miscare-2', nume: 'Fandare demo' } }] });
+    const adresa = window.location.href;
+    const stare = window.history.state;
+    const inapoi = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+    try {
+      window.history.replaceState({ programareFoaie: { data: azi, atribuire: 'atribuire-1' }, altaStare: 'păstrată' }, '', `#prog-azi/${azi}/bloc-1/1/atribuire-1`);
+      const pasi = window.history.length;
+      raspunsAzi([antrenament({ zi: ziProgram({ blocuri: [superset] }) })]);
+      monteaza([azi, 'bloc-1', '1', 'atribuire-1']);
+      const pagina = await screen.findByRole('region', { name: 'Antrenament: Program sintetic' });
+      fireEvent.click(within(pagina).getByRole('button', { name: 'A2' }));
+      expect(window.location.hash).toBe(`#prog-azi/${azi}/bloc-1/2/atribuire-1`);
+      expect(window.history.length).toBe(pasi);
+      expect(window.history.state.altaStare).toBe('păstrată');
+      fireEvent.click(within(pagina).getByRole('button', { name: 'Închide antrenamentul' }));
+      expect(inapoi).toHaveBeenCalledTimes(1);
+    } finally {
+      inapoi.mockRestore();
+      window.history.replaceState(stare, '', adresa);
+    }
+  });
+
+  it('o adresă directă către un bloc ascuns sau necunoscut arată o ieșire înapoi la zi', async () => {
+    raspunsAzi([antrenament()]);
+    const navigare = monteaza([azi, 'bloc-inexistent', '1', 'atribuire-1']);
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('Antrenamentul cerut nu este disponibil'));
+    fireEvent.click(screen.getByRole('button', { name: 'Înapoi la zi' }));
+    expect(navigare).toHaveBeenLastCalledWith('prog-azi', [azi]);
+  });
+
+  it('o dată invalidă din adresa antrenamentului arată ieșirea către azi fără eroare de afișare', async () => {
+    raspunsAzi([antrenament()]);
+    const navigare = monteaza(['2026-02-31', 'bloc-1', '1', 'atribuire-1']);
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('Antrenamentul cerut nu este disponibil'));
+    fireEvent.click(screen.getByRole('button', { name: 'Înapoi la zi' }));
+    expect(navigare).toHaveBeenLastCalledWith('prog-azi', [azi]);
+  });
+
   it('deschide video valid în Dialog și închide cu butonul sau Escape', async () => {
     raspunsAzi([antrenament()]); monteaza();
     const declansator = await screen.findByRole('button', { name: 'Video: Genuflexiune demo' });

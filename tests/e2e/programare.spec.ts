@@ -5,7 +5,7 @@ import { atribuire, blocProgram, documentProgram, profilSportiv, program, ziProg
 import { http, HttpResponse } from 'msw';
 
 const citireSintetica = () => {
-  const a = atribuire({ data_start: '2026-09-07', data_sfarsit: '2026-11-28' });
+  const a = atribuire({ data_start: '2026-09-07', data_sfarsit: '2026-11-28', sportiv_gen: 'feminin' });
   const p = program({ saptamani: 12, zile_pe_saptamana: 6, atribuiri: [a] });
   const profil = profilSportiv({ gen: 'feminin' });
   const baza = blocProgram();
@@ -29,6 +29,113 @@ const citireSintetica = () => {
 };
 
 test.describe('Programare — etapa 1', () => {
+  test('foaia mobilă păstrează supersetul, schimbă blocul și se închide prin Înapoi', async ({ page, network }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'));
+    installAdminResponses(network, citireSintetica());
+    network.use(http.get('https://www.youtube-nocookie.com/*', () => new HttpResponse('<html>Demo video</html>', { headers: { 'Content-Type': 'text/html' } })));
+    await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+    await page.goto('/admin#prog-azi/2026-10-21');
+    const deschide = page.getByRole('button', { name: 'Deschide antrenamentul' });
+    await deschide.click();
+    const foaie = page.getByRole('dialog', { name: 'Antrenament: Program sintetic' });
+    await expect(foaie).toBeVisible();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+    const blocuri = foaie.getByRole('navigation', { name: 'Blocurile antrenamentului' });
+    await blocuri.getByRole('button', { name: 'A2', exact: true }).click();
+    await expect(page).toHaveURL(/#prog-azi\/2026-10-21\/bloc-1\/2\/atribuire-1$/);
+    await expect(blocuri.getByRole('button', { name: 'A2', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(foaie.getByRole('region', { name: 'Blocurile zilei' }).locator('li[aria-current="true"]')).toContainText('Transport demo 14 calorii');
+    await foaie.getByRole('tab', { name: 'Istoric', exact: true }).click();
+    await expect(foaie.getByText('Nu există rezultate înregistrate pentru acest exercițiu.')).toBeVisible();
+    await foaie.getByRole('tab', { name: 'Exercițiu', exact: true }).click();
+    await blocuri.getByRole('button', { name: 'A1', exact: true }).click();
+    await foaie.getByRole('region', { name: 'Exercițiul curent' }).getByRole('button', { name: 'Video: Genuflexiune demo' }).click();
+    const video = page.getByRole('dialog', { name: 'Genuflexiune demo', exact: true });
+    await expect(video).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(video).toHaveCount(0);
+    await expect(foaie).toBeVisible();
+    await blocuri.getByRole('button', { name: 'B', exact: true }).click();
+    await expect(foaie.getByText('Mișcare liberă, după confort.')).toBeVisible();
+    await expect(foaie.locator('form')).toHaveCount(0);
+    expect(await foaie.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await page.goBack();
+    await expect(foaie).toHaveCount(0);
+    await expect(page).toHaveURL(/#prog-azi\/2026-10-21$/);
+    await expect(deschide).toBeFocused();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+    await deschide.click();
+    await page.getByRole('button', { name: 'Închide antrenamentul' }).click();
+    await expect(foaie).toHaveCount(0);
+    await expect(deschide).toBeFocused();
+  });
+
+  test('un link direct se închide în Azi, fără să părăsească adminul', async ({ page, network }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'));
+    installAdminResponses(network, citireSintetica());
+    await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+    await page.goto('/admin#prog-azi/2026-10-21/bloc-1/2/atribuire-1');
+    await expect(page.getByRole('dialog', { name: 'Antrenament: Program sintetic' })).toBeVisible();
+    await page.getByRole('button', { name: 'Închide antrenamentul' }).click();
+    await expect(page).toHaveURL(/\/admin#prog-azi\/2026-10-21$/);
+    await expect(page.getByRole('button', { name: 'Deschide antrenamentul' })).toBeVisible();
+  });
+
+  test('antrenamentul are trei coloane pe desktop', async ({ page, network }) => {
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'));
+    installAdminResponses(network, citireSintetica());
+    await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+    await page.goto('/admin#prog-azi/2026-10-21/bloc-1/1/atribuire-1');
+    const pagina = page.getByRole('region', { name: 'Antrenament: Program sintetic' });
+    await expect(pagina).toBeVisible();
+    const coloane = await Promise.all(['Blocurile zilei', 'Exercițiul curent', 'Istoricul exercițiului'].map(name => pagina.getByRole('region', { name }).boundingBox()));
+    expect(coloane[0]!.x).toBeLessThan(coloane[1]!.x);
+    expect(coloane[1]!.x).toBeLessThan(coloane[2]!.x);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test('schimbarea pragului de 640 px închide video înainte de a muta foaia', async ({ page, network }) => {
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'));
+    installAdminResponses(network, citireSintetica());
+    network.use(http.get('https://www.youtube-nocookie.com/*', () => new HttpResponse('<html>Demo video</html>', { headers: { 'Content-Type': 'text/html' } })));
+    await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+    await page.goto('/admin#prog-azi/2026-10-21/bloc-1/1/atribuire-1');
+    const pagina = page.getByRole('region', { name: 'Antrenament: Program sintetic' });
+    const video = page.getByRole('dialog', { name: 'Genuflexiune demo', exact: true });
+    await pagina.getByRole('region', { name: 'Exercițiul curent' }).getByRole('button', { name: 'Video: Genuflexiune demo' }).click();
+    await expect(video).toBeVisible();
+
+    await page.setViewportSize({ width: 640, height: 844 });
+    await expect(video).toHaveCount(0);
+    const foaie = page.getByRole('dialog', { name: 'Antrenament: Program sintetic' });
+    await expect(foaie).toBeVisible();
+    await expect(foaie.getByRole('tab', { name: 'Exercițiu', exact: true })).toBeFocused();
+    await foaie.getByRole('button', { name: 'A2', exact: true }).click();
+    await expect(foaie.getByRole('button', { name: 'A2', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await foaie.getByRole('button', { name: 'A1', exact: true }).click();
+    const declansator = foaie.getByRole('region', { name: 'Exercițiul curent' }).getByRole('button', { name: 'Video: Genuflexiune demo' });
+    await declansator.click();
+    await video.getByRole('button', { name: 'Închide video' }).click();
+    await expect(video).toHaveCount(0);
+    await expect(declansator).toBeFocused();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+
+    await declansator.click();
+    await expect(video).toBeVisible();
+    await page.setViewportSize({ width: 641, height: 844 });
+    await expect(video).toHaveCount(0);
+    await expect(foaie).toHaveCount(0);
+    await expect(pagina).toBeVisible();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+    await pagina.getByRole('button', { name: 'Închide antrenamentul' }).click();
+    await expect(page.getByRole('button', { name: 'Deschide antrenamentul' })).toBeVisible();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  });
+
   test('Azi la 390 px: extindere, ținte feminine, video și navigare în viitor', async ({ page, network }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'));
@@ -92,7 +199,7 @@ test.describe('Programare — etapa 1', () => {
       admin_prog_atribuie: (p: Record<string, unknown>) => {
         const sfarsit = new Date(`${p.p_data_start}T12:00:00Z`);
         sfarsit.setUTCDate(sfarsit.getUTCDate() + 13);
-        const a = atribuire({ id: `atribuire-${atribuiri.length + 1}`, sportiv_nume: profil!.nume,
+        const a = atribuire({ id: `atribuire-${atribuiri.length + 1}`, sportiv_nume: profil!.nume, sportiv_gen: profil!.gen,
           data_start: String(p.p_data_start), data_sfarsit: sfarsit.toISOString().slice(0, 10) });
         atribuiri.push(a); return a;
       },

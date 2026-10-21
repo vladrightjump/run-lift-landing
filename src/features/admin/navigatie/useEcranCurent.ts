@@ -44,6 +44,15 @@ export const useEcranCurent = (implicit: EcranAdmin) => {
     const urmatoare = { ecran, parametri };
     if (fragment(urmatoare) === fragment(adresaRef.current)) return;
     if (gardaIesire.current && !gardaIesire.current()) return;
+    const eraFoaie = adresaRef.current.ecran === 'prog-azi' && !!adresaRef.current.parametri[1];
+    // Scrierea sincronă îi permite foii să înlocuiască selecția curentă fără
+    // să ajungă înaintea efectului care ar fi creat intrarea inițială.
+    window.location.hash = fragment(urmatoare);
+    if (ecran === 'prog-azi' && parametri[1] && !eraFoaie) {
+      window.history.replaceState({ ...window.history.state,
+        programareFoaie: { data: parametri[0], atribuire: parametri[3] },
+      }, '', window.location.href);
+    }
     adresaRef.current = urmatoare;
     setAdresa(urmatoare);
   }, []);

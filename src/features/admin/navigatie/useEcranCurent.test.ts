@@ -19,9 +19,23 @@ import { useEcranCurent } from './useEcranCurent';
 afterEach(() => {
   cleanup();
   window.location.hash = '';
+  window.history.replaceState(null, '', window.location.href);
 });
 
 describe('ecranul curent se citește din adresă', () => {
+  it('marchează numai foile deschise din navigarea internă', () => {
+    window.location.hash = '#prog-calendar';
+    const { result } = renderHook(() => useEcranCurent('acum'));
+    act(() => result.current.schimba('prog-azi', ['2026-10-21', 'bloc-1', '2', 'atribuire-1']));
+    expect(window.history.state).toMatchObject({ programareFoaie: { data: '2026-10-21', atribuire: 'atribuire-1' } });
+    expect(window.location.hash).toBe('#prog-azi/2026-10-21/bloc-1/2/atribuire-1');
+  });
+
+  it('o adresă directă a antrenamentului nu pretinde că are un pas anterior în admin', () => {
+    window.location.hash = '#prog-azi/2026-10-21/bloc-1/1/atribuire-1';
+    renderHook(() => useEcranCurent('acum'));
+    expect(window.history.state?.programareFoaie).toBeUndefined();
+  });
   it('păstrează parametrii și permite navigarea în același ecran', () => {
     window.history.replaceState(null, '', '#prog-azi/2026-10-21/bloc-1');
     const { result } = renderHook(() => useEcranCurent('acum'));
