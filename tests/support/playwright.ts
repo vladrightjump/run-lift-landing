@@ -1,7 +1,7 @@
 import { test as base, type BrowserContext } from '@playwright/test';
 import { defineNetworkFixture, type NetworkFixture } from '@msw/playwright';
 import { type AnyHandler } from 'msw';
-import { HttpNetworkFrame } from 'msw/experimental';
+import { HttpNetworkFrame, WebSocketNetworkFrame } from 'msw/experimental';
 import { SUPABASE } from '../../src/shared/lib/backend';
 import { browserAssets, handlers as defaultHandlers } from './handlers';
 
@@ -23,7 +23,16 @@ export function createMockNetwork(context: BrowserContext, handlers: AnyHandler[
     handlers: [...handlers, browserAssets],
     // MSW 3 calls MSW 2's onUnhandledRequest option onUnhandledFrame.
     async onUnhandledFrame({ frame, defaults }) {
-      const url = frame instanceof HttpNetworkFrame ? frame.data.request.url : frame.protocol;
+      const connection = frame instanceof WebSocketNetworkFrame ? frame.data.connection : null;
+      if (connection) {
+        const url = connection.client.url;
+        // Playwright omits WebSocket protocols. Vite's authenticated local HMR
+        // endpoint is identified by its root path and sole token parameter.
+        if (url.protocol === 'ws:' && ['localhost', '127.0.0.1'].includes(url.hostname)
+          && url.port === '5173' && url.pathname === '/'
+          && url.searchParams.size === 1 && !!url.searchParams.get('token')) return;
+      }
+      const url = frame instanceof HttpNetworkFrame ? frame.data.request.url : connection?.client.url.href ?? frame.protocol;
       unhandled.push(url);
       // MSW 3's custom defaults.error only prints. InternalError tells the
       // Playwright bridge to abort instead of falling through to the backend.

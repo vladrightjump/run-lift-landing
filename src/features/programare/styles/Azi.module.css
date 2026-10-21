@@ -1,0 +1,55 @@
+.ecran { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: start; gap: 24px; max-width: 1040px; min-width: 0; color: var(--pa-text); }
+.banda { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 100px; max-height: calc(100dvh - 140px); overflow-y: auto; scrollbar-width: thin; padding: 4px 6px; }
+.data { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 0 0 auto; min-width: 48px; min-height: 64px; padding: 0; border: 0; color: var(--pa-muted); background: none; font: inherit; cursor: pointer; }
+.cercData { box-sizing: border-box; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--pa-line); border-radius: 50%; font-size: 15px; font-weight: 600; color: var(--pa-text); background: var(--pa-surface); }
+.cuAntrenament .cercData { border: 2px solid var(--pa-accent-text); }
+.selectata .cercData { color: var(--pa-accent-ink); background: var(--pa-accent); border-color: var(--pa-accent); }
+.selectata .ziScurta { color: var(--pa-text); font-weight: 700; }
+.ziScurta { font-size: 12px; }
+.data:focus-visible, .fir button:focus-visible, .modalVideo button:focus-visible { outline: 2px solid var(--pa-accent-text); outline-offset: 3px; }
+.fir { display: grid; gap: 18px; min-width: 0; }
+.antetEcran { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: 16px; }
+.antetEcran h2 { margin: 0; font-size: 24px; line-height: 1.35; }
+.inapoi { min-height: 44px; padding: 8px 0; border: 0; color: var(--pa-accent-text); background: none; font: inherit; font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.cardZi { min-width: 0; overflow: hidden; background: var(--pa-surface); border: 1px solid var(--pa-line); border-left: 3px solid var(--pa-accent); border-radius: var(--pa-r); }
+.antetCard { padding: 22px 24px 12px; }
+.antetCard h2 { margin: 6px 0; font-size: 22px; line-height: 1.35; overflow-wrap: anywhere; }
+.supraTitlu { margin: 0; color: var(--pa-muted); font-size: 12px; font-weight: 600; line-height: 1.5; }
+.sursa { margin: 8px 0 14px; color: var(--pa-muted); font-size: 12px; overflow-wrap: anywhere; }
+.titluZi { margin: 12px 0; font-size: 15px; font-weight: 600; line-height: 1.5; }
+.principal, .secundar { min-height: 44px; padding: 10px 16px; border: 1px solid transparent; border-radius: var(--pa-r); background: var(--pa-accent); color: var(--pa-accent-ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.principal:hover { background: var(--pa-accent-hover); }
+.secundar { color: var(--pa-text); border-color: var(--pa-line-strong); background: var(--pa-surface); }
+.blocuri { padding: 0 24px; }
+.bloc { padding: 16px 0; border-bottom: 1px solid var(--pa-line); min-width: 0; }
+.bloc:last-child { border-bottom: 0; }
+.titluBloc { margin: 0 0 6px; font-size: 16px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.prefix { color: var(--pa-accent-text); font-weight: 700; }
+.randuri { list-style: none; margin: 0; padding: 0; }
+.rand { min-width: 0; }
+.linieExercitiu { display: flex; align-items: start; min-width: 0; }
+.exercitiu, .exercitiuStatic { box-sizing: border-box; flex: 1; min-width: 0; min-height: 44px; padding: 10px 0; border: 0; background: none; color: var(--pa-text); font: inherit; font-size: 14px; line-height: 1.65; text-align: left; overflow-wrap: anywhere; }
+.exercitiu { cursor: pointer; }
+.exercitiu:hover { text-decoration: underline; text-underline-offset: 3px; }
+.video { flex: 0 0 44px; width: 44px; height: 44px; border: 0; color: var(--pa-accent-text); background: none; font: inherit; font-size: 20px; cursor: pointer; }
+.pauza, .antetPrescriptie { margin: 0 0 8px; color: var(--pa-muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.antetPrescriptie { margin-top: 10px; color: var(--pa-text); font-weight: 600; }
+.nota, .instructiuni { margin: 8px 0 12px; color: var(--pa-muted); font-size: 14px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.nota { padding-left: 12px; border-left: 2px solid var(--pa-line-strong); }
+.subsolCard { display: flex; justify-content: center; padding: 12px 24px 24px; }
+.comunitate { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; background: var(--pa-surface); border: 1px solid var(--pa-line); border-radius: var(--pa-r); }
+.asteptare { color: var(--pa-muted); font-size: 12px; }
+.mesaj { margin: 0; padding: 20px 0; color: var(--pa-muted); font-size: 14px; line-height: 1.65; }
+.modalVideo { box-sizing: border-box; width: min(680px, calc(100vw - 32px)); }
+.player { display: block; box-sizing: border-box; width: 100%; aspect-ratio: 16 / 9; margin: 12px 0 16px; border: 0; border-radius: var(--pa-r); background: #000; }
+@media (max-width: 640px) {
+  .ecran { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .banda { position: static; flex-direction: row; gap: 10px; max-height: none; overflow-x: auto; overflow-y: hidden; padding: 4px 2px 8px; }
+  .fir { gap: 14px; }
+  .antetEcran h2 { font-size: 21px; }
+  .antetCard { padding: 18px 16px 8px; }
+  .antetCard h2 { font-size: 20px; }
+  .blocuri { padding: 0 16px; }
+  .subsolCard { padding: 12px 16px 18px; }
+  .comunitate { padding: 14px 16px; }
+}
