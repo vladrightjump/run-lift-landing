@@ -17,6 +17,7 @@ playwright-report/
 # Unelte locale / artefacte de sesiune
 .claude/
 .playwright-mcp/
+imports/
 maps_embed_check.png
 form-*.png
 cs-*.png

@@ -3,6 +3,7 @@
   "entry": [
     "src/app/admin-preview.tsx",
     "scripts/*.{ts,mjs}",
+    "scripts/wodup/extrage.ts",
     "tests/e2e/**/*.spec.ts",
     "{src,tests}/**/*.test.{ts,tsx}"
   ],
