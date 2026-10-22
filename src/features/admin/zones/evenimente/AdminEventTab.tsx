@@ -426,7 +426,7 @@ export const AdminEventTab = ({
    * Previzualizarea arată ce e pe ecran, nu ce era pe server.
    *
    * `/?config=draft` reinterogează `admin_get_event_config` și randează rândul
-   * `draft` (vezi `hooks/useEventConfig.tsx`). Cât timp butonul a fost o simplă
+   * `draft` (vezi `shared/lib/useEventConfig.tsx`). Cât timp butonul a fost o simplă
    * ancoră, editai șase câmpuri, deschideai previzualizarea, verificai
    * documentul de DINAINTEA editărilor — și publicai convins că ai văzut. E
    * aceeași clasă de capcană ca `launchAt` moștenit, doar mutată cu un ecran

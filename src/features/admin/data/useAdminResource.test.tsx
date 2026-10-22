@@ -147,6 +147,34 @@ describe('useAdminResource — încărcarea', () => {
 
     expect(incarca).toHaveBeenCalledTimes(2);
   });
+
+  const schimbaTabul = async (stare: 'visible' | 'hidden') => {
+    await act(async () => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => stare });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+  };
+
+  it('părăsirea tabului nu cere nimic', async () => {
+    const incarca = vi.fn().mockResolvedValue([]);
+    randeaza(incarca);
+    await lasaSaSeAseze();
+
+    await schimbaTabul('hidden');
+    expect(incarca).toHaveBeenCalledTimes(1);
+    await schimbaTabul('visible');
+  });
+
+  it('după demontare, revenirea în tab nu mai cere nimic', async () => {
+    const incarca = vi.fn().mockResolvedValue([]);
+    const { unmount } = randeaza(incarca);
+    await lasaSaSeAseze();
+    unmount();
+
+    await schimbaTabul('visible');
+    expect(incarca).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('useAdminResource — căile de eșec', () => {

@@ -35,7 +35,7 @@ browser ──[mode, token, hp, elapsed, data]──▶ Edge: submit-form
    token-ul Turnstile la Cloudflare, apoi scrie cu cheia de service.
 2. **`supabase/sql/supabase-migration-turnstile-lockdown.sql`** — scoate politicile și grant-urile de
    INSERT pentru rolul `anon`. Fără pasul ăsta, restul e decorativ.
-3. **`src/lib/turnstile.ts` + `src/lib/antiBot.ts`** — generarea token-ului și colectarea
+3. **`src/shared/lib/turnstile.ts` + `src/features/inscriere/lib/antiBot.ts`** — generarea token-ului și colectarea
    dovezilor, în client.
 
 ### Straturile, în ordinea costului
@@ -119,7 +119,7 @@ Cloudflare. Ca să nu se întâmple asta tăcut în producție:
 
 - `scripts/check-deploy-config.ts` **oprește build-ul** dacă `VITE_TURNSTILE_SITE_KEY`
   lipsește la un build Vercel de producție (local doar avertizează);
-- `checkTurnstileCsp` (`src/lib/deployConfig.ts`) verifică cele trei directive CSP de care
+- `checkTurnstileCsp` (`src/shared/lib/deployConfig.ts`) verifică cele trei directive CSP de care
   are nevoie Turnstile — `script-src`, `frame-src`, `connect-src`. Dacă lipsește una,
   captcha pică tăcut și nimeni nu se mai poate înscrie: exact tiparul regresiei din 4 august.
 
@@ -181,7 +181,7 @@ Partea bună a unei ediții închise: nu există fereastră de înscrieri de str
 se poate face liniștit.
 
 **Preview-urile nu pot trimite formulare.** `redirectCanonic` mută vizitatorul pe domeniu
-DOAR de pe producție (`src/lib/canonicalHost.ts`), deci un preview rămâne pe `*.vercel.app`
+DOAR de pe producție (`src/shared/lib/canonicalHost.ts`), deci un preview rămâne pe `*.vercel.app`
 și primește refuz de CORS de la `submit-form`. Formularele se testează local
 (`http://localhost:5173`, care e în `ORIGINI`) sau pe producție.
 

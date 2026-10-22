@@ -40,12 +40,12 @@ Aceste cifre sunt context intern. Participarea la o sesiune nu reprezintă numă
 
 ### Ce există în proiect
 
-- Pagina publică este legată de ediția evenimentului și de fazele acestuia: [src/App.tsx](src/App.tsx).
-- Hero-ul actual prezintă „Hyrox Trial”: [Hero.tsx](src/components/landing/Hero.tsx).
+- Pagina publică este legată de ediția evenimentului și de fazele acestuia: [LandingPage.tsx](src/features/landing/pages/LandingPage.tsx).
+- Hero-ul actual prezintă „Hyrox Trial”: [Hero.tsx](src/features/landing/components/Hero.tsx).
 - Există înscriere, capacitate, listă de așteptare și fluxuri de confirmare.
-- Pagina cu antrenamente afișează săptămâni ordonate: [Antrenament.tsx](src/components/Antrenament.tsx).
-- Există o prezentare a comunității și conținut video: [DespreNoi.tsx](src/components/DespreNoi.tsx).
-- Identitatea vizuală folosește Anton, Archivo, lime și fundaluri închise: [src/public.css](src/public.css).
+- Pagina cu antrenamente afișează săptămâni ordonate: [AntrenamentPage.tsx](src/features/antrenament/pages/AntrenamentPage.tsx).
+- Există o prezentare a comunității și conținut video: [DespreNoiPage.tsx](src/features/despre-noi/pages/DespreNoiPage.tsx).
+- Identitatea vizuală folosește Anton, Archivo, lime și fundaluri închise: [src/shared/styles/tokens.css](src/shared/styles/tokens.css).
 
 ### Ce trebuie stabilit înainte de vânzare
 
@@ -210,8 +210,8 @@ Acest document propune o extindere a structurii comerciale. Planul anterior de [
 
 La implementare trebuie evaluate:
 
-- Separarea homepage-ului permanent de fazele unei ediții din `App.tsx`.
-- Rutarea din [src/main.tsx](src/main.tsx), care în prezent folosește căi explicite.
+- Separarea homepage-ului permanent de fazele unei ediții din `LandingPage.tsx`.
+- Rutarea din [src/app/router.tsx](src/app/router.tsx), care în prezent folosește căi explicite.
 - Refolosirea componentelor de înscriere și păstrarea legăturilor din emailuri.
 - Comportamentul adreselor `/inscriere`, `/confirmare`, `/renunt`, `/unsubscribe` și `/antrenament#s1`.
 - Separarea informațiilor despre club de configurația unei ediții.
