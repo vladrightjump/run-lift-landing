@@ -2,7 +2,7 @@
  * Derivatele de TIMP ale ediției.
  *
  * Sursa de adevăr e rândul `published` din `runlift.event_config`, citit la
- * runtime (vezi `hooks/useEventConfig`). Fișierul ăsta nu mai ține valori: ține
+ * runtime (vezi `shared/lib/useEventConfig.tsx`). Fișierul ăsta nu mai ține valori: ține
  * REGULA prin care un config devine momente absolute.
  *
  * Componentele iau reperele din `useEditionDates()`. Funcțiile pure (validare,

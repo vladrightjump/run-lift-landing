@@ -1,7 +1,7 @@
 // Variabilele de eveniment din șabloanele de email, derivate din configul
 // publicat (`public_config()`).
 //
-// De ce trăiesc AICI și nu în `src/content/format.ts`, care le are deja:
+// De ce trăiesc AICI și nu în `src/shared/content/format.ts`, care le are deja:
 // funcția Edge rulează pe Deno și se deployează separat, cu directorul ăsta ca
 // rădăcină; nu are niciun import în afara lui, iar un import din `src/` n-ar fi
 // verificabil decât la deploy — pe o cale unde eșecul e tăcut (confirmarea e
@@ -69,7 +69,7 @@ export type ConfigEveniment = {
 
 /**
  * „Scările de Granit, Valea Morilor" — locul cursei, într-un singur rând.
- * Oglindește `placeStrings` din `src/content/format.ts` pentru un loc fără
+ * Oglindește `placeStrings` din `src/shared/content/format.ts` pentru un loc fără
  * reper (cursa n-are `landmark`).
  */
 function locul(venue: ConfigEveniment["venue"]): string {

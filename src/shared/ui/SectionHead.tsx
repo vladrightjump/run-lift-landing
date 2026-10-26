@@ -11,7 +11,7 @@ type Props = {
 /**
  * Antetul de secțiune al paginilor publice: numărul, o linie până la margine și
  * titlul la scară de afiș. Clasele `.e3-title-num` și `.e3-title` poartă și
- * dezvăluirea legată de scroll din `edition3.css`.
+ * dezvăluirea legată de scroll din `PublicLayout.module.css`.
  */
 export const SectionHead = ({ num, children }: Props) => (
   <div className={styles['e3-sec-head']} data-css={"e3-sec-head"}>

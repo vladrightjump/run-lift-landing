@@ -87,7 +87,7 @@ flowchart LR
 ```
 
 **Regula de aur:** sursa de adevăr pentru ediție e rândul `published` din `runlift.event_config`.
-`src/content/edition.ts` e doar instantaneul de build (primul cadru + meta de share).
+`src/shared/content/edition.ts` e doar instantaneul de build (primul cadru + meta de share).
 
 **Grupul din parc** stă alături, nu în harta de mai sus: tabelele lui sînt în schema `public`, iar
 singurul „server" din repo e botul de Telegram, pe Railway (`bot/`). Harta lui e în 4.11.
@@ -98,7 +98,7 @@ singurul „server" din repo e botul de Telegram, pe Railway (`bot/`). Harta lui
 
 ### 2.1 Rutele
 
-Nu există router. `src/main.tsx` alege componenta după `pathname`:
+`src/app/router.tsx` (TanStack Router) alege componenta după `pathname`; rutele stau în `src/features/*/route.tsx`:
 
 | Cale | Componentă | Ce face | Primește config live? |
 |---|---|---|---|
@@ -121,7 +121,7 @@ pagină — altfel linkul antrenamentului ar arăta cardul ediției, cu o dată 
 ### 2.2 Ce ecran vede vizitatorul pe `/`
 
 Totul e pe ceas, fără redeploy. Momentele vin din configul publicat
-(`useEditionDates` → `src/lib/config.ts`).
+(`useEditionDates` → `src/shared/lib/config.ts`).
 
 ```mermaid
 stateDiagram-v2
@@ -138,8 +138,8 @@ stateDiagram-v2
   state "Coming Soon „Ne vedem curând”<br/>countdown spre nextEditionAt" as UrmatorulAntrenament
 ```
 
-- Precedența (`src/App.tsx`): poarta de lansare bate fazele zilei cursei.
-- Fazele zilei: `src/hooks/usePagePhase.ts` (`pre` → `leaderboard` → `next`).
+- Precedența (`src/features/landing/pages/LandingPage.tsx`): poarta de lansare bate fazele zilei cursei.
+- Fazele zilei: `src/shared/lib/usePagePhase.ts` (`pre` → `leaderboard` → `next`).
 - În faza „cine vine" aranjarea secțiunilor e fixă (Participanți, Format, Locație), nu din config.
 - În faza „landing complet", ordinea și vizibilitatea secțiunilor vin din `config.layout`;
   numerotarea (01, 02…) se derivă din poziție. Secțiunea „Instagram" dispare dacă n-are clipuri.
@@ -180,11 +180,11 @@ Consecință practică: o publicare din admin ajunge în taburile deja deschise 
 reload. Acțiunile ireversibile (redirectul de pe `/inscriere`) așteaptă `settled`, ca să nu decidă
 pe un instantaneu de build vechi.
 
-Cod: `src/hooks/useEventConfig.tsx`, `src/content/eventConfig.ts` (forma + parsarea documentului).
+Cod: `src/shared/lib/useEventConfig.tsx`, `src/shared/content/eventConfig.ts` (forma + parsarea documentului).
 
 ### 2.4 Înscrierea la eveniment
 
-Aceeași logică pentru toate cele trei uși (2.5): `src/hooks/useRegistration.ts`.
+Aceeași logică pentru toate cele trei uși (2.5): `src/features/inscriere/hooks/useRegistration.ts`.
 
 **Ce vede omul** — stările panoului de înscriere:
 
@@ -206,7 +206,7 @@ stateDiagram-v2
 ```
 
 Modul „listă de așteptare" se activează singur când `locuri rămase ≤ 0` și lista mai are loc.
-Locurile vin din `public_stats` (poll periodic, `src/hooks/useStats.ts`).
+Locurile vin din `public_stats` (poll periodic, `src/features/inscriere/hooks/useStats.ts`).
 
 **Ce se întâmplă la submit:**
 
@@ -286,7 +286,7 @@ dat la fața locului până la deadline-ul real. O închide `useRegistration`, p
 ### 2.6 „Anunță-mă la lansare" + confirmarea din email
 
 Formularul din `ComingSoon` (modal) și din `/despre-noi` (inline). Logica comună:
-`src/hooks/useLaunchForm.ts` + `src/lib/launchForm.ts`. Câmpul `sursa` spune de unde a venit
+`src/features/inscriere/hooks/useLaunchForm.ts` + `src/features/inscriere/lib/launchForm.ts`. Câmpul `sursa` spune de unde a venit
 (`lansare` / `despre-noi`).
 
 ```mermaid
@@ -466,9 +466,9 @@ flowchart TB
   `auto_promote` nou aduce un toast.
 - **Ediție de arhivă** = orice ediție selectată care nu e cea curentă. Butoanele de scriere se
   ascund, iar serverul refuză oricum (`edition_archived`).
-- Grupurile și taburile: `src/admin/adminNavigatie.ts`. Nodurile liniei de timp:
-  `src/admin/reperele.ts` — **singura** listă de repere; faza și semnalele de atenție rămân în
-  `src/admin/stareCurenta.ts`. Randarea: `src/admin/LiniaDeTimp.tsx`.
+- Grupurile și taburile: `src/features/admin/navigatie/adminNavigatie.ts`. Nodurile liniei de timp:
+  `src/features/admin/zones/evenimente/reperele.ts` — **singura** listă de repere; faza și semnalele de atenție rămân în
+  `src/features/admin/data/stareCurenta.ts`. Randarea: `src/features/admin/components/LiniaDeTimp.tsx`.
 - **De ce linia de timp și nu meniul.** Desfășurarea în timp e forma pe care organizatorul o are
   oricum în cap; meniul îl obliga s-o traducă în taburi — reminderele sunt un grup din
   „Evenimentul", lista de înscriși e alt tab, ediția următoare un dialog în al treilea. Panoul
@@ -575,7 +575,7 @@ Cod: `AdminTemplatesTab.tsx`.
 ### 4.8 Setup → Evenimentul
 
 Ciclul de viață al configului unei ediții. Cod: `AdminEventTab.tsx`, grupurile din
-`src/admin/eventTab/grupuri/`, validarea din `eventConfigForm.ts`.
+`src/features/admin/zones/evenimente/eventTab/grupuri/`, validarea din `eventConfigForm.ts`.
 
 ```mermaid
 stateDiagram-v2
@@ -719,7 +719,7 @@ Browserul n-are cheia de service; fiecare funcție începe cu `admin_check_token
 - `admin_sala_date`: tot ce le trebuie celor patru ecrane, dintr-o cerere — setările, membrii (fără
   telefon și email), antrenamentele și răspunsurile din ultimele 800 de zile, conturile nelegate,
   ultimele 30 de comenzi și, separat, ultima scoatere a fiecărui membru (`scoateri`, oricât de
-  veche, ca o scoatere eșuată să rămână reîncercabilă). Analiza se calculează în browser (`src/admin/sala/statistici.ts`, portat
+  veche, ca o scoatere eșuată să rămână reîncercabilă). Analiza se calculează în browser (`src/features/admin/zones/antrenamente/statistici.ts`, portat
   din gym-app cu testele lui). Ecranele o reîmprospătează la 15 secunde (`useSala.ts`).
 - `admin_sala_rezumat`: doar cât îi trebuie cardului de pe pornire (antrenamentul următor, cu
   `poll_sent`, câți vin și câți nu, plus orarul sondajului).
@@ -753,7 +753,7 @@ oglindește doar ca să spună motivul înainte de apăsare (`configBot.ts`, `Di
 | O comandă la fel care încă așteaptă nu se mai pune în coadă (întoarce comanda existentă) | — |
 | Mesajul liber: nevid, cel mult 4096 de caractere (limita Telegram) | `mesaj_gol`, `mesaj_prea_lung` |
 
-Fiecare cod are un mesaj în `REFUZURI_SALA` / `MESAJE_REFUZ` (`src/lib/salaApi.ts`); un test pică
+Fiecare cod are un mesaj în `REFUZURI_SALA` / `MESAJE_REFUZ` (`src/features/admin/zones/antrenamente/api.ts`); un test pică
 dacă apare în SQL un cod pe care clientul nu-l știe. O eroare pe care serverul n-o numește ajunge
 în monitorizare (`logClientError`), iar la una de rețea toastul spune să verifici înainte să
 reîncerci.
@@ -815,9 +815,9 @@ rezumatul urmează antrenamentul zilei (`reminderDue`, `summaryDue` în `bot/src
 
 | Ce | Unde |
 |---|---|
-| Ecranele și cardul | `src/admin/sala/Ecran*.tsx`, `CardGrup.tsx`; registrul: `adminNavigatie.ts` (grupul `grup`) |
-| Logica fără React | `src/admin/sala/*.ts` (`model`, `statistici`, `analiza`, `sondaj`, `textCard`, `stareBot`, `configBot`, `mesaj`) |
-| Clientul | `src/lib/salaApi.ts` (refolosește `rpc` din `adminApi.ts`) |
+| Ecranele și cardul | `src/features/admin/zones/antrenamente/Ecran*.tsx`; registrul: `adminNavigatie.ts` (grupul `grup`) |
+| Logica fără React | `src/features/admin/zones/antrenamente/*.ts` (`model`, `statistici`, `analiza`, `sondaj`, `stareBot`, `configBot`, `mesaj`) |
+| Clientul | `src/features/admin/zones/antrenamente/api.ts` (refolosește `rpc` din `src/shared/lib/rpc.ts`) |
 | Funcțiile SQL | `supabase/sql/supabase-migration-sala-*.sql`; instantaneele `supabase/schema/runlift.sql` + `sala.sql` |
 | Teste | `tests/unit/sala*.test.ts(x)`, `tests/unit/sql/sala.test.ts` (PGlite, pe instantaneu), `tests/e2e/sala.spec.ts` (e2e) |
 | Botul | `bot/` (cod), `.railway/railway.ts` (serviciul Railway), job-ul `bot` din `ci-deploy.yml` |
@@ -860,26 +860,26 @@ Fiecare încercare lasă un rând în `email_log` (`log_emails`), vizibil în 4.
 | Titlul/textul secțiunii Instagram | `/admin` → Evenimentul → Instagram | nu |
 | Ordinea/legenda/vizibilitatea unui clip | `/admin` → Clipuri | nu |
 | Un clip nou în bandă | `/admin` → Clipuri (link YouTube lipit) | nu |
-| Meta de share (titlu/imagine WhatsApp/Facebook) | `src/content/edition.ts` → build | **da** |
-| Proza statică a paginii (texte care nu țin de ediție) | componentele din `src/components/` | da |
-| Ordinea fazelor / când comută pagina | `src/App.tsx`, `src/hooks/usePagePhase.ts`, derivatele din `src/lib/config.ts` | da |
-| Validarea formularului | `src/lib/validation.ts` **și** `validateEventRow` / `validateLaunchRow` din `submit-form` | da + deploy manual al funcției Edge |
-| Mesajele de eroare la înscriere | `mesajPentru()` în `src/hooks/useRegistration.ts` | da |
-| Reguli anti-bot (timp minim, honeypot, fail-open) | `supabase/functions/submit-form/index.ts`, `src/lib/antiBot.ts` | deploy manual Edge |
+| Meta de share (titlu/imagine WhatsApp/Facebook) | `src/shared/content/edition.ts` → build | **da** |
+| Proza statică a paginii (texte care nu țin de ediție) | componentele din `src/features/*/components/` | da |
+| Ordinea fazelor / când comută pagina | `src/features/landing/pages/LandingPage.tsx`, `src/shared/lib/usePagePhase.ts`, derivatele din `src/shared/lib/config.ts` | da |
+| Validarea formularului | `src/shared/lib/validation.ts` **și** `validateEventRow` / `validateLaunchRow` din `submit-form` | da + deploy manual al funcției Edge |
+| Mesajele de eroare la înscriere | `mesajPentru()` în `src/features/inscriere/hooks/useRegistration.ts` | da |
+| Reguli anti-bot (timp minim, honeypot, fail-open) | `supabase/functions/submit-form/index.ts`, `src/features/inscriere/lib/antiBot.ts` | deploy manual Edge |
 | Capacitate / deadline pe server | triggerele `registrations_guard`, `event_waitlist_cap` (citesc `app_config`) | migrare SQL |
 | Regula de promovare automată | `auto_promote_from_waitlist()` | migrare SQL |
 | Frecvența cron-ului / fereastra de 2h | `supabase-cron-reminder-ARM.sql` / `maybe_send_reminder()` | SQL |
 | Un tab nou în admin | `adminNavigatie.ts` (grup + tab), `TabAdmin` din `stareCurenta.ts`, randarea în `AdminDashboard.tsx` | da |
-| O acțiune nouă în admin | RPC `admin_*` nou (SQL, cu `admin_check_token`) + wrapper în `src/lib/adminApi.ts` | da + migrare |
-| Un mod nou de formular public | `TABLE` + `validate*` în `submit-form` (altfel slăbești validarea) + `postForm` în `src/lib/supabase.ts` | da + Edge |
+| O acțiune nouă în admin | RPC `admin_*` nou (SQL, cu `admin_check_token`) + wrapper în `src/features/admin/zones/<zona>/api.ts` | da + migrare |
+| Un mod nou de formular public | `TABLE` + `validate*` în `submit-form` (altfel slăbești validarea) + `postForm` în `src/features/inscriere/data/api.ts` | da + Edge |
 | Orarul, locul, reminderul sau textul sondajului din grup | `/admin` → Botul de Telegram | nu |
 | Anularea, mutarea sau un antrenament extra, pentru o singură zi | chatul privat cu botul (`/antrenament`); anularea și din `/admin` → Prezențe | nu |
 | O comandă nouă a organizatorilor în Telegram | `bot/src/lib/command-parse.ts` (scurtătura), `bot/src/lib/day-actions.ts` (decizia), `bot/src/control.ts` (cardul) | bot |
-| O acțiune nouă pe grupul din parc | funcție `runlift.admin_sala_*` (migrare, cu `admin_check_token` + `sala_jurnal`) + wrapper în `src/lib/salaApi.ts` + codul de refuz în `REFUZURI_SALA` (testul pică dacă uiți) | da + migrare |
+| O acțiune nouă pe grupul din parc | funcție `runlift.admin_sala_*` (migrare, cu `admin_check_token` + `sala_jurnal`) + wrapper în `src/features/admin/zones/antrenamente/api.ts` + codul de refuz în `REFUZURI_SALA` (testul pică dacă uiți) | da + migrare |
 | Comportamentul botului în Telegram | `bot/src/` → merge în `main`; Railway îl ia după CI verde | da (Railway) |
 | Setările serviciului Railway (sursă, cale urmărită, `/health`) | `.railway/railway.ts` → `railway config plan` / `apply` | CLI Railway |
 | Versiunea de Node (local, CI, Vercel, Railway) | `.nvmrc` + `engines` din `package.json` și `bot/package.json` | da |
-| Un șablon nou pentru reminder | rândul în `email_templates` + `REMINDER_TEMPLATE_KEYS` din `src/content/eventConfig.ts` **+ `TEMPLATES_PERMISE` din `send-email`** (testul pică dacă uiți) | da + Edge + SQL |
+| Un șablon nou pentru reminder | rândul în `email_templates` + `REMINDER_TEMPLATE_KEYS` din `src/shared/content/eventConfig.ts` **+ `TEMPLATES_PERMISE` din `send-email`** (testul pică dacă uiți) | da + Edge + SQL |
 
 Amintiri de proces (din `CI-CD.md` și `MIGRATIONS.md`): merge în `main` = deploy Vercel;
 funcțiile Edge **nu** se deployează din CI (`supabase functions deploy … --no-verify-jwt`);

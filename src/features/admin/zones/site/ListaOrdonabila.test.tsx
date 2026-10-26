@@ -7,7 +7,7 @@ import { ListaOrdonabila } from './ListaOrdonabila';
  * Primitivele de control.
  *
  * Ce se păzește aici: controlul se alege după FORMA alegerii, nu după ce e mai
- * rapid de randat. În tot `src/admin/` erau 108 butoane față de 9 liste
+ * rapid de randat. În tot `src/features/admin/` erau 108 butoane față de 9 liste
  * derulante și un singur buton radio — inclusiv acolo unde alegerea era vădit
  * „una dintre acestea".
  *

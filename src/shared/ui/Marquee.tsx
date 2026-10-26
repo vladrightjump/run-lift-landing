@@ -8,7 +8,7 @@ type Props = {
 
 /**
  * Banda rulantă lime dintre secțiuni — pasul cursei, scris ca pe o bandă de
- * start. Mișcarea, pauza și împinsul din scroll stau în `edition3.css`
+ * start. Mișcarea, pauza și împinsul din scroll stau în `Marquee.module.css`
  * (`.e3-marquee*`).
  *
  * Conținutul e randat de DOUĂ ori: animația se oprește la -50% din pistă, deci

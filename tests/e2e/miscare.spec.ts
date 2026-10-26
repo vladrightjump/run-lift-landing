@@ -188,7 +188,7 @@ test.describe('Mișcare — reduced motion', () => {
   test('fără mișcare: titlurile nu rămân tăiate de mască', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
-    // Regula din edition3.css scoate clip-path-ul cu !important.
+    // Regula din PublicLayout.module.css scoate clip-path-ul cu !important.
     await expect(page.locator("[data-css~=\"e3-title\"]").first()).toHaveCSS('clip-path', 'none');
   });
 

@@ -17,8 +17,8 @@ type Props = {
 export const TopBar = ({ cd, onInscrie, showCta = true }: Props) => {
   const { EVENT_META } = useEditionStrings();
 
-  // Aspectul stă în `.e3-topbar*` (edition3.css pentru comportamentul la
-  // scroll, public.css pentru compoziție), NU inline: inline ar bate media
+  // Aspectul stă în `.e3-topbar*` (TopBar.module.css pentru comportamentul la
+  // scroll și compoziție), NU inline: inline ar bate media
   // query-ul de mobil la specificitate.
   return (
     <header className={styles['e3-topbar']} data-css={"e3-topbar"}>

@@ -55,6 +55,12 @@ adminul își declară ruta în index. `pages`, `components`, `data`, `hooks`, `
 `styles` se creează numai când au un proprietar și un consumator real. Testele
 `.test.ts` și `.test.tsx` stau lângă codul verificat.
 
+`shared/ui/` ține și trusa de controale a adminului (`Dialog`, `GrupRadio`,
+`ListaDerulanta`, `MeniuActiuni`, `ToastAdmin`), chiar dacă azi o folosește doar
+adminul: e trusa comună din redesignul panoului, păstrată ca primitive, nu ca
+ecrane. `MeniuActiuni` n-are încă un consumator; meniul ⋯ al rândurilor din liste
+e planificat în `docs/plans/2026-10-06-1331-feat-redesign-admin-panoul-plan.md`.
+
 [`/antrenament`](../src/features/antrenament/index.ts) este exemplul de referință:
 [ruta](../src/features/antrenament/route.tsx),
 [pagina și testul ei](../src/features/antrenament/pages/AntrenamentPage.tsx),

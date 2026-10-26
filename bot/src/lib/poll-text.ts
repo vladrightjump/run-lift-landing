@@ -20,7 +20,7 @@ export function esc(s: string): string {
 
 // The editable part of the poll: the title phrase and the two button labels.
 // Day, date, time and location stay automatic. Must match the admin preview
-// (`src/admin/sala/sondaj.ts`) character for character.
+// (`src/features/admin/zones/antrenamente/sondaj.ts`) character for character.
 export interface PollWording {
   title: string;
   yes: string;

@@ -257,7 +257,7 @@ export const DespreNoi = () => {
           </div>
           <div className={styles.layout4}>
             {ETAPE.map((e) => (
-              // Stilurile stau în `.dn-step` (index.css), NU inline: inline ar
+              // Stilurile stau în `.dn-step` (DespreNoiPage.module.css), NU inline: inline ar
               // bate `:hover` la specificitate și tenta lime n-ar mai apărea.
               <div key={e.nr} className={styles['dn-step'] + ' ' + shared4['e3-spot']} data-css={"dn-step e3-spot"} data-reveal>
                 <span className={styles['dn-step-nr']} data-css={"dn-step-nr"}>{e.nr}</span>

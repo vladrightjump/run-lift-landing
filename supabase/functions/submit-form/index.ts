@@ -74,7 +74,7 @@ const MIN_FORM_MS = 3_000;
 //
 // Preview-urile Vercel NU sunt aici, deliberat. `redirectCanonic` mută
 // vizitatorul pe parktraining.fit DOAR de pe producție (`env !== 'production'
-// → null`, vezi src/lib/canonicalHost.ts), deci un preview rămâne pe
+// → null`, vezi src/shared/lib/canonicalHost.ts), deci un preview rămâne pe
 // `*.vercel.app` și formularele lui primesc refuz de CORS. Consecința, scrisă
 // pe față: formularele se testează local sau pe producție, nu pe preview.
 // Alternativa ar fi un pattern `*.vercel.app` aici plus cheia Turnstile în
@@ -106,7 +106,7 @@ const TABLE: Record<Mode, string> = {
   launch: "launch_notifications",
 };
 
-// Aceleași reguli ca în `src/lib/validation.ts` — clientul le aplică pentru UX,
+// Aceleași reguli ca în `src/shared/lib/validation.ts` — clientul le aplică pentru UX,
 // serverul pentru adevăr.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE_RE = /^\+?\d{8,15}$/;
@@ -250,7 +250,7 @@ function validateLaunchRow(data: Row): { row: Row } | { error: string } {
 /**
  * INSERT prin PostgREST cu cheia de service. Întoarce răspunsul BRUT: statusul și
  * corpul se propagă neschimbate spre client, ca helperele existente din
- * `src/lib/supabase.ts` (`isDuplicateError` pe 409, `isEventFullError` &co. pe
+ * `src/features/inscriere/data/api.ts` (`isDuplicateError` pe 409, `isEventFullError` &co. pe
  * textul erorii) să continue să funcționeze fără nicio traducere între straturi.
  */
 async function insertRow(table: string, row: Row, id?: string): Promise<Response> {

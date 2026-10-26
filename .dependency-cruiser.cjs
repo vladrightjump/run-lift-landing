@@ -3,8 +3,11 @@ const { join } = require('node:path');
 
 // dependency-cruiser vede modulele; verificarea de mai jos vede și fișierele
 // neimportate sau fără cod (CSS, imagini, text). Orice descendent trebuie să
-// stea într-unul dintre cele trei directoare ale aplicației.
+// stea într-unul dintre cele trei directoare ale aplicației. Fișierele cu punct
+// (`.DS_Store` din Finder) sunt ignorate de git și n-ajung în CI; local, nu
+// trebuie să pice verificarea.
 const inAfaraStructurii = readdirSync(join(__dirname, 'src'), { withFileTypes: true })
+  .filter((entry) => !entry.name.startsWith('.'))
   .filter((entry) => !entry.isDirectory() || !['app', 'features', 'shared'].includes(entry.name))
   .map((entry) => `src/${entry.name}`);
 if (inAfaraStructurii.length) {

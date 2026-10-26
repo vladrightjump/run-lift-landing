@@ -203,7 +203,7 @@ test.describe('autentificarea', () => {
     const intrare = await jeton(page, '--pa-input');
 
     // Clicul pe „Arată" mergea pe `main` doar la a doua încercare: apăsarea
-    // muta butonul sub cursor (vezi `translate` din `src/index.css`).
+    // muta butonul sub cursor (vezi `translate` din `src/features/admin/components/RadacinaAdmin.module.css`).
     await page.getByRole('button', { name: 'Arată' }).click();
     await expect(page.locator('input[name="parola"]')).toHaveAttribute('type', 'text');
     // Cursorul departe de câmpuri, ca hover-ul să nu schimbe marginea.

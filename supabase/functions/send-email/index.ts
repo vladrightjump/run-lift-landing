@@ -206,7 +206,7 @@ const linkRenunt = (token?: string): string =>
  * ștearsă singură variabila ar lăsa o frază care trimite spre nimic. Aceeași
  * unitate ca `renderHtml`, care oricum împarte textul pe `\n{2,}`.
  *
- * Oglindește `faraLinkRenunt` din `src/admin/emailAudience.ts` — duplicat pentru
+ * Oglindește `faraLinkRenunt` din `src/features/admin/zones/evenimente/emailAudience.ts` — duplicat pentru
  * că trimiterea manuală compune textele în client, cea automată aici.
  */
 const faraLinkRenunt = (text: string): string =>
@@ -639,7 +639,7 @@ Deno.serve(async (req: Request) => {
 
     // Zăvor pe difuzările manuale: aceeași primitivă atomică folosită de
     // reminderul programat mai jos. Cheia o derivă clientul din ediție +
-    // audiență + subiect (`src/admin/sendLock.ts`); fără cheie, comportamentul
+    // audiență + subiect (`src/features/admin/zones/evenimente/sendLock.ts`); fără cheie, comportamentul
     // rămâne cel dinainte, ca apelurile vechi să nu se rupă.
     const onceKeyAdmin = typeof payload.once_key === "string" ? payload.once_key : "";
     if (onceKeyAdmin) {
@@ -860,7 +860,7 @@ Deno.serve(async (req: Request) => {
     // pe reminderul implicit, care cel puțin e cel editat din /admin.
     //
     // Reminderele de aici trebuie să fie EXACT `REMINDER_TEMPLATE_KEYS` din
-    // `src/content/eventConfig.ts` (lista din care alege admin-ul). Funcția nu o
+    // `src/shared/content/eventConfig.ts` (lista din care alege admin-ul). Funcția nu o
     // poate importa — alt runtime, alt bundle — deci alinierea o păzește
     // `tests/unit/edge/sendEmail.test.ts`.
     const TEMPLATES_PERMISE = [

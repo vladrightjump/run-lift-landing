@@ -51,7 +51,7 @@ test.describe('grupul din parc', () => {
     });
   });
 
-  test('setările botului se salvează cu textul sondajului, iar previzualizarea îl arată', async ({ page, network }) => {
+  test('setările botului se salvează cu textul sondajului', async ({ page, network }) => {
     const scrieri = await deschideAdminul(page, network, '#grup-bot');
     await page.getByLabel('Titlu').fill('Alergăm mâine!');
     await page.getByRole('button', { name: 'Salvează setările' }).click();

@@ -96,7 +96,7 @@ export const RegistrationSection = ({ reg, stats, num = '03' }: Props) => {
                 </>
               )}
             </p>
-            {/* Fundalul și bordura vin din `.e3-card` (edition3.css): inline ar
+            {/* Fundalul și bordura vin din `.e3-card` (PublicSurface.module.css): inline ar
                 bate `:hover`. */}
             <div data-reveal className={shared3['e3-card'] + ' ' + shared3['e3-spot'] + ' ' + styles['e3-reg-summary']} data-css={"e3-card e3-spot e3-reg-summary"}>
               <div className={styles['e3-reg-summary-title']} data-css={"e3-reg-summary-title"}>Pe scurt</div>
