@@ -45,8 +45,11 @@ export const EcranCalendar = ({ parametri, onNavigare }: { parametri: string[]; 
   const profil = useResursaProgramare(['profil'], incarcaProfil);
   const programe = useResursaProgramare(['programe'], incarcaPrograme);
   const atribuiri = programe.date?.flatMap(program => program.atribuiri.map(atribuire => ({ atribuire, program }))) ?? [];
-  const aleasa = parametri[0] ? atribuiri.find(a => a.atribuire.id === parametri[0]) : atribuiri.find(a => a.atribuire.sportiv_id === profil.date?.id) ?? atribuiri[0];
   const azi = aziProgramare();
+  const proprii = atribuiri.filter(a => a.atribuire.sportiv_id === profil.date?.id)
+    .sort((a, b) => b.atribuire.data_start.localeCompare(a.atribuire.data_start));
+  const aleasa = parametri[0] ? atribuiri.find(a => a.atribuire.id === parametri[0])
+    : proprii.find(a => a.atribuire.data_start <= azi && a.atribuire.data_sfarsit >= azi) ?? proprii[0] ?? atribuiri[0];
   const anDinAdresa = /^\d{4}$/.test(parametri[1] ?? '') ? Number(parametri[1]) : 0;
   const an = anDinAdresa > 0 ? anDinAdresa : Number((aleasa?.atribuire.data_start ?? azi).slice(0, 4));
   const id = aleasa?.atribuire.id ?? '';

@@ -71,6 +71,73 @@ test.describe('Programare — etapa 1', () => {
     await expect(deschide).toBeFocused();
   });
 
+  test('Înapoi cu video deschis îl închide definitiv, iar Înainte păstrează foaia utilizabilă', async ({ page, network }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'));
+    installAdminResponses(network, citireSintetica());
+    network.use(http.get('https://www.youtube-nocookie.com/*', () => new HttpResponse('<html>Demo video</html>', { headers: { 'Content-Type': 'text/html' } })));
+    await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+    await page.goto('/admin#prog-azi/2026-10-21');
+    const deschide = page.getByRole('button', { name: 'Deschide antrenamentul' });
+    await deschide.click();
+    const foaie = page.getByRole('dialog', { name: 'Antrenament: Program sintetic' });
+    const declansator = foaie.getByRole('region', { name: 'Exercițiul curent' }).getByRole('button', { name: 'Video: Genuflexiune demo' });
+    const video = page.getByRole('dialog', { name: 'Genuflexiune demo', exact: true });
+    await declansator.click();
+    await expect(video).toBeVisible();
+
+    await page.goBack();
+    await expect(page).toHaveURL(/#prog-azi\/2026-10-21$/);
+    await expect(foaie).toHaveCount(0);
+    await expect(video).toHaveCount(0);
+    await expect(deschide).toBeFocused();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+
+    await page.goForward();
+    await expect(foaie).toBeVisible();
+    await expect(video).toHaveCount(0);
+    await expect(foaie.getByRole('tab', { name: 'Exercițiu', exact: true })).toBeFocused();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+    await foaie.getByRole('button', { name: 'A2', exact: true }).click();
+    await expect(foaie.getByRole('button', { name: 'A2', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await foaie.getByRole('button', { name: 'A1', exact: true }).click();
+    await declansator.click();
+    await video.getByRole('button', { name: 'Închide video' }).click();
+    await expect(declansator).toBeFocused();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+    await page.getByRole('button', { name: 'Închide antrenamentul' }).click();
+    await expect(foaie).toHaveCount(0);
+    await expect(deschide).toBeFocused();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  });
+
+  test('video din Azi se închide la navigarea între date și nu reapare prin Înainte', async ({ page, network }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'));
+    installAdminResponses(network, citireSintetica());
+    network.use(http.get('https://www.youtube-nocookie.com/*', () => new HttpResponse('<html>Demo video</html>', { headers: { 'Content-Type': 'text/html' } })));
+    await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+    await page.goto('/admin#prog-azi/2026-10-21');
+    await page.getByRole('button', { name: /22 octombrie 2026, are antrenament/ }).click();
+    await expect(page).toHaveURL(/#prog-azi\/2026-10-22$/);
+    const declansator = page.getByRole('article', { name: 'Program sintetic' }).getByRole('button', { name: 'Video: Genuflexiune demo' });
+    const video = page.getByRole('dialog', { name: 'Genuflexiune demo', exact: true });
+    await declansator.click();
+    await expect(video).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(/#prog-azi\/2026-10-21$/);
+    await expect(video).toHaveCount(0);
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+    await page.goForward();
+    await expect(page).toHaveURL(/#prog-azi\/2026-10-22$/);
+    await expect(video).toHaveCount(0);
+    await declansator.click();
+    await page.keyboard.press('Escape');
+    await expect(video).toHaveCount(0);
+    await expect(declansator).toBeFocused();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  });
+
   test('un link direct se închide în Azi, fără să părăsească adminul', async ({ page, network }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'));

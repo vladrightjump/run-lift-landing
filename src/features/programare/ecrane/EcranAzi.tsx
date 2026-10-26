@@ -22,7 +22,13 @@ const interogareTelefon = () => typeof window.matchMedia === 'function' ? window
 export const EcranAzi = ({ parametri, onNavigare }: { parametri: string[]; onNavigare: NavigareProgramare }) => {
   const azi = aziProgramare();
   const data = dataValida(parametri[0]) ? parametri[0] : azi;
-  const [video, setVideo] = useState<Miscare | null>(null);
+  const exercitiu = /^[1-9]\d*$/.test(parametri[2] ?? '1') ? Number(parametri[2] ?? '1') : 0;
+  const adresa = JSON.stringify([data, parametri[1] ?? '', exercitiu, parametri[3] ?? '']);
+  const [video, setVideo] = useState<{ adresa: string; miscare: Miscare } | null>(null);
+  // Resetăm înainte de randarea foii, ca portalul vechi să nu devină inert
+  // la Înapoi/Înainte și selecția să nu reapară la revenirea la aceeași adresă.
+  if (video && video.adresa !== adresa) setVideo(null);
+  const deschideVideo = (miscare: Miscare) => setVideo({ adresa, miscare });
   const [telefon, setTelefon] = useState(() => interogareTelefon()?.matches ?? false);
   useEffect(() => {
     const lista = interogareTelefon();
@@ -52,7 +58,6 @@ export const EcranAzi = ({ parametri, onNavigare }: { parametri: string[]; onNav
   }, foaie && !!atribuireId && !propriu && (!!resursa.date || resursa.eroare));
   const antrenament = propriu ?? atribuireCeruta.date;
   const bloc = antrenament?.zi.blocuri.find(item => item.id === parametri[1] && !item.ascuns);
-  const exercitiu = /^[1-9]\d*$/.test(parametri[2] ?? '1') ? Number(parametri[2] ?? '1') : 0;
   const selectat = bloc && (bloc.seturi.length ? bloc.seturi.some(set => set.exercitiu === exercitiu) : exercitiu === 1);
   const profilAntrenament: ProfilSportiv | null = antrenament
     ? antrenament.atribuire.sportiv_id === profil?.id ? profil : {
@@ -90,17 +95,17 @@ export const EcranAzi = ({ parametri, onNavigare }: { parametri: string[]; onNav
         : resursa.date.antrenamente.length === 0 ? <p className={styles.mesaj}>Niciun antrenament programat pentru această zi.</p>
         : <>
           <aside className={styles.comunitate} aria-label="Firul zilei"><span className={styles.supraTitlu}>Firul zilei</span><span className={styles.asteptare}>În curând</span></aside>
-          {resursa.date.antrenamente.map(item => <CardZi key={`${item.atribuire.id}-${item.zi.id}`} antrenament={item} profil={profil} onVideo={setVideo} onDeschide={(blocId, numar) => onNavigare('prog-azi', [data, blocId, String(numar), item.atribuire.id])} />)}
+          {resursa.date.antrenamente.map(item => <CardZi key={`${item.atribuire.id}-${item.zi.id}`} antrenament={item} profil={profil} onVideo={deschideVideo} onDeschide={(blocId, numar) => onNavigare('prog-azi', [data, blocId, String(numar), item.atribuire.id])} />)}
         </>}
       {banda.eroare && <p className={styles.mesaj} role="alert">Nu am putut încărca marcajele benzii de date.</p>}
     </div>
   </div>
     {foaie && (dataValida(parametri[0]) && antrenament && bloc && selectat && profilAntrenament
       ? <FoaieAntrenament antrenament={antrenament} data={data} bloc={bloc} exercitiu={exercitiu} profil={profilAntrenament}
-        telefon={telefon} onAlege={alegeBloc} onInchide={inchideFoaia} onVideo={setVideo} />
+        telefon={telefon} onAlege={alegeBloc} onInchide={inchideFoaia} onVideo={deschideVideo} />
       : dataValida(parametri[0]) && ((!resursa.date && !resursa.eroare) || (atribuireId && !propriu && atribuireCeruta.date === undefined && !atribuireCeruta.eroare))
         ? <p className={styles.mesaj} role="status">Se încarcă antrenamentul…</p>
         : <div className={styles.mesaj}><p role="alert">Antrenamentul cerut nu este disponibil pentru această zi.</p><button type="button" className={styles.inapoi} onClick={() => onNavigare('prog-azi', [data])}>Înapoi la zi</button></div>)}
-    {video && <ModalVideo miscare={video} onInchide={() => setVideo(null)} />}
+    {video && video.adresa === adresa && <ModalVideo miscare={video.miscare} onInchide={() => setVideo(null)} />}
   </>;
 };

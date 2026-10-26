@@ -11,8 +11,11 @@ import { EcranAzi } from './EcranAzi';
 
 const azi = aziProgramare();
 const antrenament = (extra: Partial<AntrenamentZi> = {}): AntrenamentZi => ({ atribuire: atribuire(), program: program(), zi: ziProgram(), ...extra });
+const ecran = (parametri: string[], onNavigare = vi.fn()) => <FurnizorProgramare sesiune={{ token: 'token-test', onAuthError: vi.fn(() => false), showToast: vi.fn() }}>
+  <EcranAzi parametri={parametri} onNavigare={onNavigare} />
+</FurnizorProgramare>;
 const monteaza = (parametri: string[] = [], onNavigare = vi.fn()) => {
-  render(<FurnizorProgramare sesiune={{ token: 'token-test', onAuthError: vi.fn(() => false), showToast: vi.fn() }}><EcranAzi parametri={parametri} onNavigare={onNavigare} /></FurnizorProgramare>);
+  render(ecran(parametri, onNavigare));
   return onNavigare;
 };
 const raspunsAzi = (antrenamente: AntrenamentZi[], extra: Partial<DateAzi> = {}) => server.use(rpcHandler('admin_prog_azi', () => HttpResponse.json({ data: azi, profil: profilSportiv(), antrenamente, ...extra })));
@@ -189,6 +192,47 @@ describe('Azi', () => {
     fireEvent.click(declansator);
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it.each([
+    { caz: 'data', urmatoare: [decaleazaData(azi, 1), 'bloc-1', '1', 'atribuire-1'] },
+    { caz: 'blocul', urmatoare: [azi, 'bloc-2', '1', 'atribuire-1'] },
+    { caz: 'exercițiul', urmatoare: [azi, 'bloc-1', '2', 'atribuire-1'] },
+    { caz: 'atribuirea', urmatoare: [azi, 'bloc-1', '1', 'atribuire-2'] },
+    { caz: 'închiderea foii', urmatoare: [azi] },
+  ])('schimbarea adresei ($caz) închide video definitiv, inclusiv la revenire', async ({ urmatoare }) => {
+    raspunsAzi([antrenament()]);
+    const initiala = [azi, 'bloc-1', '1', 'atribuire-1'];
+    const { rerender } = render(ecran(initiala));
+    const pagina = await screen.findByRole('region', { name: 'Exercițiul curent' });
+    fireEvent.click(within(pagina).getByRole('button', { name: 'Video: Genuflexiune demo' }));
+    expect(screen.getByRole('dialog', { name: 'Genuflexiune demo' })).toBeDefined();
+
+    rerender(ecran(urmatoare));
+    expect(screen.queryByRole('dialog', { name: 'Genuflexiune demo' })).toBeNull();
+    rerender(ecran(initiala));
+    await screen.findByRole('region', { name: 'Exercițiul curent' });
+    expect(screen.queryByRole('dialog', { name: 'Genuflexiune demo' })).toBeNull();
+  });
+
+  it('video din Azi se închide la schimbarea datei și nu revine cu data anterioară', async () => {
+    raspunsAzi([antrenament()]);
+    const { rerender } = render(ecran([azi]));
+    fireEvent.click(await screen.findByRole('button', { name: 'Video: Genuflexiune demo' }));
+    expect(screen.getByRole('dialog', { name: 'Genuflexiune demo' })).toBeDefined();
+    rerender(ecran([decaleazaData(azi, 1)]));
+    expect(screen.queryByRole('dialog', { name: 'Genuflexiune demo' })).toBeNull();
+    rerender(ecran([]));
+    await screen.findByRole('article', { name: 'Program sintetic' });
+    expect(screen.queryByRole('dialog', { name: 'Genuflexiune demo' })).toBeNull();
+  });
+
+  it('adresele echivalente pentru Azi păstrează video deschis', async () => {
+    raspunsAzi([antrenament()]);
+    const { rerender } = render(ecran([]));
+    fireEvent.click(await screen.findByRole('button', { name: 'Video: Genuflexiune demo' }));
+    rerender(ecran([azi]));
+    expect(screen.getByRole('dialog', { name: 'Genuflexiune demo' })).toBeDefined();
   });
 
   it('mișcările fără video ori cu id invalid nu primesc buton video', async () => {

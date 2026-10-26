@@ -113,6 +113,33 @@ describe('Calendarul atribuirii', () => {
     expect(onNavigare).toHaveBeenLastCalledWith('prog-calendar', ['atribuire-1', '2025']);
   });
 
+  it.each([
+    { caz: 'preferă intervalul curent, inclusiv când începe azi', date: [['2026-01-05', '2026-03-28'], ['2026-10-21', '2026-11-28'], ['2027-01-05', '2027-03-28']], aleasa: 1 },
+    { caz: 'include ultima zi a intervalului curent', date: [['2026-01-05', '2026-03-28'], ['2026-09-07', '2026-10-21'], ['2027-01-05', '2027-03-28']], aleasa: 1 },
+    { caz: 'preferă cel mai recent start între intervale curente', date: [['2026-01-05', '2026-03-28'], ['2026-09-07', '2026-11-28'], ['2026-10-19', '2026-11-28']], aleasa: 2 },
+    { caz: 'alege ultimul start când toate atribuirile sunt terminate', date: [['2026-01-05', '2026-03-28'], ['2026-05-04', '2026-07-25']], aleasa: 1 },
+    { caz: 'alege ultimul start când toate atribuirile sunt viitoare', date: [['2026-11-02', '2027-01-23'], ['2027-01-05', '2027-03-28']], aleasa: 1 },
+    { caz: 'alege ultimul start fără interval curent, între trecut și viitor', date: [['2026-01-05', '2026-03-28'], ['2027-01-05', '2027-03-28']], aleasa: 1 },
+    { caz: 'păstrează legătura explicită la atribuirea terminată', date: [['2026-01-05', '2026-03-28'], ['2026-10-19', '2026-11-28']], aleasa: 0, explicita: true },
+    { caz: 'păstrează prima atribuire ca rezervă fără atribuiri proprii', date: [['2026-01-05', '2026-03-28'], ['2026-10-19', '2026-11-28']], aleasa: 0, altSportiv: true },
+  ])('$caz', async ({ date, aleasa, explicita, altSportiv }) => {
+    const atribuiri = date.map(([data_start, data_sfarsit], index) => atribuire({ id: `atribuire-${index}`, sportiv_id: altSportiv ? 2 : 1, data_start, data_sfarsit }));
+    const cereri: string[] = [];
+    server.use(
+      rpcHandler('admin_prog_profil', () => HttpResponse.json(profilSportiv())),
+      rpcHandler('admin_prog_programe', () => HttpResponse.json([program({ atribuiri })])),
+      rpcHandler('admin_prog_calendar', async ({ request }) => {
+        const { p_atribuire_id } = await request.json() as { p_atribuire_id: string };
+        cereri.push(p_atribuire_id);
+        return HttpResponse.json({ atribuire: atribuiri.find(a => a.id === p_atribuire_id), zile: [], totaluri: { zile_antrenament: 0, rezultate: 0, pr: 0 } });
+      }),
+    );
+    monteaza(explicita ? [atribuiri[aleasa].id] : []);
+    await screen.findByRole('region', { name: 'Toate săptămânile atribuirii' });
+    expect((screen.getByLabelText('Sportiv și program') as HTMLSelectElement).value).toBe(atribuiri[aleasa].id);
+    expect(cereri).toEqual([atribuiri[aleasa].id]);
+  });
+
   it('păstrează o atribuire care trece în anul următor și aliniază pauzele după datele reale', async () => {
     const calendar: DateCalendar = {
       atribuire: atribuire({ data_start: '2026-12-31', data_sfarsit: '2027-01-03' }),
