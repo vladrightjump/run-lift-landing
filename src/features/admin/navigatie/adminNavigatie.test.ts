@@ -29,8 +29,11 @@ const CHEI_VECHI: EcranAdmin[] = [
 ];
 
 describe('zonele', () => {
-  it('sunt patru, în ordinea Acum · Antrenamente · Evenimente · Site', () => {
-    expect(ZONE.map((z) => z.cheie)).toEqual(['acum', 'antrenamente', 'evenimente', 'site']);
+  it('include zona privată Programare lângă Antrenamente', () => {
+    expect(ZONE.map((z) => z.cheie)).toEqual(['acum', 'antrenamente', 'programare', 'evenimente', 'site']);
+    expect(ZONE.find(z => z.cheie === 'programare')?.file.map(f => f.ecrane[0].cheie)).toEqual([
+      'prog-azi', 'prog-calendar', 'prog-programe', 'prog-exercitii', 'prog-rezultate',
+    ]);
   });
 
   it('fiecare dintre cele 14 ecrane vechi e o filă validă (R1)', () => {

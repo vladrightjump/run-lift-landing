@@ -52,7 +52,7 @@ describe('cadrul pe desktop: șina', () => {
   it('arată toate zonele și filele deodată, fără semantică de tab', () => {
     cadru('acum');
     const sina = screen.getByRole('navigation', { name: 'Zone și ecrane' });
-    for (const nume of ['Acum', 'Antrenamente', 'Evenimente', 'Site', 'Următorul', 'Participanți', 'Mesaje', 'Detalii și publicare', 'Clipuri']) {
+    for (const nume of ['Acum', 'Antrenamente', 'Programare', 'Evenimente', 'Site', 'Următorul', 'Participanți', 'Mesaje', 'Detalii și publicare', 'Clipuri']) {
       expect(within(sina).getByRole('button', { name: new RegExp(`^${nume}`) })).toBeDefined();
     }
     expect(document.querySelectorAll('[role="tab"], [role="tablist"]')).toHaveLength(0);
@@ -121,10 +121,10 @@ describe('cadrul pe desktop: șina', () => {
 describe('cadrul pe telefon: bara de jos', () => {
   beforeEach(() => setTelefon(true));
 
-  it('zonele stau într-o bară de jos cu patru intrări, iar șina lipsește', () => {
+  it('zonele stau într-o bară de jos cu cinci intrări, iar șina lipsește', () => {
     cadru('participanti');
     const bara = screen.getByRole('navigation', { name: 'Zone' });
-    expect(within(bara).getAllByRole('button')).toHaveLength(4);
+    expect(within(bara).getAllByRole('button')).toHaveLength(5);
     expect(within(bara).getByRole('button', { name: /^Evenimente/ }).getAttribute('aria-current')).toBe('page');
     expect(screen.queryByRole('navigation', { name: 'Zone și ecrane' })).toBeNull();
   });

@@ -20,64 +20,68 @@ import { esteEcran } from './adminNavigatie';
  * gardă pusă pe unul singur ar fi o gardă cu trei sferturi de gaură.
  */
 
-const dinHash = (hash: string): EcranAdmin | null => {
-  const cheie = hash.replace(/^#/, '');
-  return esteEcran(cheie) ? cheie : null;
+type AdresaAdmin = { ecran: EcranAdmin; parametri: string[] };
+
+const fragment = ({ ecran, parametri }: AdresaAdmin) =>
+  `#${[ecran, ...parametri.map(encodeURIComponent)].join('/')}`;
+
+const dinHash = (hash: string): AdresaAdmin | null => {
+  const [cheie, ...parti] = hash.replace(/^#/, '').split('/');
+  if (!esteEcran(cheie)) return null;
+  try { return { ecran: cheie, parametri: parti.map(decodeURIComponent) }; }
+  catch { return null; }
 };
 
 export const useEcranCurent = (implicit: EcranAdmin) => {
-  const [ecran, setEcran] = useState<EcranAdmin>(
-    () => dinHash(window.location.hash) ?? implicit
+  const [adresa, setAdresa] = useState<AdresaAdmin>(
+    () => dinHash(window.location.hash) ?? { ecran: implicit, parametri: [] }
   );
   const gardaIesire = useRef<(() => boolean) | null>(null);
+  const adresaRef = useRef(adresa);
+  useEffect(() => { adresaRef.current = adresa; }, [adresa]);
 
-  // Ecranul curent, citibil din ascultătorul de `hashchange` fără să-l lege de
-  // o valoare veche: efectul se înregistrează o dată, iar `ecran` s-ar fi
-  // închis peste valoarea de la montare.
-  //
-  // Sincronizarea stă într-un efect, nu în corpul randării: cititorii lui sînt
-  // toți asincroni (handler de eveniment, ascultător de `hashchange`), deci
-  // rulează după ce efectul a trecut.
-  const ecranRef = useRef(ecran);
-  useEffect(() => {
-    ecranRef.current = ecran;
-  }, [ecran]);
-
-  const schimba = useCallback((urmator: EcranAdmin) => {
-    if (urmator === ecranRef.current) return;
+  const schimba = useCallback((ecran: EcranAdmin, parametri: string[] = []) => {
+    const urmatoare = { ecran, parametri };
+    if (fragment(urmatoare) === fragment(adresaRef.current)) return;
     if (gardaIesire.current && !gardaIesire.current()) return;
-    setEcran(urmator);
+    const eraFoaie = adresaRef.current.ecran === 'prog-azi' && !!adresaRef.current.parametri[1];
+    // Scrierea sincronă îi permite foii să înlocuiască selecția curentă fără
+    // să ajungă înaintea efectului care ar fi creat intrarea inițială.
+    window.location.hash = fragment(urmatoare);
+    if (ecran === 'prog-azi' && parametri[1] && !eraFoaie) {
+      window.history.replaceState({ ...window.history.state,
+        programareFoaie: { data: parametri[0], atribuire: parametri[3] },
+      }, '', window.location.href);
+    }
+    adresaRef.current = urmatoare;
+    setAdresa(urmatoare);
   }, []);
 
   const inregistreazaGardaIesire = useCallback((garda: (() => boolean) | null) => {
     gardaIesire.current = garda;
   }, []);
 
-  // Fragmentul urmează ecranul. `replace` n-ar merge aici: fiecare ecran
-  // trebuie să lase o intrare în istoric, altfel „înapoi" n-ar avea unde să se
-  // întoarcă și am fi scris adresa degeaba.
+  // Fiecare dată sau bloc deschis lasă un pas în istoricul browserului.
   useEffect(() => {
-    if (window.location.hash !== `#${ecran}`) window.location.hash = ecran;
-  }, [ecran]);
+    const hash = fragment(adresa);
+    if (window.location.hash !== hash) window.location.hash = hash;
+  }, [adresa]);
 
-  // „Înapoi" și „înainte" din browser, plus orice link care schimbă fragmentul.
   useEffect(() => {
     const laSchimbare = () => {
-      const cerut = dinHash(window.location.hash);
-      const curent = ecranRef.current;
-      if (cerut === null || cerut === curent) return;
+      const ceruta = dinHash(window.location.hash);
+      const curenta = adresaRef.current;
+      if (ceruta === null || fragment(ceruta) === fragment(curenta)) return;
       if (gardaIesire.current && !gardaIesire.current()) {
-        // Refuzul trebuie să pună adresa la loc. Altfel URL-ul ar arăta un
-        // ecran iar pe ecran ar fi altul — exact minciuna pe care adresa
-        // trebuia s-o repare.
-        window.location.hash = curent;
+        window.location.hash = fragment(curenta);
         return;
       }
-      setEcran(cerut);
+      adresaRef.current = ceruta;
+      setAdresa(ceruta);
     };
     window.addEventListener('hashchange', laSchimbare);
     return () => window.removeEventListener('hashchange', laSchimbare);
   }, []);
 
-  return { ecran, schimba, inregistreazaGardaIesire };
+  return { ...adresa, schimba, inregistreazaGardaIesire };
 };

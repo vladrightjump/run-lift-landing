@@ -117,13 +117,13 @@
   .admin-subfila[aria-current="page"] { background: var(--pa-ink); color: var(--pa-ink-text); }
   .admin-bara-jos {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-    display: grid; grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
     background: var(--pa-surface); border-top: 1px solid var(--pa-line); padding-bottom: env(safe-area-inset-bottom);
   }
   .admin-bara-jos-zona {
     position: relative; min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 3px; border: 0; border-radius: 0; background: none; cursor: pointer;
-    font-family: var(--pa-font); font-size: 12px; font-weight: 600; color: var(--pa-muted);
+    font-family: var(--pa-font); font-size: 11px; font-weight: 600; color: var(--pa-muted);
   }
   .admin-bara-jos-zona[aria-current="page"] { color: var(--pa-text); }
   .admin-bara-jos-icon {

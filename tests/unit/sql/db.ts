@@ -35,7 +35,7 @@ const SALA_SQL = readFileSync(resolve(__dirname, '../../../supabase/schema/sala.
  * de aici se poate rula de mai multe ori. După `apply_migration` și regenerarea
  * instantaneelor, scoate-o din listă: instantaneul o conține deja.
  */
-const MIGRARI_NEAPLICATE = ([] as string[]).map((f) =>
+const MIGRARI_NEAPLICATE = (['supabase/sql/supabase-migration-programare.sql'] as string[]).map((f) =>
   readFileSync(resolve(__dirname, '../../..', f), 'utf8'),
 );
 
@@ -81,6 +81,13 @@ const TABELE = [
   'weekly_workout',
   'training_reels',
   'homepage_settings',
+  'prog_atribuire',
+  'prog_set',
+  'prog_bloc',
+  'prog_zi',
+  'prog_miscare',
+  'prog_program',
+  'prog_sportiv',
 ];
 
 /** Tabelele grupului de antrenament, din `public`. */
@@ -105,7 +112,7 @@ export const PAROLA_ADMIN = 'parola-de-test';
 
 export type BazaTest = PGlite;
 
-export const porneste = async (): Promise<BazaTest> => {
+export const porneste = async (aplicaMigrari = true): Promise<BazaTest> => {
   const db = new PGlite({ extensions: { pgcrypto } });
   // Corpurile funcțiilor SQL se validează la creare, iar instantaneul le
   // încarcă înaintea tabelelor pe care le citesc.
@@ -113,7 +120,7 @@ export const porneste = async (): Promise<BazaTest> => {
   await db.exec(INFRASTRUCTURA);
   await db.exec(SCHEMA_SQL);
   await db.exec(SALA_SQL);
-  for (const migrare of MIGRARI_NEAPLICATE) await db.exec(migrare);
+  if (aplicaMigrari) for (const migrare of MIGRARI_NEAPLICATE) await db.exec(migrare);
   return db;
 };
 

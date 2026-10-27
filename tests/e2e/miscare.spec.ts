@@ -329,6 +329,7 @@ test.describe('Mișcare — titlul din hero', () => {
   // deci nu pornește niciodată de la opacitate zero și nici complet mascat.
   test('titlul are formă din primul cadru: fără opacitate zero, jumătate de literă vizibilă', async ({ page }) => {
     await page.goto('/?preview=landing');
+    await expect(page.locator('[data-css~="e3-hero-title"]')).toBeAttached();
     const start = await page.evaluate(() =>
       Array.from(document.querySelectorAll<HTMLElement>("[data-css~=\"e3-hero-title\"], [data-css~=\"e3-word\"]")).map((el) => {
         for (const a of el.getAnimations()) {
@@ -347,6 +348,7 @@ test.describe('Mișcare — titlul din hero', () => {
 
   test('intrările din primul ecran se termină în cel mult 700 ms', async ({ page }) => {
     await page.goto('/?preview=landing');
+    await expect(page.locator('[data-css~="e3-hero"]')).toBeAttached();
     const capete = await page.evaluate(() =>
       document
         .querySelector("[data-css~=\"e3-hero\"]")!
@@ -362,6 +364,7 @@ test.describe('Mișcare — titlul din hero', () => {
 
   test('CTA-ul din hero nu mai strălucește la nesfârșit', async ({ page }) => {
     await page.goto('/?preview=landing');
+    await expect(page.locator('[data-css~="e3-hero-cta"]')).toBeAttached();
     const infinite = await page.evaluate(() =>
       document
         .querySelector("[data-css~=\"e3-hero-cta\"]")!

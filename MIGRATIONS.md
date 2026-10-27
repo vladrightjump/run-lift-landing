@@ -3,7 +3,7 @@
 Catalog al migrărilor care ating Run + Lift, cu granița clară față de aplicația vecină
 (gym-app + botul de Telegram) care împarte același proiect Supabase.
 
-Ultima actualizare: 12 octombrie 2026.
+Ultima actualizare: 21 octombrie 2026.
 
 ---
 
@@ -28,6 +28,18 @@ Proiectul Supabase **`ironworks-gym`** (`whyndrjcezmtajbykeil`, eu-central-1) e 
 Rutarea către `runlift` se face prin headerele PostgREST `Accept-Profile` (GET) /
 `Content-Profile` (scriere). Schema trebuie **expusă** în Supabase → Project Settings → API →
 Exposed schemas (`public, graphql_public, runlift`).
+
+---
+
+## Migrare pregătită — Programare, etapa 1 (21 octombrie 2026)
+
+**NEAPLICATĂ LIVE:** `supabase/sql/supabase-migration-programare.sql`. Testele o încarcă prin `MIGRARI_NEAPLICATE`, peste instantaneul existent; `supabase/schema/runlift.sql` rămâne instantaneul producției.
+
+Adaugă șapte tabele private `runlift.prog_*` pentru profiluri de sportiv, mișcări, programe, zile, blocuri, seturi și atribuiri. Cele opt funcții `admin_prog_*` verifică tokenul existent; profilul și atribuirea se scriu numai pentru adminul din sesiune. Citirile programelor și calendarelor sunt comune adminilor, iar Azi folosește sportivul curent. Atribuirile întorc genul proprietarului pentru afișarea corectă a țintelor când sunt citite de alt admin. Importul JSON v1 actualizează identificatorii externi și ascunde rândurile retrase, fără ștergeri fizice. Nu adaugă rezultate, comentarii, media sau comenzi către bot și nu scrie în schema `public`.
+
+Testele SQL verifică refuzul tokenurilor invalide/expirate, accesul direct interzis pentru `anon`, izolarea scrierilor pe sesiune, importul repetat, înlocuirea și reordonarea zilelor fără pierderea arhivei, datele relative, păstrarea atribuirilor și corpurile neschimbate ale funcțiilor existente. Unicitatea poziției se aplică numai zilelor vizibile. Migrarea poate fi reaplicată.
+
+Înainte de publicare: aplică prin MCP `apply_migration`, cu numele `runlift_programare_01`; verifică drepturile, refuzul unui token invalid și corpurile funcțiilor existente în Supabase. Regenerează apoi `supabase/schema/runlift.sql` cu `scripts/schema-snapshot.sql`, scoate migrarea din `MIGRARI_NEAPLICATE` și înlocuiește această secțiune cu versiunea și verificarea aplicării live.
 
 ---
 
