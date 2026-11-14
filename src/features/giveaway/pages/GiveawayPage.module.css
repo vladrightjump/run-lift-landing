@@ -1,0 +1,110 @@
+/* Pagina /giveaway. Gândită întâi pentru telefon: aproape tot traficul vine
+   din linkul de pe Instagram. */
+
+.gw-root {
+  background: var(--e3-bg); color: var(--e3-text);
+  min-height: 100dvh; display: flex; flex-direction: column;
+  font-family: Archivo, sans-serif;
+}
+.gw-accent { color: var(--e3-accent); }
+
+.gw-topbar {
+  display: flex; align-items: center;
+  padding: 14px var(--e3-gutter);
+  border-bottom: 1px solid var(--e3-border);
+}
+.gw-logo {
+  font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--e3-text); text-decoration: none;
+}
+
+.gw-main {
+  flex: 1; width: 100%; max-width: 1080px; margin: 0 auto; box-sizing: border-box;
+  padding: clamp(28px, 6vw, 64px) var(--e3-gutter) clamp(40px, 8vw, 96px);
+  display: grid; gap: clamp(32px, 6vw, 64px); align-content: start;
+}
+
+.gw-loading { margin: 0; color: var(--e3-muted); font-size: 16px; }
+
+.gw-hero { display: grid; gap: 16px; }
+.gw-kicker {
+  margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--e3-accent);
+}
+.gw-title {
+  margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+  font-size: clamp(40px, 9vw, 88px); line-height: 0.98; letter-spacing: 0.5px;
+  text-transform: uppercase; text-wrap: balance;
+}
+.gw-prize {
+  margin: 0; max-width: 640px; font-size: clamp(17px, 2.4vw, 21px); line-height: 1.5;
+  color: var(--e3-muted-strong); text-wrap: pretty;
+}
+.gw-sponsor {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  font-size: 13px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--e3-muted);
+}
+.gw-sponsor img { height: 36px; width: auto; max-width: 180px; object-fit: contain; }
+.gw-sponsor-name { color: var(--e3-text); }
+.gw-period {
+  margin: 0; padding-top: 16px; border-top: 1px solid var(--e3-border);
+  font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong);
+}
+
+.gw-grid {
+  display: grid; gap: clamp(24px, 5vw, 56px); align-items: start;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 860px) {
+  .gw-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
+}
+
+.gw-how h2, .gw-rules h2, .gw-notice h2 {
+  margin: 0 0 16px; font-family: Anton, sans-serif; font-weight: 400;
+  font-size: clamp(24px, 4vw, 32px); letter-spacing: 0.5px; text-transform: uppercase;
+}
+.gw-how ol {
+  margin: 0; padding-left: 22px; display: grid; gap: 12px;
+  font-size: 16px; line-height: 1.5; color: var(--e3-muted-strong);
+}
+.gw-how li::marker { color: var(--e3-accent); font-weight: 700; }
+
+/* Linkul „regulamentul" din formular sare aici; lăsăm aer deasupra titlului. */
+.gw-entry, .gw-rules { scroll-margin-top: 24px; }
+
+.gw-notice {
+  background: var(--e3-surface); border: 1px solid var(--e3-border);
+  padding: clamp(24px, 5vw, 36px);
+}
+.gw-notice p { margin: 0; font-size: 16px; line-height: 1.6; color: var(--e3-muted-strong); }
+
+.gw-rules { border-top: 1px solid var(--e3-border); padding-top: clamp(28px, 5vw, 48px); }
+.gw-rule { max-width: 720px; }
+.gw-rule + .gw-rule { margin-top: 24px; }
+.gw-rule h3 {
+  margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--e3-text);
+}
+.gw-rule p { margin: 0 0 10px; font-size: 15px; line-height: 1.65; color: var(--e3-muted-strong); }
+
+.gw-empty { display: grid; gap: 16px; justify-items: start; max-width: 620px; }
+.gw-empty h1 {
+  margin: 0; font-family: Anton, sans-serif; font-weight: 400;
+  font-size: clamp(32px, 7vw, 56px); line-height: 1.02; letter-spacing: 0.5px;
+  text-transform: uppercase; text-wrap: balance;
+}
+.gw-empty p { margin: 0; font-size: 17px; line-height: 1.6; color: var(--e3-muted-strong); }
+.gw-link { color: var(--e3-accent); font-size: 16px; font-weight: 600; }
+.gw-retry {
+  background: var(--e3-accent); color: var(--e3-bg); border: none; cursor: pointer;
+  font-family: Anton, sans-serif; font-size: 16px; letter-spacing: 1.5px;
+  text-transform: uppercase; padding: 14px 22px;
+}
+.gw-retry:hover { background: var(--e3-accent-hover); }
+
+.gw-footer {
+  padding: 24px var(--e3-gutter); border-top: 1px solid var(--e3-border);
+  font-family: Anton, sans-serif; font-size: 16px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--e3-text);
+}

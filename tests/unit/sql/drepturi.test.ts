@@ -144,6 +144,9 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
     // Ordinea blocurilor de pe ecranul dintre ediții și locul antrenamentelor,
     // pe care site-ul le arată oricum public.
     'public_homepage',
+    // Giveaway-ul curent, perioada și starea lui. Fără numărul de participări
+    // și fără date personale (vezi `giveaway.test.ts`).
+    'public_giveaway',
     'confirm_signup',
     'decline_spot',
     'unsubscribe',
@@ -186,6 +189,9 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
       'admin_sala_seteaza_antrenament', 'admin_sala_salveaza_config', 'admin_sala_porneste_bot',
       'admin_sala_comanda', 'admin_sala_scoate_din_grup', 'admin_sala_salveaza_membru',
       'admin_sala_leaga_cont', 'admin_sala_membru_din_cont', 'admin_sala_uneste',
+      // Giveaway-ul: participările, extragerea și încheierea.
+      'admin_giveaway_date', 'admin_giveaway_sterge', 'admin_giveaway_extrage',
+      'admin_giveaway_confirma', 'admin_giveaway_incheie',
     ],
   ];
 
@@ -203,6 +209,12 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
     // Ajutoarele funcțiilor grupului: ziua la Chișinău și urma scrierilor.
     'sala_azi',
     'sala_jurnal',
+    // Ajutoarele giveaway-ului și garda de înscriere: le cheamă doar triggerul
+    // și funcțiile de mai sus, niciodată un client.
+    'giveaway_cheie_telefon',
+    'giveaway_curent',
+    'giveaway_stare',
+    'giveaway_entries_guard',
   ];
 
   it('inventarul e complet — o funcție nouă nu poate trece neobservată', async () => {

@@ -38,6 +38,8 @@ export type EcranAdmin =
   | 'clipuri'
   | 'antrenament'
   | 'coming-soon'
+  // Giveaway-ul de pe Instagram: participările, extragerea și încheierea.
+  | 'giveaway'
   // Grupul de antrenament din parc (fostul gym-app): botul de Telegram,
   // prezențele și membrii. Nu țin de nicio ediție.
   | 'grup-prezente'

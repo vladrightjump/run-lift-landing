@@ -19,6 +19,7 @@ src/
 │   ├── antrenament/             # pagina și cardurile programului săptămânal
 │   ├── confirmare/              # confirmarea din linkul de email
 │   ├── despre-noi/              # prezentarea antrenamentelor din parc
+│   ├── giveaway/                # pagina giveaway-ului de pe Instagram și formularul ei
 │   ├── inscriere/               # formularul, validarea și transportul înscrierii
 │   ├── landing/                 # homepage, Coming Soon și secțiunile ediției
 │   ├── reels/                   # banda cu clipuri și citirea listei publice

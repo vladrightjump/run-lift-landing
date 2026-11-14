@@ -74,6 +74,12 @@ describe('adresele (R5, KTD3)', () => {
     expect(zonaEcranului('coming-soon')).toBe('site');
   });
 
+  it('`giveaway` e o filă a zonei Site', () => {
+    expect(zonaEcranului('giveaway')).toBe('site');
+    expect(filaEcranului('giveaway').eticheta).toBe('Giveaway');
+    expect(esteEcran('giveaway')).toBe(true);
+  });
+
   it('aterizarea implicită e Acum', () => {
     expect(ECRAN_IMPLICIT).toBe('acum');
     expect(zonaEcranului('acum')).toBe('acum');

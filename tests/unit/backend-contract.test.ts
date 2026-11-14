@@ -9,6 +9,7 @@ import { listWeeklyWorkout, mesajRefuzAntrenament } from '../../src/features/adm
 import { InvalidTokenError } from '../../src/shared/lib/rpc';
 import * as sala from '../../src/features/admin/zones/antrenamente/api';
 import { SUPABASE } from '../../src/shared/lib/config';
+import { loadPublicGiveaway, submitGiveawayEntry } from '../../src/features/giveaway/data/api';
 import { createFetchCapture } from '../support/fetchCapture';
 
 /**
@@ -89,6 +90,50 @@ describe('rutarea spre schema runlift', () => {
     await fetchWeeklyWorkouts();
     expect(headersOf()['Content-Profile']).toBe(SUPABASE.schema);
     expect(urlOf()).toBe(`${SUPABASE.url}/rest/v1/rpc/public_weekly_workouts`);
+  });
+});
+
+describe('giveaway-ul — pagina publică', () => {
+  const participare = {
+    nume: ' Ana Popescu ',
+    telefon: '069 123 456',
+    email: 'ana@exemplu.ro',
+    instagram: '@Ana.Run',
+    acordRegulament: true,
+    acordContact: false,
+  };
+
+  it('citirea giveaway-ului trimite Content-Profile = schema și merge spre proiectul corect', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('null', { status: 200 }));
+    expect(await loadPublicGiveaway()).toBeNull();
+    expect(headersOf()['Content-Profile']).toBe(SUPABASE.schema);
+    expect(urlOf()).toBe(`${SUPABASE.url}/rest/v1/rpc/public_giveaway`);
+  });
+
+  it('un răspuns stricat e o eroare, nu „niciun giveaway"', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('<html>', { status: 200 }));
+    await expect(loadPublicGiveaway()).rejects.toThrow();
+  });
+
+  it('participarea pleacă prin submit-form, fără giveaway și fără schemă', async () => {
+    await submitGiveawayEntry(participare, proofs);
+    expect(urlOf()).toMatch(/\/functions\/v1\/submit-form$/);
+    expect(headersOf()['Content-Profile']).toBeUndefined();
+    const plic = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(plic).toEqual({
+      mode: 'giveaway',
+      token: proofs.token,
+      hp: '',
+      elapsed: proofs.elapsed,
+      data: {
+        nume: 'Ana Popescu',
+        telefon: '069123456',
+        email: 'ana@exemplu.ro',
+        instagram: 'ana.run',
+        acord_regulament: true,
+        acord_contact: false,
+      },
+    });
   });
 });
 

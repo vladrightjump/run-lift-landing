@@ -250,8 +250,37 @@ export function adminPreviewData(now = Date.now()): Record<string, unknown> {
     },
   };
 
+  // Giveaway-ul: înscrieri închise, o persoană extrasă acum și una înlocuită.
+  const participariGiveaway = NUME.slice(0, 8).map(([nume, prenume], i) => {
+    const cont = `${prenume.toLowerCase()}.${nume.toLowerCase().replace(/[^a-z]/g, '')}`;
+    return {
+      id: `gw-p-${i}`,
+      nume: `${prenume} ${nume}`,
+      telefon: `069${String(200000 + i * 3571).slice(0, 6)}`,
+      email: `${cont}@gmail.com`,
+      instagram: cont,
+      acord_contact: i % 3 !== 0,
+      created_at: cuOreInUrma(i * 9 + 30),
+      extrasa_la: i === 2 ? cuOreInUrma(3) : i === 5 ? cuOreInUrma(1) : null,
+      inlocuita_la: i === 2 ? cuOreInUrma(1) : null,
+    };
+  });
+
   return {
     admin_check_token: true,
+    admin_giveaway_date: {
+      giveaways: [{ id: 'gw-preview', slug: 'toamna', titlu: 'Giveaway de toamnă', stare: 'extras' }],
+      giveaway: {
+        id: 'gw-preview', slug: 'toamna', titlu: 'Giveaway de toamnă',
+        starts_at: cuZileInUrma(12), ends_at: cuZileInUrma(1), stare: 'extras',
+        castigator: null, incheiat_la: null, total_participari: null,
+      },
+      participari: participariGiveaway,
+    },
+    admin_giveaway_sterge: null,
+    admin_giveaway_extrage: 'gw-p-5',
+    admin_giveaway_confirma: null,
+    admin_giveaway_incheie: 0,
     admin_list_registrations: inscrieri,
     admin_list_waitlist: asteptare,
     admin_list_email_log: jurnal,

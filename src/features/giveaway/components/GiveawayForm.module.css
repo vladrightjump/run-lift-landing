@@ -1,0 +1,67 @@
+/* Formularul de giveaway. Același limbaj ca formularul din /despre-noi:
+   suprafață închisă, colțuri drepte, etichete mici cu majuscule. */
+
+.gw-form {
+  background: var(--e3-surface);
+  border: 1px solid var(--e3-border);
+  padding: clamp(20px, 5vw, 36px);
+  display: grid;
+  gap: 18px;
+}
+
+.gw-field { display: grid; gap: 8px; }
+.gw-field > span {
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--e3-muted);
+}
+.gw-field input {
+  background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+  font-family: Archivo, sans-serif; font-size: 16px; padding: 13px 14px;
+  outline: none; transition: border-color 0.2s ease;
+  min-width: 0; width: 100%; box-sizing: border-box;
+}
+.gw-field input:focus-visible { border-color: var(--e3-accent); }
+.gw-field.invalid input { border-color: var(--e3-danger-strong); }
+
+/* Bifa și textul ei: ținta de atins e tot rândul, nu doar pătratul. */
+.gw-check {
+  display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start;
+  font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong); cursor: pointer;
+}
+.gw-check input {
+  width: 22px; height: 22px; margin: 0; accent-color: var(--e3-accent); cursor: pointer;
+}
+.gw-check a { color: var(--e3-accent); }
+.gw-check.invalid { color: var(--e3-danger-strong); }
+
+.gw-error { margin: 0; font-size: 14px; color: var(--e3-danger-strong); }
+
+.gw-submit {
+  background: var(--e3-accent); color: var(--e3-bg); border: none; cursor: pointer;
+  font-family: Anton, sans-serif; font-size: 18px; letter-spacing: 1.5px;
+  text-transform: uppercase; padding: 16px 24px; width: 100%;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.gw-submit:hover { background: var(--e3-accent-hover); transform: translateY(-2px); }
+.gw-submit:active { transform: translateY(0) scale(0.98); }
+.gw-submit:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+.gw-result {
+  background: var(--e3-surface); border: 1px solid var(--e3-accent);
+  padding: clamp(24px, 5vw, 40px); display: grid; gap: 14px;
+  justify-items: center; text-align: center;
+}
+.gw-result h2 {
+  margin: 0; font-family: Anton, sans-serif; font-weight: 400; font-size: 28px;
+  letter-spacing: 0.5px; text-transform: uppercase; color: var(--e3-text);
+}
+.gw-result p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--e3-muted-strong); }
+.gw-result-mark {
+  width: 56px; height: 56px; background: var(--e3-accent); color: var(--e3-bg);
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gw-submit, .gw-field input { transition: none; }
+  .gw-submit:hover { transform: none; }
+}
