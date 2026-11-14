@@ -20,28 +20,27 @@ type Props = {
 export const GiveawayForm = ({ sfarsit, onInchis }: Props) => {
   const { draft, setField, errors, state, eroare, submit, hpProps } = useGiveawayForm();
 
-  if (state === 'success') {
+  if (state === 'success' || state === 'duplicate') {
     return (
       <div className={styles['gw-result']} data-css="gw-result" role="status">
         <span className={styles['gw-result-mark']} data-css="gw-result-mark" aria-hidden="true">✓</span>
-        <h2>Ești în giveaway!</h2>
-        <p>
-          Am primit participarea ta. Câștigătorul e ales după {momentComplet(sfarsit)} și e anunțat pe
-          pagina noastră de Instagram.
-        </p>
-      </div>
-    );
-  }
-
-  if (state === 'duplicate') {
-    return (
-      <div className={styles['gw-result']} data-css="gw-result" role="status">
-        <span className={styles['gw-result-mark']} data-css="gw-result-mark" aria-hidden="true">✓</span>
-        <h2>Ești deja în giveaway</h2>
-        <p>
-          Am găsit deja o participare cu aceste date. O persoană participă o singură dată, deci nu mai
-          ai nimic de făcut.
-        </p>
+        {state === 'success' ? (
+          <>
+            <h2>Ești în giveaway!</h2>
+            <p>
+              Am primit participarea ta. Câștigătorul e ales după {momentComplet(sfarsit)} și e anunțat pe
+              pagina noastră de Instagram.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2>Ești deja în giveaway</h2>
+            <p>
+              Am găsit deja o participare cu aceste date. O persoană participă o singură dată, deci nu mai
+              ai nimic de făcut.
+            </p>
+          </>
+        )}
       </div>
     );
   }

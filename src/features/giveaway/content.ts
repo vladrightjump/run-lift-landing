@@ -5,8 +5,6 @@
  * afara ei. Aici stă doar ce citește omul — premiul, sponsorul, condițiile și
  * regulamentul. Un `slug` fără intrare arată pagina „niciun giveaway activ",
  * deci rândul și conținutul pot ajunge în producție în orice ordine.
- *
- * Cum adaugi un giveaway: `GHID-GIVEAWAY.md`.
  */
 export type ContinutGiveaway = {
   titlu: string;

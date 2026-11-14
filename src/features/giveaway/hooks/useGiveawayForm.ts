@@ -23,7 +23,7 @@ import {
  * `duplicate` e un răspuns al serverului, nu o eroare de arătat lângă buton:
  * omul nu are ce corecta în formular, deci formularul dispare.
  */
-export type GiveawayFormState = 'form' | 'loading' | 'success' | 'duplicate';
+type GiveawayFormState = 'form' | 'loading' | 'success' | 'duplicate';
 
 /**
  * Logica formularului de giveaway: validare, trimitere prin poarta anti-bot și
