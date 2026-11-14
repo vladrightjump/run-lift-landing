@@ -31,6 +31,23 @@ Exposed schemas (`public, graphql_public, runlift`).
 
 ---
 
+## Migrare pregătită — giveaway-ul de pe Instagram (14 noiembrie 2026)
+
+**NEAPLICATĂ LIVE:** `supabase/sql/supabase-migration-giveaway.sql`. Testele o încarcă prin `MIGRARI_NEAPLICATE`, peste instantaneul existent; `supabase/schema/runlift.sql` rămâne instantaneul producției.
+
+Planul `docs/plans/2026-11-14-0736-feat-giveaway-instagram-plan.md`. Doar adaugă, deci se poate aplica înaintea funcției Edge și a site-ului:
+
+- `runlift.giveaways` (un rând pe giveaway: `slug`, titlu, perioadă, copia câștigătorului, totalul de la încheiere) și `runlift.giveaway_entries` (participările). RLS pornit, fără politici; `anon` și `authenticated` n-au niciun drept, `service_role` are doar INSERT pe participări.
+- Triggerul `giveaway_entries_guard_trg`: serverul atribuie giveaway-ul curent și refuză înscrierea din afara perioadei (`giveaway_neinceput`, `giveaway_inchis`, `fara_giveaway`). Trei indexuri unice pe giveaway (telefon canonic, email, cont de Instagram) opresc dublurile.
+- `runlift.public_giveaway()`: giveaway-ul curent, perioada și starea, fără numere și fără date personale.
+- `runlift.admin_giveaway_date`, `_sterge`, `_extrage`, `_confirma`, `_incheie`: token verificat în funcție, urmă în `admin_events` fără nume sau contacte. Ștergerea e un `DELETE` real, nu `deleted_at`.
+
+Înainte de publicare: aplică prin MCP `apply_migration`, cu numele `runlift_giveaway`; verifică pe baza reală că `anon` și `authenticated` nu citesc tabelele și că un token inventat e refuzat, apoi rulează `get_advisors`. Regenerează `supabase/schema/runlift.sql` cu `scripts/schema-snapshot.sql`, scoate migrarea din `MIGRARI_NEAPLICATE` și înlocuiește această secțiune cu versiunea și verificarea aplicării live.
+
+Un giveaway nou nu cere migrare: e un rând în `runlift.giveaways` plus conținutul din cod (vezi `GHID-GIVEAWAY.md`, când apare primul).
+
+---
+
 ## Migrări aplicate — alerta de inactivitate și istoricul probelor (12 octombrie 2026)
 
 Planul `docs/plans/2026-10-11-2142-feat-alerta-inactivitate-si-istoric-probe-plan.md`. Ambele doar adaugă (tabele, coloane nullabile, funcții, triggere), deci au fost aplicate înaintea botului nou, fără efect asupra botului vechi:
