@@ -240,6 +240,17 @@ export const ZONE: ZonaRegistru[] = [
           },
         ],
       },
+      {
+        cheie: 'giveaway',
+        eticheta: 'Giveaway',
+        ecrane: [
+          {
+            cheie: 'giveaway',
+            eticheta: 'Giveaway',
+            descriere: 'Participările la giveaway-ul de pe Instagram, extragerea și încheierea',
+          },
+        ],
+      },
     ],
   },
 ];

@@ -6,6 +6,7 @@ import { trialData } from './builders/trial';
 import { reel } from './builders/reels';
 import { workout } from './builders/workouts';
 import { publicStats, publicHomepage, publicTrialConfig } from './builders/public';
+import { dateGiveaway } from './builders/giveaway';
 
 /** Override a named RPC without changing the shared endpoint matching. */
 export const rpcHandler = (name: string, resolver: HttpResponseResolver) =>
@@ -44,6 +45,7 @@ export function createHandlers(overrides: Record<string, unknown> = {}, latencyM
     admin_sala_date: dateSala(),
     admin_sala_rezumat: null,
     admin_trial_data: trialData(),
+    admin_giveaway_date: dateGiveaway({ giveaway: null }),
     ...overrides,
   };
   return [

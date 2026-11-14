@@ -16,6 +16,7 @@ import { AdminLaunchTab } from '../zones/evenimente/AdminLaunchTab';
 import { AdminEventTab } from '../zones/evenimente/AdminEventTab';
 import { AdminComingSoonTab } from '../zones/site/AdminComingSoonTab';
 import { AdminClipuriTab } from '../zones/site/AdminClipuriTab';
+import { EcranGiveaway } from '../zones/site/EcranGiveaway';
 import { EcranAcum } from '../zones/acum/EcranAcum';
 import { FurnizorSala } from '../zones/antrenamente';
 import { useEcranCurent } from '../navigatie/useEcranCurent';
@@ -218,6 +219,7 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
     clipuri: null,
     antrenament: null,
     'coming-soon': null,
+    giveaway: null,
     sabloane: null,
     'grup-prezente': null,
     'grup-membri': null,
@@ -646,6 +648,9 @@ const ContinutDashboard = ({ onLogout }: Omit<Props, 'token'>) => {
           <AdminComingSoonTab
           />
         )}
+
+        {/* Își ia singur datele, ca ecranele grupului: nu ține de ediția deschisă. */}
+        {tab === 'giveaway' && <EcranGiveaway />}
 
         {tab === 'lansare' && (
           <div className={styles['admin-launch']} data-css="admin-launch">

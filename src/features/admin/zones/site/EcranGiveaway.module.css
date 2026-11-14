@@ -1,0 +1,50 @@
+/* Ecranul Giveaway. Tabelul, statisticile și butoanele vin din stilurile comune
+   ale adminului; aici stau doar piesele proprii. */
+
+.admin-giveaway { display: grid; gap: 20px; }
+
+.admin-giveaway-stare { font-size: 18px; font-weight: 700; line-height: 1.3; color: var(--pa-text); }
+
+.admin-giveaway-panou {
+  border: 1px solid var(--pa-line); border-radius: var(--pa-r-lg);
+  background: var(--pa-surface); padding: 20px 24px;
+  display: grid; gap: 12px;
+}
+.admin-giveaway-panou h3 { margin: 0; font-family: var(--pa-font); font-weight: 700; font-size: 20px; }
+.admin-giveaway-panou p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--pa-text-2); max-width: 70ch; }
+
+.admin-giveaway-persoana {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px;
+  padding: 12px 0; border-top: 1px solid var(--pa-line-soft); border-bottom: 1px solid var(--pa-line-soft);
+}
+.admin-giveaway-persoana strong { font-size: 20px; color: var(--pa-text); }
+
+/* Nouă coloane: tabelul comun are șase. Telefonul are lățime fixă, ca să nu
+   fie tăiat cu „…" nici pe telefon, unde tabelul se derulează pe orizontală ca
+   celelalte. 960px încape fără derulare pe un ecran de 1280. */
+.admin-giveaway-tabel { min-width: 960px; }
+.admin-giveaway-row {
+  grid-template-columns: 40px 1.4fr 100px 1.6fr 1.1fr 100px 56px 108px 84px;
+}
+.admin-giveaway-row-head {
+  padding: 12px 24px; border-bottom: 1px solid var(--pa-line);
+  font-size: 11px; font-weight: 700; color: var(--pa-muted-2); animation: none;
+}
+.admin-giveaway-row-head:hover { background: transparent; }
+
+.admin-giveaway-link {
+  font-size: 14px; color: var(--pa-text-2); font-variant-numeric: tabular-nums;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: color 0.2s ease;
+}
+.admin-giveaway-link:hover { color: var(--pa-accent-text); }
+
+.admin-giveaway-semn { font-size: 13px; font-weight: 700; color: var(--pa-accent-text); }
+.admin-giveaway-semn-vechi { font-size: 13px; color: var(--pa-muted); }
+
+.admin-giveaway-sterge { background: transparent; border-color: var(--pa-danger); color: var(--pa-danger); }
+.admin-giveaway-sterge:hover:not(:disabled) {
+  background: var(--pa-danger-solid); border-color: var(--pa-danger-solid); color: var(--pa-surface);
+}
+
+.admin-giveaway-gol { padding: 36px 24px; text-align: center; font-size: 15px; color: var(--pa-muted); }
