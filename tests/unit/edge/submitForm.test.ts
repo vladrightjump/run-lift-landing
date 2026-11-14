@@ -529,6 +529,8 @@ describe('participarea la giveaway', () => {
     ['cont de Instagram cu spații', { instagram: 'ana run' }, 'invalid:instagram'],
     ['cont de Instagram de 31 de caractere', { instagram: 'a'.repeat(31) }, 'invalid:instagram'],
     ['cont de Instagram gol', { instagram: '  ' }, 'invalid:instagram'],
+    ['linkul unei postări în loc de profil', { instagram: 'https://www.instagram.com/p/Cxyz123/' }, 'invalid:instagram'],
+    ['linkul unui reel în loc de profil', { instagram: 'instagram.com/reel/Cxyz123/' }, 'invalid:instagram'],
     ['regulament nebifat', { acord_regulament: false }, 'invalid:acord_regulament'],
     ['regulament bifat ca text', { acord_regulament: 'true' }, 'invalid:acord_regulament'],
   ])('%s e refuzat, fără scriere', async (_, over, eroare) => {

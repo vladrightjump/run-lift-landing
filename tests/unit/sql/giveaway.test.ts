@@ -169,13 +169,21 @@ describe('public_giveaway', () => {
     expect(new Date(g!.ends_at).getTime()).toBeGreaterThan(new Date(g!.starts_at).getTime());
   });
 
-  it('curent e cel terminat până începe următorul, apoi cel nou', async () => {
+  it('fără niciunul deschis, următorul programat e anunțat înaintea celui terminat', async () => {
     await giveaway('vechi', 'inchis');
+    expect(await citestePublic()).toMatchObject({ slug: 'vechi', stare: 'inchis' });
+
     const nou = await giveaway('nou', 'programat');
-    expect((await citestePublic())?.slug).toBe('vechi');
+    expect(await citestePublic()).toMatchObject({ slug: 'nou', stare: 'programat' });
 
     await db.query(`update runlift.giveaways set starts_at = now() - interval '1 hour' where id = $1`, [nou]);
     expect(await citestePublic()).toMatchObject({ slug: 'nou', stare: 'deschis' });
+  });
+
+  it('cel deschis are întâietate față de unul programat mai târziu', async () => {
+    await giveaway('deschis', 'deschis');
+    await giveaway('viitor', 'programat');
+    expect(await citestePublic()).toMatchObject({ slug: 'deschis', stare: 'deschis' });
   });
 
   it('nu spune câți s-au înscris și nu poartă date personale', async () => {
@@ -446,6 +454,19 @@ describe('funcțiile adminului', () => {
     expect(d.giveaway?.stare).toBe('confirmat');
     expect(d.giveaway?.castigator).toMatchObject({ nume: 'Maria Ceban', instagram: 'maria.c' });
     expect(d.giveaway?.castigator?.extras_la).toBeTruthy();
+  });
+
+  it('a doua confirmare e refuzată și nu mută momentul confirmării', async () => {
+    const g = await giveaway('toamna', 'deschis');
+    await inscrie();
+    await inchide(g);
+    await extrage(g);
+    await confirma(g);
+    const prima = (await date()).giveaway?.castigator?.confirmat_la;
+
+    await expect(confirma(g)).rejects.toThrow(/deja_confirmat/);
+    expect((await date()).giveaway?.castigator?.confirmat_la).toBe(prima);
+    expect((await jurnal()).filter((u) => u.tip === 'giveaway_confirmare')).toHaveLength(1);
   });
 
   it('reextragerea după confirmare anulează confirmarea', async () => {

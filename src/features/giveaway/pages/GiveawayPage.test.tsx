@@ -209,6 +209,17 @@ describe('pagina /giveaway — înscrierea', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Intră în giveaway' })).toBeNull());
   });
 
+  it('un refuz „giveaway neînceput" nu spune că înscrierile s-au încheiat', async () => {
+    formResponse({ status: 400, text: '{"code":"P0001","message":"giveaway_neinceput"}' });
+    await deschis();
+    completeaza();
+    bifeazaRegulamentul();
+    trimite();
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(/nu sunt deschise acum/);
+    expect(screen.queryByText(/Înscrierile s-au încheiat/)).toBeNull();
+  });
+
   it('o respingere anti-bot arată mesajul ei și lasă formularul completat', async () => {
     formResponse({ status: 403, text: '{"error":"captcha_failed"}' });
     await deschis();

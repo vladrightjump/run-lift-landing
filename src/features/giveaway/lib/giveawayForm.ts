@@ -29,6 +29,8 @@ export const EMPTY_GIVEAWAY_DRAFT: GiveawayDraft = {
 
 /** Un cont de Instagram: 1–30 de caractere din litere, cifre, punct și liniuță jos. */
 const INSTAGRAM_RE = /^[a-z0-9._]{1,30}$/;
+/** Primul segment al unui link Instagram care NU e un profil. */
+const INSTAGRAM_NU_E_PROFIL = ['p', 'reel', 'reels', 'stories', 'explore', 'tv'];
 
 /**
  * Contul de Instagram, oricum l-ar fi scris omul: cu „@", simplu sau ca link de
@@ -37,6 +39,8 @@ const INSTAGRAM_RE = /^[a-z0-9._]{1,30}$/;
 export const normalizeInstagram = (valoare: string): string => {
   const text = valoare.trim();
   const link = /instagram\.com\/([^/?#\s]+)/i.exec(text);
+  // Linkul unei postări nu e un profil: rămâne neschimbat și pică validarea.
+  if (link && INSTAGRAM_NU_E_PROFIL.includes(link[1].toLowerCase())) return text;
   return (link ? link[1] : text).replace(/^@/, '').toLowerCase();
 };
 
@@ -57,4 +61,5 @@ export const GIVEAWAY_MESSAGES = {
   regulament: 'Bifează că accepți regulamentul ca să participi.',
   timeout: 'Serverul răspunde greu. Încearcă din nou.',
   generic: 'Nu am putut trimite. Verifică conexiunea și încearcă din nou.',
+  indisponibil: 'Înscrierile nu sunt deschise acum. Reîncarcă pagina.',
 } as const;

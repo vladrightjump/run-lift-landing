@@ -115,7 +115,8 @@ as $function$
   from (select regexp_replace(coalesce(p_telefon, ''), '[\s().-]', '', 'g') as d) x;
 $function$;
 
--- Giveaway-ul curent: cel mai recent început, altfel următorul programat.
+-- Giveaway-ul curent: cel deschis acum; altfel următorul programat, ca pagina
+-- să-l poată anunța; altfel cel mai recent terminat.
 create or replace function runlift.giveaway_curent()
 returns uuid
 language sql
@@ -124,8 +125,10 @@ security definer
 set search_path to ''
 as $function$
   select coalesce(
-    (select g.id from runlift.giveaways g where g.starts_at <= now() order by g.starts_at desc limit 1),
-    (select g.id from runlift.giveaways g where g.starts_at > now() order by g.starts_at asc limit 1)
+    (select g.id from runlift.giveaways g
+      where g.starts_at <= now() and g.ends_at > now() order by g.starts_at desc limit 1),
+    (select g.id from runlift.giveaways g where g.starts_at > now() order by g.starts_at asc limit 1),
+    (select g.id from runlift.giveaways g order by g.ends_at desc limit 1)
   );
 $function$;
 
@@ -374,6 +377,8 @@ begin
   select * into v_extras from giveaway_entries
    where giveaway_id = v_g.id and extrasa_la is not null and inlocuita_la is null;
   if not found then raise exception 'fara_extras'; end if;
+  -- A doua confirmare ar muta momentul confirmării și ar dubla urma.
+  if v_g.confirmat_la is not null then raise exception 'deja_confirmat'; end if;
 
   update giveaways
      set confirmat_la = now(),

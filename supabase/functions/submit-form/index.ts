@@ -122,6 +122,8 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SURSE = ["lansare", "despre-noi"];
 // Un cont de Instagram: 1–30 de caractere din litere, cifre, punct și liniuță jos.
 const INSTAGRAM_RE = /^[a-z0-9._]{1,30}$/;
+// Primul segment al unui link Instagram care NU e un profil.
+const INSTAGRAM_NU_E_PROFIL = ["p", "reel", "reels", "stories", "explore", "tv"];
 
 const normalizePhone = (v: string) => v.replace(/[\s().-]/g, "");
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
@@ -132,6 +134,9 @@ const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
  */
 const normalizeInstagram = (v: string) => {
   const link = /instagram\.com\/([^/?#\s]+)/i.exec(v);
+  // Linkul unei postări (`/p/…`, `/reel/…`) nu e un profil: rămâne neschimbat,
+  // deci pică validarea, în loc să devină contul „p".
+  if (link && INSTAGRAM_NU_E_PROFIL.includes(link[1].toLowerCase())) return v;
   return (link ? link[1] : v).replace(/^@/, "").toLowerCase();
 };
 

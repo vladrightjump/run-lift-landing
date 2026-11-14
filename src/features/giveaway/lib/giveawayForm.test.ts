@@ -38,6 +38,7 @@ describe('validarea formularului de giveaway', () => {
     ['cont de Instagram cu spații', { instagram: 'ana run' }, 'instagram'],
     ['cont de Instagram de 31 de caractere', { instagram: 'a'.repeat(31) }, 'instagram'],
     ['cont de Instagram gol', { instagram: '' }, 'instagram'],
+    ['linkul unei postări în loc de profil', { instagram: 'https://www.instagram.com/p/Cxyz123/' }, 'instagram'],
     ['regulament nebifat', { acordRegulament: false }, 'acordRegulament'],
   ] as const)('%s marchează doar câmpul lui', (_, over, camp) => {
     expect(validateGiveawayDraft({ ...VALID, ...over })).toEqual({ [camp]: true });

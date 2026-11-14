@@ -62,7 +62,8 @@ export const EcranGiveaway = () => {
     (t: string, signal: AbortSignal) => loadGiveaway(t, ales, signal),
     [ales]
   );
-  const { date, eroare, reincarca } = useAdminResource<DateGiveaway>(incarca, undefined, {
+  // Lista vine cu toate contactele: un minut între citiri e destul pentru un număr.
+  const { date, eroare, reincarca } = useAdminResource<DateGiveaway>(incarca, 60_000, {
     queryKey: ['site', 'giveaway', ales],
   });
   const scrie = useAdminMutation((lucru: (t: string) => Promise<unknown>) => lucru(token));

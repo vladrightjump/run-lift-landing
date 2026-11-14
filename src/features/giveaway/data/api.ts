@@ -53,9 +53,10 @@ export const submitGiveawayEntry = async (
   );
 };
 
-/**
- * Serverul a refuzat fiindcă giveaway-ul nu primește înscrieri acum: s-a
- * închis între timp, n-a început sau nu mai există. Pagina era în urmă.
- */
+/** Serverul a refuzat fiindcă giveaway-ul s-a închis cât pagina stătea deschisă. */
 export const isGiveawayClosedError = (err: unknown): boolean =>
-  err instanceof SubmitHttpError && /giveaway_inchis|giveaway_neinceput|fara_giveaway/.test(err.message);
+  err instanceof SubmitHttpError && err.message.includes('giveaway_inchis');
+
+/** Giveaway-ul n-a început încă sau nu mai există: pagina arăta o stare veche. */
+export const isGiveawayUnavailableError = (err: unknown): boolean =>
+  err instanceof SubmitHttpError && /giveaway_neinceput|fara_giveaway/.test(err.message);

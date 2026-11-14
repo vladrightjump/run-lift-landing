@@ -84,6 +84,7 @@ export const mesajRefuzGiveaway = (err: unknown): string => {
   if (text.includes('giveaway_deschis')) return 'Extragerea se poate face abia după ce se închid înscrierile.';
   if (text.includes('giveaway_incheiat')) return 'Giveaway-ul e deja încheiat.';
   if (text.includes('fara_extras')) return 'Nu e nicio persoană extrasă de confirmat.';
+  if (text.includes('deja_confirmat')) return 'Câștigătorul e deja confirmat.';
   if (text.includes('fara_castigator')) return 'Confirmă întâi câștigătorul.';
   if (text.includes('participare_inexistenta')) return 'Participarea nu mai există.';
   if (text.includes('giveaway_inexistent')) return 'Giveaway-ul nu mai există. Reîncarcă pagina.';

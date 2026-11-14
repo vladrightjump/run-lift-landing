@@ -10,7 +10,7 @@ import {
 import { isAbortError, isTimeoutError } from '../../../shared/lib/errors';
 import { logClientError } from '../../../shared/lib/monitoring';
 import { isTurnstileError } from '../../../shared/lib/turnstile';
-import { isGiveawayClosedError, submitGiveawayEntry } from '../data/api';
+import { isGiveawayClosedError, isGiveawayUnavailableError, submitGiveawayEntry } from '../data/api';
 import {
   EMPTY_GIVEAWAY_DRAFT,
   GIVEAWAY_MESSAGES,
@@ -101,7 +101,8 @@ export const useGiveawayForm = () => {
       }
       logClientError('giveaway-entry', err);
       setState('form');
-      if (isTurnstileError(err)) setEroare(antiBotErrorMessage(err));
+      if (isGiveawayUnavailableError(err)) setEroare(GIVEAWAY_MESSAGES.indisponibil);
+      else if (isTurnstileError(err)) setEroare(antiBotErrorMessage(err));
       else if (isBotRejectedError(err)) setEroare(ANTIBOT_MESSAGES.captcha);
       else setEroare(isTimeoutError(err) ? GIVEAWAY_MESSAGES.timeout : GIVEAWAY_MESSAGES.generic);
     } finally {
