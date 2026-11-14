@@ -11,6 +11,7 @@
 //  • "registration" — înscriere la eveniment  → runlift.registrations
 //  • "waitlist"     — listă de așteptare      → runlift.event_waitlist
 //  • "launch"       — „anunță-mă la lansare"  → runlift.launch_notifications
+//  • "giveaway"     — participare la giveaway → runlift.giveaway_entries
 //
 // IMPORTANT — validarea: `service_role` OCOLEȘTE RLS, deci regulile care stăteau
 // în `WITH CHECK`-urile politicilor `anon` (acord = true, lungimi, format email,
@@ -35,6 +36,12 @@
 // Trigger-ele `registrations_guard_trg` (event_full / registration_closed) și
 // `event_waitlist_cap_trg` (waitlist_full) rămân active — sunt trigger-e, nu
 // politici RLS, deci se aplică și scrierilor făcute cu cheia de service.
+//
+// IMPORTANT — giveaway-ul: ca `editie`, NU se acceptă niciodată din client.
+// Trigger-ul `giveaway_entries_guard_trg` atribuie giveaway-ul curent și refuză
+// înscrierea din afara perioadei (`giveaway_neinceput`, `giveaway_inchis`,
+// `fara_giveaway`); dublurile le opresc indexurile unice (HTTP 409). Aici doar
+// curățăm rândul. Modul nu trimite niciun email.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 // Pe proiectele cu chei noi (sb_publishable/sb_secret) env-ul legacy poate lipsi,
@@ -98,12 +105,13 @@ const json = (req: Request, status: number, body: unknown) =>
     headers: { ...corsFor(req), "Content-Type": "application/json" },
   });
 
-type Mode = "registration" | "waitlist" | "launch";
+type Mode = "registration" | "waitlist" | "launch" | "giveaway";
 
 const TABLE: Record<Mode, string> = {
   registration: "registrations",
   waitlist: "event_waitlist",
   launch: "launch_notifications",
+  giveaway: "giveaway_entries",
 };
 
 // Aceleași reguli ca în `src/shared/lib/validation.ts` — clientul le aplică pentru UX,
@@ -112,9 +120,20 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE_RE = /^\+?\d{8,15}$/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SURSE = ["lansare", "despre-noi"];
+// Un cont de Instagram: 1–30 de caractere din litere, cifre, punct și liniuță jos.
+const INSTAGRAM_RE = /^[a-z0-9._]{1,30}$/;
 
 const normalizePhone = (v: string) => v.replace(/[\s().-]/g, "");
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+/**
+ * Contul de Instagram, oricum l-ar fi scris omul: cu „@", simplu sau ca link de
+ * profil lipit din aplicație. Aceeași regulă ca în
+ * `src/features/giveaway/lib/giveawayForm.ts`.
+ */
+const normalizeInstagram = (v: string) => {
+  const link = /instagram\.com\/([^/?#\s]+)/i.exec(v);
+  return (link ? link[1] : v).replace(/^@/, "").toLowerCase();
+};
 
 /* ---------- Verificarea Turnstile ---------- */
 
@@ -245,6 +264,44 @@ function validateLaunchRow(data: Row): { row: Row } | { error: string } {
   return { row: { nume, prenume, email, telefon, sursa } };
 }
 
+/**
+ * `giveaway_entries` — participarea la giveaway. Plafoanele de lungime sunt
+ * aceleași cu constrângerile tabelului, ca refuzul să vină de aici, cu numele
+ * câmpului, nu ca eroare de bază de date.
+ */
+function validateGiveawayRow(data: Row): { row: Row } | { error: string } {
+  const nume = str(data.nume);
+  const email = str(data.email);
+  const telefon = normalizePhone(str(data.telefon));
+  const instagram = normalizeInstagram(str(data.instagram));
+
+  if (nume.length < 3 || nume.length > 120) return { error: "nume" };
+  if (!EMAIL_RE.test(email) || email.length > 254) return { error: "email" };
+  if (!PHONE_RE.test(telefon)) return { error: "telefon" };
+  if (!INSTAGRAM_RE.test(instagram)) return { error: "instagram" };
+  if (data.acord_regulament !== true) return { error: "acord_regulament" };
+
+  return {
+    row: {
+      nume,
+      telefon,
+      email,
+      instagram,
+      acord_regulament: true,
+      // Doar `true` înseamnă acord; orice altceva e „nu".
+      acord_contact: data.acord_contact === true,
+      // Giveaway-ul lipsește intenționat — îl pune trigger-ul din DB.
+    },
+  };
+}
+
+const VALIDATE: Record<Mode, (data: Row) => { row: Row } | { error: string }> = {
+  registration: validateEventRow,
+  waitlist: validateEventRow,
+  launch: validateLaunchRow,
+  giveaway: validateGiveawayRow,
+};
+
 /* ---------- Scrierea ---------- */
 
 /**
@@ -324,7 +381,7 @@ Deno.serve(async (req) => {
 
   // --- Validare + scriere ---
   const data = (payload.data ?? {}) as Row;
-  const checked = mode === "launch" ? validateLaunchRow(data) : validateEventRow(data);
+  const checked = VALIDATE[mode](data);
   if ("error" in checked) return json(req, 400, { error: `invalid:${checked.error}` });
 
   // Pentru înscrieri generăm id-ul aici ca să-l putem întoarce clientului

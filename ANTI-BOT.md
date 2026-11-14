@@ -84,6 +84,14 @@ PostgREST ca atare, deci `isDuplicateError` (409) și `isEventFullError` / `isWa
 din UI — inclusiv comutarea automată pe lista de așteptare la `event_full` — n-a trebuit
 rescris.
 
+**Modul `giveaway` (noiembrie 2026).** Participarea la giveaway-ul de pe Instagram intră
+pe aceeași poartă, cu același honeypot, timp minim și Turnstile, și scrie în
+`runlift.giveaway_entries`. Validarea lui e `validateGiveawayRow`. Giveaway-ul și perioada
+nu vin niciodată din client: le decide trigger-ul `giveaway_entries_guard_trg`
+(`giveaway_neinceput`, `giveaway_inchis`, `fara_giveaway`), iar dublurile le opresc
+indexurile unice, ca HTTP 409. Tabelul nu dă niciun drept rolurilor `anon` și
+`authenticated`; funcția Edge are doar INSERT.
+
 ## Ce NU s-a schimbat
 
 - **Backoffice-ul `/admin`** — merge prin RPC-uri `SECURITY DEFINER` cu `p_token`

@@ -453,3 +453,145 @@ describe('emailul de după înscriere', () => {
     await asteaptaEmail(f);
   });
 });
+
+/**
+ * Giveaway-ul de pe Instagram (planul
+ * docs/plans/2026-11-14-0736-feat-giveaway-instagram-plan.md, U3).
+ *
+ * Perioada și dublurile le păzește baza de date; aici se verifică doar că
+ * rândul ajunge curat și că nimic din cerere nu poate alege giveaway-ul.
+ */
+describe('participarea la giveaway', () => {
+  const GIVEAWAY = {
+    mode: 'giveaway',
+    token: 'token-turnstile',
+    hp: '',
+    elapsed: 30_000,
+    data: {
+      nume: '  Ana Popescu ',
+      telefon: '069 509 949',
+      email: ' ana@exemplu.ro ',
+      instagram: '@Ana.Run',
+      acord_regulament: true,
+      acord_contact: true,
+    },
+  };
+
+  const cuDate = (over: Record<string, unknown>) => ({
+    ...GIVEAWAY,
+    data: { ...GIVEAWAY.data, ...over },
+  });
+
+  it('scrie o participare curată în `giveaway_entries`', async () => {
+    const f = await incarca();
+    const { res, body } = await trimite(f, GIVEAWAY);
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ ok: true });
+
+    const cereri = f.catre(REST);
+    expect(cereri).toHaveLength(1);
+    expect(cereri[0].url).toBe(`${ENV.SUPABASE_URL}/rest/v1/giveaway_entries`);
+    expect((cereri[0].init.headers as Record<string, string>)['Content-Profile']).toBe('runlift');
+    expect(randScris(f)).toEqual({
+      nume: 'Ana Popescu',
+      telefon: '069509949',
+      email: 'ana@exemplu.ro',
+      instagram: 'ana.run',
+      acord_regulament: true,
+      acord_contact: true,
+    });
+  });
+
+  it.each([
+    'https://www.instagram.com/ana.run/',
+    'instagram.com/Ana.Run?igsh=abc123',
+    'ana.run',
+  ])('contul de Instagram scris ca `%s` ajunge `ana.run`', async (instagram) => {
+    const f = await incarca();
+    await trimite(f, cuDate({ instagram }));
+    expect(randScris(f)!.instagram).toBe('ana.run');
+  });
+
+  it.each([[undefined], ['true'], [1], [false]])(
+    'acordul de contact `%s` se scrie fals — doar `true` înseamnă acord',
+    async (acord) => {
+      const f = await incarca();
+      await trimite(f, cuDate({ acord_contact: acord }));
+      expect(randScris(f)!.acord_contact).toBe(false);
+    }
+  );
+
+  it.each([
+    ['nume de două caractere', { nume: 'Al' }, 'invalid:nume'],
+    ['nume de cinci sute de caractere', { nume: 'a'.repeat(500) }, 'invalid:nume'],
+    ['email fără domeniu', { email: 'ana@exemplu' }, 'invalid:email'],
+    ['telefon de cinci cifre', { telefon: '06950' }, 'invalid:telefon'],
+    ['cont de Instagram cu spații', { instagram: 'ana run' }, 'invalid:instagram'],
+    ['cont de Instagram de 31 de caractere', { instagram: 'a'.repeat(31) }, 'invalid:instagram'],
+    ['cont de Instagram gol', { instagram: '  ' }, 'invalid:instagram'],
+    ['regulament nebifat', { acord_regulament: false }, 'invalid:acord_regulament'],
+    ['regulament bifat ca text', { acord_regulament: 'true' }, 'invalid:acord_regulament'],
+  ])('%s e refuzat, fără scriere', async (_, over, eroare) => {
+    const f = await incarca();
+    const { res, body } = await trimite(f, cuDate(over));
+    expect(res.status).toBe(400);
+    expect(body).toEqual({ error: eroare });
+    expect(f.catre(REST)).toHaveLength(0);
+  });
+
+  /** Giveaway-ul îl decide triggerul din baza de date, ca ediția la înscrieri. */
+  it('giveaway-ul și urmele extragerii nu ajung niciodată din client în rând', async () => {
+    const f = await incarca();
+    await trimite(
+      f,
+      cuDate({ giveaway_id: 'alt-giveaway', slug: 'altul', extrasa_la: '2026-01-01', id: 'x' })
+    );
+    expect(Object.keys(randScris(f)!).sort()).toEqual([
+      'acord_contact',
+      'acord_regulament',
+      'email',
+      'instagram',
+      'nume',
+      'telefon',
+    ]);
+  });
+
+  it.each([
+    [409, '{"code":"23505","message":"duplicate key"}'],
+    [400, '{"code":"P0001","message":"giveaway_inchis"}'],
+    [400, '{"code":"P0001","message":"giveaway_neinceput"}'],
+  ])('refuzul bazei de date (%i) ajunge neschimbat la pagină', async (status, corp) => {
+    const f = await incarca({
+      rute: [
+        (c) => (c.url.includes(SITEVERIFY) ? raspunde(200, { success: true }) : null),
+        (c) => (c.url.includes(REST) ? new Response(corp, { status }) : null),
+      ],
+    });
+    const res = await f.cheama(post(GIVEAWAY));
+    expect(res.status).toBe(status);
+    expect(await res.text()).toBe(corp);
+  });
+
+  it('capcana, graba și captcha opresc și o participare', async () => {
+    const capcana = await incarca();
+    expect((await trimite(capcana, { ...GIVEAWAY, hp: 'https://spam.example' })).body).toEqual({ error: 'bot' });
+    expect(capcana.catre(REST)).toHaveLength(0);
+
+    const graba = await incarca();
+    expect((await trimite(graba, { ...GIVEAWAY, elapsed: 500 })).body).toEqual({ error: 'too_fast' });
+    expect(graba.catre(REST)).toHaveLength(0);
+
+    const captcha = await incarca({
+      rute: [(c) => (c.url.includes(SITEVERIFY) ? raspunde(200, { success: false, 'error-codes': ['invalid-input-response'] }) : null)],
+    });
+    expect((await trimite(captcha, GIVEAWAY)).res.status).toBe(403);
+    expect(captcha.catre(REST)).toHaveLength(0);
+  });
+
+  it('nu trimite niciun email', async () => {
+    const f = await incarca();
+    await trimite(f, GIVEAWAY);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(f.catre('send-email')).toHaveLength(0);
+  });
+});
