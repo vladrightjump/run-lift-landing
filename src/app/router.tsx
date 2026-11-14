@@ -30,6 +30,9 @@ import { editionPages, independentPages } from './routes';
  * propriu, și rămâne corect și între ediții — tocmai săptămânile în care are cel
  * mai mult sens.
  *
+ * `/giveaway` la fel: giveaway-ul de pe Instagram nu ține de nicio ediție și își
+ * citește starea din `public_giveaway`.
+ *
  * Componentele lor care ar chema hook-urile ar primi oricum instantaneul de build
  * din valoarea implicită a contextului.
  */

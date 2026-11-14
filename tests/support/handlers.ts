@@ -27,6 +27,7 @@ export function createHandlers(overrides: Record<string, unknown> = {}, latencyM
     public_trial_config: publicTrialConfig(),
     public_training_reels: [],
     public_weekly_workouts: [],
+    public_giveaway: null,
     admin_check_token: true,
     admin_login: 'token-test',
     admin_logout: null,

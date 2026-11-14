@@ -13,6 +13,7 @@ import { ComingSoon } from '../../src/features/landing/components/ComingSoon';
 import { server } from '../support/vitest.setup';
 import { rpcResponse } from '../support/responses';
 import { DespreNoi } from '../../src/features/despre-noi/pages/DespreNoiPage';
+import { GiveawayForm } from '../../src/features/giveaway/components/GiveawayForm';
 
 /**
  * Fiecare formular public trebuie să aibă capcana anti-bot ÎN `<form>`.
@@ -23,7 +24,7 @@ import { DespreNoi } from '../../src/features/despre-noi/pages/DespreNoiPage';
  * `/inscriere` și overlay-ul de pe landing trimiteau fără capcană. Un formular
  * nou fără honeypot nu strică nimic vizibil; se vede doar când intră boții.
  *
- * Se randează cele PATRU componente care dețin un `<form>`.
+ * Se randează cele CINCI componente care dețin un `<form>`.
  * `RegistrationOverlay` și `Inscriere` sunt acoperite tranzitiv: ambele randează
  * `RegistrationForm`, deci randarea lor ar retesta același markup târând după ea
  * `window.history`, `useStats` și countdown-urile.
@@ -73,6 +74,12 @@ const SUPRAFETE: { nume: string; element: () => ReactElement; deschide?: string 
   {
     nume: 'DespreNoi (cere informații)',
     element: () => <DespreNoi />,
+  },
+  {
+    // Pagina `/giveaway` îl arată doar după ce află că giveaway-ul e deschis;
+    // aici se randează direct, ca `<form>`-ul să existe din prima.
+    nume: 'GiveawayForm (pagina /giveaway)',
+    element: () => <GiveawayForm sfarsit="2026-11-30T18:00:00Z" onInchis={() => {}} />,
   },
 ];
 

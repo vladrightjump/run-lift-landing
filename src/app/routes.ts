@@ -2,6 +2,7 @@ import { rutaAdmin } from '../features/admin';
 import { rutaLanding } from '../features/landing';
 import { rutaDespreNoi } from '../features/despre-noi';
 import { rutaAntrenament } from '../features/antrenament/index';
+import { rutaGiveaway } from '../features/giveaway';
 import { rutaConfirmare } from '../features/confirmare/index';
 import { rutaInscriere } from '../features/inscriere/index';
 import { rutaRenunt } from '../features/renunt/index';
@@ -19,6 +20,7 @@ export const editionPages = [
 export const independentPages = [
   rutaDespreNoi,
   rutaAntrenament,
+  rutaGiveaway,
 ] as const;
 
 /** Același registru compune arborele și păzește paritatea cu rewrites explicite. */

@@ -12,7 +12,8 @@
     { "source": "/inscriere", "destination": "/index.html" },
     { "source": "/unsubscribe", "destination": "/index.html" },
     { "source": "/renunt", "destination": "/index.html" },
-    { "source": "/antrenament", "destination": "/antrenament.html" }
+    { "source": "/antrenament", "destination": "/antrenament.html" },
+    { "source": "/giveaway", "destination": "/index.html" }
   ],
   "headers": [
     {

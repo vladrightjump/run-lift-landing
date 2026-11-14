@@ -26,6 +26,7 @@ test('toate paginile existente răspund la acces direct pe build', async ({ page
     ['/unsubscribe', 'h1'],
     ['/renunt', 'h1'],
     ['/antrenament', 'h1'],
+    ['/giveaway', '[data-css~="gw-root"]'],
   ];
   for (const [path, selector] of pages) {
     const response = await page.goto(path);

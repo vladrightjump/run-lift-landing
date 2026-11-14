@@ -33,7 +33,7 @@ const timeoutSignal = (externalSignal?: AbortSignal): { signal: AbortSignal; don
  */
 export type AntiBot = { token: string; hp: string; elapsed: number };
 
-type SubmitMode = 'registration' | 'waitlist' | 'launch';
+type SubmitMode = 'registration' | 'waitlist' | 'launch' | 'giveaway';
 
 /**
  * Trimite un formular public prin funcția Edge `submit-form`.
@@ -46,8 +46,11 @@ type SubmitMode = 'registration' | 'waitlist' | 'launch';
  * Funcția propagă statusul și textul de eroare de la PostgREST ca atare, deci
  * `isDuplicateError` (409) și `isEventFullError` &co. (textul erorii) rămân
  * valabile neschimbate.
+ *
+ * Exportată pentru formularele publice din alte funcționalități (giveaway-ul):
+ * transportul și dovezile anti-bot au un singur proprietar, aici.
  */
-const postForm = async (
+export const postForm = async (
   mode: SubmitMode,
   data: Record<string, unknown>,
   antiBot: AntiBot,
