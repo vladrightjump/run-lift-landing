@@ -31,20 +31,18 @@ Exposed schemas (`public, graphql_public, runlift`).
 
 ---
 
-## Migrare pregătită — giveaway-ul de pe Instagram (14 noiembrie 2026)
+## Migrare aplicată — giveaway-ul de pe Instagram (15 noiembrie 2026)
 
-**NEAPLICATĂ LIVE:** `supabase/sql/supabase-migration-giveaway.sql`. Testele o încarcă prin `MIGRARI_NEAPLICATE`, peste instantaneul existent; `supabase/schema/runlift.sql` rămâne instantaneul producției.
+Planul `docs/plans/2026-11-14-0736-feat-giveaway-instagram-plan.md`. Fișierul: `supabase/sql/supabase-migration-giveaway.sql`. Doar adaugă:
 
-Planul `docs/plans/2026-11-14-0736-feat-giveaway-instagram-plan.md`. Doar adaugă, deci se poate aplica înaintea funcției Edge și a site-ului:
-
-- `runlift.giveaways` (un rând pe giveaway: `slug`, titlu, perioadă, copia câștigătorului, totalul de la încheiere) și `runlift.giveaway_entries` (participările). RLS pornit, fără politici; `anon` și `authenticated` n-au niciun drept, `service_role` are doar INSERT pe participări.
+- `runlift.giveaways` (un rând pe giveaway: `slug`, titlu, perioadă, copia câștigătorului, totalul de la încheiere) și `runlift.giveaway_entries` (participările). RLS pornit, fără politici.
 - Triggerul `giveaway_entries_guard_trg`: serverul atribuie giveaway-ul curent și refuză înscrierea din afara perioadei (`giveaway_neinceput`, `giveaway_inchis`, `fara_giveaway`). Trei indexuri unice pe giveaway (telefon canonic, email, cont de Instagram) opresc dublurile.
 - `runlift.public_giveaway()`: giveaway-ul curent, perioada și starea, fără numere și fără date personale.
 - `runlift.admin_giveaway_date`, `_sterge`, `_extrage`, `_confirma`, `_incheie`: token verificat în funcție, urmă în `admin_events` fără nume sau contacte. Ștergerea e un `DELETE` real, nu `deleted_at`.
 
-Înainte de publicare: aplică prin MCP `apply_migration`, cu numele `runlift_giveaway`; verifică pe baza reală că `anon` și `authenticated` nu citesc tabelele și că un token inventat e refuzat, apoi rulează `get_advisors`. Regenerează `supabase/schema/runlift.sql` cu `scripts/schema-snapshot.sql`, scoate migrarea din `MIGRARI_NEAPLICATE` și înlocuiește această secțiune cu versiunea și verificarea aplicării live.
+Aplicată în producție pe 15 noiembrie 2026 prin MCP `apply_migration` (`runlift_giveaway`, versiunea `20261115053811`), după ce site-ul cu pagina `/giveaway` fusese deja publicat. Verificat după aplicare: `anon` și `authenticated` n-au niciun drept pe cele două tabele (citirea și inserarea cu cheia publică răspund `permission denied`); `public_giveaway()` ca `anon` întoarce `null`, fiindcă nu există încă niciun giveaway; un token inventat e refuzat cu `invalid_token`, fără nicio urmă în `admin_events`; ajutoarele și garda nu sunt apelabile de `anon` sau `authenticated`. `get_advisors`: aceleași cinci clase ca înainte, niciuna nouă. Pe producție `service_role` are toate drepturile pe tabele, din drepturile implicite ale schemei, nu doar INSERT-ul din migrare. Instantaneul `runlift.sql` regenerat (diferența e exact migrarea, plus cele două variante `admin_trial_attendance` în altă ordine); scoasă din `MIGRARI_NEAPLICATE`.
 
-Un giveaway nou nu cere migrare: e un rând în `runlift.giveaways` plus conținutul din cod (vezi `GHID-GIVEAWAY.md`, când apare primul).
+Un giveaway nou nu cere migrare: e un rând în `runlift.giveaways` plus conținutul din `src/features/giveaway/content.ts`.
 
 ---
 
