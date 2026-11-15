@@ -8,7 +8,7 @@
 -- `supabase-migration-*.sql`. Ăsta e „ce e acum în producție", regenerat după
 -- fiecare migrare aplicată — vezi MIGRATIONS.md.
 --
--- Ultima regenerare: 12 octombrie 2026 (cronologia probelor în `admin_trial_data`).
+-- Ultima regenerare: 15 noiembrie 2026 (giveaway-ul de pe Instagram).
 
 CREATE OR REPLACE FUNCTION runlift.admin_add_registration(p_token uuid, p_nume text, p_telefon text, p_email text, p_force boolean DEFAULT false)
  RETURNS uuid
@@ -211,6 +211,182 @@ begin
       case c.status when 'draft' then 0 when 'published' then 1 else 2 end,
       c.published_at desc nulls last,
       c.created_at desc;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_giveaway_confirma(p_token uuid, p_giveaway_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_g     giveaways%rowtype;
+  v_extras giveaway_entries%rowtype;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  select * into v_g from giveaways where id = p_giveaway_id for update;
+  if not found then raise exception 'giveaway_inexistent'; end if;
+  if v_g.incheiat_la is not null then raise exception 'giveaway_incheiat'; end if;
+  select * into v_extras from giveaway_entries
+   where giveaway_id = v_g.id and extrasa_la is not null and inlocuita_la is null;
+  if not found then raise exception 'fara_extras'; end if;
+  if v_g.confirmat_la is not null then raise exception 'deja_confirmat'; end if;
+  update giveaways
+     set confirmat_la = now(),
+         castigator_nume = v_extras.nume,
+         castigator_instagram = v_extras.instagram,
+         castigator_extras_la = v_extras.extrasa_la
+   where id = v_g.id;
+  insert into admin_events (tip, detaliu)
+  values ('giveaway_confirmare', jsonb_build_object('giveaway', v_g.slug, 'participare', v_extras.id));
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_giveaway_date(p_token uuid, p_giveaway_id uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_id uuid;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  v_id := coalesce(p_giveaway_id, giveaway_curent());
+  return jsonb_build_object(
+    'giveaways', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', g.id, 'slug', g.slug, 'titlu', g.titlu, 'stare', giveaway_stare(g.id)
+      ) order by g.starts_at desc)
+      from giveaways g
+    ), '[]'::jsonb),
+    'giveaway', (
+      select jsonb_build_object(
+        'id', g.id,
+        'slug', g.slug,
+        'titlu', g.titlu,
+        'starts_at', g.starts_at,
+        'ends_at', g.ends_at,
+        'stare', giveaway_stare(g.id),
+        'castigator', case when g.confirmat_la is null then null else jsonb_build_object(
+          'nume', g.castigator_nume,
+          'instagram', g.castigator_instagram,
+          'extras_la', g.castigator_extras_la,
+          'confirmat_la', g.confirmat_la
+        ) end,
+        'incheiat_la', g.incheiat_la,
+        'total_participari', g.total_participari
+      )
+      from giveaways g where g.id = v_id
+    ),
+    'participari', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', e.id,
+        'nume', e.nume,
+        'telefon', e.telefon,
+        'email', e.email,
+        'instagram', e.instagram,
+        'acord_contact', e.acord_contact,
+        'created_at', e.created_at,
+        'extrasa_la', e.extrasa_la,
+        'inlocuita_la', e.inlocuita_la
+      ) order by e.created_at, e.id)
+      from giveaway_entries e where e.giveaway_id = v_id
+    ), '[]'::jsonb)
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_giveaway_extrage(p_token uuid, p_giveaway_id uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_g        giveaways%rowtype;
+  v_eligibile int;
+  v_ales     uuid;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  select * into v_g from giveaways where id = p_giveaway_id for update;
+  if not found then raise exception 'giveaway_inexistent'; end if;
+  if v_g.incheiat_la is not null then raise exception 'giveaway_incheiat'; end if;
+  if now() < v_g.ends_at then raise exception 'giveaway_deschis'; end if;
+  select count(*) into v_eligibile
+    from giveaway_entries where giveaway_id = v_g.id and extrasa_la is null;
+  if v_eligibile = 0 then raise exception 'fara_participari'; end if;
+  update giveaway_entries set inlocuita_la = now()
+   where giveaway_id = v_g.id and extrasa_la is not null and inlocuita_la is null;
+  update giveaways
+     set confirmat_la = null, castigator_nume = null,
+         castigator_instagram = null, castigator_extras_la = null
+   where id = v_g.id;
+  select id into v_ales
+    from giveaway_entries
+   where giveaway_id = v_g.id and extrasa_la is null
+   order by gen_random_uuid()
+   limit 1;
+  update giveaway_entries set extrasa_la = now() where id = v_ales;
+  insert into admin_events (tip, detaliu)
+  values ('giveaway_extragere', jsonb_build_object(
+    'giveaway', v_g.slug, 'participare', v_ales, 'din', v_eligibile
+  ));
+  return v_ales;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_giveaway_incheie(p_token uuid, p_giveaway_id uuid)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_g      giveaways%rowtype;
+  v_total  int;
+  v_sterse int;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  select * into v_g from giveaways where id = p_giveaway_id for update;
+  if not found then raise exception 'giveaway_inexistent'; end if;
+  if v_g.incheiat_la is not null then raise exception 'giveaway_incheiat'; end if;
+  if v_g.confirmat_la is null then raise exception 'fara_castigator'; end if;
+  select count(*) into v_total from giveaway_entries where giveaway_id = v_g.id;
+  delete from giveaway_entries where giveaway_id = v_g.id and not acord_contact;
+  get diagnostics v_sterse = row_count;
+  update giveaways set incheiat_la = now(), total_participari = v_total where id = v_g.id;
+  insert into admin_events (tip, detaliu)
+  values ('giveaway_incheiere', jsonb_build_object(
+    'giveaway', v_g.slug, 'total', v_total, 'sterse', v_sterse
+  ));
+  return v_sterse;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.admin_giveaway_sterge(p_token uuid, p_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_giveaway uuid;
+begin
+  if not admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  delete from giveaway_entries where id = p_id returning giveaway_id into v_giveaway;
+  if v_giveaway is null then raise exception 'participare_inexistenta'; end if;
+  insert into admin_events (tip, detaliu)
+  values ('giveaway_stergere', jsonb_build_object(
+    'giveaway', (select g.slug from giveaways g where g.id = v_giveaway),
+    'participare', p_id
+  ));
 end;
 $function$
 ;
@@ -1571,6 +1747,18 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+ if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+ raise exception 'trial_refresh_required';
+end $function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -1585,18 +1773,6 @@ begin
  result:=public.trial_set_attendance(p_booking,p_attended,'admin:'||(select user_id::text from runlift.admin_sessions where token=p_token),p_correction);
  perform runlift.sala_jurnal(p_token,'trial_attendance',jsonb_build_object('booking',p_booking,'attended',p_attended,'version',p_version,'correction',p_correction));
  return result;
-end $function$
-;
-
-CREATE OR REPLACE FUNCTION runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
-begin
- if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
- raise exception 'trial_refresh_required';
 end $function$
 ;
 
@@ -2261,6 +2437,87 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.giveaway_cheie_telefon(p_telefon text)
+ RETURNS text
+ LANGUAGE sql
+ IMMUTABLE
+ SET search_path TO ''
+AS $function$
+  select case
+    when d ~ '^\+373\d{8}$' then d
+    when d ~ '^373\d{8}$' then '+' || d
+    when d ~ '^0\d{8}$' then '+373' || substr(d, 2)
+    else d
+  end
+  from (select regexp_replace(coalesce(p_telefon, ''), '[\s().-]', '', 'g') as d) x;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.giveaway_curent()
+ RETURNS uuid
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select coalesce(
+    (select g.id from runlift.giveaways g
+      where g.starts_at <= now() and g.ends_at > now() order by g.starts_at desc limit 1),
+    (select g.id from runlift.giveaways g where g.starts_at > now() order by g.starts_at asc limit 1),
+    (select g.id from runlift.giveaways g order by g.ends_at desc limit 1)
+  );
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.giveaway_entries_guard()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'runlift'
+AS $function$
+declare
+  v_id    uuid;
+  v_start timestamptz;
+  v_end   timestamptz;
+begin
+  v_id := giveaway_curent();
+  if v_id is null then raise exception 'fara_giveaway'; end if;
+  select g.starts_at, g.ends_at into v_start, v_end from giveaways g where g.id = v_id;
+  if now() < v_start then raise exception 'giveaway_neinceput'; end if;
+  if now() >= v_end then raise exception 'giveaway_inchis'; end if;
+  new.giveaway_id := v_id;
+  new.extrasa_la := null;
+  new.inlocuita_la := null;
+  new.created_at := now();
+  new.email := btrim(new.email);
+  new.instagram := lower(regexp_replace(btrim(new.instagram), '^@', ''));
+  new.telefon_cheie := giveaway_cheie_telefon(new.telefon);
+  return new;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.giveaway_stare(p_giveaway_id uuid)
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select case
+    when g.incheiat_la is not null then 'incheiat'
+    when now() < g.starts_at then 'programat'
+    when now() < g.ends_at then 'deschis'
+    when g.confirmat_la is not null then 'confirmat'
+    when exists (
+      select 1 from runlift.giveaway_entries e
+       where e.giveaway_id = g.id and e.extrasa_la is not null and e.inlocuita_la is null
+    ) then 'extras'
+    else 'inchis'
+  end
+  from runlift.giveaways g
+  where g.id = p_giveaway_id;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.info_lookup(p_email text)
  RETURNS TABLE(email text, nume text, prenume text, token_confirmare uuid, email_trimis_la timestamp with time zone)
  LANGUAGE sql
@@ -2413,6 +2670,29 @@ AS $function$
   from runlift.event_config c
   where c.status = 'published'
   limit 1;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION runlift.public_giveaway()
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select (
+    select jsonb_build_object(
+      'slug', g.slug,
+      'starts_at', g.starts_at,
+      'ends_at', g.ends_at,
+      'stare', case
+        when now() < g.starts_at then 'programat'
+        when now() < g.ends_at then 'deschis'
+        else 'inchis'
+      end
+    )
+    from runlift.giveaways g
+    where g.id = runlift.giveaway_curent()
+  );
 $function$
 ;
 
@@ -2810,6 +3090,36 @@ create table runlift.event_waitlist (
   deleted_at timestamp with time zone
 );
 
+create table runlift.giveaway_entries (
+  id uuid default gen_random_uuid() not null,
+  giveaway_id uuid not null,
+  nume text not null,
+  telefon text not null,
+  telefon_cheie text not null,
+  email text not null,
+  instagram text not null,
+  acord_regulament boolean not null,
+  acord_contact boolean default false not null,
+  extrasa_la timestamp with time zone,
+  inlocuita_la timestamp with time zone,
+  created_at timestamp with time zone default now() not null
+);
+
+create table runlift.giveaways (
+  id uuid default gen_random_uuid() not null,
+  slug text not null,
+  titlu text not null,
+  starts_at timestamp with time zone not null,
+  ends_at timestamp with time zone not null,
+  castigator_nume text,
+  castigator_instagram text,
+  castigator_extras_la timestamp with time zone,
+  confirmat_la timestamp with time zone,
+  incheiat_la timestamp with time zone,
+  total_participari integer,
+  created_at timestamp with time zone default now() not null
+);
+
 create table runlift.homepage_settings (
   id smallint default 1 not null,
   trial_first boolean default false not null,
@@ -2902,6 +3212,9 @@ alter table runlift.email_log add constraint email_log_pkey PRIMARY KEY (id);
 alter table runlift.email_templates add constraint email_templates_pkey PRIMARY KEY (cheie);
 alter table runlift.event_config add constraint event_config_pkey PRIMARY KEY (id);
 alter table runlift.event_waitlist add constraint event_waitlist_pkey PRIMARY KEY (id);
+alter table runlift.giveaway_entries add constraint giveaway_entries_pkey PRIMARY KEY (id);
+alter table runlift.giveaways add constraint giveaways_pkey PRIMARY KEY (id);
+alter table runlift.giveaways add constraint giveaways_slug_key UNIQUE (slug);
 alter table runlift.homepage_settings add constraint homepage_settings_pkey PRIMARY KEY (id);
 alter table runlift.launch_notifications add constraint launch_notifications_pkey PRIMARY KEY (id);
 alter table runlift.registrations add constraint registrations_pkey PRIMARY KEY (id);
@@ -2910,6 +3223,15 @@ alter table runlift.training_reels add constraint training_reels_pkey PRIMARY KE
 alter table runlift.weekly_workout add constraint weekly_workout_pkey PRIMARY KEY (id);
 alter table runlift.admin_sessions add constraint admin_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES runlift.admin_users(id);
 alter table runlift.event_config add constraint event_config_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'superseded'::text])));
+alter table runlift.giveaway_entries add constraint giveaway_entries_acord_regulament_check CHECK (acord_regulament);
+alter table runlift.giveaway_entries add constraint giveaway_entries_email_check CHECK (((char_length(email) >= 5) AND (char_length(email) <= 254)));
+alter table runlift.giveaway_entries add constraint giveaway_entries_giveaway_id_fkey FOREIGN KEY (giveaway_id) REFERENCES runlift.giveaways(id) ON DELETE CASCADE;
+alter table runlift.giveaway_entries add constraint giveaway_entries_instagram_check CHECK ((instagram ~ '^[a-z0-9._]{1,30}$'::text));
+alter table runlift.giveaway_entries add constraint giveaway_entries_nume_check CHECK (((char_length(nume) >= 3) AND (char_length(nume) <= 120)));
+alter table runlift.giveaway_entries add constraint giveaway_entries_telefon_check CHECK (((char_length(telefon) >= 8) AND (char_length(telefon) <= 16)));
+alter table runlift.giveaways add constraint giveaways_perioada CHECK ((ends_at > starts_at));
+alter table runlift.giveaways add constraint giveaways_slug_check CHECK ((slug ~ '^[a-z0-9][a-z0-9-]{1,62}$'::text));
+alter table runlift.giveaways add constraint giveaways_titlu_check CHECK (((char_length(titlu) >= 1) AND (char_length(titlu) <= 120)));
 alter table runlift.homepage_settings add constraint homepage_settings_id_check CHECK ((id = 1));
 alter table runlift.launch_notifications add constraint launch_notifications_editie_check CHECK (((editie >= 1) AND (editie <= 100)));
 alter table runlift.launch_notifications add constraint launch_notifications_sursa_check CHECK ((sursa = ANY (ARRAY['lansare'::text, 'despre-noi'::text])));
@@ -2932,6 +3254,9 @@ CREATE UNIQUE INDEX event_config_o_ciorna ON runlift.event_config USING btree (e
 CREATE UNIQUE INDEX event_config_un_singur_publicat ON runlift.event_config USING btree (status) WHERE (status = 'published'::text);
 CREATE INDEX event_waitlist_editie_activi ON runlift.event_waitlist USING btree (editie) WHERE (deleted_at IS NULL);
 CREATE UNIQUE INDEX event_waitlist_email_editie_key ON runlift.event_waitlist USING btree (lower(email), editie) WHERE (deleted_at IS NULL);
+CREATE UNIQUE INDEX giveaway_entries_email_uniq ON runlift.giveaway_entries USING btree (giveaway_id, lower(email));
+CREATE UNIQUE INDEX giveaway_entries_instagram_uniq ON runlift.giveaway_entries USING btree (giveaway_id, instagram);
+CREATE UNIQUE INDEX giveaway_entries_telefon_uniq ON runlift.giveaway_entries USING btree (giveaway_id, telefon_cheie);
 CREATE INDEX launch_notifications_editie_created_idx ON runlift.launch_notifications USING btree (editie, created_at DESC);
 CREATE UNIQUE INDEX launch_notifications_email_editie_idx ON runlift.launch_notifications USING btree (lower(email), editie);
 CREATE INDEX launch_notifications_sursa_idx ON runlift.launch_notifications USING btree (sursa, editie, created_at DESC);
@@ -2946,6 +3271,7 @@ CREATE INDEX weekly_workout_program ON runlift.weekly_workout USING btree (numar
 CREATE UNIQUE INDEX weekly_workout_un_publicat_pe_numar ON runlift.weekly_workout USING btree (numar) WHERE (status = 'published'::text);
 
 CREATE TRIGGER event_waitlist_cap_trg BEFORE INSERT ON runlift.event_waitlist FOR EACH ROW EXECUTE FUNCTION runlift.event_waitlist_cap();
+CREATE TRIGGER giveaway_entries_guard_trg BEFORE INSERT ON runlift.giveaway_entries FOR EACH ROW EXECUTE FUNCTION runlift.giveaway_entries_guard();
 CREATE TRIGGER registrations_autopromote_trg AFTER UPDATE OF deleted_at ON runlift.registrations FOR EACH ROW WHEN (((old.deleted_at IS NULL) AND (new.deleted_at IS NOT NULL))) EXECUTE FUNCTION runlift.auto_promote_from_waitlist();
 CREATE TRIGGER registrations_backup_trigger AFTER INSERT OR DELETE OR UPDATE ON runlift.registrations FOR EACH ROW EXECUTE FUNCTION runlift.registrations_backup_sync();
 CREATE TRIGGER registrations_forteaza_editia BEFORE INSERT ON runlift.registrations FOR EACH ROW EXECUTE FUNCTION runlift.forteaza_editia_curenta();
@@ -2985,6 +3311,26 @@ revoke all on function runlift.admin_get_event_config(p_token uuid, p_editie int
 grant execute on function runlift.admin_get_event_config(p_token uuid, p_editie integer) to anon;
 grant execute on function runlift.admin_get_event_config(p_token uuid, p_editie integer) to authenticated;
 grant execute on function runlift.admin_get_event_config(p_token uuid, p_editie integer) to service_role;
+revoke all on function runlift.admin_giveaway_confirma(p_token uuid, p_giveaway_id uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_giveaway_confirma(p_token uuid, p_giveaway_id uuid) to anon;
+grant execute on function runlift.admin_giveaway_confirma(p_token uuid, p_giveaway_id uuid) to authenticated;
+grant execute on function runlift.admin_giveaway_confirma(p_token uuid, p_giveaway_id uuid) to service_role;
+revoke all on function runlift.admin_giveaway_date(p_token uuid, p_giveaway_id uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_giveaway_date(p_token uuid, p_giveaway_id uuid) to anon;
+grant execute on function runlift.admin_giveaway_date(p_token uuid, p_giveaway_id uuid) to authenticated;
+grant execute on function runlift.admin_giveaway_date(p_token uuid, p_giveaway_id uuid) to service_role;
+revoke all on function runlift.admin_giveaway_extrage(p_token uuid, p_giveaway_id uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_giveaway_extrage(p_token uuid, p_giveaway_id uuid) to anon;
+grant execute on function runlift.admin_giveaway_extrage(p_token uuid, p_giveaway_id uuid) to authenticated;
+grant execute on function runlift.admin_giveaway_extrage(p_token uuid, p_giveaway_id uuid) to service_role;
+revoke all on function runlift.admin_giveaway_incheie(p_token uuid, p_giveaway_id uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_giveaway_incheie(p_token uuid, p_giveaway_id uuid) to anon;
+grant execute on function runlift.admin_giveaway_incheie(p_token uuid, p_giveaway_id uuid) to authenticated;
+grant execute on function runlift.admin_giveaway_incheie(p_token uuid, p_giveaway_id uuid) to service_role;
+revoke all on function runlift.admin_giveaway_sterge(p_token uuid, p_id uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_giveaway_sterge(p_token uuid, p_id uuid) to anon;
+grant execute on function runlift.admin_giveaway_sterge(p_token uuid, p_id uuid) to authenticated;
+grant execute on function runlift.admin_giveaway_sterge(p_token uuid, p_id uuid) to service_role;
 revoke all on function runlift.admin_list_editions(p_token uuid) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_list_editions(p_token uuid) to anon;
 grant execute on function runlift.admin_list_editions(p_token uuid) to authenticated;
@@ -3139,14 +3485,14 @@ revoke all on function runlift.admin_set_homepage_order(p_token uuid, p_trial_fi
 grant execute on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) to anon;
 grant execute on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) to authenticated;
 grant execute on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) to service_role;
-revoke all on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to anon;
-grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to authenticated;
-grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to service_role;
 revoke all on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean) to anon;
 grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean) to authenticated;
 grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean) to service_role;
+revoke all on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to anon;
+grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to authenticated;
+grant execute on function runlift.admin_trial_attendance(p_token uuid, p_booking uuid, p_attended boolean, p_version integer, p_correction boolean) to service_role;
 revoke all on function runlift.admin_trial_config(p_token uuid, p_config jsonb) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_trial_config(p_token uuid, p_config jsonb) to anon;
 grant execute on function runlift.admin_trial_config(p_token uuid, p_config jsonb) to authenticated;
@@ -3223,6 +3569,14 @@ grant execute on function runlift.event_waitlist_cap() to authenticated;
 grant execute on function runlift.event_waitlist_cap() to service_role;
 revoke all on function runlift.forteaza_editia_curenta() from public, anon, authenticated, service_role;
 grant execute on function runlift.forteaza_editia_curenta() to service_role;
+revoke all on function runlift.giveaway_cheie_telefon(p_telefon text) from public, anon, authenticated, service_role;
+grant execute on function runlift.giveaway_cheie_telefon(p_telefon text) to service_role;
+revoke all on function runlift.giveaway_curent() from public, anon, authenticated, service_role;
+grant execute on function runlift.giveaway_curent() to service_role;
+revoke all on function runlift.giveaway_entries_guard() from public, anon, authenticated, service_role;
+grant execute on function runlift.giveaway_entries_guard() to service_role;
+revoke all on function runlift.giveaway_stare(p_giveaway_id uuid) from public, anon, authenticated, service_role;
+grant execute on function runlift.giveaway_stare(p_giveaway_id uuid) to service_role;
 revoke all on function runlift.info_lookup(p_email text) from public, anon, authenticated, service_role;
 grant execute on function runlift.info_lookup(p_email text) to anon;
 grant execute on function runlift.info_lookup(p_email text) to authenticated;
@@ -3245,6 +3599,10 @@ revoke all on function runlift.public_config() from public, anon, authenticated,
 grant execute on function runlift.public_config() to anon;
 grant execute on function runlift.public_config() to authenticated;
 grant execute on function runlift.public_config() to service_role;
+revoke all on function runlift.public_giveaway() from public, anon, authenticated, service_role;
+grant execute on function runlift.public_giveaway() to anon;
+grant execute on function runlift.public_giveaway() to authenticated;
+grant execute on function runlift.public_giveaway() to service_role;
 revoke all on function runlift.public_homepage() from public, anon, authenticated, service_role;
 grant execute on function runlift.public_homepage() to anon;
 grant execute on function runlift.public_homepage() to authenticated;
@@ -3423,6 +3781,18 @@ grant insert on table runlift.event_waitlist to service_role;
 grant update on table runlift.event_waitlist to service_role;
 grant delete on table runlift.event_waitlist to service_role;
 alter table runlift.event_waitlist enable row level security;
+revoke all on table runlift.giveaway_entries from public, anon, authenticated, service_role;
+grant select on table runlift.giveaway_entries to service_role;
+grant insert on table runlift.giveaway_entries to service_role;
+grant update on table runlift.giveaway_entries to service_role;
+grant delete on table runlift.giveaway_entries to service_role;
+alter table runlift.giveaway_entries enable row level security;
+revoke all on table runlift.giveaways from public, anon, authenticated, service_role;
+grant select on table runlift.giveaways to service_role;
+grant insert on table runlift.giveaways to service_role;
+grant update on table runlift.giveaways to service_role;
+grant delete on table runlift.giveaways to service_role;
+alter table runlift.giveaways enable row level security;
 revoke all on table runlift.homepage_settings from public, anon, authenticated, service_role;
 grant select on table runlift.homepage_settings to service_role;
 grant insert on table runlift.homepage_settings to service_role;
