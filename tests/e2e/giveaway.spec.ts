@@ -1,17 +1,12 @@
 import { test, expect } from '../support/playwright';
 import { createHandlers } from '../support/handlers';
-import { rpcResponse } from '../support/responses';
+import { rpcResponse, submitFormResponse, type FormEnvelope } from '../support/responses';
 import { publicGiveaway } from '../support/builders/public';
 import { installAdminResponses } from '../support/admin';
 import { dateGiveaway, participareGiveaway } from '../support/builders/giveaway';
 
 /**
  * Giveaway-ul pe aplicația construită: pagina /giveaway și ecranul din admin.
- *
- * Producția nu poartă niciun giveaway de probă, deci până la primul conținut
- * real pagina are de arătat un singur lucru: că nu e niciun giveaway activ.
- * Parcursul de înscriere se adaugă odată cu acel conținut (planul
- * docs/plans/2026-11-14-0736-feat-giveaway-instagram-plan.md, U7).
  */
 test.beforeEach(async ({ network }) => {
   network.use(...createHandlers());
@@ -32,6 +27,56 @@ test('un giveaway fără texte în cod nu deschide formularul', async ({ page, n
   await expect(page.getByRole('button', { name: 'Intră în giveaway' })).toHaveCount(0);
 });
 
+test('giveaway-ul BITONIC programat arată pachetul, logoul și ora de deschidere', async ({ page, network }) => {
+  network.use(rpcResponse('public_giveaway', publicGiveaway({ slug: 'bitonic-2026', stare: 'programat', ends_at: 'infinity' })));
+  await page.goto('/giveaway');
+
+  await expect(page.getByRole('heading', { name: 'Run + Lift × BITONIC' })).toBeVisible();
+  await expect(page.getByText(/Înscrierile încep pe 1 noiembrie 2026.*10:00/)).toBeVisible();
+  const logo = page.getByRole('img', { name: 'BITONIC', exact: true });
+  await expect(logo).toBeVisible();
+  await expect.poll(() => logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  const pachet = page.getByRole('list', { name: 'Produsele din pachet' });
+  for (const [nume, slug] of [
+    ['BITONIC® ORANGE IMUN', 'orange-imun'],
+    ['BITONIC® OMEGA 3 GOLD', 'golden-oils-forte'],
+    ['BITONIC® VITAMINA D + ZINC', 'vitamina-d-zinc'],
+  ]) {
+    await expect(pachet.getByRole('link', { name: nume })).toHaveAttribute('href', `https://bitonic.md/products/${slug}`);
+  }
+  await expect(page.getByRole('button', { name: 'Intră în giveaway' })).toHaveCount(0);
+});
+
+test('participantul se poate înscrie la giveaway-ul BITONIC fără termen fix', async ({ page, network }) => {
+  let plic: FormEnvelope | undefined;
+  network.use(
+    rpcResponse('public_giveaway', publicGiveaway({ slug: 'bitonic-2026', ends_at: 'infinity' })),
+    submitFormResponse({ onRequest: (trimis) => { plic = trimis; } }),
+  );
+  await page.goto('/giveaway');
+
+  await expect(page.getByText('Anunțăm pe Instagram când se vor închide înscrierile.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Urmărește @we_run_and_lift pe Instagram' }))
+    .toHaveAttribute('href', 'https://instagram.com/we_run_and_lift');
+  await expect(page.getByRole('link', { name: 'Urmărește @bitonic.md pe Instagram' }))
+    .toHaveAttribute('href', 'https://www.instagram.com/bitonic.md');
+  await expect(page.getByText('Completează formularul de pe această pagină, o singură dată.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Regulament', exact: true })).toBeVisible();
+  await page.getByLabel('Nume și prenume').fill('Ana Popescu');
+  await page.getByLabel('Telefon').fill('069 123 456');
+  await page.getByLabel('Email').fill('ana@example.com');
+  await page.getByLabel('Instagram', { exact: true }).fill('@Ana.Run');
+  await page.getByRole('checkbox', { name: /accept regulamentul/i }).check();
+  await page.getByRole('button', { name: 'Intră în giveaway' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Ești în giveaway!' })).toBeVisible();
+  await expect(page.getByText(/Câștigătorul e ales după închiderea înscrierilor/)).toBeVisible();
+  expect(plic).toMatchObject({
+    mode: 'giveaway',
+    data: { instagram: 'ana.run', acord_regulament: true, acord_contact: false },
+  });
+});
+
 test('o citire eșuată se poate reîncerca', async ({ page, network }) => {
   network.use(rpcResponse('public_giveaway', { message: 'boom' }, { status: 500 }));
   await page.goto('/giveaway');
@@ -43,16 +88,16 @@ test('o citire eșuată se poate reîncerca', async ({ page, network }) => {
 });
 
 /**
- * Ecranul din admin, de la extragere la încheiere. Serverul e simulat ca o
+ * Ecranul din admin, de la oprirea înscrierilor la încheiere. Serverul e simulat ca o
  * mașină de stări: fiecare scriere schimbă ce întoarce următoarea citire.
  */
-test('organizatorul extrage, confirmă și încheie giveaway-ul din admin', async ({ page, network }) => {
+test('organizatorul închide înscrierile, extrage, confirmă și încheie giveaway-ul din admin', async ({ page, network }) => {
   const ana = participareGiveaway({ id: 'p-ana', nume: 'Ana Popescu', instagram: 'ana.run', acord_contact: true });
   const ion = participareGiveaway({ id: 'p-ion', nume: 'Ion Rusu', instagram: 'ion.r' });
   const ionExtras = { ...ion, extrasa_la: '2026-12-01T10:00:00Z' };
   const castigator = { nume: 'Ion Rusu', instagram: 'ion.r', extras_la: '2026-12-01T10:00:00Z', confirmat_la: '2026-12-01T11:00:00Z' };
 
-  let stare = dateGiveaway({ participari: [ana, ion] });
+  let stare = dateGiveaway({ giveaway: { stare: 'deschis', ends_at: 'infinity' }, participari: [ana, ion] });
   const scrieri: { rpc: string; corp: unknown }[] = [];
   const scrie = (rpc: string, urmatoarea: ReturnType<typeof dateGiveaway>, raspuns: unknown) => (corp: unknown) => {
     scrieri.push({ rpc, corp });
@@ -61,6 +106,7 @@ test('organizatorul extrage, confirmă și încheie giveaway-ul din admin', asyn
   };
   installAdminResponses(network, {
     admin_giveaway_date: () => stare,
+    admin_giveaway_opreste_inscrierile: scrie('opreste', dateGiveaway({ participari: [ana, ion] }), null),
     admin_giveaway_extrage: scrie('extrage', dateGiveaway({ giveaway: { stare: 'extras' }, participari: [ana, ionExtras] }), 'p-ion'),
     admin_giveaway_confirma: scrie('confirma', dateGiveaway({ giveaway: { stare: 'confirmat', castigator }, participari: [ana, ionExtras] }), null),
     admin_giveaway_incheie: scrie(
@@ -76,6 +122,15 @@ test('organizatorul extrage, confirmă și încheie giveaway-ul din admin', asyn
   await page.goto('/admin#giveaway');
 
   const panou = page.getByRole('region', { name: 'Extragere' });
+  const oprire = panou.getByRole('button', { name: 'Închide înscrierile' });
+  const dialog = page.getByRole('alertdialog');
+  await oprire.click();
+  await dialog.getByRole('button', { name: 'Renunță' }).click();
+  expect(scrieri).toHaveLength(0);
+  await expect(panou.getByRole('button', { name: 'Extrage câștigătorul' })).toHaveCount(0);
+  await oprire.click();
+  await dialog.getByRole('button', { name: 'Închide acum' }).click();
+
   await panou.getByRole('button', { name: 'Extrage câștigătorul' }).click();
   await expect(panou.getByRole('heading', { name: 'Persoană extrasă' })).toBeVisible();
   await expect(panou.getByText('Ion Rusu', { exact: true })).toBeVisible();
@@ -84,7 +139,6 @@ test('organizatorul extrage, confirmă și încheie giveaway-ul din admin', asyn
   await expect(panou.getByRole('heading', { name: 'Câștigător confirmat' })).toBeVisible();
 
   await panou.getByRole('button', { name: 'Încheie giveaway-ul' }).click();
-  const dialog = page.getByRole('alertdialog');
   await expect(dialog.getByText(/1 participări fără acord/)).toBeVisible();
   await expect(dialog.getByText(/ireversibil/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Încheie definitiv' }).click();
@@ -96,6 +150,7 @@ test('organizatorul extrage, confirmă și încheie giveaway-ul din admin', asyn
   await expect(page.getByRole('link', { name: '@ion.r' })).toHaveCount(0);
 
   expect(scrieri).toEqual([
+    { rpc: 'opreste', corp: { p_token: 'token-e2e', p_giveaway_id: 'gw-1' } },
     { rpc: 'extrage', corp: { p_token: 'token-e2e', p_giveaway_id: 'gw-1' } },
     { rpc: 'confirma', corp: { p_token: 'token-e2e', p_giveaway_id: 'gw-1' } },
     { rpc: 'incheie', corp: { p_token: 'token-e2e', p_giveaway_id: 'gw-1' } },

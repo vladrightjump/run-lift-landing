@@ -14,6 +14,7 @@ export type GiveawayPublic = {
   /** Cheia sub care stau textele în `content.ts`. */
   slug: string;
   starts_at: string;
+  /** PostgreSQL întoarce `infinity` când campania nu are termen fix. */
   ends_at: string;
   stare: StareGiveaway;
 };
