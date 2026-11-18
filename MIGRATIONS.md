@@ -44,7 +44,7 @@ Planul `docs/plans/2026-11-14-0736-feat-giveaway-instagram-plan.md`. Doar adaug�
 
 Înainte de publicare: aplică prin MCP `apply_migration`, cu numele `runlift_giveaway`; verifică pe baza reală că `anon` și `authenticated` nu citesc tabelele și că un token inventat e refuzat, apoi rulează `get_advisors`. Regenerează `supabase/schema/runlift.sql` cu `scripts/schema-snapshot.sql`, scoate migrarea din `MIGRARI_NEAPLICATE` și înlocuiește această secțiune cu versiunea și verificarea aplicării live.
 
-Un giveaway nou nu cere migrare: e un rând în `runlift.giveaways` plus conținutul din cod (vezi `GHID-GIVEAWAY.md`, când apare primul).
+Pentru o campanie fără termen fix, aplică și `supabase/sql/supabase-migration-giveaway-inchidere-manuala.sql`. Adaugă RPC-ul `runlift.admin_giveaway_opreste_inscrierile` și sincronizează închiderea cu înscrierile prin blocarea rândului campaniei. După deploy, campaniile se lansează cu un rând în `runlift.giveaways` și conținutul din cod. [Ghidul de lansare](GHID-GIVEAWAY.md)
 
 ---
 

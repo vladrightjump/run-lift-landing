@@ -40,13 +40,19 @@
   margin: 0; max-width: 640px; font-size: clamp(17px, 2.4vw, 21px); line-height: 1.5;
   color: var(--e3-muted-strong); text-wrap: pretty;
 }
+.gw-products {
+  margin: 0; padding-left: 20px; display: grid; gap: 8px; line-height: 1.5;
+}
+.gw-products li::marker { color: var(--e3-accent); }
 .gw-sponsor {
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
   font-size: 13px; font-weight: 600; letter-spacing: 1.5px;
   text-transform: uppercase; color: var(--e3-muted);
 }
-.gw-sponsor img { height: 36px; width: auto; max-width: 180px; object-fit: contain; }
-.gw-sponsor-name { color: var(--e3-text); }
+.gw-sponsor img {
+  height: 36px; width: 156px; padding: 8px 12px; box-sizing: border-box;
+  object-fit: contain; background: #fff;
+}
 .gw-period {
   margin: 0; padding-top: 16px; border-top: 1px solid var(--e3-border);
   font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong);

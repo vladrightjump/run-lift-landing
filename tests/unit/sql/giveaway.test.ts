@@ -33,11 +33,11 @@ const INTERVALE: Record<Perioada, [string, string]> = {
   inchis: [`now() - interval '3 days'`, `now() - interval '2 days'`],
 };
 
-const giveaway = async (slug: string, perioada: Perioada): Promise<string> => {
+const giveaway = async (slug: string, perioada: Perioada, faraTermen = false): Promise<string> => {
   const [start, end] = INTERVALE[perioada];
   const r = await db.query<{ id: string }>(
     `insert into runlift.giveaways (slug, titlu, starts_at, ends_at)
-     values ($1, $2, ${start}, ${end}) returning id`,
+     values ($1, $2, ${start}, ${faraTermen ? "'infinity'" : end}) returning id`,
     [slug, `Giveaway ${slug}`]
   );
   return r.rows[0].id;
@@ -137,6 +137,9 @@ const date = async (id: string | null = null, token = ADMIN_TOKEN): Promise<Date
 
 const sterge = (id: string, token = ADMIN_TOKEN) =>
   rpc('select runlift.admin_giveaway_sterge($1, $2)', [token, id]);
+
+const opresteInscrierile = (g: string, token: string | null = ADMIN_TOKEN) =>
+  rpc('select runlift.admin_giveaway_opreste_inscrierile($1, $2)', [token, g]);
 
 const extrage = async (g: string, token = ADMIN_TOKEN): Promise<string> =>
   (await rpc<{ id: string }>('select runlift.admin_giveaway_extrage($1, $2) id', [token, g])).rows[0].id;
@@ -263,6 +266,41 @@ describe('înscrierea', () => {
          values ('gresit', 'Greșit', now(), now() - interval '1 hour')`
       )
     ).rejects.toThrow(/violates check constraint/);
+  });
+});
+
+describe('închiderea manuală a înscrierilor', () => {
+  it('acceptă înscrieri până la oprire și permite extragerea imediat după', async () => {
+    const g = await giveaway('bitonic', 'deschis', true);
+    expect(await citestePublic()).toMatchObject({ slug: 'bitonic', stare: 'deschis', ends_at: 'infinity' });
+    const p = await inscrie();
+    await expect(extrage(g)).rejects.toThrow(/giveaway_deschis/);
+
+    await opresteInscrierile(g);
+    const inchis = await citestePublic();
+    expect(inchis).toMatchObject({ slug: 'bitonic', stare: 'inchis' });
+    expect(Number.isFinite(Date.parse(inchis!.ends_at))).toBe(true);
+    await expect(inscrie()).rejects.toThrow(/giveaway_inchis/);
+    await expect(extrage(g)).resolves.toBe(p);
+
+    await opresteInscrierile(g);
+    expect(await citestePublic()).toEqual(inchis);
+    expect((await jurnal()).filter((e) => e.tip === 'giveaway_inscrieri_oprite')).toEqual([
+      { tip: 'giveaway_inscrieri_oprite', detaliu: { giveaway: 'bitonic' } },
+    ]);
+  });
+
+  it('refuză oprirea fără token, înainte de start și în campaniile cu termen fix', async () => {
+    const g = await giveaway('bitonic', 'deschis', true);
+    await expect(opresteInscrierile(g, TOKEN_INVENTAT)).rejects.toThrow(/invalid_token/);
+    await expect(opresteInscrierile(g, null)).rejects.toThrow(/invalid_token/);
+
+    const programat = await giveaway('viitor', 'programat', true);
+    await expect(opresteInscrierile(programat)).rejects.toThrow(/giveaway_neinceput/);
+
+    const cuTermen = await giveaway('termen-fix', 'deschis');
+    await expect(opresteInscrierile(cuTermen)).rejects.toThrow(/giveaway_cu_termen/);
+    expect(await jurnal()).toEqual([]);
   });
 });
 

@@ -3,8 +3,8 @@ import { momentComplet } from '../../../shared/lib/formatare';
 import { useGiveawayForm } from '../hooks/useGiveawayForm';
 
 type Props = {
-  /** Sfârșitul înscrierilor: după el e anunțat câștigătorul. */
-  sfarsit: string;
+  /** Sfârșitul înscrierilor, când e programat. */
+  sfarsit: string | null;
   /** Serverul a refuzat trimiterea fiindcă giveaway-ul s-a închis între timp. */
   onInchis: () => void;
 };
@@ -28,8 +28,8 @@ export const GiveawayForm = ({ sfarsit, onInchis }: Props) => {
           <>
             <h2>Ești în giveaway!</h2>
             <p>
-              Am primit participarea ta. Câștigătorul e ales după {momentComplet(sfarsit)} și e anunțat pe
-              pagina noastră de Instagram.
+              Am primit participarea ta. Câștigătorul e ales după{' '}
+              {sfarsit ? momentComplet(sfarsit) : 'închiderea înscrierilor'} și e anunțat pe pagina noastră de Instagram.
             </p>
           </>
         ) : (

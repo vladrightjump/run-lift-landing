@@ -74,6 +74,7 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
   // stătea deschisă. Starea citită la încărcare a rămas în urmă.
   const [inchisLaTrimitere, setInchisLaTrimitere] = useState(false);
   const stare = inchisLaTrimitere ? 'inchis' : giveaway.stare;
+  const sfarsit = giveaway.ends_at === 'infinity' ? null : giveaway.ends_at;
 
   return (
     <>
@@ -81,22 +82,38 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
         <p className={styles['gw-kicker']}>Giveaway</p>
         <h1 className={styles['gw-title']}>{continut.titlu}</h1>
         <p className={styles['gw-prize']}>{continut.premiu}</p>
+        <ul className={styles['gw-products']} aria-label="Produsele din pachet">
+          {continut.produse.map(({ nume, url }) => (
+            <li key={url}>
+              <a className={styles['gw-link']} href={url} target="_blank" rel="noopener noreferrer">
+                {nume}
+              </a>
+            </li>
+          ))}
+        </ul>
         <div className={styles['gw-sponsor']} data-css="gw-sponsor">
           <span>Împreună cu</span>
           <img src={continut.sponsor.logo} alt={continut.sponsor.nume} />
-          <span className={styles['gw-sponsor-name']}>{continut.sponsor.nume}</span>
         </div>
-        <p className={styles['gw-period']} data-css="gw-period">
-          Înscrieri: {momentComplet(giveaway.starts_at)} – {momentComplet(giveaway.ends_at)}
-        </p>
+        {(sfarsit !== null || stare !== 'inchis') && (
+          <p className={styles['gw-period']} data-css="gw-period">
+            {sfarsit
+              ? `Înscrieri: ${momentComplet(giveaway.starts_at)} – ${momentComplet(sfarsit)}`
+              : 'Anunțăm pe Instagram când se vor închide înscrierile.'}
+          </p>
+        )}
       </section>
 
       <div className={styles['gw-grid']} data-css="gw-grid">
         <section className={styles['gw-how']} data-css="gw-how">
           <h2>Cum participi</h2>
           <ol>
-            {continut.conditii.map((conditie) => (
-              <li key={conditie}>{conditie}</li>
+            {continut.conditii.map(({ text, url }) => (
+              <li key={url}>
+                <a className={styles['gw-link']} href={url} target="_blank" rel="noopener noreferrer">
+                  {text}
+                </a>
+              </li>
             ))}
             <li>Completează formularul de pe această pagină, o singură dată.</li>
           </ol>
@@ -110,7 +127,7 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
             </div>
           )}
           {stare === 'deschis' && (
-            <GiveawayForm sfarsit={giveaway.ends_at} onInchis={() => setInchisLaTrimitere(true)} />
+            <GiveawayForm sfarsit={sfarsit} onInchis={() => setInchisLaTrimitere(true)} />
           )}
           {stare === 'inchis' && (
             <div className={styles['gw-notice']} data-css="gw-notice">

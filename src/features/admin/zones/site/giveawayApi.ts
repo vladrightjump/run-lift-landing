@@ -34,6 +34,7 @@ export type GiveawayAdmin = {
   slug: string;
   titlu: string;
   starts_at: string;
+  /** `infinity` până la oprirea manuală a înscrierilor fără termen fix. */
   ends_at: string;
   stare: StareGiveaway;
   /** Copia câștigătorului confirmat. Rămâne și după ce participarea lui e ștearsă. */
@@ -62,6 +63,9 @@ export const loadGiveaway = (
 export const stergeParticipare = (token: string, id: string): Promise<void> =>
   rpc<void>('admin_giveaway_sterge', { p_token: token, p_id: id });
 
+export const opresteInscrierile = (token: string, giveawayId: string): Promise<void> =>
+  rpc<void>('admin_giveaway_opreste_inscrierile', { p_token: token, p_giveaway_id: giveawayId });
+
 /** Prima extragere și reextragerea. Alegerea se face pe server. */
 export const extrageGiveaway = (token: string, giveawayId: string): Promise<string> =>
   rpc<string>('admin_giveaway_extrage', { p_token: token, p_giveaway_id: giveawayId });
@@ -82,6 +86,8 @@ export const mesajRefuzGiveaway = (err: unknown): string => {
   const text = err instanceof Error ? err.message : String(err);
   if (text.includes('fara_participari')) return 'Nu mai e nicio participare de extras.';
   if (text.includes('giveaway_deschis')) return 'Extragerea se poate face abia după ce se închid înscrierile.';
+  if (text.includes('giveaway_neinceput')) return 'Înscrierile nu au început încă.';
+  if (text.includes('giveaway_cu_termen')) return 'Înscrierile se închid automat la termenul programat.';
   if (text.includes('giveaway_incheiat')) return 'Giveaway-ul e deja încheiat.';
   if (text.includes('fara_extras')) return 'Nu e nicio persoană extrasă de confirmat.';
   if (text.includes('deja_confirmat')) return 'Câștigătorul e deja confirmat.';

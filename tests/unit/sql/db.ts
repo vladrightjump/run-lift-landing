@@ -35,7 +35,10 @@ const SALA_SQL = readFileSync(resolve(__dirname, '../../../supabase/schema/sala.
  * de aici se poate rula de mai multe ori. După `apply_migration` și regenerarea
  * instantaneelor, scoate-o din listă: instantaneul o conține deja.
  */
-const MIGRARI_NEAPLICATE = (['supabase/sql/supabase-migration-giveaway.sql'] as string[]).map((f) =>
+const MIGRARI_NEAPLICATE = [
+  'supabase/sql/supabase-migration-giveaway.sql',
+  'supabase/sql/supabase-migration-giveaway-inchidere-manuala.sql',
+].map((f) =>
   readFileSync(resolve(__dirname, '../../..', f), 'utf8'),
 );
 
