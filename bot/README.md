@@ -103,7 +103,7 @@ railway config plan           # din rădăcina repo-ului
 
 Planul trebuie să arate doar schimbările de mai sus pe `service.bot`: sursa (repo, `/bot`,
 `checkSuites`), builderul, comenzile, calea urmărită și `/health`. **Nicio ștergere** — nici de
-serviciu, nici de variabilă (toate nouă sînt `preserve()`). Dacă CLI-ul spune că serviciul e încă
+serviciu, nici de variabilă (valorile din Railway sînt `preserve()`). Dacă CLI-ul spune că serviciul e încă
 condus de `railway.json` (repo-ul vechi îl are la rădăcină), schimbă întâi sursa din panou
 (Settings → Source: acest repo, `main`, rădăcina `/bot`, câmpul „Railway Config File" gol),
 apoi rulează din nou `plan`. Când planul e curat: `railway config apply`, apoi verifică
@@ -228,3 +228,55 @@ Organizatorii autorizați în `TELEGRAM_ADMIN_CHAT_IDS` pot scrie:
 Botul afișează grupul configurat și conținutul exact înainte de „Trimite în grup” / „Renunță”. O comandă nouă înlocuiește previzualizarea anterioară pentru aceste două comenzi. Confirmarea este legată de organizator, expiră după 15 minute și nu poate fi folosită de două ori. Ciornele sunt în memorie, pe replica unică; un restart le invalidează. La timeout se raportează livrare neconfirmată: verifică grupul înainte de a repeta comanda.
 
 Sondajele `/poll` nu folosesc tabelele de prezență, iar `/sondaj` rămâne comanda antrenamentului. Publicările se verifică în grup și prin confirmarea privată; nu apar în istoricul acțiunilor din admin. Meniul și `/ajutor` includ comenzile; `/start` reînregistrează meniul organizatorului. Limitele sondajelor respectă [Telegram Bot API](https://core.telegram.org/bots/api#sendpoll).
+
+## Monitorizarea botului în producție
+
+`/health` verifică dacă procesul HTTP răspunde și rămâne verificarea de la deploy.
+Monitorul extern folosește `GET /monitoring/status` cu antetul
+`Authorization: Bearer <BOT_MONITOR_TOKEN>`. Fără token configurat, ruta răspunde cu
+404. Verificarea nu trimite mesaje, nu scrie date și nu apelează Telegram sau Supabase
+la fiecare cerere.
+
+### Activare
+
+1. Livrează mai întâi ramura într-un serviciu de test izolat. Folosește un bot, un grup
+   și o bază de date dedicate testului.
+2. Adaugă în Railway o valoare aleatorie dedicată pentru `BOT_MONITOR_TOKEN`. Păstrează
+   valoarea în setările secrete ale serviciului și ale monitorului. La modificarea
+   configurației Railway din repo, citește `railway config plan` înainte de aplicare.
+3. În Better Stack Uptime, creează o singură verificare HTTPS pentru ruta de monitorizare.
+   Adaugă antetul de autorizare la setările cererii. Pornește cu un interval de 60 s,
+   confirmare după 120 s și revenire după 60 s. Configurează un e-mail pentru începutul
+   și închiderea incidentului, fără notificări paralele către același destinatar.
+   Folosește un monitor sau o echipă dedicată dacă rutarea e-mailurilor ar afecta și
+   alte servicii. [Configurarea monitorului](https://betterstack.com/docs/uptime/api/create-a-new-monitor/) · [E-mailuri de incident](https://betterstack.com/docs/uptime/integrations/integrating-with-better-uptime/outgoing-emails/).
+4. În serviciul de test, verifică un răspuns sănătos, o întrerupere scurtă fără e-mail,
+   apoi o eroare care persistă peste prag. Include cazurile în care serverul răspunde
+   dar planificatorul nu termină ticul și în care un sondaj rămâne neconfirmat.
+   Urmărește un singur e-mail de incident și unul de revenire. Un serviciu de test
+   pentru e-mail poate valida notificările separat.
+5. După ce codul ajunge în producție, setează secretul separat pentru producție și
+   verifică răspunsul 200 cu antetul corect. Activează e-mailurile numai după proba cu
+   destinatarul real. Pentru rollback sau schimbarea tokenului, pune întâi monitorul
+   în pauză și reia-l după ce cererea autorizată răspunde 200.
+
+### La incident
+
+În Railway → `production` → `bot`, deschide jurnalele de deploy la ora incidentului
+și caută `"bot_monitor_status"` sau `"bot_operation_failed"`. Câmpurile `operation`,
+`dependency`, `error_code`, `outcome` și `session_date` arată ce a eșuat și la ce
+sondaj se referă. Pentru voturi, folosește `update_id` când este prezent. Intervalele
+logurilor sunt în UTC, iar programul sondajului este în ora Chișinăului.
+
+| Stare | Ce verifici |
+| --- | --- |
+| Lipsă răspuns sau 5xx de la Railway | Deploy-ul activ și eventualele reporniri. |
+| `starting`, `scheduler_disabled`, `scheduler_stale` | Dacă a trecut primul tic, dacă `BOT_SCHEDULER` e pornit, apoi accesul la setări în Supabase și erorile din tic. Un tic devine vechi după 5 minute. |
+| `poll_check_unavailable` | Citirea datelor pentru un sondaj deja scadent. Lipsa citirii nu stabilește dacă Telegram l-a primit. |
+| `poll_unconfirmed` | Sondajul nu are dovadă vizibilă de livrare după 10 minute. **Verifică întâi grupul Telegram**, apoi rezultatul `poll.send_message` și eventualul `posted_metadata_unconfirmed`, înainte de a retrimite manual. |
+| `schedule_history_unknown` | Un restart după schimbarea setărilor poate ascunde orarul vechi. Verifică orarul și grupul. Această stare apare în jurnale, fără alertă de sondaj ratat. |
+| `trial.send_message` cu rezultat `unconfirmed` sau `partial` | Verifică livrarea în ecranul Probe înainte de a retrimite. |
+
+O recuperare înseamnă că verificările trec din nou. Poate însemna și că fereastra
+sondajului s-a închis sau că antrenamentul a fost anulat. Monitorul nu testează
+livrarea webhook-ului Telegram și nu confirmă primirea mesajelor de probă.

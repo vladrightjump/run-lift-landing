@@ -1,3 +1,4 @@
+import { botFailure } from "./log.js";
 import { createAdminClient } from "./supabase.js";
 
 // Runtime bot configuration, stored as a single row (id=1) in Supabase and
@@ -54,18 +55,29 @@ export function textOrNull(v: unknown): string | null {
   return typeof v === "string" && v.trim() ? v : null;
 }
 
+export interface BotConfigRead {
+  config: BotConfig;
+  updatedAt: number | null;
+}
+
 export async function getBotConfig(): Promise<BotConfig> {
+  return (await readBotConfig()).config;
+}
+
+export async function readBotConfig(): Promise<BotConfigRead> {
+  const started = performance.now();
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("bot_config")
       .select(
-        "enabled, poll_days, poll_time, summary_days, summary_time, training_time, location, auto_reminder_enabled, reminder_threshold, poll_title, poll_yes_label, poll_no_label",
+        "updated_at, enabled, poll_days, poll_time, summary_days, summary_time, training_time, location, auto_reminder_enabled, reminder_threshold, poll_title, poll_yes_label, poll_no_label",
       )
       .eq("id", 1)
       .maybeSingle();
-    if (error || !data) return DEFAULT_CONFIG;
-    return {
+    if (error || !data) throw error ?? new Error("Missing bot_config row");
+    const updatedAt = Date.parse(data.updated_at);
+    const config: BotConfig = {
       enabled: data.enabled ?? true,
       pollDays: normalizeDays(data.poll_days, DEFAULT_CONFIG.pollDays),
       pollTime: normalizeTime(data.poll_time) ?? DEFAULT_CONFIG.pollTime,
@@ -85,8 +97,9 @@ export async function getBotConfig(): Promise<BotConfig> {
       pollYesLabel: textOrNull(data.poll_yes_label),
       pollNoLabel: textOrNull(data.poll_no_label),
     };
-  } catch (err) {
-    console.error("[config] read failed, using defaults:", err);
-    return DEFAULT_CONFIG;
+    return { config, updatedAt: Number.isFinite(updatedAt) ? updatedAt : null };
+  } catch (error) {
+    botFailure("scheduler.read_config", "supabase", started, error);
+    return { config: DEFAULT_CONFIG, updatedAt: null };
   }
 }

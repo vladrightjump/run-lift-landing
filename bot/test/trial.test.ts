@@ -22,7 +22,7 @@ function mock(handler: (url:URL, body:Record<string,unknown>, method:string) => 
     const method = init?.method ?? 'GET';
     calls.push({url,body,method});
     const data = await handler(url, body, method);
-    return new Response(JSON.stringify(data), { status:200, headers:{'Content-Type':'application/json'} });
+    return data instanceof Response ? data : Response.json(data);
   };
   return calls;
 }
@@ -193,14 +193,19 @@ test('outbox reports successful, blocked and ambiguous deliveries distinctly and
     if(url.pathname.endsWith('/sendMessage')) {
       if(scenario==='timeout') throw new Error('Simulated network timeout after send');
       if(scenario==='blocked') return {ok:false,error_code:403,description:'bot blocked'};
+      if(scenario==='ambiguous-gateway') return Response.json({ok:false,error_code:500}, {status:502});
+      if(scenario==='rate-limit') return {ok:false,error_code:429,description:'Too Many Requests'};
       return telegram;
     }
     return null;
   });
-  for (const value of ['success','blocked','timeout','stale']) {scenario=value;claimed=false;await processTrialMessages();}
-  assert.deepEqual(calls.filter(x=>x.url.pathname.endsWith('/rpc/trial_complete_message')).map(x=>[x.body.p_message,x.body.p_status]),[['success','sent'],['blocked','failed'],['timeout','ambiguous'],['stale','cancelled']]);
+  for (const value of ['success','blocked','timeout','ambiguous-gateway','rate-limit','stale']) {scenario=value;claimed=false;await processTrialMessages();}
+  assert.deepEqual(calls.filter(x=>x.url.pathname.endsWith('/rpc/trial_complete_message')).map(x=>[x.body.p_message,x.body.p_status]),[
+    ['success','sent'],['blocked','failed'],['timeout','ambiguous'],['ambiguous-gateway','ambiguous'],['stale','cancelled'],
+  ]);
+  assert.equal(calls.filter(x=>x.url.pathname.endsWith('/trial_messages') && x.body.status==='pending').length,1);
   assert.ok(calls.some(x=>x.url.pathname.endsWith('/trial_prospects')&&x.method==='PATCH'&&x.body.dm_enabled===false));
-  assert.equal(calls.filter(x=>x.url.pathname.endsWith('/sendMessage')).length,3);
+  assert.equal(calls.filter(x=>x.url.pathname.endsWith('/sendMessage')).length,5);
 });
 
 test('handleUpdate attendance and explicit continuation use separate authorized RPC transitions', async () => {
@@ -399,4 +404,99 @@ test('a callback from the person also refreshes the profile', async () => {
     : url.pathname.endsWith('/trial_prospects') ? { ...p } : null);
   await trialCallback({ ...cb('t:question'), from: { id: 11, username: 'ana_cb' } });
   assert.equal(profilePatches(calls)[0]?.telegram_username, 'ana_cb');
+});
+
+test('a status write failure after Telegram accepts a trial message leaves its lease for review', async (t) => {
+  const { processTrialMessages } = await import('../src/jobs/trial-messages.js');
+  const log = t.mock.method(console, 'error', () => {});
+  const booked = { ...b, status: 'scheduled', session_start: '2099-10-08T06:00Z' };
+  const calls = mock((url, _body, method) => {
+    const path = url.pathname.split('/').at(-1);
+    if (path === 'trial_config') return method === 'PATCH' ? null : config;
+    if (path === 'members') return { id: 'organizer' };
+    if (path === 'getMe') return { ok: true, result: { id: 7, username: 'training_bot' } };
+    if (path === 'getChatMember') return { ok: true, result: { status: 'administrator', can_invite_users: true } };
+    if (path === 'trial_claim_messages') return [{
+      id: 'sent-unknown', prospect_id: p.id, booking_id: b.id, booking_version: b.version,
+      kind: 'booking_confirmed', recipient_telegram_id: 11, status: 'processing', attempts: 1, payload: {},
+    }];
+    if (path === 'trial_prospects') return p;
+    if (path === 'trial_bookings') return booked;
+    if (path === 'trial_messages') return { status: 'processing' };
+    if (path === 'sendMessage') return telegram;
+    if (path === 'trial_complete_message') {
+      return Response.json({ code: '08006', message: 'private database details' }, { status: 503 });
+    }
+    return null;
+  });
+  await processTrialMessages();
+  const completed = calls.filter((call) => call.url.pathname.endsWith('/trial_complete_message'));
+  assert.deepEqual(completed.map((call) => call.body.p_status), ['sent']);
+  assert.ok(!calls.some((call) => call.url.pathname.endsWith('/trial_messages') && call.method === 'PATCH'));
+  const lines = log.mock.calls.map((call) => String(call.arguments[0]));
+  assert.equal(lines.length, 1);
+  const event = JSON.parse(lines[0]);
+  assert.equal(event.operation, 'trial.complete_message');
+  assert.equal(event.dependency, 'supabase');
+  assert.equal(event.outcome, 'unconfirmed');
+  assert.doesNotMatch(lines[0], /private/);
+});
+
+test('trial permission transport errors name the Telegram operation exactly once', async (t) => {
+  const { processTrialMessages } = await import('../src/jobs/trial-messages.js');
+  const log = t.mock.method(console, 'error', () => {});
+  mock((url) => {
+    if (url.pathname.endsWith('/trial_config')) return { ...config, bot_username: 'different_bot' };
+    if (url.pathname.endsWith('/members')) return { id: 'organizer' };
+    if (url.pathname.endsWith('/getMe')) throw new DOMException('connection failed', 'TimeoutError');
+    return null;
+  });
+  await assert.rejects(processTrialMessages);
+  assert.equal(log.mock.callCount(), 1);
+  const event = JSON.parse(String(log.mock.calls[0].arguments[0]));
+  assert.equal(event.operation, 'trial.get_bot_identity');
+  assert.equal(event.dependency, 'telegram');
+  assert.equal(event.error_category, 'timeout');
+});
+
+test('Telegram acceptance remains observable if the poll message ID cannot be saved', async (t) => {
+  const { sendPoll, wasPollAccepted } = await import('../src/jobs/send-poll.js');
+  const log = t.mock.method(console, 'error', () => {});
+  const date = '2099-11-19';
+  const calls = mock((url, _body, method) => {
+    if (url.pathname.endsWith('/bot_config')) return { updated_at: '2026-11-18T00:00Z' };
+    if (url.pathname.endsWith('/sendMessage')) return telegram;
+    if (url.pathname.endsWith('/training_sessions') && method === 'PATCH') {
+      return Response.json({ code: '08006', message: 'private database details' }, { status: 503 });
+    }
+    if (url.pathname.endsWith('/training_sessions')) return { id: 'different-session', status: 'scheduled' };
+    return null;
+  });
+  assert.equal((await sendPoll({ date, force: true })).ok, true);
+  assert.equal(wasPollAccepted(date, 'different-session'), true);
+  assert.equal(wasPollAccepted(date, 'other-session'), false);
+  assert.deepEqual(await sendPoll({ date }), { ok: true, detail: 'already-sent' });
+  assert.equal(calls.filter((call) => call.url.pathname.endsWith('/sendMessage')).length, 1);
+  assert.equal(log.mock.callCount(), 1);
+  const event = JSON.parse(String(log.mock.calls[0].arguments[0]));
+  assert.equal(event.operation, 'poll.save_message_id');
+  assert.equal(event.outcome, 'posted_metadata_unconfirmed');
+});
+
+test('uncertain poll delivery remains for review and a scheduled send does not replay it', async (t) => {
+  const { sendPoll, wasPollAccepted } = await import('../src/jobs/send-poll.js');
+  t.mock.method(console, 'error', () => {});
+  const date = '2099-11-20';
+  const calls = mock((url) => {
+    if (url.pathname.endsWith('/bot_config')) return { updated_at: '2026-11-18T00:00Z' };
+    if (url.pathname.endsWith('/sendMessage')) throw new DOMException('Timed out', 'TimeoutError');
+    if (url.pathname.endsWith('/training_sessions')) return { id: 'session-20', status: 'scheduled' };
+    return null;
+  });
+  const initial = await sendPoll({ date, force: true });
+  assert.equal(initial.ok, false);
+  assert.match(initial.detail ?? '', /Verifică grupul/);
+  assert.deepEqual(await sendPoll({ date }), initial);
+  assert.equal(wasPollAccepted(date), false);
+  assert.equal(calls.filter((call) => call.url.pathname.endsWith('/sendMessage')).length, 1);
 });

@@ -4,10 +4,13 @@ import { recordMembership } from "./lib/membership.js";
 import { memberControl, memberControlDeps } from "./member-control.js";
 import { inactivityCallback, inactivityControlDeps } from "./inactivity-control.js";
 import type { TelegramMember } from "./lib/telegram.js";
+import { withinDeadline } from "./lib/deadline.js";
+import { botEvent, botFailure, observeDatabase, unreportedFailure } from "./lib/log.js";
 import { createAdminClient } from "./lib/supabase.js";
 import {
   answerCallbackQuery,
   editMessageText,
+  isUnchangedEdit,
   sendMessage,
   setMyCommands,
 } from "./lib/telegram.js";
@@ -37,6 +40,7 @@ interface TgChat {
 }
 
 export interface TgUpdate {
+  update_id?: number;
   chat_join_request?: { chat: TgChat; from: TgUser; invite_link?: { invite_link: string } };
   chat_member?: { chat: TgChat; date: number; new_chat_member: TelegramMember };
   callback_query?: {
@@ -82,7 +86,7 @@ function controlDeps(): ControlDeps {
         const r = await editMessageText(chatId, messageId, text, {
           reply_markup: { inline_keyboard: kb ?? [] },
         });
-        if (!r.ok && r.description !== "Bad Request: message is not modified") {
+        if (!r.ok && !isUnchangedEdit(r)) {
           // An old card can't be edited (deleted, too old): send a new one.
           await sendMessage(chatId, text, kb?.length ? { reply_markup: { inline_keyboard: kb } } : undefined);
         }
@@ -114,10 +118,11 @@ export async function registerOrganizerMenu(chatId: number): Promise<void> {
 // is logged and told to the organizer, who simply taps or writes again.
 // Redelivering a Confirm would only answer "E deja făcut" (KTD5).
 async function organizerSafely(chatId: number, work: () => Promise<void>): Promise<void> {
+  const started = performance.now();
   try {
     await work();
   } catch (err) {
-    console.error("[control] handler error:", err);
+    unreportedFailure("control.handle_action", started, err);
     try {
       await sendMessage(chatId, `⚠️ Nu s-a putut face acum (${String(err).slice(0, 200)}). Încearcă din nou.`);
     } catch (sendErr) {
@@ -131,6 +136,7 @@ async function organizerSafely(chatId: number, work: () => Promise<void>): Promi
 // REDELIVERS the update, so no vote is ever silently dropped. The attendance
 // upsert is idempotent, which makes redelivery safe.
 export async function handleUpdate(update: TgUpdate): Promise<boolean> {
+  const started = performance.now();
   try {
     if (update.chat_join_request) { await trialJoinRequest(update.chat_join_request); return true; }
     if (update.chat_member) {
@@ -188,21 +194,24 @@ export async function handleUpdate(update: TgUpdate): Promise<boolean> {
       return true;
     }
     if (update.callback_query) {
-      return await handleCallbackQuery(update.callback_query);
+      return await handleCallbackQuery(update.callback_query, update.update_id);
     } else if (update.message) {
       await handleMessage(update.message);
     }
     return true;
   } catch (err) {
-    console.error("[telegram/webhook] handler error:", err);
-    void voteFailureAlert(String(err));
+    unreportedFailure("webhook.handle_update", started, err, "retry", { updateId: update?.update_id });
+    void voteFailureAlert("procesarea actualizării a eșuat");
     return false; // transient — let Telegram retry
   }
 }
 
 async function handleCallbackQuery(
   cb: NonNullable<TgUpdate["callback_query"]>,
+  updateId?: number,
 ): Promise<boolean> {
+  const started = performance.now();
+  const context = { updateId };
   const data = cb.data ?? "";
   // Expected: "att:yes:<session_id>" / "att:no:<session_id>"
   const match = /^att:(yes|no):(.+)$/.exec(data);
@@ -223,13 +232,17 @@ async function handleCallbackQuery(
     .select("status")
     .eq("id", sessionId)
     .maybeSingle();
-  if (sessErr) throw new Error(sessErr.message); // transient — Telegram retries
+  if (sessErr) {
+    botFailure("vote.read_session", "supabase", started, sessErr, "retry", context);
+    void voteFailureAlert("nu pot citi antrenamentul");
+    return false;
+  }
   if (!voteAccepted(sess?.status ?? null)) {
     await answerCallbackQuery(cb.id, "Antrenamentul e anulat.");
     return true;
   }
 
-  let member = await resolveMember(supabase, from);
+  let member = await resolveMember(supabase, from, updateId);
 
   if (!member) {
     // Unknown Telegram account — auto-create a member from the Telegram name so
@@ -251,14 +264,14 @@ async function handleCallbackQuery(
       .maybeSingle();
     if (ins.data) {
       member = ins.data as { id: string };
-      console.log(
-        `[vote] auto-created member "${autoName}" (tg ${from.id} @${from.username ?? "-"})`,
-      );
+      botEvent("info", "vote_member_created", { operation: "vote.create_member" }, context);
     } else {
       // Insert failed (likely a concurrent create / race) — re-resolve so the
       // vote is never dropped.
-      if (ins.error) console.error("[vote] member insert error:", ins.error.message);
-      member = await resolveMember(supabase, from);
+      if (ins.error && ins.error.code !== "23505") {
+        botFailure("vote.create_member", "supabase", started, ins.error, "failed", context);
+      }
+      member = await resolveMember(supabase, from, updateId);
     }
     // Clear any earlier "unmatched" parking row for them.
     await supabase
@@ -268,9 +281,7 @@ async function handleCallbackQuery(
     if (!member) {
       // Last resort: park the identity so nothing about the person is lost,
       // alert the admins (throttled), and let Telegram redeliver the vote.
-      console.error(
-        `[vote] RETRY: could not resolve/create member for tg ${from.id} (@${from.username ?? "-"}), response=${response}`,
-      );
+      botFailure("vote.resolve_member", "supabase", started, null, "retry", context);
       await supabase.from("telegram_unmatched").upsert(
         {
           telegram_user_id: from.id,
@@ -280,8 +291,8 @@ async function handleCallbackQuery(
         },
         { onConflict: "telegram_user_id" },
       );
-      void voteFailureAlert(`nu pot crea membrul pentru @${from.username ?? from.id}`);
-      await answerCallbackQuery(cb.id, "Moment — se reîncearcă automat");
+      void voteFailureAlert("nu pot crea membrul");
+      await acknowledgeVote(cb.id, "Moment — se reîncearcă automat", updateId);
       return false;
     }
   }
@@ -290,16 +301,23 @@ async function handleCallbackQuery(
   // session). Only meaningful for a positive answer.
   let isFirstTraining = false;
   if (response === "yes") {
-    const { count } = await supabase
+    const countStarted = performance.now();
+    const { count, error } = await supabase
       .from("attendance")
       .select("id", { count: "exact", head: true })
       .eq("member_id", member.id)
       .eq("response", "yes")
       .neq("session_id", sessionId);
+    if (error) {
+      botFailure("vote.count_prior_yes", "supabase", countStarted, error, "retry", context);
+      void voteFailureAlert("nu pot verifica prezențele anterioare");
+      return false;
+    }
     isFirstTraining = (count ?? 0) === 0;
   }
 
   // Upsert on (session_id, member_id) — changing one's mind is allowed.
+  const saveStarted = performance.now();
   const attRes = await supabase.from("attendance").upsert(
     {
       session_id: sessionId,
@@ -311,40 +329,47 @@ async function handleCallbackQuery(
     { onConflict: "session_id,member_id" },
   );
   if (attRes.error) {
-    console.error(
-      `[vote] FAILED to record: member ${member.id} → ${response} (session ${sessionId}): ${attRes.error.message}`,
-    );
-    void voteFailureAlert(attRes.error.message);
-    await answerCallbackQuery(cb.id, "Moment — se reîncearcă automat");
-    return false; // Telegram redelivers; upsert is idempotent
+    botFailure("vote.save", "supabase", saveStarted, attRes.error, "retry", context);
+    void voteFailureAlert("nu pot salva votul");
+    await acknowledgeVote(cb.id, "Moment — se reîncearcă automat", updateId);
+    return false;
   }
-  console.log(
-    `[vote] recorded: member ${member.id} → ${response} (session ${sessionId})`,
+  botEvent("info", "vote_recorded", {
+    operation: "vote.save", dependency: "supabase", outcome: "saved",
+    duration_ms: Math.round(performance.now() - saveStarted),
+  }, context);
+
+  // The attendance upsert determines the webhook result. Each follow-up
+  // starts independently and has the same deadline measured from the save.
+  const auditStarted = performance.now();
+  const audit = withinDeadline(FOLLOW_UP_MS, async (signal) => {
+    const { error } = await supabase.from("attendance_log").insert({
+      session_id: sessionId,
+      member_id: member.id,
+      telegram_user_id: from.id,
+      response,
+      source: "telegram",
+    }).abortSignal(signal);
+    if (error) throw error;
+  }).catch((error) => botFailure("vote.audit", "supabase", auditStarted, error, "unconfirmed", context));
+  const ack = acknowledgeVote(cb.id, response === "yes" ? "Notat ✅" : "Notat ❌", updateId);
+  const refresh = cb.message && refreshPollMessage(
+    supabase, cb.message.chat.id, cb.message.message_id, sessionId, updateId,
   );
-
-  // Append-only audit trail — every tap (incl. changes of mind) kept forever.
-  const logRes = await supabase.from("attendance_log").insert({
-    session_id: sessionId,
-    member_id: member.id,
-    telegram_user_id: from.id,
-    response,
-    source: "telegram",
-  });
-  if (logRes.error) console.error("[vote-log]", logRes.error.message);
-
-  await answerCallbackQuery(cb.id, response === "yes" ? "Notat ✅" : "Notat ❌");
-
-  // Refresh the poll message in place with the live tally. Editing a message
-  // does NOT notify group members, so this updates silently on every vote.
-  if (cb.message) {
-    await refreshPollMessage(
-      supabase,
-      cb.message.chat.id,
-      cb.message.message_id,
-      sessionId,
-    );
-  }
+  await Promise.all([audit, ack, refresh]);
   return true;
+}
+
+const FOLLOW_UP_MS = 4_000;
+
+async function acknowledgeVote(id: string, text: string, updateId?: number): Promise<void> {
+  const started = performance.now();
+  try {
+    const result = await withinDeadline(FOLLOW_UP_MS, (signal) => answerCallbackQuery(id, text, signal));
+    if (!result.ok) throw result;
+  } catch (error) {
+    botFailure("vote.acknowledge", "telegram", started, error, "failed", { updateId });
+  }
 }
 
 // Whether a vote on a session with this status is recorded. A missing session
@@ -361,24 +386,36 @@ async function refreshPollMessage(
   chatId: number,
   messageId: number,
   sessionId: string,
-) {
+  updateId?: number,
+): Promise<void> {
+  let operation = "vote.refresh_read";
+  let dependency: "supabase" | "telegram" = "supabase";
+  let started = performance.now();
   try {
-    const { data } = await supabase
-      .from("training_sessions")
-      .select("id, session_date, starts_at, location, status, poll_message_id, poll_wording")
-      .eq("id", sessionId)
-      .maybeSingle();
-    if (!data) return;
-    const { text, keyboard } = await renderSessionPoll(supabase, data as SessionRow);
-    const res = await editMessageText(chatId, messageId, text, {
-      parse_mode: "HTML",
-      reply_markup: { inline_keyboard: keyboard },
+    await withinDeadline(FOLLOW_UP_MS, async (signal) => {
+      const { data, error } = await supabase
+        .from("training_sessions")
+        .select("id, session_date, starts_at, location, status, poll_message_id, poll_wording")
+        .eq("id", sessionId)
+        .abortSignal(signal)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return;
+      operation = "vote.refresh_tally";
+      started = performance.now();
+      const { text, keyboard } = await renderSessionPoll(supabase, data as SessionRow, signal);
+      signal.throwIfAborted();
+      operation = "vote.refresh_edit";
+      dependency = "telegram";
+      started = performance.now();
+      const result = await editMessageText(chatId, messageId, text, {
+        parse_mode: "HTML",
+        reply_markup: { inline_keyboard: keyboard },
+      }, signal);
+      if (!result.ok && !isUnchangedEdit(result)) throw result;
     });
-    if (!res.ok && res.description !== "Bad Request: message is not modified") {
-      console.error("[refresh-poll] edit failed:", res.description);
-    }
-  } catch (err) {
-    console.error("[refresh-poll]", err);
+  } catch (error) {
+    botFailure(operation, dependency, started, error, "failed", { updateId });
   }
 }
 
@@ -388,29 +425,31 @@ async function refreshPollMessage(
 async function resolveMember(
   supabase: ReturnType<typeof createAdminClient>,
   from: TgUser,
+  updateId?: number,
 ): Promise<{ id: string } | null> {
-  const byId = await supabase
+  const context = { updateId };
+  const byId = await observeDatabase("vote.read_member_id", () => supabase
     .from("members")
     .select("id")
     .eq("telegram_user_id", from.id)
-    .maybeSingle();
-  if (byId.data) return byId.data as { id: string };
+    .maybeSingle(), "retry", context);
+  if (byId) return byId;
 
-  if (from.username) {
-    const byUsername = await supabase
+  const username = from.username;
+  if (username) {
+    const byUsername = await observeDatabase("vote.read_member_username", () => supabase
       .from("members")
       .select("id")
-      .ilike("telegram_username", from.username)
+      .ilike("telegram_username", username)
       .is("telegram_user_id", null)
-      .maybeSingle();
-    if (byUsername.data) {
-      const m = byUsername.data as { id: string };
+      .maybeSingle(), "retry", context);
+    if (byUsername) {
       // Remember the numeric id so future lookups hit the primary path.
-      await supabase
+      await observeDatabase("vote.link_member", () => supabase
         .from("members")
         .update({ telegram_user_id: from.id })
-        .eq("id", m.id);
-      return m;
+        .eq("id", byUsername.id), "failed", context).catch(() => {});
+      return byUsername;
     }
   }
 
