@@ -8,7 +8,7 @@
 
 ## Programează campania
 
-1. Aplică în Supabase migrarea [pentru închiderea manuală](supabase/sql/supabase-migration-giveaway-inchidere-manuala.sql), după migrarea de bază a giveaway-ului. Publică site-ul cu textele și verifică disponibilitatea funcției Edge `submit-form`. [Ghidul de deploy](ANTI-BOT.md)
+1. Verifică în Supabase că migrările giveaway-ului sunt aplicate. Publică site-ul cu textele și verifică disponibilitatea funcției Edge `submit-form`. [Migrările giveaway-ului](MIGRATIONS.md) [Ghidul de deploy](ANTI-BOT.md)
 2. În producție, adaugă un rând în `runlift.giveaways` cu `slug`, `titlu`, `starts_at` și `ends_at`. Folosește același `slug` ca în cod. Pentru BITONIC, setează `ends_at` la `'infinity'::timestamptz`. Pentru deschidere imediată folosește `now()`, iar pentru momente programate folosește fusul `Europe/Chisinau`.
 3. Verifică `/giveaway`. Campania programată arată premiul și data începerii. Formularul apare când se deschid înscrierile. În `/admin#giveaway`, verifică titlul, perioada și contorul de participări, care pornește de la zero.
 4. Distribuie linkul public după ce pagina afișează campania.
