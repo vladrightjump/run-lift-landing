@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { isDue, reminderDue, schedulerEnabled, summaryDue } from "../src/lib/schedule.js";
+import { isDue, localScheduleClaims, reminderDue, schedulerEnabled, summaryDue } from "../src/lib/schedule.js";
 import { summaryKeyboard } from "../src/control.js";
 import { normalizeTime, normalizeDays, textOrNull } from "../src/lib/config.js";
 import { fmtDate } from "../src/lib/format.js";
@@ -25,6 +25,15 @@ test("isDue: does not fire at the wrong minute", () => {
 
 test("isDue: empty day list never fires", () => {
   assert.equal(isDue([], "20:00", 1, "20:00"), false);
+});
+
+test("scheduled actions claim the repeated local minute only once", () => {
+  const claim = localScheduleClaims();
+  assert.equal(claim("2026-10-25", "03:30", "poll"), true);
+  assert.equal(claim("2026-10-25", "03:59", "summary"), true);
+  assert.equal(claim("2026-10-25", "03:30", "poll"), false);
+  assert.equal(claim("2026-10-25", "03:30", "reminder"), true);
+  assert.equal(claim("2026-10-26", "03:30", "poll"), true);
 });
 
 // ── Config normalization ─────────────────────────────────────────────────────

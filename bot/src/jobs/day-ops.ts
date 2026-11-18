@@ -6,7 +6,7 @@
 // not undo the row; it comes back to the organizer with the reason (R26).
 
 import { createAdminClient } from "../lib/supabase.js";
-import { editMessageText, sendMessage } from "../lib/telegram.js";
+import { editMessageText, isUnchangedEdit, sendMessage } from "../lib/telegram.js";
 import { getBotConfig } from "../lib/config.js";
 import { localWeekdayAndTime, todayInTz } from "../lib/tz.js";
 import { renderPoll, wordingFromCopy } from "../lib/poll-text.js";
@@ -138,12 +138,13 @@ interface AttRow {
 }
 
 // A session's votes, with each voter's name and Telegram account.
-async function attendanceOf(supabase: Supabase, sessionId: string): Promise<AttRow[]> {
-  const { data, error } = await supabase
+async function attendanceOf(supabase: Supabase, sessionId: string, signal?: AbortSignal): Promise<AttRow[]> {
+  const query = supabase
     .from("attendance")
     .select("member_id, response, member:members(full_name, telegram_user_id)")
     .eq("session_id", sessionId);
-  if (error) throw new Error(error.message);
+  const { data, error } = await (signal ? query.abortSignal(signal) : query);
+  if (error) throw Object.assign(new Error(error.message), { code: error.code });
   return (data ?? []) as unknown as AttRow[];
 }
 
@@ -154,8 +155,9 @@ const nameOf = (a: AttRow) => a.member?.full_name ?? "necunoscut";
 export async function renderSessionPoll(
   supabase: Supabase,
   session: SessionRow,
+  signal?: AbortSignal,
 ): Promise<ReturnType<typeof renderPoll>> {
-  const att = await attendanceOf(supabase, session.id);
+  const att = await attendanceOf(supabase, session.id, signal);
   return renderPoll({
     sessionId: session.id,
     date: session.session_date,
@@ -258,7 +260,7 @@ export function realPorts(): Ports {
         parse_mode: "HTML",
         reply_markup: { inline_keyboard: keyboard },
       });
-      if (r.ok || r.description === "Bad Request: message is not modified") return null;
+      if (r.ok || isUnchangedEdit(r)) return null;
       return r.description ?? "editarea a eșuat";
     },
 

@@ -1,22 +1,37 @@
 import { processTrialMessages } from './jobs/trial-messages.js';
 import "dotenv/config";
+import { botFailure, unreportedFailure } from "./lib/log.js";
 import { syncMemberships } from "./lib/membership.js";
 import express from "express";
 import cron from "node-cron";
 import { handleUpdate, registerOrganizerMenu, type TgUpdate } from "./webhook.js";
 import { organizerIds } from "./lib/organizers.js";
-import { sendPoll } from "./jobs/send-poll.js";
+import { sendPoll, wasPollAccepted } from "./jobs/send-poll.js";
 import { morningSummary } from "./jobs/morning-summary.js";
 import { processCommands } from "./jobs/process-commands.js";
 import { inactivityAlert } from "./jobs/inactivity-alert.js";
-import { GYM_TZ, localWeekdayAndTime, todayInTz } from "./lib/tz.js";
-import { getBotConfig } from "./lib/config.js";
-import { inactivityDue, isDue, reminderDue, schedulerEnabled, summaryDue } from "./lib/schedule.js";
+import { GYM_TZ, localMinuteInstant, localWeekdayAndTime, ymdInTz } from "./lib/tz.js";
+import { readBotConfig } from "./lib/config.js";
+import { inactivityDue, isDue, localScheduleClaims, reminderDue, schedulerEnabled, summaryDue } from "./lib/schedule.js";
 import { alertAdmins } from "./lib/notify.js";
 import { autoReminder, todaysSession } from "./jobs/auto-reminder.js";
 import { getWebhookInfo } from "./lib/telegram.js";
+import { createAdminClient } from "./lib/supabase.js";
+import { createBotMonitor, monitorStatusRoute } from "./lib/monitor-status.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
+const monitorToken = process.env.BOT_MONITOR_TOKEN;
+const monitor = createBotMonitor({
+  schedulerEnabled: schedulerEnabled(),
+  wasPollAccepted,
+  async readSessions(dates, signal) {
+    const { data, error } = await createAdminClient().from("training_sessions")
+      .select("id, session_date, status, poll_message_id")
+      .in("session_date", dates).abortSignal(signal);
+    if (error) throw error;
+    return data ?? [];
+  },
+});
 
 // ── Webhook HTTP server ───────────────────────────────────────────────────────
 // Telegram POSTs updates here. We verify the secret-token header. Successful /
@@ -24,13 +39,14 @@ const PORT = Number(process.env.PORT ?? 3000);
 // error) gets 500 so Telegram REDELIVERS the update — no vote is ever silently
 // dropped. The attendance upsert is idempotent, so redelivery is safe.
 const app = express();
-app.use(express.json());
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "parkgym-telegram-bot" });
 });
 
-app.post("/telegram/webhook", async (req, res) => {
+app.get("/monitoring/status", monitorStatusRoute(monitorToken, monitor.status));
+
+app.post("/telegram/webhook", express.json(), async (req, res) => {
   const secret = req.header("x-telegram-bot-api-secret-token");
   if (!secret || secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
     return res.status(401).json({ ok: false });
@@ -62,8 +78,7 @@ app.listen(PORT, () => {
 //                      also on a day with an extra training (summaryDue)
 //   auto-reminder    — 2h before today's training, by its own start time
 //                      (reminderDue), at most once per training
-const firedThisMinute = new Set<string>();
-let lastMinute = "";
+const claimScheduledRun = localScheduleClaims();
 // Trainings already auto-reminded while this process runs (KTD12).
 const remindedSessions = new Set<string>();
 // The local day the inactivity check last ran in this process.
@@ -71,6 +86,9 @@ let lastInactivityRun: string | null = null;
 let inactivityRetryAt = 0;
 let inactivityAlertedOn: string | null = null;
 
+// An all-minute cron trigger needs no timezone. node-cron would compare
+// local clock times and skip the repeated hour after the autumn clock change.
+// The jobs below still use the Chișinău calendar.
 if (schedulerEnabled()) cron.schedule(
   "* * * * *",
   async () => {
@@ -78,30 +96,36 @@ if (schedulerEnabled()) cron.schedule(
       // Always drain the command queue (kick, etc.), even if scheduling is off.
       await processCommands().catch((err) => console.error("[commands]", err));
 
-      await processTrialMessages().catch((err) => console.error("[trial]", err));
+      const trialStarted = performance.now();
+      await processTrialMessages().catch((err) => unreportedFailure("trial.run_worker", trialStarted, err));
       void syncMemberships().catch((err) => console.error("[membership]", err));
-      const cfg = await getBotConfig();
-      if (!cfg.enabled) return;
-
-      const { weekday, hhmm } = localWeekdayAndTime(GYM_TZ);
-      if (hhmm !== lastMinute) {
-        firedThisMinute.clear();
-        lastMinute = hhmm;
+      const configReadAt = Date.now();
+      const read = await readBotConfig();
+      const cfg = read.config;
+      if (!cfg.enabled) {
+        if (monitorToken) void monitor.recordTick(read, configReadAt);
+        return;
       }
+
+      const localNow = new Date();
+      const localToday = ymdInTz(localNow);
+      const { weekday, hhmm } = localWeekdayAndTime(GYM_TZ, localNow);
+      const claim = (action: string) => claimScheduledRun(localToday, hhmm, action);
 
       if (
         isDue(cfg.pollDays, cfg.pollTime, weekday, hhmm) &&
-        !firedThisMinute.has("poll")
+        localMinuteInstant(localToday, hhmm) === Math.floor(localNow.getTime() / 60_000) * 60_000 &&
+        claim("poll")
       ) {
-        firedThisMinute.add("poll");
+        const pollStarted = performance.now();
         void sendPoll()
           .then((r) => {
             if (!r.ok)
-              void alertAdmins(`⚠️ Sondajul automat n-a plecat — ${r.detail ?? "?"}`);
+              void alertAdmins(`⚠️ Sondajul automat cere verificare — ${r.detail ?? "?"}`);
           })
           .catch((err) => {
-            console.error("[cron/send-poll]", err);
-            void alertAdmins(`⚠️ Eroare la trimiterea sondajului: ${err}`);
+            unreportedFailure("poll.run_scheduled", pollStarted, err);
+            void alertAdmins("⚠️ Eroare la sondajul automat. Verifică grupul înainte de retrimitere.");
           });
       }
 
@@ -112,8 +136,7 @@ if (schedulerEnabled()) cron.schedule(
         return null;
       });
 
-      if (summaryDue(cfg, weekday, hhmm, today) && !firedThisMinute.has("summary")) {
-        firedThisMinute.add("summary");
+      if (summaryDue(cfg, weekday, hhmm, today) && claim("summary")) {
         void morningSummary()
           .then((r) => {
             if (!r.ok)
@@ -128,20 +151,20 @@ if (schedulerEnabled()) cron.schedule(
       // Inactivity alerts with action buttons — once a day from 09:00 local.
       // A failed run retries every 15 minutes the same day; the organizers hear
       // about it once a day.
-      const localToday = todayInTz();
       if (inactivityDue(hhmm, localToday, lastInactivityRun) && Date.now() >= inactivityRetryAt) {
         lastInactivityRun = localToday;
+        const started = performance.now();
         void inactivityAlert()
           .then((r) => {
-            if (!r.ok) console.error(`[cron/inactivity-alert] ${r.detail}`);
+            if (!r.ok) botFailure("alert.inactivity_config", "bot", started, null);
           })
           .catch((err) => {
-            console.error("[cron/inactivity-alert]", err);
+            unreportedFailure("alert.run_inactivity", started, err);
             lastInactivityRun = null;
             inactivityRetryAt = Date.now() + 15 * 60_000;
             if (inactivityAlertedOn !== localToday) {
               inactivityAlertedOn = localToday;
-              void alertAdmins(`⚠️ Eroare la alertele de inactivitate (reîncerc la 15 minute): ${err}`);
+              void alertAdmins("⚠️ Eroare la alertele de inactivitate. Reîncerc la 15 minute.");
             }
           });
       }
@@ -151,9 +174,8 @@ if (schedulerEnabled()) cron.schedule(
       if (
         cfg.autoReminderEnabled &&
         reminderDue(today, hhmm, remindedSessions) &&
-        !firedThisMinute.has("autorem")
+        claim("autorem")
       ) {
-        firedThisMinute.add("autorem");
         remindedSessions.add(today!.id);
         void autoReminder(cfg.reminderThreshold).catch((err) =>
           console.error("[cron/auto-reminder]", err),
@@ -164,9 +186,8 @@ if (schedulerEnabled()) cron.schedule(
       if (
         weekday === 1 &&
         hhmm === "09:05" &&
-        !firedThisMinute.has("webhookcheck")
+        claim("webhookcheck")
       ) {
-        firedThisMinute.add("webhookcheck");
         void (async () => {
           const info = await getWebhookInfo();
           const i = info.result;
@@ -196,11 +217,11 @@ if (schedulerEnabled()) cron.schedule(
           }
         })().catch((err) => console.error("[cron/webhook-check]", err));
       }
+      if (monitorToken) void monitor.recordTick(read, configReadAt);
     } catch (err) {
       console.error("[cron/tick]", err);
     }
   },
-  { timezone: GYM_TZ },
 );
 
 console.log(

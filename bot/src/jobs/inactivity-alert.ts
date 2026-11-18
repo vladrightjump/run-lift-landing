@@ -1,4 +1,5 @@
 import { createAdminClient } from "../lib/supabase.js";
+import { botFailure, observeDatabase, observeTelegram } from "../lib/log.js";
 import { editMessageText, getChatMember, sendMessage, type InlineKeyboard, type TelegramMember } from "../lib/telegram.js";
 import { todayInTz } from "../lib/tz.js";
 import { organizerIds } from "../lib/organizers.js";
@@ -37,7 +38,9 @@ export interface InactivityPorts {
 // place that edits an alert).
 export async function editOrThrow(chatId: number, messageId: number, text: string): Promise<void> {
   const r = await editMessageText(chatId, messageId, text);
-  if (!r.ok) throw new Error(r.description ?? "editMessageText failed");
+  if (!r.ok) throw Object.assign(new Error("Alert edit rejected"), {
+    error_code: r.error_code, http_status: r.http_status,
+  });
 }
 
 // Edits every copy of a settled alert. A copy the organizer deleted only logs.
@@ -47,8 +50,9 @@ export async function editAll(
 ): Promise<void> {
   const text = settledText(review);
   for (const m of review.messages ?? []) {
+    const started = performance.now();
     await edit(m.chat_id, m.message_id, text).catch((err) =>
-      console.error(`[inactivity] edit ${m.chat_id}/${m.message_id}:`, err),
+      botFailure("alert.edit_inactivity", "telegram", started, err),
     );
   }
 }
@@ -56,8 +60,9 @@ export async function editAll(
 async function sendAlert(review: ReviewView, ports: InactivityPorts): Promise<SentMessage[]> {
   const sent: SentMessage[] = [];
   for (const chatId of ports.organizers) {
+    const started = performance.now();
     const messageId = await ports.send(chatId, alertText(review), alertKeyboard(review.id)).catch((err) => {
-      console.error(`[inactivity] send to ${chatId}:`, err);
+      botFailure("alert.send_inactivity", "telegram", started, err, "unconfirmed");
       return null;
     });
     if (messageId != null) sent.push({ chat_id: chatId, message_id: messageId });
@@ -95,15 +100,17 @@ export async function runInactivity(ports: InactivityPorts): Promise<{ ok: boole
     // Live check before alerting (R4): group admins are never alerted, and
     // someone who already left is recorded instead. A failed check retries tomorrow.
     let live: TelegramMember;
+    const started = performance.now();
     try {
       live = await ports.inspect(c.telegram_user_id);
     } catch (err) {
-      console.error(`[inactivity] getChatMember ${c.telegram_user_id}:`, err);
+      botFailure("alert.inspect_membership", "telegram", started, err);
       continue;
     }
     if (live.status === "administrator" || live.status === "creator") continue;
     if (membershipState(live) !== "in_group") {
-      await ports.record(live).catch((err) => console.error("[inactivity] record:", err));
+      const recordStarted = performance.now();
+      await ports.record(live).catch((err) => botFailure("alert.record_membership", "supabase", recordStarted, err));
       continue;
     }
 
@@ -123,8 +130,7 @@ export async function runInactivity(ports: InactivityPorts): Promise<{ ok: boole
 }
 
 const rpc = async <T>(name: string, args: Record<string, unknown>): Promise<T> => {
-  const { data, error } = await createAdminClient().rpc(name, args);
-  if (error) throw error;
+  const data = await observeDatabase(`alert.${name}`, () => createAdminClient().rpc(name, args));
   return data as T;
 };
 
@@ -141,13 +147,16 @@ export const inactivityPorts = (): InactivityPorts => {
     discard: (id) => rpc<void>("inactivity_discard", { p_review: id }),
     async inspect(telegramId) {
       const r = await getChatMember(group, telegramId);
-      if (!r.ok || !r.result) throw new Error(r.description ?? "getChatMember failed");
+      if (!r.ok || !r.result) throw r;
       return r.result;
     },
     record: (member) => recordMembership(group, member, new Date().toISOString()),
     async send(chatId, text, keyboard) {
-      const r = await sendMessage(chatId, text, { reply_markup: { inline_keyboard: keyboard } });
-      return r.ok && r.result ? r.result.message_id : null;
+      const r = await observeTelegram("alert.send_inactivity",
+        () => sendMessage(chatId, text, { reply_markup: { inline_keyboard: keyboard } }),
+        "unconfirmed",
+      ).catch(() => null);
+      return r?.ok ? r.result?.message_id ?? null : null;
     },
     edit: editOrThrow,
   };
