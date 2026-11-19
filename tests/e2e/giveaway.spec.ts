@@ -1,7 +1,7 @@
 import { test, expect } from '../support/playwright';
 import { createHandlers } from '../support/handlers';
 import { rpcResponse, submitFormResponse, type FormEnvelope } from '../support/responses';
-import { publicGiveaway } from '../support/builders/public';
+import { publicGiveaway, publicHomepage } from '../support/builders/public';
 import { installAdminResponses } from '../support/admin';
 import { dateGiveaway, participareGiveaway } from '../support/builders/giveaway';
 
@@ -163,6 +163,55 @@ test('o citire eșuată se poate reîncerca', async ({ page, network }) => {
   network.use(rpcResponse('public_giveaway', null));
   await page.getByRole('button', { name: 'Încearcă din nou' }).click();
   await expect(page.getByRole('heading', { name: /niciun giveaway activ/i })).toBeVisible();
+});
+
+test('adminul poate ascunde și afișa linkul Giveaway pe pagina principală', async ({ page, network }) => {
+  let vizibil = true;
+  const scrieri: unknown[] = [];
+  installAdminResponses(network, {
+    public_homepage: () => publicHomepage({ giveaway_visible: vizibil }),
+    admin_set_homepage_giveaway: (corp: unknown) => {
+      scrieri.push(corp);
+      vizibil = (corp as { p_visible: boolean }).p_visible;
+      return null;
+    },
+    public_giveaway: publicGiveaway({ slug: 'bitonic-2026', ends_at: 'infinity' }),
+  });
+  await page.addInitScript(() => localStorage.setItem('runlift_admin_token', 'token-e2e'));
+  await page.setViewportSize({ width: 375, height: 820 });
+  const link = page.getByRole('link', { name: /^giveaway$/i });
+
+  await page.goto('/?preview=soon');
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute('href', '/giveaway');
+
+  await page.goto('/admin#giveaway');
+  const optiuni = page.getByRole('group', { name: 'Butonul Giveaway pe pagina principală' });
+  await expect(optiuni.getByRole('radio', { name: 'Afișat' })).toBeChecked();
+  await optiuni.getByRole('radio', { name: 'Ascuns' }).click();
+  await expect(optiuni.getByRole('radio', { name: 'Ascuns' })).toBeChecked();
+
+  const citire = page.waitForResponse((response) => response.url().endsWith('/rpc/public_homepage'));
+  await page.goto('/?preview=next');
+  await citire;
+  await expect(link).toHaveCount(0);
+
+  await page.goto('/admin#giveaway');
+  await expect(optiuni.getByRole('radio', { name: 'Ascuns' })).toBeChecked();
+  await optiuni.getByRole('radio', { name: 'Afișat' }).click();
+  await expect(optiuni.getByRole('radio', { name: 'Afișat' })).toBeChecked();
+
+  await page.goto('/?preview=next');
+  await expect(link).toBeVisible();
+  await page.goto('/?preview=landing');
+  await expect(link).toBeVisible();
+  await link.click();
+  await expect(page).toHaveURL(/\/giveaway$/);
+  await expect(page.getByRole('heading', { name: 'Înscrie-te la giveaway' })).toBeVisible();
+  expect(scrieri).toEqual([
+    { p_token: 'token-e2e', p_visible: false },
+    { p_token: 'token-e2e', p_visible: true },
+  ]);
 });
 
 /**

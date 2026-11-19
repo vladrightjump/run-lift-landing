@@ -47,6 +47,14 @@ Testele aplică ambele migrări peste instantaneul din `supabase/schema/runlift.
 
 Campaniile se lansează cu un rând în `runlift.giveaways` și conținutul din cod. [Ghidul de lansare](GHID-GIVEAWAY.md)
 
+### Vizibilitatea butonului Giveaway pe pagina principală
+
+| Versiune | Nume | Schema | Ce face |
+|---|---|---|---|
+| 20261119053840 | `runlift_homepage_giveaway` | runlift | Adaugă `homepage_settings.giveaway_visible` și comutatorul din Site → Giveaway. [SQL](supabase/sql/supabase-migration-homepage-giveaway.sql) |
+
+Migrarea a fost aplicată pe 19 noiembrie 2026. Butonul pornește afișat, iar `public_homepage()` întoarce alegerea salvată. RPC-ul de scriere verifică sesiunea de admin și înregistrează schimbarea în `admin_events`.
+
 ---
 
 ## Migrări aplicate — alerta de inactivitate și istoricul probelor (12 octombrie 2026)

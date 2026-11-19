@@ -8,6 +8,7 @@ import { Dialog } from '../../../../shared/ui/Dialog';
 import { useSesiuneAdmin } from '../../data/adminSession';
 import { useAdminMutation } from '../../data/useAdminMutation';
 import { useAdminResource } from '../../data/useAdminResource';
+import { AdminGiveawayVisibility } from './AdminGiveawayVisibility';
 import {
   confirmaGiveaway,
   extrageGiveaway,
@@ -56,7 +57,14 @@ const profilInstagram = (cont: string) => `https://www.instagram.com/${cont}/`;
 const extrasaAcum = (participari: ParticipareGiveaway[]) =>
   participari.find((p) => p.extrasa_la !== null && p.inlocuita_la === null) ?? null;
 
-export const EcranGiveaway = () => {
+export const EcranGiveaway = () => (
+  <div className={styles['admin-giveaway']} data-css="admin-giveaway">
+    <AdminGiveawayVisibility />
+    <CampanieGiveaway />
+  </div>
+);
+
+const CampanieGiveaway = () => {
   const { token, onAuthError, showToast } = useSesiuneAdmin();
   // `null` = giveaway-ul curent, ales de server. Selectorul apare abia când există două.
   const [ales, setAles] = useState<string | null>(null);
@@ -149,7 +157,7 @@ export const EcranGiveaway = () => {
   };
 
   return (
-    <div className={styles['admin-giveaway']} data-css="admin-giveaway">
+    <>
       {giveaways.length > 1 && (
         <label className={adminStyles['admin-config-camp']} data-css="admin-config-camp">
           Giveaway
@@ -261,7 +269,7 @@ export const EcranGiveaway = () => {
           onConfirma={() => confirma(confirmare)}
         />
       )}
-    </div>
+    </>
   );
 };
 

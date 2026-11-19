@@ -1551,6 +1551,26 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION runlift.admin_set_homepage_giveaway(p_token uuid, p_visible boolean)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  if p_visible is null then raise exception 'config_invalid: vizibilitatea lipsește'; end if;
+
+  insert into runlift.homepage_settings (id, giveaway_visible, updated_at)
+  values (1, p_visible, now())
+  on conflict (id) do update set giveaway_visible = excluded.giveaway_visible, updated_at = excluded.updated_at;
+
+  insert into runlift.admin_events (tip, detaliu)
+  values ('homepage_giveaway_set', jsonb_build_object('giveaway_visible', p_visible));
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean)
  RETURNS void
  LANGUAGE plpgsql
@@ -2422,12 +2442,13 @@ CREATE OR REPLACE FUNCTION runlift.public_homepage()
  STABLE SECURITY DEFINER
  SET search_path TO ''
 AS $function$
-  -- Fără rând de setări sau fără configul botului, implicitele: antrenamentul
-  -- primul și niciun loc (site-ul cade pe locul din cod).
   select jsonb_build_object(
-    'trial_first', coalesce((select s.trial_first from runlift.homepage_settings s where s.id = 1), false),
-    'training_location', (select c.location from public.bot_config c where c.id = 1)
-  );
+    'trial_first', coalesce(s.trial_first, false),
+    'training_location', (select c.location from public.bot_config c where c.id = 1),
+    'giveaway_visible', coalesce(s.giveaway_visible, true)
+  )
+  from (values (1)) as homepage(id)
+  left join runlift.homepage_settings s on s.id = homepage.id;
 $function$
 ;
 
@@ -2813,7 +2834,8 @@ create table runlift.event_waitlist (
 create table runlift.homepage_settings (
   id smallint default 1 not null,
   trial_first boolean default false not null,
-  updated_at timestamp with time zone default now() not null
+  updated_at timestamp with time zone default now() not null,
+  giveaway_visible boolean default true not null
 );
 
 create table runlift.launch_notifications (
@@ -3135,6 +3157,10 @@ revoke all on function runlift.admin_set_coming_soon(p_token uuid, p_show boolea
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to anon;
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to authenticated;
 grant execute on function runlift.admin_set_coming_soon(p_token uuid, p_show boolean, p_launch_at text, p_next_edition_at text) to service_role;
+revoke all on function runlift.admin_set_homepage_giveaway(p_token uuid, p_visible boolean) from public, anon, authenticated, service_role;
+grant execute on function runlift.admin_set_homepage_giveaway(p_token uuid, p_visible boolean) to anon;
+grant execute on function runlift.admin_set_homepage_giveaway(p_token uuid, p_visible boolean) to authenticated;
+grant execute on function runlift.admin_set_homepage_giveaway(p_token uuid, p_visible boolean) to service_role;
 revoke all on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) from public, anon, authenticated, service_role;
 grant execute on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) to anon;
 grant execute on function runlift.admin_set_homepage_order(p_token uuid, p_trial_first boolean) to authenticated;

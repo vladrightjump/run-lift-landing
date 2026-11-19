@@ -9,8 +9,8 @@ import { saptamanaPublica } from '../support/builders/workouts';
  * „Primul tău antrenament cu noi" își schimbă locul după `public_homepage()`.
  *
  * Implicitul — și orice eșec al funcției — e ordinea de dinainte: antrenamentul
- * primul. Setarea atinge doar ecranul dintre ediții; landing-ul și Coming
- * Soon-ul de dinainte de anunț nu o citesc.
+ * primul. Doar ecranul dintre ediții folosește această ordine. Celelalte
+ * ecrane citesc aceeași configurare pentru vizibilitatea linkului Giveaway.
  */
 
 const PROBA = publicTrialConfig({ enabled: true, bot_username: 'ParkTrialBot', contact_text: 'Scrie-ne.' });
@@ -131,20 +131,21 @@ test.describe('Ordinea de pe ecranul dintre ediții', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 
-  test('Coming Soon-ul de dinainte de anunț nu cere ordinea', async ({ page, network }) => {
+  test('Coming Soon-ul de dinainte de anunț citește setările fără să arate cardul dintre ediții', async ({ page, network }) => {
     const apelate: string[] = [];
     mock(network, { homepage: { trial_first: true, training_location: null } }, apelate);
     await page.goto('/?preview=soon');
     await expect(page.locator("[data-css~=\"cs-title\"]")).toBeVisible();
     await expect(card(page)).toHaveCount(0);
-    expect(apelate).not.toContain('public_homepage');
+    await expect.poll(() => apelate.filter((rpc) => rpc === 'public_homepage')).toHaveLength(1);
   });
 
-  test('landing-ul unei ediții active nu cere ordinea', async ({ page, network }) => {
+  test('landing-ul unei ediții active citește setările fără să arate cardul dintre ediții', async ({ page, network }) => {
     const apelate: string[] = [];
     mock(network, { homepage: { trial_first: true, training_location: null } }, apelate);
     await page.goto('/?preview=landing');
     await expect(proba(page)).toBeVisible();
-    expect(apelate).not.toContain('public_homepage');
+    await expect(card(page)).toHaveCount(0);
+    await expect.poll(() => apelate.filter((rpc) => rpc === 'public_homepage')).toHaveLength(1);
   });
 });
