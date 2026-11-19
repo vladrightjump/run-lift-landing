@@ -3,7 +3,7 @@
 
 .gw-root {
   background: var(--e3-bg); color: var(--e3-text);
-  min-height: 100dvh; display: flex; flex-direction: column;
+  min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
   font-family: Archivo, sans-serif;
 }
 .gw-accent { color: var(--e3-accent); }
@@ -25,6 +25,44 @@
 }
 
 .gw-loading { margin: 0; color: var(--e3-muted); font-size: 16px; }
+
+.gw-registration {
+  width: 100%; max-width: 560px; margin-inline: auto;
+  display: grid; gap: 20px; scroll-margin-top: 20px;
+}
+.gw-registration-heading {
+  display: grid; gap: 10px; padding-inline-start: 14px;
+  border-inline-start: 3px solid var(--e3-accent);
+}
+.gw-registration-heading p {
+  margin: 0; color: var(--e3-muted-strong); font-size: 13px;
+  font-weight: 700; letter-spacing: 1.25px; text-transform: uppercase;
+}
+.gw-registration-heading h1 {
+  margin: 0; font: 400 clamp(30px, 7.5vw, 48px)/1.08 Anton, sans-serif;
+  text-transform: uppercase;
+}
+.gw-disclosure { border-block: 1px solid var(--e3-border); }
+.gw-disclosure summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 0; min-height: 44px; box-sizing: border-box;
+  font-size: 15px; font-weight: 600; line-height: 1.5; color: var(--e3-text);
+  cursor: pointer; scroll-margin-top: 20px;
+}
+.gw-disclosure summary::-webkit-details-marker { display: none; }
+.gw-disclosure summary::after {
+  content: ''; flex: 0 0 8px; height: 8px; margin-inline-end: 4px;
+  border-inline-end: 2px solid var(--e3-accent); border-block-end: 2px solid var(--e3-accent);
+  transform: translateY(-2px) rotate(45deg);
+}
+.gw-disclosure[open] summary::after { transform: translateY(2px) rotate(225deg); }
+.gw-disclosure-content { display: grid; gap: 16px; padding: 12px 0 20px; }
+.gw-back {
+  justify-self: start; min-height: 44px; padding: 10px 14px;
+  background: var(--e3-surface); border: 1px solid var(--e3-border);
+  color: var(--e3-accent); font: 600 15px Archivo, sans-serif; cursor: pointer;
+}
+.gw-back:hover { border-color: var(--e3-accent); }
 
 .gw-hero { display: grid; gap: 16px; }
 .gw-kicker {
@@ -85,7 +123,6 @@
 }
 .gw-how li::marker { color: var(--e3-accent); font-weight: 700; }
 
-/* Linkul „regulamentul" din formular sare aici; lăsăm aer deasupra titlului. */
 .gw-entry, .gw-rules { scroll-margin-top: 24px; }
 
 .gw-notice {
