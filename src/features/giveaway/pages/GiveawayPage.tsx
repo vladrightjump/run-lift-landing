@@ -1,5 +1,5 @@
 import styles from './GiveawayPage.module.css';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { INSTAGRAM_URL } from '../../../shared/lib/config';
 import { momentComplet } from '../../../shared/lib/formatare';
 import { usePublicQuery } from '../../../shared/lib/usePublicQuery';
@@ -75,38 +75,32 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
   const [inchisLaTrimitere, setInchisLaTrimitere] = useState(false);
   const stare = inchisLaTrimitere ? 'inchis' : giveaway.stare;
   const sfarsit = giveaway.ends_at === 'infinity' ? null : giveaway.ends_at;
-  const inscriere = useRef<HTMLElement>(null);
   const bifaRegulament = useRef<HTMLInputElement>(null);
-  const regulament = useRef<HTMLDetailsElement>(null);
-  const titluRegulament = useRef<HTMLElement>(null);
+  const regulament = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    if (stare !== 'deschis') return;
-
     const deschideRegulamentulDinFragment = () => {
-      const detalii = regulament.current;
-      if (window.location.hash === '#regulament' && detalii && !detalii.open) {
-        detalii.open = true;
-        titluRegulament.current?.scrollIntoView?.({ block: 'start' });
+      const dialog = regulament.current;
+      if (window.location.hash === '#regulament' && dialog && !dialog.open) {
+        dialog.showModal();
       }
     };
     deschideRegulamentulDinFragment();
     window.addEventListener('hashchange', deschideRegulamentulDinFragment);
     return () => window.removeEventListener('hashchange', deschideRegulamentulDinFragment);
-  }, [stare]);
+  }, []);
 
-  const deschideRegulamentul = () => {
-    if (regulament.current) regulament.current.open = true;
-    titluRegulament.current?.focus({ preventScroll: true });
+  const deschideRegulamentul = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    regulament.current?.showModal();
   };
 
   const revinoLaFormular = () => {
-    if (regulament.current) regulament.current.open = false;
     if (window.location.hash === '#regulament') {
       window.history.replaceState(window.history.state, '', '#inscriere');
     }
-    const destinatie = bifaRegulament.current ?? inscriere.current;
-    destinatie?.focus();
+    bifaRegulament.current?.focus();
   };
 
   const premiul = (
@@ -155,24 +149,36 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
     </section>
   );
 
-  const regulile = continut.regulament.map((sectiune) => (
-    <div className={styles['gw-rule']} key={sectiune.titlu}>
-      <h3>{sectiune.titlu}</h3>
-      {sectiune.paragrafe.map((paragraf) => (
-        <p key={paragraf}>{paragraf}</p>
-      ))}
-    </div>
-  ));
+  const dialogRegulament = (
+    <dialog
+      className={styles['gw-rules']}
+      id="regulament"
+      ref={regulament}
+      aria-labelledby="titlu-regulament"
+      onClose={revinoLaFormular}
+    >
+      <header className={styles['gw-rules-header']}>
+        <h2 id="titlu-regulament">Regulament</h2>
+        <button type="button" className={styles['gw-close']} onClick={() => regulament.current?.close()}>
+          Închide
+        </button>
+      </header>
+      <div className={styles['gw-rules-content']}>
+        {continut.regulament.map((sectiune) => (
+          <div className={styles['gw-rule']} key={sectiune.titlu}>
+            <h3>{sectiune.titlu}</h3>
+            {sectiune.paragrafe.map((paragraf) => (
+              <p key={paragraf}>{paragraf}</p>
+            ))}
+          </div>
+        ))}
+      </div>
+    </dialog>
+  );
 
   if (stare === 'deschis') {
     return (
-      <section
-        className={styles['gw-registration']}
-        id="inscriere"
-        ref={inscriere}
-        tabIndex={-1}
-        aria-labelledby="giveaway-title"
-      >
+      <section className={styles['gw-registration']} id="inscriere" aria-labelledby="giveaway-title">
         <header className={styles['gw-registration-heading']}>
           <p>{continut.titlu}</p>
           <h1 id="giveaway-title">Înscrie-te la giveaway</h1>
@@ -190,15 +196,7 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
           bifaRegulament={bifaRegulament}
           onRegulament={deschideRegulamentul}
         />
-        <details className={styles['gw-disclosure']} ref={regulament}>
-          <summary id="regulament" ref={titluRegulament}>Regulament</summary>
-          <div className={styles['gw-disclosure-content']}>
-            <div>{regulile}</div>
-            <button type="button" className={styles['gw-back']} onClick={revinoLaFormular}>
-              Înapoi la formular
-            </button>
-          </div>
-        </details>
+        {dialogRegulament}
       </section>
     );
   }
@@ -230,10 +228,12 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
         </section>
       </div>
 
-      <section className={styles['gw-rules']} data-css="gw-rules" id="regulament">
-        <h2>Regulament</h2>
-        {regulile}
-      </section>
+      <div>
+        <a className={styles['gw-link']} href="#regulament" aria-haspopup="dialog" onClick={deschideRegulamentul}>
+          Citește regulamentul
+        </a>
+      </div>
+      {dialogRegulament}
     </>
   );
 };

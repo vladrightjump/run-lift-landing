@@ -1,5 +1,5 @@
 import styles from './GiveawayForm.module.css';
-import type { Ref } from 'react';
+import type { MouseEventHandler, Ref } from 'react';
 import { momentComplet } from '../../../shared/lib/formatare';
 import { useGiveawayForm } from '../hooks/useGiveawayForm';
 
@@ -9,7 +9,7 @@ type Props = {
   /** Serverul a refuzat trimiterea fiindcă giveaway-ul s-a închis între timp. */
   onInchis: () => void;
   bifaRegulament?: Ref<HTMLInputElement>;
-  onRegulament?: () => void;
+  onRegulament?: MouseEventHandler<HTMLAnchorElement>;
 };
 
 /**
@@ -44,6 +44,9 @@ export const GiveawayForm = ({ sfarsit, onInchis, bifaRegulament, onRegulament }
             </p>
           </>
         )}
+        <a className={styles['gw-rules-link']} href="#regulament" aria-haspopup="dialog" onClick={onRegulament}>
+          Citește regulamentul
+        </a>
       </div>
     );
   }
@@ -124,7 +127,10 @@ export const GiveawayForm = ({ sfarsit, onInchis, bifaRegulament, onRegulament }
           onChange={(e) => setField('acordRegulament', e.target.checked)}
         />
         <span>
-          Am citit și accept <a href="#regulament" onClick={onRegulament}>regulamentul</a> giveaway-ului.
+          Am citit și accept{' '}
+          <a className={styles['gw-rules-link']} href="#regulament" aria-haspopup="dialog" onClick={onRegulament}>
+            regulamentul
+          </a>.
         </span>
       </label>
       <label className={styles['gw-check']} data-css="gw-check">

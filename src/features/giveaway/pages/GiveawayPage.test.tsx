@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { GiveawayPage } from './GiveawayPage';
 import { formResponse } from '../../../../tests/support/publicForms';
@@ -23,10 +23,6 @@ vi.mock('../content', () => ({
         }
       : null,
 }));
-
-beforeEach(() => {
-  window.history.replaceState(null, '', '/giveaway');
-});
 
 afterEach(cleanup);
 
@@ -89,22 +85,10 @@ describe('pagina /giveaway — stările giveaway-ului', () => {
       expect(screen.getByLabelText(eticheta)).toBeDefined();
     }
     expect(screen.getAllByRole('checkbox')).toHaveLength(2);
-    const titluRegulament = screen.getByText('Regulament', { exact: true });
-    expect(titluRegulament.closest('details')?.open).toBe(false);
-    fireEvent.click(screen.getByRole('link', { name: 'regulamentul' }));
-    expect(titluRegulament.closest('details')?.open).toBe(true);
-    expect(document.activeElement).toBe(titluRegulament);
-    fireEvent.click(screen.getByRole('button', { name: 'Înapoi la formular' }));
-    expect(titluRegulament.closest('details')?.open).toBe(false);
-    expect(document.activeElement).toBe(bifa);
+    expect(screen.getByRole('link', { name: 'regulamentul' }).getAttribute('href')).toBe('#regulament');
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(nume.value).toBe('Ana Popescu');
     expect(bifa.checked).toBe(true);
-  });
-
-  it('deschide regulamentul după ce se încarcă o campanie accesată cu fragmentul #regulament', async () => {
-    window.history.replaceState(null, '', '/giveaway#regulament');
-    await deschis();
-    expect(screen.getByText('Regulament', { exact: true }).closest('details')?.open).toBe(true);
   });
 
   it('închis: spune că înscrierile s-au încheiat, fără formular', async () => {
