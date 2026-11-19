@@ -43,6 +43,9 @@ export const setComingSoon = (
 export const setHomepageOrder = (token: string, trialFirst: boolean): Promise<void> =>
   rpc<void>('admin_set_homepage_order', { p_token: token, p_trial_first: trialFirst });
 
+export const setHomepageGiveaway = (token: string, visible: boolean): Promise<void> =>
+  rpc<void>('admin_set_homepage_giveaway', { p_token: token, p_visible: visible });
+
 /**
  * Un clip din bandă, așa cum îl vede backoffice-ul.
  *

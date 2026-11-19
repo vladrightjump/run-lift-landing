@@ -9,6 +9,8 @@ import { useEventConfig, useEditionDates } from '../../../shared/lib/useEventCon
 import { useCountdown } from '../../../shared/lib/useCountdown';
 import { useStats } from '../../inscriere';
 import { useNow } from '../../../shared/lib/useNow';
+import { loadPublicHomepage } from '../../../shared/lib/homepagePublic';
+import { usePublicQuery } from '../../../shared/lib/usePublicQuery';
 import { useRegistration } from '../../inscriere';
 import { useScrollReveal } from '../../../shared/lib/useScrollReveal';
 import { useSpotlight } from '../../../shared/lib/useSpotlight';
@@ -44,6 +46,7 @@ type Props = {
  */
 export const Landing = ({ mode = 'full' }: Props) => {
   const trial = usePublicTrial();
+  const { data: homepage } = usePublicQuery('homepage', loadPublicHomepage);
   const lista = mode === 'leaderboard';
   const config = useEventConfig();
   const { layout } = config;
@@ -111,7 +114,12 @@ export const Landing = ({ mode = 'full' }: Props) => {
 
       <SignupBanner />
       <TopBar cd={cd} onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
-      <Hero trialHref={trial && !lista ? trialLink(trial.bot_username) : null} onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
+      <Hero
+        trialHref={trial && !lista ? trialLink(trial.bot_username) : null}
+        onInscrie={lista ? undefined : () => setOverlay(true)}
+        showCta={!lista}
+        showGiveaway={homepage?.value.giveawayVisible}
+      />
       <Marquee items={marquee} />
       {!lista && <TrialTraining config={trial} />}
       {lista ? (

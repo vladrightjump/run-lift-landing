@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { HOMEPAGE_IMPLICIT, loadPublicHomepage, type PublicHomepage } from './homepagePublic';
 import { usePublicQuery } from './usePublicQuery';
 
-/** După două secunde ordinea se fixează; un răspuns târziu schimbă doar locul. */
+/** După două secunde ordinea se fixează, iar celelalte setări se actualizează la răspuns. */
 export function usePublicHomepage(enabled = true): PublicHomepage & { gata: boolean } {
   const query = usePublicQuery('homepage', loadPublicHomepage, enabled);
   const [homepage, setHomepage] = useState<PublicHomepage>(HOMEPAGE_IMPLICIT);
@@ -18,7 +18,7 @@ export function usePublicHomepage(enabled = true): PublicHomepage & { gata: bool
     if (!enabled) return;
     if (query.data) {
       const nou = query.data.value;
-      setHomepage(vechi => dupaLimita.current ? { ...vechi, trainingLocation: nou.trainingLocation } : nou);
+      setHomepage(vechi => dupaLimita.current ? { ...nou, trialFirst: vechi.trialFirst } : nou);
       setGata(true);
     } else if (query.isError) setGata(true);
   }, [enabled, query.data, query.isError]);

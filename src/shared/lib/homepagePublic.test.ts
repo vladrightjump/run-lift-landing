@@ -15,10 +15,11 @@ import {
  */
 
 describe('parseHomepage', () => {
-  it('citește ordinea și locul', () => {
-    expect(parseHomepage({ trial_first: true, training_location: 'Sala Ironworks' })).toEqual({
+  it('citește ordinea, locul și vizibilitatea linkului', () => {
+    expect(parseHomepage({ trial_first: true, training_location: 'Sala Ironworks', giveaway_visible: true })).toEqual({
       trialFirst: true,
       trainingLocation: 'Sala Ironworks',
+      giveawayVisible: true,
     });
   });
 
@@ -43,6 +44,11 @@ describe('parseHomepage', () => {
     expect(parseHomepage({ trial_first: 1 }).trialFirst).toBe(false);
   });
 
+  it('o setare de giveaway absentă sau de alt tip păstrează linkul ascuns', () => {
+    expect(parseHomepage({}).giveawayVisible).toBe(false);
+    expect(parseHomepage({ giveaway_visible: 'true' }).giveawayVisible).toBe(false);
+  });
+
   it('răspuns care nu e obiect: implicitul', () => {
     for (const r of [null, undefined, 'x', [], 3]) expect(parseHomepage(r)).toEqual(HOMEPAGE_IMPLICIT);
   });
@@ -54,7 +60,7 @@ describe('loadPublicHomepage', () => {
     server.use(rpcResponse('public_homepage', publicHomepage({ trial_first: true, training_location: 'Sala X' }), {
       onRequest: (request) => { requests.push(request); },
     }));
-    await expect(loadPublicHomepage()).resolves.toEqual({ trialFirst: true, trainingLocation: 'Sala X' });
+    await expect(loadPublicHomepage()).resolves.toEqual({ trialFirst: true, trainingLocation: 'Sala X', giveawayVisible: false });
     expect(requests[0].url).toMatch(/\/rest\/v1\/rpc\/public_homepage$/);
   });
 });
