@@ -1,4 +1,5 @@
 import styles from './GiveawayForm.module.css';
+import type { Ref } from 'react';
 import { momentComplet } from '../../../shared/lib/formatare';
 import { useGiveawayForm } from '../hooks/useGiveawayForm';
 
@@ -7,6 +8,8 @@ type Props = {
   sfarsit: string | null;
   /** Serverul a refuzat trimiterea fiindcă giveaway-ul s-a închis între timp. */
   onInchis: () => void;
+  bifaRegulament?: Ref<HTMLInputElement>;
+  onRegulament?: () => void;
 };
 
 /**
@@ -17,7 +20,7 @@ type Props = {
  * anti-bot stă în `<form>`, ca la celelalte formulare publice (vezi
  * `tests/unit/antiBotSurfaces.test.tsx`).
  */
-export const GiveawayForm = ({ sfarsit, onInchis }: Props) => {
+export const GiveawayForm = ({ sfarsit, onInchis, bifaRegulament, onRegulament }: Props) => {
   const { draft, setField, errors, state, eroare, submit, hpProps } = useGiveawayForm();
 
   if (state === 'success' || state === 'duplicate') {
@@ -115,12 +118,13 @@ export const GiveawayForm = ({ sfarsit, onInchis }: Props) => {
       >
         <input
           type="checkbox"
+          ref={bifaRegulament}
           checked={draft.acordRegulament}
           aria-invalid={errors.acordRegulament ? true : undefined}
           onChange={(e) => setField('acordRegulament', e.target.checked)}
         />
         <span>
-          Am citit și accept <a href="#regulament">regulamentul</a> giveaway-ului.
+          Am citit și accept <a href="#regulament" onClick={onRegulament}>regulamentul</a> giveaway-ului.
         </span>
       </label>
       <label className={styles['gw-check']} data-css="gw-check">

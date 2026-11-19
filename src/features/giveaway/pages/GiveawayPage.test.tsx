@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { GiveawayPage } from './GiveawayPage';
 import { formResponse } from '../../../../tests/support/publicForms';
@@ -24,9 +24,11 @@ vi.mock('../content', () => ({
       : null,
 }));
 
-afterEach(() => {
-  cleanup();
+beforeEach(() => {
+  window.history.replaceState(null, '', '/giveaway');
 });
+
+afterEach(cleanup);
 
 const completeaza = (over: Record<string, string> = {}) => {
   const valori = {
@@ -63,22 +65,46 @@ describe('pagina /giveaway — stările giveaway-ului', () => {
     expect(screen.queryByRole('button', { name: 'Intră în giveaway' })).toBeNull();
   });
 
-  it('deschis: arată premiul, sponsorul, perioada, condițiile, regulamentul și formularul', async () => {
+  it('deschis: arată întâi formularul și păstrează datele la consultarea detaliilor', async () => {
     await deschis();
 
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Înscrie-te la giveaway');
+    const detalii = screen.getByText('Premiul și pașii de participare', { exact: true });
+    expect(detalii.closest('details')?.open).toBe(false);
+    const nume = screen.getByLabelText<HTMLInputElement>('Nume și prenume');
+    fireEvent.change(nume, { target: { value: 'Ana Popescu' } });
+    const bifa = screen.getByRole<HTMLInputElement>('checkbox', { name: /accept regulamentul/i });
+    fireEvent.click(bifa);
+
+    fireEvent.click(detalii);
     expect(screen.getByText(/abonament de trei luni/)).toBeDefined();
     expect(screen.getByRole('img', { name: 'Sponsor Sport' }).getAttribute('src')).toBe('/giveaway/sponsor.svg');
     expect(screen.getByText(/1 noiembrie 2026/)).toBeDefined();
     expect(screen.getByText(/30 noiembrie 2026/)).toBeDefined();
-    expect(screen.getByText('Urmărește @sponsor.sport')).toBeDefined();
-    expect(screen.getByRole('heading', { name: 'Cine poate participa' })).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Urmărește @sponsor.sport' })).toBeDefined();
+    fireEvent.click(detalii);
+    expect(detalii.closest('details')?.open).toBe(false);
 
     for (const eticheta of ['Nume și prenume', 'Telefon', 'Email', 'Instagram']) {
       expect(screen.getByLabelText(eticheta)).toBeDefined();
     }
-    const bife = screen.getAllByRole('checkbox') as HTMLInputElement[];
-    expect(bife).toHaveLength(2);
-    expect(bife.every((b) => !b.checked)).toBe(true);
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+    const titluRegulament = screen.getByText('Regulament', { exact: true });
+    expect(titluRegulament.closest('details')?.open).toBe(false);
+    fireEvent.click(screen.getByRole('link', { name: 'regulamentul' }));
+    expect(titluRegulament.closest('details')?.open).toBe(true);
+    expect(document.activeElement).toBe(titluRegulament);
+    fireEvent.click(screen.getByRole('button', { name: 'Înapoi la formular' }));
+    expect(titluRegulament.closest('details')?.open).toBe(false);
+    expect(document.activeElement).toBe(bifa);
+    expect(nume.value).toBe('Ana Popescu');
+    expect(bifa.checked).toBe(true);
+  });
+
+  it('deschide regulamentul după ce se încarcă o campanie accesată cu fragmentul #regulament', async () => {
+    window.history.replaceState(null, '', '/giveaway#regulament');
+    await deschis();
+    expect(screen.getByText('Regulament', { exact: true }).closest('details')?.open).toBe(true);
   });
 
   it('închis: spune că înscrierile s-au încheiat, fără formular', async () => {
