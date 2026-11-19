@@ -58,8 +58,8 @@ completează pe îndelete.
 **`appearance: 'interaction-only'`.** Widgetul e invizibil dacă Cloudflare nu cere
 interacțiune — adică aproape întotdeauna. Nu e „captcha cu poze".
 
-**Containerul widgetului nu e `display: none`.** Turnstile refuză să randeze într-un
-element ascuns; îl scoatem din flux (`position: fixed`, 0×0, `aria-hidden`).
+**Widgetul apare la cererea Cloudflare.** Containerul fix din colțul de jos permite
+interacțiunea cu varianta compactă a widgetului, inclusiv pe telefoane.
 
 **Fail-open DOAR când Cloudflare nu răspunde.**
 
