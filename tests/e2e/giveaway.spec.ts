@@ -45,6 +45,12 @@ test('giveaway-ul BITONIC programat arată pachetul, logoul și ora de deschider
     await expect(pachet.getByRole('link', { name: nume })).toHaveAttribute('href', `https://bitonic.md/products/${slug}`);
   }
   await expect(page.getByRole('button', { name: 'Intră în giveaway' })).toHaveCount(0);
+  const regulament = page.getByRole('dialog', { name: 'Regulament' });
+  await expect(regulament).toBeHidden();
+  await page.getByRole('link', { name: 'Citește regulamentul' }).click();
+  await expect(regulament.getByRole('heading', { name: 'Participare', exact: true })).toBeVisible();
+  await regulament.getByRole('button', { name: 'Închide' }).click();
+  await expect(regulament).toBeHidden();
 });
 
 test('pe mobil participantul vede formularul direct, consultă detaliile și se înscrie', async ({ page, network }) => {
@@ -58,7 +64,7 @@ test('pe mobil participantul vede formularul direct, consultă detaliile și se 
 
   const nume = page.getByLabel('Nume și prenume');
   const bifa = page.getByRole('checkbox', { name: /accept regulamentul/i });
-  const titluRegulament = page.getByText('Regulament', { exact: true });
+  const regulament = page.getByRole('dialog', { name: 'Regulament' });
   const detalii = page.getByText('Premiul și pașii de participare', { exact: true });
   await expect(page.getByRole('heading', { level: 1, name: 'Înscrie-te la giveaway' })).toBeVisible();
   await expect(nume).toBeInViewport({ ratio: 1 });
@@ -83,11 +89,16 @@ test('pe mobil participantul vede formularul direct, consultă detaliile și se 
   await expect(page.getByRole('img', { name: 'BITONIC', exact: true })).toBeHidden();
 
   await bifa.check();
-  await page.getByRole('link', { name: 'regulamentul', exact: true }).press('Enter');
-  await expect(titluRegulament).toBeFocused();
-  await expect(titluRegulament).toBeInViewport();
-  await expect(page.getByRole('heading', { name: 'Datele de participare' })).toBeVisible();
-  await page.getByRole('button', { name: 'Înapoi la formular' }).click();
+  const linkRegulament = page.getByRole('link', { name: 'regulamentul', exact: true });
+  await expect(linkRegulament).toHaveCount(1);
+  await expect(regulament).toBeHidden();
+  await linkRegulament.press('Enter');
+  const inchide = regulament.getByRole('button', { name: 'Închide' });
+  await expect(inchide).toBeFocused();
+  await expect(regulament).toBeInViewport({ ratio: 1 });
+  await expect(regulament.getByRole('heading', { name: 'Datele de participare' })).toBeVisible();
+  await inchide.click();
+  await expect(regulament).toBeHidden();
   await expect(bifa).toBeFocused();
   await expect(bifa).toBeChecked();
   await expect(bifa).toBeInViewport();
@@ -130,13 +141,18 @@ test('pe desktop câmpurile sunt într-o singură coloană centrată', async ({ 
   }
 });
 
-test('linkul direct la regulament îl deschide și derulează la el după încărcare', async ({ page, network }) => {
+test('linkul direct deschide regulamentul după încărcare și Escape revine la bifă', async ({ page, network }) => {
   network.use(rpcResponse('public_giveaway', publicGiveaway({ slug: 'bitonic-2026' }), { latencyMs: 350 }));
   await page.setViewportSize({ width: 390, height: 630 });
   await page.goto('/giveaway#regulament');
 
-  await expect(page.getByRole('heading', { name: 'Datele de participare' })).toBeVisible();
-  await expect(page.getByText('Regulament', { exact: true })).toBeInViewport({ ratio: 1 });
+  const regulament = page.getByRole('dialog', { name: 'Regulament' });
+  await expect(regulament.getByRole('heading', { name: 'Datele de participare' })).toBeVisible();
+  await expect(regulament.getByRole('heading', { name: 'Regulament', exact: true })).toBeInViewport();
+  await page.keyboard.press('Escape');
+  await expect(regulament).toBeHidden();
+  await expect(page.getByRole('checkbox', { name: /accept regulamentul/i })).toBeFocused();
+  await expect(page).toHaveURL(/\/giveaway#inscriere$/);
 });
 
 test('o citire eșuată se poate reîncerca', async ({ page, network }) => {
