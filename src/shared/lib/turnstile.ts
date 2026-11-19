@@ -97,21 +97,17 @@ const loadApi = (): Promise<TurnstileApi> => {
 };
 
 /**
- * Containerul widgetului. NU e `display:none`: Turnstile refuză să randeze
- * într-un element ascuns. Îl scoatem din flux și din arborele de accesibilitate;
- * când Cloudflare chiar cere interacțiune, widgetul apare ca overlay propriu.
+ * Containerul fix lasă Turnstile să afișeze provocarea interactivă deasupra
+ * formularului. `appearance: 'interaction-only'` controlează vizibilitatea.
  */
 const ensureContainer = (): HTMLDivElement => {
   if (container?.isConnected) return container;
   container = document.createElement('div');
   container.id = 'turnstile-container';
-  container.setAttribute('aria-hidden', 'true');
   container.style.position = 'fixed';
-  container.style.bottom = '0';
-  container.style.left = '0';
-  container.style.width = '0';
-  container.style.height = '0';
-  container.style.overflow = 'hidden';
+  container.style.bottom = '8px';
+  container.style.right = '8px';
+  container.style.zIndex = '400';
   document.body.appendChild(container);
   return container;
 };
@@ -147,6 +143,7 @@ export const getTurnstileToken = async (): Promise<string> => {
       sitekey: TURNSTILE_SITE_KEY,
       appearance: 'interaction-only',
       execution: 'execute',
+      size: 'compact',
       retry: 'never',
       callback: (token: string) => settle((p) => p.resolve(token)),
       'error-callback': () => {
