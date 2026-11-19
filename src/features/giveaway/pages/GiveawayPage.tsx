@@ -81,6 +81,14 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
       <section className={styles['gw-hero']} data-css="gw-hero">
         <p className={styles['gw-kicker']}>Giveaway</p>
         <h1 className={styles['gw-title']}>{continut.titlu}</h1>
+        <div className={styles['gw-sponsor']} data-css="gw-sponsor">
+          <span>Împreună cu</span>
+          <img
+            className={continut.sponsor.logoNegru ? styles['gw-sponsor-logo-inversat'] : undefined}
+            src={continut.sponsor.logo}
+            alt={continut.sponsor.nume}
+          />
+        </div>
         <p className={styles['gw-prize']}>{continut.premiu}</p>
         <ul className={styles['gw-products']} aria-label="Produsele din pachet">
           {continut.produse.map(({ nume, url }) => (
@@ -91,10 +99,6 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
             </li>
           ))}
         </ul>
-        <div className={styles['gw-sponsor']} data-css="gw-sponsor">
-          <span>Împreună cu</span>
-          <img src={continut.sponsor.logo} alt={continut.sponsor.nume} />
-        </div>
         {(sfarsit !== null || stare !== 'inchis') && (
           <p className={styles['gw-period']} data-css="gw-period">
             {sfarsit

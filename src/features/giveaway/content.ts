@@ -14,7 +14,7 @@ export type ContinutGiveaway = {
   premiu: string;
   produse: { nume: string; url: string }[];
   /** Logoul stă în `public/`: politica `img-src` permite doar originea site-ului. */
-  sponsor: { nume: string; logo: string };
+  sponsor: { nume: string; logo: string; logoNegru?: boolean };
   /** Ce are de făcut participantul pe Instagram, pe lângă formular. */
   conditii: { text: string; url: string }[];
   regulament: { titlu: string; paragrafe: string[] }[];
@@ -31,7 +31,7 @@ const CONTINUT = new Map<string, ContinutGiveaway>([
       { nume: 'BITONIC® OMEGA 3 GOLD', url: 'https://bitonic.md/products/golden-oils-forte' },
       { nume: 'BITONIC® VITAMINA D + ZINC', url: 'https://bitonic.md/products/vitamina-d-zinc' },
     ],
-    sponsor: { nume: 'BITONIC', logo: '/giveaway/bitonic-logo.svg' },
+    sponsor: { nume: 'BITONIC', logo: '/giveaway/bitonic-logo.svg', logoNegru: true },
     conditii: [
       { text: 'Urmărește @we_run_and_lift pe Instagram', url: INSTAGRAM_URL },
       { text: 'Urmărește @bitonic.md pe Instagram', url: 'https://www.instagram.com/bitonic.md' },
