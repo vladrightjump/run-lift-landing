@@ -108,7 +108,7 @@
   .dn-section-head h2 { font-size: clamp(40px, 8vw, 120px); line-height: 0.9; color: var(--e3-text); }
 
   .dn-story {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: clamp(24px, 4vw, 48px); align-items: start;
   }
   .dn-story-text { margin: 0; font-size: 17px; line-height: 1.6; color: var(--e3-muted-strong); text-wrap: pretty; }
@@ -135,10 +135,6 @@
     background: var(--e3-surface-tint); border-color: var(--e3-accent);
     transform: translateY(-4px); box-shadow: 0 14px 32px rgba(10,14,8,0.55);
   }
-  .dn-stat {
-    animation: fade-up 0.5s ease-out both;
-    animation-delay: calc(var(--i, 0) * 90ms);
-  }
   .dn-orar-row { transition: background 0.2s ease, box-shadow 0.2s ease; }
   .dn-orar-row:hover { background: var(--e3-surface-hover); box-shadow: inset 3px 0 0 var(--e3-accent); }
   .dn-value-title {
@@ -147,35 +143,39 @@
   }
   .dn-value-card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong); }
 
-  .dn-stats {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+  .cuprins {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 0 24px;
+    padding: 8px 20px; border-bottom: 1px solid var(--e3-border);
   }
-  .dn-stat { border: 1px solid var(--e3-border); padding: 28px 24px; }
-  .dn-stat-value {
-    font-family: Anton, sans-serif; font-size: clamp(26px, 3.2vw, 36px);
-    line-height: 1.1; overflow-wrap: break-word; color: var(--e3-text);
+  .cuprins a { padding: 12px 0; font-weight: 600; }
+  .cuprins a:hover, .activitati a:hover, .disponibilitate a:hover { text-decoration: underline; }
+  .dn-section[id] { scroll-margin-top: 74px; }
+  .activitati { margin: 0; padding: 0; list-style: none; }
+  .activitati li {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, .85fr);
+    align-items: baseline; gap: 16px 32px; padding: 22px 0; border-top: 1px solid var(--e3-border);
   }
-  .dn-stat-value[data-css~="accent"] { color: var(--e3-accent); }
-  .dn-stat-label {
-    margin-top: 10px; font-size: 13px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--e3-muted);
+  .activitati h3 { margin: 0; font-size: 1.4rem; }
+  .activitati p, .intrebari p, .disponibilitate { margin: 0; line-height: 1.6; color: var(--e3-muted-strong); }
+  .activitati a, .disponibilitate a { color: var(--e3-accent); font-weight: 600; }
+  .intrebari details { padding: 16px 0; border-top: 1px solid var(--e3-border); }
+  .intrebari summary { cursor: pointer; font-size: 1.12rem; font-weight: 700; }
+  .intrebari p { margin-top: 8px; max-width: 68ch; }
+  .disponibilitate { margin-top: 24px; }
+  @media (max-width: 720px) {
+    .activitati li { grid-template-columns: 1fr; gap: 8px; }
+    .cuprins { justify-content: flex-start; }
   }
 
   .dn-form-grid {
     max-width: 1200px; margin: 0 auto; display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: clamp(24px, 4vw, 64px); align-items: start;
   }
   .dn-form-intro {
     margin: 0; max-width: 480px; font-size: 17px; line-height: 1.6;
     color: var(--e3-muted-strong); text-wrap: pretty;
   }
-  .dn-badge { display: flex; align-items: center; gap: 10px; margin-top: 24px; }
-  .dn-badge span:last-child {
-    font-size: 13px; font-weight: 600; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--e3-muted);
-  }
-
   .dn-form {
     background: var(--e3-surface); border: 1px solid var(--e3-border);
     padding: clamp(24px, 4vw, 36px); display: grid; gap: 18px;

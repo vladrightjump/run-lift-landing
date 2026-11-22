@@ -4,7 +4,7 @@ import shared3 from '../../../shared/ui/PublicLayout.module.css';
 import shared2 from '../../../shared/ui/PublicMotion.module.css';
 import styles from './DespreNoiPage.module.css';
 import { useState } from 'react';
-import type { CSSProperties } from 'react';
+import { TrialTraining, usePublicTrialStare } from '../../trial';
 import { useLaunchForm } from '../../inscriere';
 import { useScrollReveal } from '../../../shared/lib/useScrollReveal';
 import { useSpotlight } from '../../../shared/lib/useSpotlight';
@@ -23,30 +23,21 @@ import { useTrainingReels } from '../../reels';
 import { ReelsRail } from '../../reels';
 
 const POVESTE = [
-  'Am început antrenamentele în parc, în trei prieteni, cu un scop simplu: să devenim mai fit și mai funcționali.',
-  'Încet-încet am crescut comunitatea, unde am devenit prieteni care se antrenează și se respectă împreună.',
-  'Azi organizăm antrenamente deschise și evenimente în stil HYROX, unde toată lumea e binevenită, de la începători la avansați.',
+  'La început eram trei prieteni. Ne întâlneam în parc, în Chișinău, ca să alergăm și să lucrăm la forță împreună.',
+  'Pe măsură ce ni s-au alăturat și alții, am legat prietenii la antrenament. Așa a crescut Run + Lift.',
+  'Azi ne vedem la antrenamente în timpul săptămânii și organizăm curse în care alergarea alternează cu stații de exerciții.',
 ];
 
 const VALORI = [
-  {
-    titlu: 'ÎMPREUNĂ',
-    text: 'Nimeni nu termină singur. Ultimul care trece linia e aplaudat cel mai tare.',
-  },
-  {
-    titlu: 'ÎN AER LIBER',
-    text: 'Parcul e sala noastră. Soare, ploaie sau frig: ne vedem afară.',
-  },
-  {
-    titlu: 'PE NIVELUL TĂU',
-    text: 'Fiecare merge în ritmul lui. Ne adaptăm exercițiile și greutățile după tine.',
-  },
+  { titlu: 'Împreună până la final', text: 'Ultimul care trece linia de sosire primește aplauzele grupului.' },
+  { titlu: 'În ritmul tău', text: 'La alergare îți alegi ritmul. La stații, adaptăm exercițiile și greutățile nivelului tău.' },
+  { titlu: 'La prima întâlnire', text: 'Poți veni singur la o probă. Facem încălzirea împreună și ai ocazia să cunoști grupul înainte să decizi dacă revii.' },
 ];
 
-const STATISTICI = [
-  { valoare: 'O comunitate', eticheta: 'În continuă creștere', accent: true },
-  { valoare: 'Antrenamente', eticheta: 'În fiecare săptămână', accent: false },
-  { valoare: 'Evenimente', eticheta: 'Deschise oricui', accent: false },
+const ACTIVITATI = [
+  { titlu: 'Antrenamente în grup', text: 'În timpul săptămânii ne întâlnim pentru alergare și forță. Membrii anunță în sondajul din Telegram dacă vin la următoarea sesiune.', href: '#program', link: 'Program și hartă' },
+  { titlu: 'Antrenamentul săptămânii', text: 'Publicăm pe site sesiunile de pregătire. Poți deschide o săptămână anterioară ca să repeți un antrenament.', href: '/antrenament', link: 'Deschide programul săptămânii' },
+  { titlu: 'Cursele Run + Lift', text: 'La o ediție de cursă treci de la alergare la stații de forță, contra cronometru. Fiecare ediție are propriul loc de start și propriile înscrieri.', href: '/', link: 'Vezi următoarea ediție' },
 ];
 
 const ETAPE = [
@@ -54,7 +45,7 @@ const ETAPE = [
   {
     nr: '02',
     titlu: 'Exerciții funcționale',
-    text: 'Antrenament în grup, adaptat individual, cu exerciții funcționale, în stil HYROX.',
+    text: 'Alternăm alergarea cu exerciții de forță. Într-o stație poți avea de împins, de tras sau de cărat o greutate.',
   },
   { nr: '03', titlu: 'Stretching', text: 'Revenire, întindere și un moment să ne cunoaștem mai bine.' },
 ];
@@ -73,10 +64,6 @@ const orar = (unde: string | null) => [
 /**
  * Banda de sub hero. Zilele și ora sunt constante de build; locul vine din
  * setările botului.
- *
- * Pagina cere de la server exact două lucruri: `public_training_reels()` (banda
- * cu clipuri, administrată din `/admin`) și `public_homepage()` (locul).
- * `tests/e2e/despre-noi.spec.ts` păzește granița asta.
  */
 const marquee = (unde: string | null) => [
   'Alergare',
@@ -86,7 +73,7 @@ const marquee = (unde: string | null) => [
   ...(unde ? [unde] : []),
 ];
 
-type CheieSectiune = 'poveste' | 'comunitate' | 'antrenament' | 'clipuri' | 'unde' | 'info';
+type CheieSectiune = 'poveste' | 'comunitate' | 'antrenament' | 'clipuri' | 'vizita' | 'unde' | 'info';
 
 /**
  * Numerele secțiunilor, derivate din ce chiar se randează.
@@ -106,6 +93,7 @@ const numerotare = (areClipuri: boolean) => {
     'comunitate',
     'antrenament',
     ...(areClipuri ? (['clipuri'] as const) : []),
+    'vizita',
     'unde',
     'info',
   ];
@@ -117,6 +105,7 @@ export const DespreNoi = () => {
   const { draft, setField: setFieldBase, errors, state, submit, hpProps } = useLaunchForm('despre-noi');
   const [eroare, setEroare] = useState('');
   const reels = useTrainingReels();
+  const proba = usePublicTrialStare();
   // Locul apare abia după răspunsul serverului (cel mult 2 s): după o mutare,
   // nimeni nu trebuie să vadă, nici o clipă, locul vechi din cod. Dacă serverul
   // nu răspunde, rămâne locul din cod.
@@ -166,6 +155,7 @@ export const DespreNoi = () => {
         </a>
       </header>
 
+      <main>
       <section className={styles['dn-hero']} data-css={"dn-hero"}>
         <div className={styles['dn-hero-stripes']} data-css={"dn-hero-stripes"} aria-hidden="true" />
         {/* `e3-hero-video` adaugă driftul legat de scroll — clipul se mișcă în
@@ -189,23 +179,29 @@ export const DespreNoi = () => {
           <h1 className={styles['dn-hero-title']} data-css={"dn-hero-title"}>
             {/* Cuvintele cresc din linia de bază prin mască, ca pe landing. */}
             <span className={shared2['e3-word'] + ' ' + styles.text1} data-css={"e3-word"} >
-              Mai mult decât
+              Comunitatea
             </span>
             <br />
             <span className={shared2['e3-word'] + ' ' + styles['dn-accent'] + ' ' + styles.text2} data-css={"e3-word dn-accent"} >
-              un antrenament.
+              Run + Lift
             </span>
           </h1>
           <p className={styles['dn-hero-sub']} data-css={"dn-hero-sub"}>
-            Alergare, forță și oameni faini: asta e Run <span className={styles['dn-accent']} data-css={"dn-accent"}>+</span> Lift.
-            Vino așa cum ești, restul vine de la sine.
+            Suntem o comunitate din Chișinău. Alergăm împreună, ne antrenăm la stații de forță și organizăm curse în stil HYROX.
           </p>
         </div>
       </section>
 
+      <nav className={styles.cuprins} aria-label="Pe această pagină">
+        <a href="#poveste">Povestea noastră</a>
+        <a href="#comunitate">Comunitatea</a>
+        <a href="#antrenament">Antrenamentul</a>
+        <a href="#prima-vizita">Prima vizită</a>
+        <a href="#program">Program și hartă</a>
+      </nav>
       <Marquee items={marquee(loc?.where ?? null)} />
 
-      <section className={styles['dn-section']} data-css={"dn-section"}>
+      <section id="poveste" className={styles['dn-section']} data-css={"dn-section"}>
         <div className={styles['dn-container']} data-css={"dn-container"}>
           <div className={styles['dn-section-head']} data-css={"dn-section-head"}>
             <span className={styles['dn-section-num'] + ' ' + shared3['e3-title-num']} data-css={"dn-section-num e3-title-num"}>{nr('poveste')}</span>
@@ -231,25 +227,25 @@ export const DespreNoi = () => {
         </div>
       </section>
 
-      <section className={styles['dn-section']} data-css={"dn-section"}>
+      <section id="comunitate" className={styles['dn-section']} data-css={"dn-section"}>
         <div className={styles['dn-container']} data-css={"dn-container"}>
           <div className={styles['dn-section-head']} data-css={"dn-section-head"}>
             <span className={styles['dn-section-num'] + ' ' + shared3['e3-title-num']} data-css={"dn-section-num e3-title-num"}>{nr('comunitate')}</span>
             <h2 className={shared3['e3-title']} data-css={"e3-title"}>Comunitatea</h2>
           </div>
-          <div className={styles['dn-stats']} data-css={"dn-stats"}>
-            {STATISTICI.map((s, i) => (
-              // `--i` dă decalajul cascadei; cartonașele nu mai apar toate odată.
-              <div key={s.eticheta} className={styles['dn-stat'] + ' ' + shared4['e3-spot']} data-css={"dn-stat e3-spot"} style={{ '--i': i } as CSSProperties}>
-                <div className={styles['dn-stat-value']} data-css={`dn-stat-value${s.accent ? ' accent' : ''}`}>{s.valoare}</div>
-                <div className={styles['dn-stat-label']} data-css={"dn-stat-label"}>{s.eticheta}</div>
-              </div>
+          <ul className={styles.activitati}>
+            {ACTIVITATI.map((activitate) => (
+              <li key={activitate.href}>
+                <h3>{activitate.titlu}</h3>
+                <p>{activitate.text}</p>
+                <a href={activitate.href}>{activitate.link} →</a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
-      <section id="prima-vizita" className={styles['dn-section']} data-css={"dn-section"}>
+      <section id="antrenament" className={styles['dn-section']} data-css={"dn-section"}>
         <div className={styles['dn-container']} data-css={"dn-container"}>
           <div className={styles['dn-section-head']} data-css={"dn-section-head"}>
             <span className={styles['dn-section-num'] + ' ' + shared3['e3-title-num']} data-css={"dn-section-num e3-title-num"}>{nr('antrenament')}</span>
@@ -280,7 +276,33 @@ export const DespreNoi = () => {
         body="Antrenamentele, filmate pe teren. Dacă vrei să vezi cum e înainte să vii, aici e."
       />
 
-      <section className={styles['dn-section']} data-css={"dn-section"}>
+      <section id="prima-vizita" className={styles['dn-section']} data-css="dn-section">
+        <div className={styles['dn-container']}>
+          <div className={styles['dn-section-head']} data-css="dn-section-head">
+            <span className={styles['dn-section-num']} data-css="dn-section-num">{nr('vizita')}</span>
+            <h2 className={shared3['e3-title']}>Prima vizită</h2>
+          </div>
+          <div className={styles.intrebari}>
+            <details open>
+              <summary>Cum rezerv o probă?</summary>
+              <p>Când înscrierile sunt deschise, apasă „Aleg ziua în Telegram”. În conversația privată cu botul apeși Start, citești condițiile, îți scrii numele și alegi o sesiune. Confirmarea și mesajul de reamintire vin în aceeași conversație.</p>
+            </details>
+            <details>
+              <summary>Ce fac dacă mi se schimbă programul?</summary>
+              <p>Revino la confirmarea din Telegram. De acolo poți anula rezervarea și alege o altă zi disponibilă.</p>
+            </details>
+            <details>
+              <summary>Cum intru în grup după probă?</summary>
+              <p>După ce organizatorul confirmă că ai participat, botul te întreabă dacă vrei să continui. Dacă alegi „Da, vreau să continui”, botul verifică cererea și îți trimite invitația în grupul de antrenament.</p>
+            </details>
+          </div>
+          {proba.config
+            ? <TrialTraining config={proba.config} embedded />
+            : proba.gata && <p className={styles.disponibilitate}>Programul probelor nu este disponibil momentan. <a href="#informatii">Ține-mă la curent</a></p>}
+        </div>
+      </section>
+
+      <section id="program" className={styles['dn-section']} data-css={"dn-section"}>
         <div className={styles['dn-container']} data-css={"dn-container"}>
           <div className={styles['dn-section-head']} data-css={"dn-section-head"}>
             <span className={styles['dn-section-num'] + ' ' + shared3['e3-title-num']} data-css={"dn-section-num e3-title-num"}>{nr('unde')}</span>
@@ -358,11 +380,8 @@ export const DespreNoi = () => {
             </div>
             <p className={styles['dn-form-intro']} data-css={"dn-form-intro"} data-reveal>
               Lasă-ne datele tale și îți scriem când urmează un antrenament deschis sau un eveniment
-              nou. Fără spam, doar ce contează.
+              nou.
             </p>
-            <div className={styles['dn-badge']} data-css={"dn-badge"}>
-              <span>Răspundem de obicei în 24h</span>
-            </div>
           </div>
 
           {state === 'success' ? (
@@ -443,6 +462,8 @@ export const DespreNoi = () => {
           )}
         </div>
       </section>
+
+      </main>
 
       <footer className={styles['dn-footer']} data-css={"dn-footer"}>
         <span className={styles['dn-footer-brand']} data-css={"dn-footer-brand"}>
