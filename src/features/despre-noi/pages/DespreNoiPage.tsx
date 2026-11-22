@@ -25,11 +25,10 @@ import { ReelsRail } from '../../reels';
 const POVESTE = [
   'La început eram trei prieteni. Ne întâlneam în parc, în Chișinău, ca să alergăm și să lucrăm la forță împreună.',
   'Pe măsură ce ni s-au alăturat și alții, am legat prietenii la antrenament. Așa a crescut Run + Lift.',
-  'Azi ne vedem la antrenamente în timpul săptămânii și organizăm curse în care alergarea alternează cu stații de exerciții.',
 ];
 
 const VALORI = [
-  { titlu: 'Împreună până la final', text: 'Ultimul care trece linia de sosire primește aplauzele grupului.' },
+  { titlu: 'Ne încurajăm', text: 'Când mai ai o repetare de făcut, ai lângă tine oameni care te încurajează.' },
   { titlu: 'În ritmul tău', text: 'La alergare îți alegi ritmul. La stații, adaptăm exercițiile și greutățile nivelului tău.' },
   { titlu: 'La prima întâlnire', text: 'Poți veni singur la o probă. Facem încălzirea împreună și ai ocazia să cunoști grupul înainte să decizi dacă revii.' },
 ];
@@ -37,7 +36,7 @@ const VALORI = [
 const ACTIVITATI = [
   { titlu: 'Antrenamente în grup', text: 'În timpul săptămânii ne întâlnim pentru alergare și forță. Membrii anunță în sondajul din Telegram dacă vin la următoarea sesiune.', href: '#program', link: 'Program și hartă' },
   { titlu: 'Antrenamentul săptămânii', text: 'Publicăm pe site sesiunile de pregătire. Poți deschide o săptămână anterioară ca să repeți un antrenament.', href: '/antrenament', link: 'Deschide programul săptămânii' },
-  { titlu: 'Cursele Run + Lift', text: 'La o ediție de cursă treci de la alergare la stații de forță, contra cronometru. Fiecare ediție are propriul loc de start și propriile înscrieri.', href: '/', link: 'Vezi următoarea ediție' },
+  { titlu: 'Un loc la prima probă', text: 'Poți veni la un antrenament ca să cunoști grupul. Ghidul îți arată cum alegi ziua în Telegram și ce poți face dacă ți se schimbă programul.', href: '#prima-vizita', link: 'Cum vii la o probă' },
 ];
 
 const ETAPE = [
@@ -150,8 +149,8 @@ export const DespreNoi = () => {
         <a className={styles['dn-logo']} data-css={"dn-logo"} href="/">
           Run <span className={styles['dn-accent']} data-css={"dn-accent"}>+</span> Lift
         </a>
-        <a className={styles['dn-topbar-cta']} data-css={"dn-topbar-cta"} href="#informatii">
-          Vreau info
+        <a className={styles['dn-topbar-cta']} data-css={"dn-topbar-cta"} href="#prima-vizita">
+          Vin prima dată
         </a>
       </header>
 
@@ -187,7 +186,7 @@ export const DespreNoi = () => {
             </span>
           </h1>
           <p className={styles['dn-hero-sub']} data-css={"dn-hero-sub"}>
-            Suntem o comunitate din Chișinău. Alergăm împreună, ne antrenăm la stații de forță și organizăm curse în stil HYROX.
+            Facem antrenamente de grup în Chișinău. Alergăm împreună, apoi lucrăm la forță. Poți începe cu o sesiune de probă.
           </p>
         </div>
       </section>
@@ -379,8 +378,7 @@ export const DespreNoi = () => {
               <h2 className={shared3['e3-title']} data-css={"e3-title"}>Vrei mai multe informații?</h2>
             </div>
             <p className={styles['dn-form-intro']} data-css={"dn-form-intro"} data-reveal>
-              Lasă-ne datele tale și îți scriem când urmează un antrenament deschis sau un eveniment
-              nou.
+              Lasă-ne datele tale și îți scriem când organizăm următorul antrenament deschis.
             </p>
           </div>
 
@@ -477,8 +475,8 @@ export const DespreNoi = () => {
         >
           Instagram {INSTAGRAM_HANDLE}
         </a>
-        <a className={styles['dn-footer-link']} data-css={"dn-footer-link"} href="/">
-          Vezi evenimentul →
+        <a className={styles['dn-footer-link']} data-css={"dn-footer-link"} href="/antrenament">
+          Antrenamentul săptămânii →
         </a>
       </footer>
     </div>
