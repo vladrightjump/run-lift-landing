@@ -27,16 +27,19 @@
 
   .dn-topbar {
     position: sticky; top: 0; z-index: 50;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; padding: 14px clamp(16px, 4vw, 40px);
+    display: grid; grid-template-columns: auto minmax(0, max-content) auto;
+    align-items: center; justify-content: space-between; gap: 16px;
+    padding: 9px clamp(16px, 3vw, 40px);
     background: rgba(18,20,16,0.92); backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--e3-border);
   }
   .dn-logo {
+    white-space: nowrap;
     font-family: Anton, sans-serif; font-size: 20px; letter-spacing: 1px;
     text-transform: uppercase; color: var(--e3-text);
   }
   .dn-topbar-cta {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; box-sizing: border-box;
     background: var(--e3-accent); color: var(--e3-bg); font-weight: 700; font-size: 13px;
     letter-spacing: 1.5px; text-transform: uppercase; padding: 11px 22px;
     transition: background 0.2s ease, transform 0.15s ease;
@@ -56,29 +59,37 @@
   .dn-map-link:active { transform: translateY(0) scale(0.97); box-shadow: none; }
 
   .dn-hero {
-    position: relative; min-height: 82vh; display: flex; align-items: flex-end;
+    position: relative; min-height: clamp(470px, 78svh, 860px); display: flex; align-items: flex-end;
     /* `clip`, nu `hidden`: taie la fel, dar nu creează container de scroll.
        Cu `hidden`, `view(block)` din `.e3-hero-copy` s-ar lega de secțiune — un
        scroller fără overflow — și parallaxul n-ar porni niciodată. Aceeași
        capcană ca la hero-ul landing-ului. */
     overflow: clip; border-bottom: 1px solid var(--e3-border);
   }
-  .dn-hero-stripes {
-    position: absolute; inset: 0;
-    background: repeating-linear-gradient(45deg, var(--e3-surface) 0 28px, var(--e3-bg) 28px 56px);
-    animation: stripes-move 3s linear infinite;
-  }
   .dn-hero-fade {
-    position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(18,20,16,0.25) 0%, rgba(18,20,16,0.85) 100%);
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg, rgb(13 17 12 / 72%), transparent 85%),
+                linear-gradient(0deg, rgb(13 17 12 / 92%), transparent 85%);
   }
-  .dn-hero-video {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: cover; pointer-events: none; background: var(--e3-bg);
+  .cortina { display: none; }
+  @media (prefers-reduced-motion: no-preference) {
+    .cortina {
+      display: block; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      background: var(--e3-bg); border-left: 3px solid var(--e3-accent);
+      animation: deschide-cadrul .7s cubic-bezier(.65,0,.22,1) both;
+    }
+    .dn-topbar > a { animation: intra-meniu .38s ease-out backwards; }
+    .dn-topbar-cta { animation-delay: .08s; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    .dn-hero-video { display: none; }
-}
+  @keyframes deschide-cadrul { to { transform: translateX(101%); } }
+  @keyframes intra-meniu { from { opacity: .3; translate: 0 -5px; } }
+  .programLink {
+    display: inline-flex; align-items: center; min-height: 44px; gap: 14px; margin-top: 12px;
+    border-bottom: 1px solid currentColor; color: var(--e3-accent); font-weight: 600;
+  }
+  .programLink svg, .dn-topbar-cta svg { transition: transform .2s ease-out; }
+  .programLink:hover svg, .dn-topbar-cta:hover svg { transform: translate(2px, 2px); }
+  .dn-topbar-cta:active { transform: scale(.98); }
   .dn-hero-inner {
     position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; width: 100%;
     padding: clamp(48px, 9vw, 96px) clamp(20px, 5vw, 40px);
@@ -143,13 +154,17 @@
   }
   .dn-value-card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong); }
 
-  .cuprins {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 0 24px;
-    padding: 8px 20px; border-bottom: 1px solid var(--e3-border);
+  .activitati a:hover, .disponibilitate a:hover { text-decoration: underline; }
+  .dn-section[id] { scroll-margin-top: 80px; }
+  .intrebari summary:focus-visible { outline: 2px solid var(--e3-accent); outline-offset: 4px; }
+  @media (max-width: 960px) {
+    .dn-topbar {
+      grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 0;
+      padding-block: 8px 0;
+    }
+    .dn-topbar-cta { grid-column: 2; grid-row: 1; padding-inline: 14px; white-space: nowrap; }
+    .dn-section[id] { scroll-margin-top: 116px; }
   }
-  .cuprins a { padding: 12px 0; font-weight: 600; }
-  .cuprins a:hover, .activitati a:hover, .disponibilitate a:hover { text-decoration: underline; }
-  .dn-section[id] { scroll-margin-top: 74px; }
   .activitati { margin: 0; padding: 0; list-style: none; }
   .activitati li {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, .85fr);
@@ -160,11 +175,16 @@
   .activitati a, .disponibilitate a { color: var(--e3-accent); font-weight: 600; }
   .intrebari details { padding: 16px 0; border-top: 1px solid var(--e3-border); }
   .intrebari summary { cursor: pointer; font-size: 1.12rem; font-weight: 700; }
+  .intrebari details[open] summary { color: var(--e3-accent); }
+  @media (prefers-reduced-motion: no-preference) {
+    .intrebari details[open] p { animation: raspuns .22s ease-out; }
+    @keyframes raspuns { from { transform: translateY(-4px); opacity: .45; } }
+  }
   .intrebari p { margin-top: 8px; max-width: 68ch; }
   .disponibilitate { margin-top: 24px; }
   @media (max-width: 720px) {
     .activitati li { grid-template-columns: 1fr; gap: 8px; }
-    .cuprins { justify-content: flex-start; }
+
   }
 
   .dn-form-grid {
@@ -242,10 +262,7 @@
   @media (max-width: 520px) {
     .dn-footer { justify-content: center; text-align: center; }
 }
-  @keyframes stripes-move {
-    from { background-position: 0 0; }
-    to   { background-position: 56px 56px; }
-  }
+
 
 .text1.text1.text1.text1 { --d: 0.12s; }
 .text2.text2.text2.text2 { --d: 0.28s; }
