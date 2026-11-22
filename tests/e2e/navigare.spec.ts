@@ -107,17 +107,11 @@ test.describe('Tabul „Despre noi" — landing', () => {
 });
 
 test.describe('Drumul dus-întors', () => {
-  test('Despre noi → înapoi la eveniment („/")', async ({ page, network }) => {
-    mockStats(network);
+  test('din subsolul paginii Despre noi ajungi la antrenamentul săptămânii', async ({ page }) => {
     await page.goto('/despre-noi');
-    await page.locator("[data-css~=\"dn-footer\"] a[href=\"/\"]").click();
-    await expect(page).toHaveURL(/\/$/);
-    // La „/" apare Coming Soon (`.cs-root`) sau landing-ul (`.e3-root`), în
-    // funcție de fază. Testul ăsta verifică DRUMUL, nu faza, deci acceptă orice
-    // fază: landing-ul are trei (`pre`, `leaderboard`, `next`) și doar în `pre`
-    // există `#inscriere`. Fixarea pe `#inscriere` pica în ziua cursei, când
-    // înscrierea dispare de pe homepage. Fazele se testează în `faze.spec.ts`.
-    await expect(page.locator("[data-css~=\"cs-root\"], [data-css~=\"e3-root\"]").first()).toBeVisible();
+    await page.getByRole('contentinfo').getByRole('link', { name: /antrenamentul săptămânii/i }).click();
+    await expect(page).toHaveURL(/\/antrenament$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Antrenamentul săptămânii' })).toBeVisible();
   });
 
   test('logoul din antetul Despre noi duce la pagina principală', async ({ page, network }) => {

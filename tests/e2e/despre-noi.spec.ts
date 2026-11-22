@@ -14,7 +14,7 @@ const { LAUNCH_DATE } = deriveEditionDates(SNAPSHOT_CONFIG);
 const { EVENT_WHERE } = deriveEventStrings(SNAPSHOT_CONFIG);
 
 /**
- * Pagina /despre-noi — prezentare + formular „Vreau info".
+ * Pagina /despre-noi — prezentare + formular de noutăți.
  * Endpointurile Supabase sunt mock-uite: testele nu scriu în baza reală
  * și nu trimit emailuri.
  */
@@ -50,6 +50,9 @@ test.describe('Despre noi — conținut', () => {
     await page.goto('/despre-noi');
     await expect(page.locator("[data-css~=\"dn-kicker\"]")).toHaveText(/cine suntem/i);
     await expect(page.locator("[data-css~=\"dn-hero-title\"]")).toContainText('Run + Lift');
+
+    await expect(page.locator('[data-css~="dn-hero-sub"]')).toContainText('antrenamente de grup în Chișinău');
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Vin prima dată' })).toHaveAttribute('href', '#prima-vizita');
 
     for (const titlu of [
       'Povestea noastră',
