@@ -10,6 +10,7 @@ import { cereFiltruUrmatorul } from './filtruUrmatorul';
 
 const api = vi.hoisted(() => ({
   incarcaSala: vi.fn(),
+  incarcaVoturi: vi.fn(),
   seteazaPrezenta: vi.fn(),
   seteazaAntrenament: vi.fn(),
 }));
@@ -29,6 +30,7 @@ const randeaza = () =>
 beforeEach(() => {
   Object.values(api).forEach((f) => f.mockReset());
   showToast.mockReset();
+  api.incarcaVoturi.mockResolvedValue({ posted_at: null, votes: [] });
   api.seteazaPrezenta.mockResolvedValue(undefined);
   api.seteazaAntrenament.mockResolvedValue(undefined);
 });
@@ -48,6 +50,19 @@ describe('Prezențe', () => {
     expect(tacuti.getByText('Maria')).toBeTruthy();
     expect(tacuti.getByText('Roma')).toBeTruthy();
     expect(tacuti.queryByText('Fara')).toBeNull();
+  });
+
+  it('arată cronologia sondajului deschis pentru antrenamentul următor', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    api.incarcaVoturi.mockResolvedValue({ posted_at: null, votes: [
+      { member_id: 'ion', name: 'Ion', at: '2026-10-07T09:05:00Z', response: 'no' },
+    ] });
+    randeaza();
+    const jurnal = within(await screen.findByRole('region', { name: 'Cronologia voturilor' }));
+    const rand = await jurnal.findByRole('listitem');
+    expect(rand.textContent).toContain('Ion · Nu vin');
+    expect(rand.querySelector('time')?.textContent).toContain('12:05');
+    expect(api.incarcaVoturi).toHaveBeenCalledWith('tok', 's2', expect.any(AbortSignal));
   });
 
   it('se deschide cu filtrul cerut din Acum, o singură dată, iar „Toți" le arată pe toate (R10)', async () => {

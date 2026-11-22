@@ -119,15 +119,20 @@ describe('Analiza — scoaterea din grup', () => {
     const vot = { name: 'Maria', member_id: 'maria', response: 'yes', at: '2026-10-05T09:02:00Z' };
     api.incarcaVoturi.mockResolvedValue({
       posted_at: '2026-10-05T09:00:00Z',
-      votes: [vot, vot, { ...vot, response: 'no', at: '2026-10-05T09:30:00Z' },
+      votes: [vot, { ...vot, member_id: 'ion', name: 'Ion', response: 'no', at: '2026-10-05T09:05:00Z' },
+        { ...vot, at: '2026-10-05T09:10:00Z' }, { ...vot, response: 'no', at: '2026-10-05T09:30:00Z' },
         { ...vot, at: '2026-10-05T10:00:00Z' }],
     });
     randeaza();
-    const jurnal = within(await screen.findByRole('region', { name: 'Voturile din sondaj' }));
+    const jurnal = within(await screen.findByRole('region', { name: 'Cronologia voturilor' }));
     expect(await jurnal.findByText(/Vin → Nu vin/)).toBeTruthy();
     expect(jurnal.getByText(/Nu vin → Vin/)).toBeTruthy();
     expect(jurnal.getAllByText(/după 2 min/)).toHaveLength(1);
-    expect(jurnal.getByText(/12:02/)).toBeTruthy();
+    const randuri = jurnal.getAllByRole('listitem');
+    expect(randuri.map((rand) => rand.querySelector('strong')?.textContent)).toEqual(['Maria', 'Ion', 'Maria', 'Maria']);
+    expect(randuri.map((rand) => rand.querySelector('time')?.textContent?.slice(-5))).toEqual(['12:02', '12:05', '12:30', '13:00']);
+    expect(randuri[1].textContent).toContain('Ion · Nu vin');
+    expect(jurnal.getByText(/Și-au schimbat votul/).textContent).toContain('Au votat 2 · Și-au schimbat votul 1');
     api.incarcaVoturi.mockResolvedValue({ posted_at: null, votes: [vot] });
     fireEvent.click(screen.getByRole('button', { name: '90 de zile' }));
     fireEvent.click(screen.getAllByRole('listitem', { name: /vin,.*fără răspuns/ })[0]);
