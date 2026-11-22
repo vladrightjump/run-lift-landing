@@ -146,7 +146,7 @@ describe('trial onboarding transactions', () => {
  });
  it('exposes only public config and requires service permission proof before activation', async () => {
   const x=await caRol(db,'anon',()=>db.query<{c:object}>(`select runlift.public_trial_config() c`));
-  expect(Object.keys(x.rows[0].c).sort()).toEqual(['bot_username','bring_text','contact_text','enabled','next_session','public_host','trial_price']);
+  expect(Object.keys(x.rows[0].c).sort()).toEqual(['bot_username','bring_text','contact_text','enabled','next_session','trial_price']);
   await expect(db.query(`select runlift.admin_trial_config($1,'{"enabled":true}')`,[ADMIN_TOKEN])).rejects.toThrow('trial_config_incomplete');
   await db.query(`select runlift.admin_trial_config($1,'{"enabled":false,"welcome_text":""}')`,[ADMIN_TOKEN]);
   await expect(db.query(`select runlift.admin_trial_data('00000000-0000-0000-0000-000000000000')`)).rejects.toThrow('invalid_token');
@@ -155,20 +155,18 @@ describe('trial onboarding transactions', () => {
 
 it('oferă prima probă eligibilă din orarul botului cu locul și ora sesiunii concrete', async () => {
  const azi = "(now() at time zone 'Europe/Chisinau')::date";
- const next = async () => (await caRol(db, 'anon', () => db.query<{s: {location: string; photo: string | null} | null}>(
+ const next = async () => (await caRol(db, 'anon', () => db.query<{s: {location: string; starts_at: string} | null}>(
    "select runlift.public_trial_config()->'next_session' s"
  ))).rows[0].s;
  await db.exec(`update public.bot_config set location='Intrare nord', training_time='07:15';
    insert into public.training_sessions(session_date, status) values (${azi},'done'),(${azi}+1,'cancelled');
    insert into public.training_sessions(session_date, location, starts_at) values (${azi}+2,'Intrare sud','08:30');`);
- await db.query("select runlift.admin_trial_config($1,$2)", [ADMIN_TOKEN, JSON.stringify({
-   enabled:false, public_host:'Ana', meeting_photo:'/foto/nord.jpg',
- })]);
+ await db.exec('update public.trial_config set enabled=false');
  expect(await next()).toBeNull();
  await db.exec('update public.trial_config set enabled=true');
- expect(await next()).toMatchObject({location:'Intrare sud',photo:null});
+ expect(await next()).toMatchObject({location:'Intrare sud', starts_at:expect.any(String)});
  await db.exec(`update public.training_sessions set status='cancelled' where session_date=${azi}+2`);
- expect(await next()).toMatchObject({location:'Intrare nord',photo:'/foto/nord.jpg'});
+ expect(await next()).toMatchObject({location:'Intrare nord', starts_at:expect.any(String)});
  await db.exec("update public.bot_config set poll_days='{}'");
  expect(await next()).toBeNull();
 });

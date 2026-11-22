@@ -21,11 +21,9 @@ export function TrialTraining({ config }: { config: PublicTrialConfig | null }) 
           <>
             <p><strong>Următoarea probă</strong> · <time dateTime={upcoming.starts_at}>{momentComplet(upcoming.starts_at)}</time> (ora Chișinăului)</p>
             {upcoming.location && <p>Ne întâlnim la <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(upcoming.location)}`}>{upcoming.location}</a>.</p>}
-            {upcoming.photo && <img className={styles.fotografie} src={upcoming.photo} alt={`Punctul de întâlnire la ${upcoming.location}`} loading="lazy" />}
           </>
         ) : <p>{legacy ? 'Verifică în Telegram zilele disponibile pentru proba ta.' : 'Momentan nu este programată nicio probă. Revino pentru următoarea dată.'}</p>}
         <dl className={styles.detalii}>
-          {config.public_host && <div><dt>Te întâmpină</dt><dd>{config.public_host}</dd></div>}
           {config.bring_text && <div><dt>Ce să aduci</dt><dd>{config.bring_text}</dd></div>}
           {config.trial_price && <div><dt>Costul probei</dt><dd>{config.trial_price}</dd></div>}
         </dl>

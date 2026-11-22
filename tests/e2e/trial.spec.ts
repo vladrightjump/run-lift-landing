@@ -12,7 +12,7 @@ for (const width of [375, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       network.use(...createHandlers({
         public_trial_config: { enabled: true, bot_username: config.bot_username, contact_text: config.contact_text,
-          public_host: 'Ana', bring_text: 'Apă și prosop', next_session: { starts_at: '2099-01-14T05:00:00Z', location: 'Intrarea nord', photo: null } },
+          bring_text: 'Apă și prosop', next_session: { starts_at: '2099-01-14T05:00:00Z', location: 'Intrarea nord' } },
         public_homepage: null, public_training_reels: null, public_weekly_workouts: null,
       }));
       await page.goto(`/?preview=${phase}`);

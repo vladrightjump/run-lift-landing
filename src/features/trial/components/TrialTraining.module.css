@@ -28,7 +28,6 @@
 
 [data-css~="e3-root"] a.trial-training-button { color: #14200c; }
 .trial-training-copy a { color: inherit; text-underline-offset: 3px; }
-.fotografie { display: block; margin-top: 1rem; width: 100%; height: auto; }
 .detalii { display: grid; gap: .75rem; margin: 1rem 0 0; overflow-wrap: anywhere; }
 .detalii:empty { display: none; }
 .detalii dt { color: #c5c9bf; font-size: .85rem; }

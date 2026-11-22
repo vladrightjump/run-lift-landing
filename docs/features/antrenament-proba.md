@@ -16,7 +16,7 @@ Persoana rămâne la **Antrenamente → Persoane noi**, separat de membri. Botul
 
 Aplică `supabase/sql/supabase-migration-prima-proba.sql` pentru afișarea programului public. Pagina folosește aceleași 14 zile, ore și anulări ca botul. Pe o bază mai veche, zilele se pot verifica în Telegram. Când înscrierile sunt suspendate, intrarea trimite la prezentarea antrenamentului.
 
-În **Setări bot → Antrenamente de probă**, completează numele public al persoanei care întâmpină participanții și, opțional, calea către o fotografie reală publicată pe site. Fotografia este asociată cu locația din configurația botului la salvarea căii. Pentru o sesiune la altă adresă, pagina arată adresa acelei sesiuni și ascunde fotografia. Costul și echipamentul provin din câmpurile existente ale probei.
+Locul și ora provin din sesiunea disponibilă. Costul și echipamentul provin din setările existente ale probei.
 
 ## Administrare
 

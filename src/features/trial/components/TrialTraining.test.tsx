@@ -12,21 +12,19 @@ describe('intrarea la proba', () => {
     expect(screen.getByText(/Apasă Start/)).toBeDefined();
   });
   it('arată sesiunea din Chișinău, reperul real și detaliile publicate', () => {
-    const config = { enabled: true, bot_username: 'ParkTrialBot', contact_text: '', public_host: 'Ana',
+    const config = { enabled: true, bot_username: 'ParkTrialBot', contact_text: '',
       bring_text: 'Apă', trial_price: '90 MDL', next_session: {
-        starts_at: '2099-01-14T05:00:00Z', location: 'Intrarea nord', photo: '/foto/nord.jpg',
+        starts_at: '2099-01-14T05:00:00Z', location: 'Intrarea nord',
       } };
     const { rerender } = render(<TrialTraining config={config} />);
     expect(screen.getByText(/14 ianuarie 2099.*07:00/)).toBeTruthy();
-    expect(screen.getByText('Ana')).toBeTruthy();
     expect(screen.getByText('Apă')).toBeTruthy();
     expect(screen.getByText('90 MDL')).toBeTruthy();
-    expect(screen.getByRole('img', { name: /Intrarea nord/ }).getAttribute('src')).toBe('/foto/nord.jpg');
+    expect(screen.getByRole('link', { name: 'Intrarea nord' }).getAttribute('href')).toContain('Intrarea%20nord');
     rerender(<TrialTraining config={{ ...config, next_session: null }} />);
     expect(screen.getByText(/nicio probă/)).toBeTruthy();
     expect(screen.queryByRole('link', { name: /Aleg ziua/ })).toBeNull();
     rerender(<TrialTraining config={{ ...config, next_session: { ...config.next_session, starts_at: '2020-01-01T00:00:00Z' } }} />);
-    expect(screen.queryByRole('img')).toBeNull();
     expect(screen.queryByText(/Intrarea nord/)).toBeNull();
   });
   it('nu publica CTA dezactivat sau username invalid', () => {

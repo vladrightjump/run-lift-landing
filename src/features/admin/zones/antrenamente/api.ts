@@ -299,7 +299,6 @@ export const marcheazaComandaVerificata = (token: string, comanda: string): Prom
 
 
 export type TrialConfig = {
-  public_host?: string; meeting_photo?: string;
   message_texts?: Record<string, string>;
   enabled: boolean; bot_username: string; welcome_text: string; trial_conditions: string;
   trial_price: string; bring_text: string; continuation_conditions: string;
