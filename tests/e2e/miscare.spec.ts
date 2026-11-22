@@ -136,6 +136,30 @@ test.describe('Mișcare — efecte legate de scroll', () => {
       .toBeGreaterThan(0.05);
   });
 
+  test('scrollul în sus pe mobil scade progresul și readuce textul din hero', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/?preview=landing');
+    await settle(page);
+
+    const progress = () => scaleX(page, '[data-css~="e3-progress"]');
+    const heroOffset = () => translateY(page, '[data-css~="e3-hero-copy"]');
+    await scrollTo(page, 1200);
+    await expect.poll(heroOffset).toBeLessThan(-5);
+    const progressBefore = await progress();
+    expect(progressBefore).toBeGreaterThan(0.05);
+
+    await page.mouse.move(24, 300);
+    await page.mouse.wheel(0, -500);
+    await expect.poll(progress).toBeLessThan(progressBefore);
+    expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
+
+    await page.keyboard.press('Home');
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+    await expect.poll(progress).toBeLessThan(0.02);
+    await expect.poll(heroOffset).toBe(0);
+    await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+  });
+
   test('titlurile de secțiune se dezvăluie complet, nu rămân tăiate', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);

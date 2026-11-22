@@ -162,6 +162,33 @@ test.describe('Despre noi — conținut', () => {
     await expect(nav.getByRole('link', { name: 'Povestea noastră' })).toBeInViewport({ ratio: 1 });
   });
 
+  test('tastele End și Home păstrează pagina și cuprinsul funcționale pe mobil', async ({ page, network }) => {
+    network.use(rpcResponse('public_trial_config', { enabled: false }));
+    await page.setViewportSize({ width: 390, height: 844 });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+
+    await page.goto('/despre-noi');
+    await expect(page.getByRole('link', { name: /Deschide în Google Maps/ })).toBeAttached();
+    await expect(page.locator('#prima-vizita').getByRole('link', { name: 'Ține-mă la curent' })).toBeAttached();
+    await page.evaluate(async () => { await document.fonts.ready; });
+
+    const nav = page.getByRole('navigation', { name: 'Pe această pagină' });
+    const firstLink = nav.getByRole('link', { name: 'Povestea noastră' });
+    const noutati = nav.getByRole('link', { name: 'Noutăți' });
+    await page.keyboard.press('End');
+    await expect(noutati).toHaveAttribute('aria-current', 'location');
+    await expect(noutati).toBeInViewport({ ratio: 1 });
+    await expect(firstLink).not.toBeInViewport();
+
+    await page.keyboard.press('Home');
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+    await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+    await expect(firstLink).toBeInViewport({ ratio: 1 });
+    await expect(nav.locator('[aria-current]')).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
   test('filmarea rămâne în pauză după trecerea de la lățime mobilă la desktop', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/despre-noi');
