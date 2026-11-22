@@ -49,19 +49,47 @@ test.describe('Despre noi — conținut', () => {
   test('afișează hero, secțiunile și valorile', async ({ page }) => {
     await page.goto('/despre-noi');
     await expect(page.locator("[data-css~=\"dn-kicker\"]")).toHaveText(/cine suntem/i);
-    await expect(page.locator("[data-css~=\"dn-hero-title\"]")).toContainText('Mai mult decât');
+    await expect(page.locator("[data-css~=\"dn-hero-title\"]")).toContainText('Run + Lift');
 
     for (const titlu of [
       'Povestea noastră',
       'Comunitatea',
       'Cum arată un antrenament',
+      'Prima vizită',
       'Unde ne antrenăm',
       'Vrei mai multe informații?',
     ]) {
       await expect(page.locator("[data-css~=\"dn-section-head\"] h2", { hasText: titlu })).toBeVisible();
     }
     await expect(page.locator("[data-css~=\"dn-value-card\"]")).toHaveCount(3);
-    await expect(page.locator("[data-css~=\"dn-stat\"]")).toHaveCount(3);
+    await expect(page.locator('#comunitate li')).toHaveCount(3);
+  });
+
+  for (const width of [375, 1280]) {
+    test(`cuprinsul duce la prima vizită și rezervarea în Telegram la ${width}px`, async ({ page, network }) => {
+      await page.setViewportSize({ width, height: 800 });
+      network.use(rpcResponse('public_trial_config', { enabled: true, bot_username: 'ParkTrialBot', contact_text: '' }));
+      await page.goto('/despre-noi');
+      const cuprins = page.getByRole('navigation', { name: 'Pe această pagină' });
+      await cuprins.getByRole('link', { name: 'Prima vizită' }).click();
+      await expect(page).toHaveURL(/#prima-vizita$/);
+      const prima = page.locator('#prima-vizita');
+      await expect(prima.getByRole('heading', { name: 'Prima vizită' })).toBeInViewport();
+      await prima.getByText('Ce fac dacă mi se schimbă programul?').click();
+      await expect(prima.getByText(/anula rezervarea/)).toBeVisible();
+      await expect(prima.getByRole('link', { name: /Aleg ziua în Telegram/ })).toHaveAttribute('href', 'https://t.me/ParkTrialBot?start=trial_home');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    });
+  }
+
+  test('legătura distribuită pentru prima vizită oferă noutăți când proba e oprită', async ({ page, network }) => {
+    network.use(rpcResponse('public_trial_config', { enabled: false }));
+    await page.goto('/despre-noi#prima-vizita');
+    const prima = page.locator('#prima-vizita');
+    await expect(prima.getByRole('heading', { name: 'Prima vizită' })).toBeInViewport();
+    await expect(prima.getByRole('link', { name: /Telegram/ })).toHaveCount(0);
+    await prima.getByRole('link', { name: 'Ține-mă la curent' }).click();
+    await expect(page.getByLabel('Prenume', { exact: true })).toBeInViewport();
   });
 
   /**
@@ -109,11 +137,7 @@ test.describe('Despre noi — conținut', () => {
     await expect(ig).toHaveAttribute('rel', /noopener/);
   });
 
-  test('cere de la Supabase EXACT două lucruri: clipurile și locul', async ({ page, network }) => {
-    // Pagina a fost cândva complet fără backend. Acum banda cu clipuri se
-    // administrează din `/admin`, iar locul vine din setările botului — și numai
-    // atât. Testul păzește granița, nu absența: un provider de config pus din
-    // greșeală peste pagină ar aduce `public_config` și ar cădea aici.
+  test('citește numai clipurile, locul și disponibilitatea probelor', async ({ page, network }) => {
     const rute: string[] = [];
     page.on('request', (request) => {
       const pathname = new URL(request.url()).pathname;
@@ -127,6 +151,7 @@ test.describe('Despre noi — conținut', () => {
     expect([...new Set(rute)].sort()).toEqual([
       '/rest/v1/rpc/public_homepage',
       '/rest/v1/rpc/public_training_reels',
+      '/rest/v1/rpc/public_trial_config',
     ]);
   });
 
@@ -173,7 +198,7 @@ test.describe('Despre noi — conținut', () => {
     const numere = await page
       .locator("[data-css~=\"dn-section-num\"], [data-css~=\"e3-reels\"] [data-css~=\"e3-title-num\"]")
       .allTextContents();
-    expect(numere.map((n) => n.trim())).toEqual(['01', '02', '03', '04', '05', '06']);
+    expect(numere.map((n) => n.trim())).toEqual(['01', '02', '03', '04', '05', '06', '07']);
   });
 
   /**
@@ -313,8 +338,8 @@ test.describe('Despre noi — locul din setările botului', () => {
     await page.goto('/despre-noi');
     await expect(page.locator("[data-css~=\"dn-section\"]", { hasText: 'Unde ne antrenăm' })).toContainText('Sala Ironworks');
     await expect(page.locator("[data-css~=\"dn-root\"]")).not.toContainText('În aer liber, în parc');
-    await expect(page.locator("[data-css~=\"dn-stats\"]")).not.toContainText(/aer liber/i);
-    await expect(page.locator("[data-css~=\"dn-stats\"] [data-css~=\"dn-stat\"]")).toHaveCount(3);
+    await expect(page.locator('#comunitate')).not.toContainText(/aer liber/i);
+    await expect(page.locator('#comunitate li')).toHaveCount(3);
     await expect(page.locator("[data-css~=\"e3-marquee\"]").first()).not.toContainText(/aer liber/i);
   });
 
