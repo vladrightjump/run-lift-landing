@@ -30,9 +30,10 @@ export function SectionNav() {
     };
     const observe = () => {
       observer?.disconnect();
-      top = Math.round(header.getBoundingClientRect().height) + 32;
+      const headerHeight = header.getBoundingClientRect().height;
+      top = Math.round(headerHeight + (window.innerHeight - headerHeight) * 0.2);
       const below = Math.max(0, window.innerHeight - top - 1);
-      // Track the section crossing a one-pixel band just below the sticky header.
+      // Mark the section in the upper fifth of the reading area, below the sticky header.
       observer = new IntersectionObserver(readPosition, { rootMargin: '-' + top + 'px 0px -' + below + 'px 0px' });
       for (const target of targets) if (target) observer.observe(target);
       readPosition();
