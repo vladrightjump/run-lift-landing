@@ -13,6 +13,7 @@ import {
 import { Dialog } from '../../../../shared/ui/Dialog';
 import { antrenamentulUrmator, cineVine, deMarcatDeMana, raspunsul, zileAnulate } from './model';
 import { dataLunga, frazaSondaj, urmatorulSondaj } from './sondaj';
+import { JurnalVoturi } from './JurnalVoturi';
 import { useSala } from './useSala';
 import { citesteFiltruUrmatorul, uitaFiltruUrmatorul, type FiltruUrmatorul } from './filtruUrmatorul';
 
@@ -97,6 +98,8 @@ export const EcranPrezente = () => {
       ) : (
         <FaraAntrenament date={date} />
       )}
+
+      {urm?.poll_sent && <JurnalVoturi key={urm.id} sesiune={urm.id} zi={dataLunga(urm.session_date)} />}
 
       <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-anulari">
         <h3 id="sala-anulari">Zile anulate</h3>

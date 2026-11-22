@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
 import { useAdminResource } from '../../data/useAdminResource';
 import adminStyles from '../../components/AdminStyles.module.css';
-import shared from './SalaStyles.module.css';
+import styles from './JurnalVoturi.module.css';
+import { FUS } from '../../../../shared/lib/formatare';
 import { incarcaVoturi, type VotSondaj } from './api';
 
 const ora = new Intl.DateTimeFormat('ro-MD', {
-  timeZone: 'Europe/Chisinau', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  timeZone: FUS, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
 });
 const eticheta = { yes: 'Vin', no: 'Nu vin' };
 
@@ -22,22 +23,23 @@ function dupaSondaj(start: string | null, vot: string) {
 export const JurnalVoturi = ({ sesiune, zi }: { sesiune: string; zi: string }) => {
   const incarca = useCallback((token: string, signal: AbortSignal) => incarcaVoturi(token, sesiune, signal), [sesiune]);
   const { date, eroare } = useAdminResource(incarca, undefined, { queryKey: ['antrenamente', 'voturi', sesiune] });
-  // The RPC returns taps in chronological order. Only a different choice is a change.
-  const membri = new Map<string, VotSondaj[]>();
+  // SQL orders events by timestamp and log ID, including ties.
+  const ultimulRaspuns = new Map<string, VotSondaj['response']>();
+  const razganditi = new Set<string>();
+  const cronologie: { vot: VotSondaj; anterior?: VotSondaj['response'] }[] = [];
   for (const vot of date?.votes ?? []) {
-    const voturi = membri.get(vot.member_id) ?? [];
-    if (voturi.at(-1)?.response === vot.response) continue;
-    voturi.push(vot);
-    membri.set(vot.member_id, voturi);
+    const anterior = ultimulRaspuns.get(vot.member_id);
+    if (anterior === vot.response) continue;
+    if (anterior) razganditi.add(vot.member_id);
+    cronologie.push({ vot, anterior });
+    ultimulRaspuns.set(vot.member_id, vot.response);
   }
-  const cronologii = [...membri.values()].sort((a, b) => b.length - a.length);
-  const schimbari = cronologii.filter((voturi) => voturi.length > 1).length;
   return (
-    <section className={adminStyles['admin-config-grup']} aria-label="Voturile din sondaj">
-      <h3>Voturile din sondaj · {zi}</h3>
+    <section className={adminStyles['admin-config-grup']} aria-label="Cronologia voturilor">
+      <h3>Cronologia voturilor · {zi}</h3>
       {!date ? (
         <p role="status">{eroare ? 'Jurnalul voturilor nu a putut fi încărcat.' : 'Se încarcă voturile…'}</p>
-      ) : membri.size === 0 ? (
+      ) : cronologie.length === 0 ? (
         <p>Niciun vot Telegram înregistrat.</p>
       ) : (
         <>
@@ -46,23 +48,20 @@ export const JurnalVoturi = ({ sesiune, zi }: { sesiune: string; zi: string }) =
               ? `Primul sondaj înregistrat la ${ora.format(new Date(date.posted_at))} (ora Chișinăului).`
               : 'Ora publicării lipsește. Orele voturilor sunt afișate în fusul orar al Chișinăului.'}
           </p>
-          <p>Au votat <strong>{membri.size}</strong> · Și-au schimbat votul <strong>{schimbari}</strong></p>
-          <ul className={shared['admin-sala-lista']}>
-            {cronologii.map((voturi) => (
-              <li key={voturi[0].member_id} className={shared['admin-sala-rand']}>
-                <strong>{voturi[0].name}</strong>
-                <ol className={shared['admin-sala-lista']}>
-                  {voturi.map((vot, i) => (
-                    <li key={i}>
-                      {i === 0 ? eticheta[vot.response] : `${eticheta[voturi[i - 1].response]} → ${eticheta[vot.response]}`}
-                      {' · '}<time dateTime={vot.at}>{ora.format(new Date(vot.at))}</time>
-                      {dupaSondaj(date.posted_at, vot.at)}
-                    </li>
-                  ))}
-                </ol>
+          <p>Au votat <strong>{ultimulRaspuns.size}</strong> · Și-au schimbat votul <strong>{razganditi.size}</strong></p>
+          <ol className={styles.cronologie} aria-label="Voturi în ordine cronologică">
+            {cronologie.map(({ vot, anterior }, index) => (
+              <li key={index}>
+                <time dateTime={vot.at}>{ora.format(new Date(vot.at))}</time>
+                <div>
+                  <strong>{vot.name}</strong> · {anterior
+                    ? `${eticheta[anterior]} → ${eticheta[vot.response]}`
+                    : eticheta[vot.response]}
+                  {dupaSondaj(date.posted_at, vot.at)}
+                </div>
               </li>
             ))}
-          </ul>
+          </ol>
         </>
       )}
     </section>

@@ -18,24 +18,24 @@ import { JurnalVoturi } from './JurnalVoturi';
 import { useSala } from './useSala';
 
 const PERIOADE: [Period, string][] = [
-  ['month', 'Luna'],
-  ['quarter', '3 luni'],
-  ['year', 'An'],
+  ['month', '30 de zile'],
+  ['quarter', '90 de zile'],
+  ['year', '365 de zile'],
 ];
 
 type Filtru = 'toti' | StareFrecventa;
 
 const FILTRE: [Filtru, string][] = [
   ['toti', 'Toți'],
-  ['activ', 'Activi'],
-  ['inactiv', 'Inactivi 2+ săpt.'],
-  ['niciodata', 'N-au venit'],
+  ['activ', 'Au confirmat recent'],
+  ['inactiv', 'Ultima confirmare acum peste 14 zile'],
+  ['niciodata', 'Fără confirmări'],
 ];
 
 const ETICHETE_STARE: Record<StareFrecventa, string> = {
-  activ: 'activ',
-  inactiv: 'inactiv 2+ săpt.',
-  niciodata: 'n-a venit',
+  activ: 'a confirmat recent',
+  inactiv: 'peste 14 zile de la confirmare',
+  niciodata: 'fără confirmări',
 };
 
 const CLASA_STARE: Record<StareFrecventa, string> = {
@@ -66,12 +66,15 @@ export const EcranAnaliza = () => {
     const felie = filterByPeriod(toate, perioada, acum)
       .slice()
       .sort((a, b) => a.session_date.localeCompare(b.session_date));
+    const anterioare = filterPrevPeriod(toate, perioada, acum);
     const defalcari = felie.map((s) => sessionBreakdown(s));
     return {
       toate,
       felie,
       defalcari,
-      rezumat: summarize(felie, filterPrevPeriod(toate, perioada, acum)),
+      rezumat: summarize(felie, anterioare),
+      totalEstimat: felie.some((s) => s.poll_roster == null),
+      comparatieEstimata: anterioare.some((s) => s.poll_roster == null),
       zile: peZileleSaptamanii(felie, defalcari),
       totalVin: defalcari.reduce((a, b) => a + b.yes, 0),
       totalNu: defalcari.reduce((a, b) => a + b.no, 0),
@@ -132,7 +135,7 @@ export const EcranAnaliza = () => {
 
       <dl className={sharedSala['admin-sala-cifre'] + ' ' + styles['admin-sala-cifre--patru']} data-css="admin-sala-cifre admin-sala-cifre--patru">
         <div className={sharedSala['admin-sala-cifra'] + ' ' + sharedSala['admin-sala-cifra--vin']} data-css="admin-sala-cifra admin-sala-cifra--vin">
-          <dt>confirmări medii</dt>
+          <dt>au răspuns „Vin”, în medie</dt>
           <dd>{rezumat.avgPct}%</dd>
           <span className={styles['admin-sala-sub']} data-css="admin-sala-sub">
             {rezumat.hasPrevious
@@ -146,7 +149,7 @@ export const EcranAnaliza = () => {
           <span className={styles['admin-sala-sub']} data-css="admin-sala-sub">în perioadă</span>
         </div>
         <div className={sharedSala['admin-sala-cifra']} data-css="admin-sala-cifra">
-          <dt>record</dt>
+          <dt>cele mai multe confirmări</dt>
           <dd>{rezumat.record?.count ?? 0}</dd>
           <span className={styles['admin-sala-sub']} data-css="admin-sala-sub">{rezumat.record ? dataScurta(rezumat.record.date) : '—'}</span>
         </div>
@@ -156,6 +159,14 @@ export const EcranAnaliza = () => {
           <span className={styles['admin-sala-sub']} data-css="admin-sala-sub">în medie, pe antrenament</span>
         </div>
       </dl>
+
+      {felie.length > 0 && (calc.totalEstimat || calc.comparatieEstimata) && (
+        <p className={adminStyles['admin-config-hint']}>
+          {calc.totalEstimat
+            ? 'Unele totaluri de membri din perioada selectată sunt estimate.'
+            : 'Comparația cu perioada anterioară folosește totaluri de membri estimate.'}
+        </p>
+      )}
 
       {felie.length === 0 ? (
         <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Niciun antrenament în perioada asta.</p>
@@ -186,24 +197,30 @@ export const EcranAnaliza = () => {
             </div>
             {sesiuneAleasa && defAleasa && (
               <p className={sharedSala['admin-sala-cand']} data-css="admin-sala-cand" aria-live="polite">
-                <strong>{ziSiData(sesiuneAleasa.session_date)}</strong>: {defAleasa.yes} din {defAleasa.total} membri confirmă ({defAleasa.yesPct}%) ·{' '}
-                {defAleasa.no} nu ({defAleasa.noPct}%) · {defAleasa.none} fără răspuns ({defAleasa.nonePct}%)
+                <strong>{ziSiData(sesiuneAleasa.session_date)}</strong> · Membri incluși în calcul: {defAleasa.total} ·{' '}
+                {defAleasa.yes} „Vin” ({defAleasa.yesPct}%) ·{' '}
+                {defAleasa.no} „Nu vin” ({defAleasa.noPct}%) · {defAleasa.none} fără răspuns ({defAleasa.nonePct}%)
               </p>
             )}
-            {sesiuneAleasa && sesiuneAleasa.poll_roster == null && (
-              <p className={adminStyles['admin-config-hint']}>Total estimat din voturile înregistrate și membrii verificați în grup.</p>
+            {sesiuneAleasa && (
+              <p className={adminStyles['admin-config-hint']}>
+                {sesiuneAleasa.poll_roster == null
+                  ? 'Total estimat din voturile înregistrate și membrii verificați în grup.'
+                  : 'Total calculat din lista salvată la sondaj și voturile înregistrate.'}
+                {' '}Administratorii sunt excluși.
+              </p>
             )}
             <svg className={styles['admin-sala-curba']} data-css="admin-sala-curba" viewBox="0 0 100 44" preserveAspectRatio="none" aria-hidden="true">
               <polyline points={puncte.join(' ')} />
             </svg>
-            <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Curba: procentul celor care vin, de la primul antrenament din perioadă la ultimul.</p>
+            <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Curba arată procentul membrilor care au răspuns „Vin” la fiecare sondaj.</p>
           </section>
 
           {sesiuneAleasa && <JurnalVoturi key={sesiuneAleasa.id} sesiune={sesiuneAleasa.id} zi={dataLunga(sesiuneAleasa.session_date)} />}
 
           <div className={sharedSala['admin-sala-coloane'] + ' ' + styles['admin-sala-coloane--doua']} data-css="admin-sala-coloane admin-sala-coloane--doua">
             <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-zile">
-              <h3 id="sala-zile">Pe zile</h3>
+              <h3 id="sala-zile">Confirmări pe zile</h3>
               <ul className={sharedSala['admin-sala-lista']} data-css="admin-sala-lista">
                 {calc.zile.map((z) => (
                   <li key={z.zi} className={sharedSala['admin-sala-rand']} data-css="admin-sala-rand">
@@ -253,7 +270,7 @@ export const EcranAnaliza = () => {
             value={sortare}
             onChange={(e) => setSortare(e.target.value as 'prezente' | 'nume')}
           >
-            <option value="prezente">După prezențe</option>
+            <option value="prezente">După confirmări</option>
             <option value="nume">Alfabetic</option>
           </select>
         </div>
@@ -299,7 +316,7 @@ export const EcranAnaliza = () => {
                           <li
                             key={h.data}
                             className={CLASA_PUNCT[h.raspuns ?? 'tacere']}
-                            title={`${ziSiData(h.data)}: ${h.raspuns === 'yes' ? 'a venit' : h.raspuns === 'no' ? 'nu' : 'fără răspuns'}`}
+                            title={`${ziSiData(h.data)}: ${h.raspuns === 'yes' ? 'Vin' : h.raspuns === 'no' ? 'Nu vin' : 'fără răspuns'}`}
                           />
                         ))}
                       </ol>

@@ -1,0 +1,43 @@
+.cronologie {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.cronologie li {
+  position: relative;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0 0 1rem 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.cronologie li:not(:last-child)::before {
+  position: absolute;
+  content: '';
+  top: 0.5rem;
+  bottom: -0.5rem;
+  left: 0.25rem;
+  border-left: 1px solid var(--pa-line);
+}
+
+.cronologie li::after {
+  position: absolute;
+  content: '';
+  top: 0.35rem;
+  left: 0;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--pa-accent-text);
+}
+
+.cronologie time {
+  color: var(--pa-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .cronologie li { grid-template-columns: minmax(0, 1fr); gap: 0.15rem; }
+}

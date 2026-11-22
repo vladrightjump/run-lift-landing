@@ -81,7 +81,7 @@ export const ZONE: ZonaRegistru[] = [
           {
             cheie: 'grup-analiza',
             eticheta: 'Istoric și analiză',
-            descriere: 'Antrenamentele trecute, cine vine des și cine s-a rărit',
+            descriere: 'Răspunsurile la sondajele de antrenament și istoricul confirmărilor',
           },
         ],
       },

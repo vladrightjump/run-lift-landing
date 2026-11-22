@@ -86,6 +86,24 @@ test.describe('grupul din parc, pe telefon', () => {
     });
   }
 
+  test('cronologia sondajului deschis arată voturile și schimbările în ordine pe telefon', async ({ page, network }) => {
+    await deschideAdminul(page, network, '#acum');
+    network.use(rpcHandler('admin_sala_voturi', () => HttpResponse.json({
+      posted_at: '2026-11-20T09:00:00Z',
+      votes: [
+        { member_id: 'm0', name: 'Ana Rusu', response: 'yes', at: '2026-11-20T09:02:00Z' },
+        { member_id: 'm1', name: 'Ion Ceban', response: 'no', at: '2026-11-20T09:04:00Z' },
+        { member_id: 'm0', name: 'Ana Rusu', response: 'no', at: '2026-11-20T09:10:00Z' },
+      ],
+    })));
+    await page.goto('/admin#grup-prezente');
+    const voturi = page.getByRole('list', { name: 'Voturi în ordine cronologică' }).getByRole('listitem');
+    await expect(voturi).toHaveText([
+      /11:02.*Ana Rusu · Vin/, /11:04.*Ion Ceban · Nu vin/, /11:10.*Ana Rusu · Vin → Nu vin/,
+    ]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  });
+
   test('#acum: fără scroll orizontal la 375px, cu cardul antrenamentului', async ({ page, network }) => {
     await deschideAdminul(page, network, '#acum');
     await expect(page.getByRole('region', { name: /după sondaj/ })).toBeVisible();
