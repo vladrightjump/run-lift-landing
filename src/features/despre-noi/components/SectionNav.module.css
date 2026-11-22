@@ -10,7 +10,7 @@
   width: max-content;
   position: relative;
   display: flex;
-  gap: clamp(10px, 1.6vw, 28px);
+  gap: var(--section-nav-gap, clamp(10px, 1.6vw, 28px));
   padding-inline: 5px;
 }
 .nav a {
@@ -33,8 +33,4 @@
   background: var(--e3-accent);
   transform-origin: left;
   pointer-events: none;
-}
-@media (max-width: 960px) {
-  .nav { grid-column: 1 / -1; grid-row: 2; }
-  .track { gap: 20px; }
 }

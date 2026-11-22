@@ -7,6 +7,7 @@ import styles from './HeroFilm.module.css';
 
 export function HeroFilm() {
   const video = useRef<HTMLVideoElement>(null);
+  const [source] = useState(heroVideoSrc);
   const [playing, setPlaying] = useState(false);
   const [failed, setFailed] = useState(false);
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -24,7 +25,7 @@ export function HeroFilm() {
           <video ref={video} className={styles.film + ' ' + layout['e3-hero-video']} data-css="dn-hero-video e3-hero-video"
             autoPlay muted loop playsInline preload="metadata" poster={HERO_POSTER} aria-hidden="true"
             onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={() => setFailed(true)}
-            src={heroVideoSrc()} />
+            src={source} />
           <button type="button" className={styles.control}
             aria-label={playing ? 'Pune filmarea pe pauză' : 'Pornește filmarea'}
             onClick={() => {
