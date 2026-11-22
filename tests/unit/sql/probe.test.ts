@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vitest';
+import { beforeAll, afterAll, beforeEach, describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { porneste, reseteaza, caRol, ADMIN_TOKEN, type BazaTest } from './db';
@@ -153,22 +153,37 @@ describe('trial onboarding transactions', () => {
  });
 });
 
-it('oferă prima probă eligibilă din orarul botului cu locul și ora sesiunii concrete', async () => {
- const azi = "(now() at time zone 'Europe/Chisinau')::date";
+it.each([
+ { vineri: '2026-03-27', sambata: '2026-03-28', oraSesiunii: '2026-03-28T06:30:00Z', oraRecurenta: '2026-03-29T04:15:00Z' },
+ { vineri: '2026-10-23', sambata: '2026-10-24', oraSesiunii: '2026-10-24T05:30:00Z', oraRecurenta: '2026-10-25T05:15:00Z' },
+])('alege proba și ora locală în weekendul schimbării orei din $sambata', async ({
+ vineri, sambata, oraSesiunii, oraRecurenta,
+}) => {
+ const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.parse(vineri + 'T04:00:00Z'));
  const next = async () => (await caRol(db, 'anon', () => db.query<{s: {location: string; starts_at: string} | null}>(
    "select runlift.public_trial_config()->'next_session' s"
  ))).rows[0].s;
- await db.exec(`update public.bot_config set location='Intrare nord', training_time='07:15';
-   insert into public.training_sessions(session_date, status) values (${azi},'done'),(${azi}+1,'cancelled');
-   insert into public.training_sessions(session_date, location, starts_at) values (${azi}+2,'Intrare sud','08:30');`);
- await db.exec('update public.trial_config set enabled=false');
- expect(await next()).toBeNull();
- await db.exec('update public.trial_config set enabled=true');
- expect(await next()).toMatchObject({location:'Intrare sud', starts_at:expect.any(String)});
- await db.exec(`update public.training_sessions set status='cancelled' where session_date=${azi}+2`);
- expect(await next()).toMatchObject({location:'Intrare nord', starts_at:expect.any(String)});
- await db.exec("update public.bot_config set poll_days='{}'");
- expect(await next()).toBeNull();
+ try {
+  // Sondajul de sâmbătă programează antrenamentul de duminică.
+  await db.exec(`update public.bot_config set poll_days='{4,6}', location='Intrare nord', training_time='07:15';
+    update public.trial_config set enabled=false, permissions_verified_at=now();`);
+  await db.query("insert into public.training_sessions(session_date, status) values ($1,'done')", [vineri]);
+  await db.query("insert into public.training_sessions(session_date, location, starts_at) values ($1,'Intrare sud','08:30')", [sambata]);
+  expect(await next()).toBeNull();
+  await db.exec('update public.trial_config set enabled=true');
+  const special = await next();
+  expect(special?.location).toBe('Intrare sud');
+  expect(Date.parse(special!.starts_at)).toBe(Date.parse(oraSesiunii));
+
+  await db.query("update public.training_sessions set status='cancelled' where session_date=$1", [sambata]);
+  const recurent = await next();
+  expect(recurent?.location).toBe('Intrare nord');
+  expect(Date.parse(recurent!.starts_at)).toBe(Date.parse(oraRecurenta));
+  await db.exec("update public.bot_config set poll_days='{}'");
+  expect(await next()).toBeNull();
+ } finally {
+  clock.mockRestore();
+ }
 });
 
 it('validează și păstrează mesajele personalizate numai pentru admini', async () => {

@@ -1,4 +1,4 @@
-import { rpc } from '../../../shared/lib/rpc';
+import { rpcStrict } from '../../../shared/lib/rpc';
 
 export type PublicTrialConfig = {
   enabled: boolean;
@@ -16,6 +16,14 @@ export function trialLink(username: string, source: 'home' | 'share' | 'instagra
 }
 
 export async function loadPublicTrial(signal?: AbortSignal): Promise<PublicTrialConfig | null> {
-  const data = await rpc<PublicTrialConfig>('public_trial_config', {}, signal);
-  return data?.enabled && typeof data.bot_username === 'string' && trialLink(data.bot_username) ? data : null;
+  const data = await rpcStrict<PublicTrialConfig | null>('public_trial_config', {}, signal);
+  if (data === null || data.enabled === false) return null;
+  if (data.enabled !== true || typeof data.bot_username !== 'string' || !trialLink(data.bot_username)) {
+    throw new Error('invalid_public_trial_config');
+  }
+  const session = data.next_session;
+  if (session != null && (typeof session.starts_at !== 'string' || !Number.isFinite(Date.parse(session.starts_at)))) {
+    throw new Error('invalid_public_trial_session');
+  }
+  return data;
 }
