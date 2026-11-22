@@ -45,6 +45,7 @@ export default defineRailway(() => {
     env: {
       TELEGRAM_BOT_TOKEN: preserve(),
       TELEGRAM_WEBHOOK_SECRET: preserve(),
+      BOT_MONITOR_TOKEN: preserve(),
       TELEGRAM_GROUP_CHAT_ID: preserve(),
       TELEGRAM_ADMIN_CHAT_IDS: preserve(),
       SUPABASE_URL: preserve(),

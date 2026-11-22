@@ -24,6 +24,24 @@ export function isDue(
   return Array.isArray(days) && days.includes(weekday) && hhmm === time;
 }
 
+// A local minute can occur twice when clocks go back. Continue the minute
+// ticks, but run each time-based action only once for that local date and time.
+export function localScheduleClaims() {
+  let day = "";
+  const claims = new Set<string>();
+  return (date: string, hhmm: string, action: string): boolean => {
+    if (date < day) return false;
+    if (date !== day) {
+      day = date;
+      claims.clear();
+    }
+    const key = `${hhmm}:${action}`;
+    if (claims.has(key)) return false;
+    claims.add(key);
+    return true;
+  };
+}
+
 // ── The day's training drives the automations (KTD12 in the training-day plan)
 
 // The auto-reminder goes two hours before today's training — its own time, so

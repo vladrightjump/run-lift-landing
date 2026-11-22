@@ -21,9 +21,12 @@ export function todayInTz(tz: string = GYM_TZ): string {
 
 // The calendar day after today (in the given timezone), as "YYYY-MM-DD".
 export function tomorrowInTz(tz: string = GYM_TZ): string {
-  const [y, m, d] = todayInTz(tz).split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + 1);
+  return shiftLocalDate(todayInTz(tz), 1);
+}
+
+export function shiftLocalDate(date: string, days: number): string {
+  const dt = new Date(`${date}T00:00:00Z`);
+  dt.setUTCDate(dt.getUTCDate() + days);
   return dt.toISOString().slice(0, 10);
 }
 
@@ -44,4 +47,21 @@ export function localWeekdayAndTime(
   const mm = parts.find((p) => p.type === "minute")?.value ?? "00";
   if (hh === "24") hh = "00"; // some ICU builds render midnight as 24
   return { weekday, hhmm: `${hh.padStart(2, "0")}:${mm.padStart(2, "0")}` };
+}
+
+// Project local calendar minutes onto UTC. Checking the offsets on both sides
+// of the date handles the spring gap and the two fall occurrences in Chișinău.
+export function localMinuteInstant(date: string, hhmm: string): number | null {
+  const anchor = Date.parse(`${date}T${hhmm}:00Z`);
+  if (!Number.isFinite(anchor)) return null;
+  const day = 86_400_000;
+  function localMinute(at: number): string {
+    const instant = new Date(at);
+    return `${ymdInTz(instant)}T${localWeekdayAndTime(GYM_TZ, instant).hhmm}`;
+  }
+  const matches = [anchor - day, anchor, anchor + day].map((at) => {
+    const offset = Date.parse(`${localMinute(at)}:00Z`) - at;
+    return anchor - offset;
+  }).filter((at) => localMinute(at) === `${date}T${hhmm}`);
+  return matches.length ? Math.min(...matches) : null;
 }

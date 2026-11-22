@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { trialCopy } from './trial-copy.js';
+import { observeOperation, observeTelegram, observeDatabase } from './log.js';
 import { createAdminClient } from './supabase.js';
 import { trialSessions, type SessionRow } from './sessions.js';
 import { GYM_TZ, todayInTz, localWeekdayAndTime } from './tz.js';
@@ -23,10 +24,12 @@ export function missingTrialSchema(error: { code?: string } | null): boolean {
   return error?.code === '42P01' || error?.code === 'PGRST205' || error?.code === 'PGRST202';
 }
 export async function trialConfig(db: TrialDb = createAdminClient()): Promise<TrialConfig | null> {
-  const { data, error } = await db.from('trial_config').select('*').eq('id', 1).maybeSingle();
-  if (missingTrialSchema(error)) return null;
-  if (error) throw error;
-  return data as TrialConfig | null;
+  return observeOperation('trial.read_config', 'supabase', async () => {
+    const { data, error } = await db.from('trial_config').select('*').eq('id', 1).maybeSingle();
+    if (missingTrialSchema(error)) return null;
+    if (error) throw error;
+    return data as TrialConfig | null;
+  });
 }
 async function send(id: number, text: string, kb?: InlineKeyboard) {
   const r = await sendTrialText(id, text, kb);
@@ -249,23 +252,29 @@ export async function trialOrganizerText(actor: number, text: string): Promise<b
 
 export async function verifyTrialPermissions(db: TrialDb, c: TrialConfig): Promise<boolean> {
   const group = process.env.TELEGRAM_GROUP_CHAT_ID;
-  if (!group || !c.bot_username || !c.organizer_telegram_id || !await organizer(db, c.organizer_telegram_id)) {
-    const { error } = await db.from('trial_config').update({ permissions_verified_at: null }).eq('id', 1);
-    if (error) throw error;
+  const organizerId = c.organizer_telegram_id;
+  const clear = () => observeDatabase('trial.write_permissions', () =>
+    db.from('trial_config').update({ permissions_verified_at: null }).eq('id', 1),
+  );
+  if (!group || !c.bot_username || !organizerId ||
+      !await observeOperation('trial.read_organizer', 'supabase', () => organizer(db, organizerId))) {
+    await clear();
     return false;
   }
-  const me = await getMe();
+  const me = await observeTelegram('trial.get_bot_identity', getMe);
   if (!me.ok || !me.result || me.result.username?.toLowerCase() !== c.bot_username.toLowerCase()) {
-    const { error } = await db.from('trial_config').update({ permissions_verified_at: null }).eq('id', 1);
-    if (error) throw error;
+    await clear();
     return false;
   }
-  const permission = await getBotGroupPermissions(group, me.result.id);
+  const botId = me.result.id;
+  const permission = await observeTelegram('trial.get_group_permissions', () => getBotGroupPermissions(group, botId));
   const valid = permission.ok && (permission.result?.status === 'creator' || (permission.result?.status === 'administrator' && permission.result.can_invite_users === true));
-  const { error } = await db.from('trial_config').update({ permissions_verified_at: valid ? new Date().toISOString() : null }).eq('id', 1).eq('bot_username', c.bot_username).eq('organizer_telegram_id', c.organizer_telegram_id);
-  if (error) throw error;
+  await observeDatabase('trial.write_permissions', () => db.from('trial_config')
+    .update({ permissions_verified_at: valid ? new Date().toISOString() : null })
+    .eq('id', 1).eq('bot_username', c.bot_username).eq('organizer_telegram_id', organizerId));
   return valid;
 }
+
 export async function trialJoinRequest(request: { chat: { id: number }; from: TrialUser; invite_link?: { invite_link: string } }): Promise<void> {
   const group = process.env.TELEGRAM_GROUP_CHAT_ID;
   if (String(request.chat.id) !== group || !request.invite_link) return;

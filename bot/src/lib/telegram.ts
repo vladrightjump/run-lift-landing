@@ -15,6 +15,7 @@ interface TelegramResponse<T = unknown> {
   result?: T;
   description?: string;
   error_code?: number;
+  http_status?: number;
 }
 
 function botToken(): string {
@@ -26,14 +27,24 @@ function botToken(): string {
 async function call<T>(
   method: string,
   body: Record<string, unknown>,
+  signal = AbortSignal.timeout(10_000),
 ): Promise<TelegramResponse<T>> {
   const res = await fetch(`${API_BASE}/bot${botToken()}/${method}`, {
     method: "POST",
-    signal: AbortSignal.timeout(10_000),
+    signal,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return (await res.json()) as TelegramResponse<T>;
+  const invalid = () => Object.assign(new SyntaxError("Invalid Telegram response"), { http_status: res.status });
+  const reply = await res.json().catch(() => { throw invalid(); }) as TelegramResponse<T> | null;
+  if (typeof reply?.ok !== "boolean" || (reply.ok && !res.ok)) throw invalid();
+  if (!reply.ok) {
+    const code = reply.error_code;
+    if (typeof code !== "number" || !Number.isInteger(code) || code < 400 || code > 599 ||
+        (!res.ok && code !== res.status)) throw invalid();
+    return { ...reply, http_status: res.status };
+  }
+  return reply;
 }
 
 interface SentMessage {
@@ -62,13 +73,19 @@ export async function editMessageText(
     reply_markup?: { inline_keyboard: InlineKeyboard };
     parse_mode?: "HTML";
   },
+  signal?: AbortSignal,
 ): Promise<TelegramResponse> {
   return call("editMessageText", {
     chat_id: chatId,
     message_id: messageId,
     text,
     ...options,
-  });
+  }, signal);
+}
+
+export function isUnchangedEdit(response: TelegramResponse): boolean {
+  return !response.ok && response.error_code === 400
+    && /^Bad Request: message is not modified(?::|$)/.test(response.description ?? "");
 }
 
 export interface WebhookInfo {
@@ -109,11 +126,12 @@ export async function unbanChatMember(
 export async function answerCallbackQuery(
   callbackQueryId: string,
   text?: string,
+  signal?: AbortSignal,
 ): Promise<TelegramResponse> {
   return call("answerCallbackQuery", {
     callback_query_id: callbackQueryId,
     ...(text ? { text } : {}),
-  });
+  }, signal);
 }
 
 // The command menu ("/" in the chat). With a chat scope it shows only in that

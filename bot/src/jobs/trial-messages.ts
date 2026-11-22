@@ -1,3 +1,4 @@
+import { botFailure, observeOperation, observeTelegram, observeDatabase, unreportedFailure } from '../lib/log.js';
 import { trialCopy } from '../lib/trial-copy.js';
 import { createAdminClient } from '../lib/supabase.js';
 import { sendTrialText, createTrialInvite, getChatMember, revokeInvite, type InlineKeyboard } from '../lib/telegram.js';
@@ -37,69 +38,114 @@ export function messageStillRelevant(m: Pick<TrialMessage, 'booking_version' | '
   return true;
 }
 async function complete(db: TrialDb, m: TrialMessage, status: string, result: string) {
-  const { error } = await db.rpc('trial_complete_message', { p_message: m.id, p_status: status, p_result: result.slice(0, 1000) });
-  if (error) throw error;
+  const outcome = status === 'sent' || status === 'ambiguous' ? 'unconfirmed' : 'failed';
+  await observeDatabase('trial.complete_message', () =>
+    db.rpc('trial_complete_message', { p_message: m.id, p_status: status, p_result: result.slice(0, 1000) }),
+  outcome);
+}
+
+function requireTelegramResult<T>(
+  operation: string,
+  call: () => Promise<{ ok: boolean; result?: T }>,
+  outcome: 'failed' | 'unconfirmed' = 'failed',
+): Promise<T> {
+  return observeOperation(operation, 'telegram', async () => {
+    const reply = await call();
+    if (!reply.ok || !reply.result) throw reply;
+    return reply.result;
+  }, outcome);
 }
 async function invitation(db: TrialDb, p: Prospect, b: Booking): Promise<string> {
   const group = process.env.TELEGRAM_GROUP_CHAT_ID;
   if (!group || !eligibleForInvite(b)) throw new Error('Invitația nu este eligibilă');
-  const current = await getChatMember(group, p.telegram_user_id);
-  if (!current.ok || !current.result) throw new Error('Apartenența nu a putut fi verificată');
-  const { data: saved, error: savedError } = await db.from('telegram_group_memberships').select('state').eq('telegram_user_id', p.telegram_user_id).eq('chat_id', group).maybeSingle();
-  if (savedError) throw savedError;
-  if (current.result.status === 'kicked' || saved?.state === 'kicked') throw new Error('Persoana este exclusă. Nu se deblochează automat.');
-  const { data: old, error } = await db.from('trial_invitations').select('*').eq('booking_id', b.id).eq('booking_version', b.version).is('revoked_at', null).gt('expires_at', new Date(Date.now() + 60_000).toISOString()).order('created_at', { ascending: false }).limit(1).maybeSingle();
-  if (error) throw error;
+  const current = await requireTelegramResult('trial.get_invitee_membership', () => getChatMember(group, p.telegram_user_id));
+  const saved = await observeDatabase('trial.read_invitee_membership', () => db.from('telegram_group_memberships')
+    .select('state').eq('telegram_user_id', p.telegram_user_id).eq('chat_id', group).maybeSingle());
+  if (current.status === 'kicked' || saved?.state === 'kicked') throw new Error('Persoana este exclusă. Nu se deblochează automat.');
+  const old = await observeDatabase('trial.read_invitation', () => db.from('trial_invitations').select('*')
+    .eq('booking_id', b.id).eq('booking_version', b.version).is('revoked_at', null)
+    .gt('expires_at', new Date(Date.now() + 60_000).toISOString()).order('created_at', { ascending: false }).limit(1).maybeSingle());
   if (old) return old.invite_link;
   const expires = Math.floor(Date.now() / 1000) + 7 * 86400;
-  const result = await createTrialInvite(group, expires);
-  if (!result.ok || !result.result) throw new Error(result.description ?? 'Crearea invitației a eșuat');
-  const link = result.result.invite_link;
-  const { error: saveError } = await db.from('trial_invitations').insert({ prospect_id: p.id, booking_id: b.id, booking_version: b.version, telegram_user_id: p.telegram_user_id, invite_link: link, expires_at: new Date(expires * 1000).toISOString() });
-  if (saveError) { await revokeInvite(group, link); throw saveError; }
+  const result = await requireTelegramResult('trial.create_invitation', () => createTrialInvite(group, expires), 'unconfirmed');
+  const link = result.invite_link;
+  try {
+    await observeDatabase('trial.save_invitation', () => db.from('trial_invitations').insert({
+      prospect_id: p.id, booking_id: b.id, booking_version: b.version,
+      telegram_user_id: p.telegram_user_id, invite_link: link, expires_at: new Date(expires * 1000).toISOString(),
+    }));
+  } catch (error) {
+    await observeTelegram('trial.revoke_invitation', () => revokeInvite(group, link)).catch(() => {});
+    throw error;
+  }
   return link;
 }
-async function deliver(db: TrialDb, m: TrialMessage) {
-  const { data: prospect, error } = await db.from('trial_prospects').select('*').eq('id', m.prospect_id).single();
-  if (error) throw error;
-  const p = prospect as Prospect;
-  let b: Booking | null = null;
-  if (m.booking_id) {
-    const result = await db.from('trial_bookings').select('*').eq('id', m.booking_id).maybeSingle();
-    if (result.error) throw result.error;
-    b = result.data as Booking | null;
-  }
+async function prepareDelivery(db: TrialDb, m: TrialMessage) {
+  const p = await observeDatabase('trial.read_prospect', () => db.from('trial_prospects').select('*').eq('id', m.prospect_id).single()) as Prospect;
+  const b = m.booking_id ? await observeDatabase('trial.read_booking', () =>
+    db.from('trial_bookings').select('*').eq('id', m.booking_id).maybeSingle(),
+  ) as Booking | null : null;
   const participant = Number(m.recipient_telegram_id) === Number(p.telegram_user_id);
   // Re-read lease and feature switch immediately before any external write.
-  const { data: lease, error: leaseError } = await db.from('trial_messages').select('status').eq('id', m.id).single();
-  if (leaseError) throw leaseError;
+  const lease = await observeDatabase('trial.read_lease', () => db.from('trial_messages').select('status').eq('id', m.id).single());
   const freshConfig = await trialConfig(db);
-  if (lease.status !== 'processing') return;
+  if (lease?.status !== 'processing') return 'skip';
   if (!freshConfig?.enabled) return 'paused';
-  if ((!p.dm_enabled && participant) || !messageStillRelevant(m, b)) return complete(db, m, 'cancelled', 'Stare schimbată înaintea trimiterii');
-  let text: string;
-  let keyboard: InlineKeyboard | undefined;
-  if (m.kind === 'invite') text = `${trialCopy(freshConfig, 'invite')}\n${await invitation(db, p, b!)}`;
-  else ({ text, keyboard } = renderTrialMessage(m, p, b, freshConfig));
+  if ((!p.dm_enabled && participant) || !messageStillRelevant(m, b)) return 'cancelled';
+  const message = m.kind === 'invite'
+    ? { text: `${trialCopy(freshConfig, 'invite')}
+${await invitation(db, p, b!)}`, keyboard: undefined }
+    : renderTrialMessage(m, p, b, freshConfig);
+  return { ...message, participant, prospectId: p.id };
+}
+
+function canRetryTelegram(errorCode: number | undefined, attempts: number): boolean {
+  return (errorCode === 429 || (errorCode ?? 0) >= 500) && attempts < 3;
+}
+
+async function deliver(db: TrialDb, m: TrialMessage) {
+  const started = performance.now();
+  let prepared: Awaited<ReturnType<typeof prepareDelivery>>;
   try {
-    const result = await sendTrialText(m.recipient_telegram_id, text, keyboard);
-    if (result.ok && result.result) return complete(db, m, 'sent', `Telegram message ${result.result.message_id}`);
-    if (result.sentCount > 0) return complete(db, m, 'ambiguous', 'Mesaj livrat parțial. Verifică înainte de reîncercare.');
-    if (result.error_code === 403 && participant) {
-      const { error: disableError } = await db.from('trial_prospects').update({ dm_enabled: false }).eq('id', p.id);
-      if (disableError) throw disableError;
-    }
-    // Explicit Telegram rejection is safe to retry, unlike network timeouts. Limit three attempts.
-    if ((result.error_code === 429 || (result.error_code ?? 0) >= 500) && m.attempts < 3) {
-      const { error: retryError } = await db.from('trial_messages').update({ status: 'pending', lease_until: null, due_at: new Date(Date.now() + m.attempts * 60_000).toISOString(), result: result.description ?? 'Telegram unavailable' }).eq('id', m.id).eq('status', 'processing');
-      if (retryError) throw retryError;
-      return;
-    }
-    return complete(db, m, 'failed', result.description ?? 'Telegram a refuzat mesajul');
+    prepared = await prepareDelivery(db, m);
+  } catch (error) {
+    unreportedFailure('trial.prepare_message', started, error);
+    return complete(db, m, 'failed', error instanceof Error ? error.message : 'Eroare la pregătirea mesajului');
+  }
+  if (prepared === 'paused') return 'paused';
+  if (prepared === 'skip') return;
+  if (prepared === 'cancelled') return complete(db, m, 'cancelled', 'Stare schimbată înaintea trimiterii');
+
+  const sendStarted = performance.now();
+  let result: Awaited<ReturnType<typeof sendTrialText>>;
+  try {
+    result = await observeTelegram('trial.send_message',
+      () => sendTrialText(m.recipient_telegram_id, prepared.text, prepared.keyboard),
+      'unconfirmed',
+      (r) => r.sentCount > 0 ? 'partial' : canRetryTelegram(r.error_code, m.attempts) ? 'retry' : 'failed',
+    );
   } catch {
-    // sendMessage may have succeeded before the connection was lost. Keep visible for explicit review.
     return complete(db, m, 'ambiguous', 'Livrarea nu poate fi confirmată. Verifică înainte de reîncercare.');
   }
+  // If the DB write after delivery fails, leave the lease to expire into
+  // ambiguous. Recording "failed" could invite a resend of a delivered message.
+  if (result.ok) {
+    if (result.result) return complete(db, m, 'sent', `Telegram message ${result.result.message_id}`);
+    botFailure('trial.send_message', 'telegram', sendStarted, new SyntaxError(), 'unconfirmed');
+    return complete(db, m, 'ambiguous', 'Livrarea nu poate fi confirmată. Verifică înainte de reîncercare.');
+  }
+  if (result.sentCount > 0) return complete(db, m, 'ambiguous', 'Mesaj livrat parțial. Verifică înainte de reîncercare.');
+  if (result.error_code === 403 && prepared.participant) {
+    await observeDatabase('trial.disable_dm', () =>
+      db.from('trial_prospects').update({ dm_enabled: false }).eq('id', prepared.prospectId));
+  }
+  if (canRetryTelegram(result.error_code, m.attempts)) {
+    await observeDatabase('trial.requeue_message', () => db.from('trial_messages')
+      .update({ status: 'pending', lease_until: null, due_at: new Date(Date.now() + m.attempts * 60_000).toISOString(), result: result.description ?? 'Telegram unavailable' })
+      .eq('id', m.id).eq('status', 'processing'));
+    return;
+  }
+  return complete(db, m, 'failed', result.description ?? 'Telegram a refuzat mesajul');
 }
 let running = false;
 let lastPermissionCheck = 0;
@@ -121,17 +167,23 @@ export async function processTrialMessages(): Promise<void> {
       lastPermissionCheck = Date.now();
     }
     if (!permissionValid || !c.enabled) return;
-    const { data, error } = await db.rpc('trial_claim_messages', { p_limit: 10 });
-    if (error) throw error;
-    for (const m of (data ?? []) as TrialMessage[]) {
+    const data = await observeDatabase('trial.claim_messages', () => db.rpc('trial_claim_messages', { p_limit: 10 }));
+    const messages = (data ?? []) as TrialMessage[];
+    for (const m of messages) {
+      const started = performance.now();
+      let delivery;
       try {
-        if (await deliver(db, m) === 'paused') {
-          const { error: releaseError } = await db.rpc('trial_release_messages', { p_claims: (data as TrialMessage[]).map(row => ({ id: row.id, lease_until: row.lease_until })) });
-          if (releaseError) throw releaseError;
-          break;
-        }
+        delivery = await deliver(db, m);
+      } catch (error) {
+        unreportedFailure('trial.process_message', started, error);
+        continue;
       }
-      catch (e) { await complete(db, m, 'failed', e instanceof Error ? e.message : 'Eroare la pregătirea mesajului'); }
+      if (delivery === 'paused') {
+        await observeDatabase('trial.release_messages', () => db.rpc('trial_release_messages', {
+          p_claims: messages.map(row => ({ id: row.id, lease_until: row.lease_until })),
+        }));
+        break;
+      }
     }
   } finally { running = false; }
 }
