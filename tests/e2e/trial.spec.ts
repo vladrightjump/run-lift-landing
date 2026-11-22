@@ -1,4 +1,5 @@
 import { test, expect } from '../support/playwright';
+import { rpcResponse } from '../support/responses';
 import { createHandlers } from '../support/handlers';
 import { installAdminResponses } from '../support/admin';
 import { trialData } from '../support/builders/trial';
@@ -78,3 +79,34 @@ for (const width of [375, 1280]) test(`editează mesajul de probă în setări l
   await page.getByLabel('Mesaj de editat').selectOption('reminder');
   await expect(page.getByLabel('Textul mesajului de probă', { exact: true })).toHaveValue('Ne vedem mâine!\nAdu apă și energie.');
 });
+
+test('o probă întârziată afișează programul imediat ce sosește', async ({ page, network }) => {
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  network.use(rpcResponse('public_trial_config', {
+    enabled: true, bot_username: config.bot_username,
+    next_session: { starts_at: '2099-01-14T05:00:00Z', location: 'Intrarea nord' },
+  }, { onRequest: () => pending }));
+  try {
+    await page.goto('/?preview=soon', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Verificăm programul probelor…')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Vin prima dată' })).toHaveAttribute('href', '/despre-noi#prima-vizita');
+    release();
+    await expect(page.getByText(/14 ianuarie 2099.*07:00/)).toBeVisible();
+    await expect(page.getByText('Verificăm programul probelor…')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Vin prima dată' })).toHaveAttribute('href', '#prima-proba');
+  } finally { release(); }
+});
+
+for (const [caz, body, status, mesaj] of [
+  ['eroare de server', null, 503, 'Programul probelor nu este disponibil momentan.'],
+  ['înscrieri suspendate', { enabled: false }, 200, 'Înscrierile la probe sunt închise momentan.'],
+  ['orar gol', { enabled: true, bot_username: config.bot_username, next_session: null }, 200, 'Momentan nu este programată nicio probă. Revino pentru următoarea dată.'],
+] as const) {
+  test(`disponibilitatea probei pentru ${caz}`, async ({ page, network }) => {
+    network.use(rpcResponse('public_trial_config', body, { status }));
+    await page.goto('/?preview=soon');
+    await expect(page.getByText(mesaj, { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Aleg ziua în Telegram/ })).toHaveCount(0);
+  });
+}

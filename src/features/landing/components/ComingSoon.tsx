@@ -27,9 +27,14 @@ type Props = {
 
 const MARQUEE_ITEMS = ['Aleargă · Ridică · Rezistă', 'Antrenament nou', 'Run + Lift'];
 
+const TRIAL_FALLBACK_MESSAGES = {
+  pending: 'Verificăm programul probelor…',
+  error: 'Programul probelor nu este disponibil momentan.',
+  success: 'Înscrierile la probe sunt închise momentan.',
+};
 
 export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => {
-  const { config: trial, gata: trialGata } = usePublicTrialStare();
+  const { config: trial, gata: trialGata, status: trialStatus } = usePublicTrialStare();
   const { LAUNCH_EDITION_ORDINAL } = useEditionStrings();
   const { LAUNCH_DATE } = useEditionDates();
   // Implicitul nu poate sta în semnătură: vine din config, care e un hook.
@@ -168,7 +173,9 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
           {homepage.giveawayVisible && <GiveawayLink />}
         </div>
 
-        {trialGata && !trial && <p className={shared1['cs-sub']}>Următoarea probă nu are încă o dată publicată.</p>}
+        {trialGata && !trial && (
+          <p className={shared1['cs-sub']} role="status">{TRIAL_FALLBACK_MESSAGES[trialStatus]}</p>
+        )}
 
         {/*
           Doar pe ecranul dintre ediții. Pe „Coming Soon" (înainte de anunț)
