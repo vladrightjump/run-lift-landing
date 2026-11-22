@@ -1,5 +1,5 @@
 import styles from './GiveawayPage.module.css';
-import { useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { INSTAGRAM_URL } from '../../../shared/lib/config';
 import { momentComplet } from '../../../shared/lib/formatare';
 import { usePublicQuery } from '../../../shared/lib/usePublicQuery';
@@ -74,33 +74,143 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
   // stătea deschisă. Starea citită la încărcare a rămas în urmă.
   const [inchisLaTrimitere, setInchisLaTrimitere] = useState(false);
   const stare = inchisLaTrimitere ? 'inchis' : giveaway.stare;
+  const sfarsit = giveaway.ends_at === 'infinity' ? null : giveaway.ends_at;
+  const bifaRegulament = useRef<HTMLInputElement>(null);
+  const regulament = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const deschideRegulamentulDinFragment = () => {
+      const dialog = regulament.current;
+      if (window.location.hash === '#regulament' && dialog && !dialog.open) {
+        dialog.showModal();
+      }
+    };
+    deschideRegulamentulDinFragment();
+    window.addEventListener('hashchange', deschideRegulamentulDinFragment);
+    return () => window.removeEventListener('hashchange', deschideRegulamentulDinFragment);
+  }, []);
+
+  const deschideRegulamentul = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    regulament.current?.showModal();
+  };
+
+  const revinoLaFormular = () => {
+    if (window.location.hash === '#regulament') {
+      window.history.replaceState(window.history.state, '', '#inscriere');
+    }
+    bifaRegulament.current?.focus();
+  };
+
+  const premiul = (
+    <>
+      <div className={styles['gw-sponsor']} data-css="gw-sponsor">
+        <span>Împreună cu</span>
+        <img
+          className={continut.sponsor.logoNegru ? styles['gw-sponsor-logo-inversat'] : undefined}
+          src={continut.sponsor.logo}
+          alt={continut.sponsor.nume}
+        />
+      </div>
+      <p className={styles['gw-prize']}>{continut.premiu}</p>
+      <ul className={styles['gw-products']} aria-label="Produsele din pachet">
+        {continut.produse.map(({ nume, url }) => (
+          <li key={url}>
+            <a className={styles['gw-link']} href={url} target="_blank" rel="noopener noreferrer">
+              {nume}
+            </a>
+          </li>
+        ))}
+      </ul>
+      {(sfarsit !== null || stare !== 'inchis') && (
+        <p className={styles['gw-period']} data-css="gw-period">
+          {sfarsit
+            ? `Înscrieri: ${momentComplet(giveaway.starts_at)} – ${momentComplet(sfarsit)}`
+            : 'Anunțăm pe Instagram când se vor închide înscrierile.'}
+        </p>
+      )}
+    </>
+  );
+
+  const pasii = (
+    <section className={styles['gw-how']} data-css="gw-how">
+      <h2>Cum participi</h2>
+      <ol>
+        {continut.conditii.map(({ text, url }) => (
+          <li key={url}>
+            <a className={styles['gw-link']} href={url} target="_blank" rel="noopener noreferrer">
+              {text}
+            </a>
+          </li>
+        ))}
+        <li>Completează formularul de pe această pagină, o singură dată.</li>
+      </ol>
+    </section>
+  );
+
+  const dialogRegulament = (
+    <dialog
+      className={styles['gw-rules']}
+      id="regulament"
+      ref={regulament}
+      aria-labelledby="titlu-regulament"
+      onClose={revinoLaFormular}
+    >
+      <header className={styles['gw-rules-header']}>
+        <h2 id="titlu-regulament">Regulament</h2>
+        <button type="button" className={styles['gw-close']} onClick={() => regulament.current?.close()}>
+          Închide
+        </button>
+      </header>
+      <div className={styles['gw-rules-content']}>
+        {continut.regulament.map((sectiune) => (
+          <div className={styles['gw-rule']} key={sectiune.titlu}>
+            <h3>{sectiune.titlu}</h3>
+            {sectiune.paragrafe.map((paragraf) => (
+              <p key={paragraf}>{paragraf}</p>
+            ))}
+          </div>
+        ))}
+      </div>
+    </dialog>
+  );
+
+  if (stare === 'deschis') {
+    return (
+      <section className={styles['gw-registration']} id="inscriere" aria-labelledby="giveaway-title">
+        <header className={styles['gw-registration-heading']}>
+          <p>{continut.titlu}</p>
+          <h1 id="giveaway-title">Înscrie-te la giveaway</h1>
+        </header>
+        <details className={styles['gw-disclosure']}>
+          <summary>Premiul și pașii de participare</summary>
+          <div className={styles['gw-disclosure-content']}>
+            {premiul}
+            {pasii}
+          </div>
+        </details>
+        <GiveawayForm
+          sfarsit={sfarsit}
+          onInchis={() => setInchisLaTrimitere(true)}
+          bifaRegulament={bifaRegulament}
+          onRegulament={deschideRegulamentul}
+        />
+        {dialogRegulament}
+      </section>
+    );
+  }
 
   return (
     <>
       <section className={styles['gw-hero']} data-css="gw-hero">
         <p className={styles['gw-kicker']}>Giveaway</p>
         <h1 className={styles['gw-title']}>{continut.titlu}</h1>
-        <p className={styles['gw-prize']}>{continut.premiu}</p>
-        <div className={styles['gw-sponsor']} data-css="gw-sponsor">
-          <span>Împreună cu</span>
-          <img src={continut.sponsor.logo} alt={continut.sponsor.nume} />
-          <span className={styles['gw-sponsor-name']}>{continut.sponsor.nume}</span>
-        </div>
-        <p className={styles['gw-period']} data-css="gw-period">
-          Înscrieri: {momentComplet(giveaway.starts_at)} – {momentComplet(giveaway.ends_at)}
-        </p>
+        {premiul}
       </section>
 
       <div className={styles['gw-grid']} data-css="gw-grid">
-        <section className={styles['gw-how']} data-css="gw-how">
-          <h2>Cum participi</h2>
-          <ol>
-            {continut.conditii.map((conditie) => (
-              <li key={conditie}>{conditie}</li>
-            ))}
-            <li>Completează formularul de pe această pagină, o singură dată.</li>
-          </ol>
-        </section>
+        {pasii}
 
         <section className={styles['gw-entry']} data-css="gw-entry" id="inscriere">
           {stare === 'programat' && (
@@ -108,9 +218,6 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
               <h2>Încă puțin</h2>
               <p>Înscrierile încep pe {momentComplet(giveaway.starts_at)}.</p>
             </div>
-          )}
-          {stare === 'deschis' && (
-            <GiveawayForm sfarsit={giveaway.ends_at} onInchis={() => setInchisLaTrimitere(true)} />
           )}
           {stare === 'inchis' && (
             <div className={styles['gw-notice']} data-css="gw-notice">
@@ -121,17 +228,12 @@ const Giveaway = ({ giveaway, continut }: { giveaway: GiveawayPublic; continut: 
         </section>
       </div>
 
-      <section className={styles['gw-rules']} data-css="gw-rules" id="regulament">
-        <h2>Regulament</h2>
-        {continut.regulament.map((sectiune) => (
-          <div className={styles['gw-rule']} key={sectiune.titlu}>
-            <h3>{sectiune.titlu}</h3>
-            {sectiune.paragrafe.map((paragraf) => (
-              <p key={paragraf}>{paragraf}</p>
-            ))}
-          </div>
-        ))}
-      </section>
+      <div>
+        <a className={styles['gw-link']} href="#regulament" aria-haspopup="dialog" onClick={deschideRegulamentul}>
+          Citește regulamentul
+        </a>
+      </div>
+      {dialogRegulament}
     </>
   );
 };

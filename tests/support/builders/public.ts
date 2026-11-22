@@ -5,8 +5,8 @@ export const publicStats = (over: { count?: number; participants?: { nume: strin
   count: 0, participants: [], waitlist: 0, ...over,
 });
 
-export const publicHomepage = (over: { trial_first?: boolean; training_location?: string | null } = {}) => ({
-  trial_first: false, training_location: null, ...over,
+export const publicHomepage = (over: { trial_first?: boolean; training_location?: string | null; giveaway_visible?: boolean } = {}) => ({
+  trial_first: false, training_location: null, giveaway_visible: false, ...over,
 });
 
 export const publicReel = (over: Partial<ReturnType<typeof reel>> = {}) => {

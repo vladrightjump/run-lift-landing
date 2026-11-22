@@ -1,12 +1,15 @@
 import styles from './GiveawayForm.module.css';
+import type { MouseEventHandler, Ref } from 'react';
 import { momentComplet } from '../../../shared/lib/formatare';
 import { useGiveawayForm } from '../hooks/useGiveawayForm';
 
 type Props = {
-  /** Sfârșitul înscrierilor: după el e anunțat câștigătorul. */
-  sfarsit: string;
+  /** Sfârșitul înscrierilor, când e programat. */
+  sfarsit: string | null;
   /** Serverul a refuzat trimiterea fiindcă giveaway-ul s-a închis între timp. */
   onInchis: () => void;
+  bifaRegulament?: Ref<HTMLInputElement>;
+  onRegulament?: MouseEventHandler<HTMLAnchorElement>;
 };
 
 /**
@@ -17,7 +20,7 @@ type Props = {
  * anti-bot stă în `<form>`, ca la celelalte formulare publice (vezi
  * `tests/unit/antiBotSurfaces.test.tsx`).
  */
-export const GiveawayForm = ({ sfarsit, onInchis }: Props) => {
+export const GiveawayForm = ({ sfarsit, onInchis, bifaRegulament, onRegulament }: Props) => {
   const { draft, setField, errors, state, eroare, submit, hpProps } = useGiveawayForm();
 
   if (state === 'success' || state === 'duplicate') {
@@ -28,8 +31,8 @@ export const GiveawayForm = ({ sfarsit, onInchis }: Props) => {
           <>
             <h2>Ești în giveaway!</h2>
             <p>
-              Am primit participarea ta. Câștigătorul e ales după {momentComplet(sfarsit)} și e anunțat pe
-              pagina noastră de Instagram.
+              Am primit participarea ta. Câștigătorul e ales după{' '}
+              {sfarsit ? momentComplet(sfarsit) : 'închiderea înscrierilor'} și e anunțat pe pagina noastră de Instagram.
             </p>
           </>
         ) : (
@@ -41,6 +44,9 @@ export const GiveawayForm = ({ sfarsit, onInchis }: Props) => {
             </p>
           </>
         )}
+        <a className={styles['gw-rules-link']} href="#regulament" aria-haspopup="dialog" onClick={onRegulament}>
+          Citește regulamentul
+        </a>
       </div>
     );
   }
@@ -115,12 +121,16 @@ export const GiveawayForm = ({ sfarsit, onInchis }: Props) => {
       >
         <input
           type="checkbox"
+          ref={bifaRegulament}
           checked={draft.acordRegulament}
           aria-invalid={errors.acordRegulament ? true : undefined}
           onChange={(e) => setField('acordRegulament', e.target.checked)}
         />
         <span>
-          Am citit și accept <a href="#regulament">regulamentul</a> giveaway-ului.
+          Am citit și accept{' '}
+          <a className={styles['gw-rules-link']} href="#regulament" aria-haspopup="dialog" onClick={onRegulament}>
+            regulamentul
+          </a>.
         </span>
       </label>
       <label className={styles['gw-check']} data-css="gw-check">

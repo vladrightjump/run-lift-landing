@@ -59,7 +59,13 @@ export type SalaAntrenament = {
   status: 'scheduled' | 'done' | 'cancelled';
   /** Sondajul a plecat deja în grup. */
   poll_sent: boolean;
+  poll_roster?: string[] | null;
 };
+
+export type VotSondaj = { member_id: string; name: string; response: 'yes' | 'no'; at: string };
+export type JurnalSondaj = { posted_at: string | null; votes: VotSondaj[] };
+export const incarcaVoturi = (token: string, sesiune: string, signal: AbortSignal) =>
+  rpc<JurnalSondaj>('admin_sala_voturi', { p_token: token, p_sesiune: sesiune }, signal);
 
 type SalaRaspuns = {
   session_id: string;

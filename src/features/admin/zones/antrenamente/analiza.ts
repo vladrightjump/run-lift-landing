@@ -1,5 +1,6 @@
 import type { SalaDate, SalaMembru } from './api';
 import type { Breakdown, StatSession } from './statistici';
+import { sesiuniPentruStatistici } from './model';
 import { RO_DOW, ziuaSaptamanii } from './sondaj';
 
 /**
@@ -61,12 +62,13 @@ export const prezentePeMembru = (
 };
 
 /** Frecvența fiecărui membru care n-a ieșit din grup. */
-export const randuriFrecventa = (d: SalaDate): RandFrecventa[] => {
-  const total = d.antrenamente.filter((a) => a.status !== 'cancelled' && a.session_date <= d.azi).length;
+export const randuriFrecventa = (d: SalaDate, toate = sesiuniPentruStatistici(d)): RandFrecventa[] => {
+  const trecute = toate.filter((a) => a.status !== 'cancelled' && a.session_date <= d.azi);
   const { sesiuni: prezente, ultima } = prezentePeMembru(d);
   return d.membri
-    .filter((m) => m.status !== 'cancelled')
+    .filter((m) => !m.is_admin && m.status !== 'cancelled')
     .map((m) => {
+      const total = trecute.filter((a) => a.eligibleIds.has(m.id)).length;
       const n = prezente.get(m.id)?.size ?? 0;
       const u = ultima.get(m.id) ?? null;
       return { membru: m, prezente: n, total, ultima: u, stare: stareFrecventa(n, u, d.azi) };
@@ -83,8 +85,8 @@ export type IstoricMembru = {
 };
 
 /** Istoricul unui membru pe ultimele antrenamente care au avut loc. */
-export const istoricMembru = (d: SalaDate, membru: string): IstoricMembru => {
-  const sesiuni = d.antrenamente
+export const istoricMembru = (d: SalaDate, membru: string, toate = sesiuniPentruStatistici(d)): IstoricMembru => {
+  const sesiuni = toate.filter((a) => a.eligibleIds.has(membru))
     .filter((a) => a.status !== 'cancelled' && a.session_date <= d.azi)
     .sort((a, b) => b.session_date.localeCompare(a.session_date))
     .slice(0, 20);

@@ -15,7 +15,7 @@ import { porneste, reseteaza, caRol, ADMIN_TOKEN, type BazaTest } from './db';
  * Rulează pe instantaneul schemei din producție (vezi `db.ts`).
  */
 
-type Homepage = { trial_first: boolean; training_location: string | null };
+type Homepage = { trial_first: boolean; training_location: string | null; giveaway_visible: boolean };
 
 let db: BazaTest;
 
@@ -40,9 +40,19 @@ const comuta = (trialFirst: boolean, token = ADMIN_TOKEN) =>
     db.query('select runlift.admin_set_homepage_order($1, $2)', [token, trialFirst])
   );
 
+const comutaGiveaway = (vizibil: boolean | null, token = ADMIN_TOKEN) =>
+  caRol(db, 'anon', () =>
+    db.query('select runlift.admin_set_homepage_giveaway($1, $2)', [token, vizibil])
+  );
+
+const migrareGiveaway = readFileSync(
+  resolve(__dirname, '../../../supabase/sql/supabase-migration-homepage-giveaway.sql'),
+  'utf8'
+);
+
 describe('public_homepage', () => {
-  it('fără setări și fără configul botului: antrenamentul primul, fără loc', async () => {
-    expect(await citeste()).toEqual({ trial_first: false, training_location: null });
+  it('fără setări: antrenamentul primul, fără loc, cu linkul Giveaway afișat', async () => {
+    expect(await citeste()).toEqual({ trial_first: false, training_location: null, giveaway_visible: true });
   });
 
   it('locul vine din configul botului, schimbat acolo se vede imediat', async () => {
@@ -100,6 +110,36 @@ describe('admin_set_homepage_order', () => {
       'utf8'
     );
     await db.exec(migrare);
+    await db.exec(migrareGiveaway);
     expect((await citeste()).trial_first).toBe(true);
+  });
+});
+
+describe('admin_set_homepage_giveaway', () => {
+  it('salvează vizibilitatea fără să schimbe ordinea și păstrează alegerea la reaplicare', async () => {
+    await comuta(true);
+    await comutaGiveaway(false);
+    await db.exec(migrareGiveaway);
+    expect(await citeste()).toMatchObject({ trial_first: true, giveaway_visible: false });
+
+    await comuta(false);
+    expect((await citeste()).giveaway_visible).toBe(false);
+    await comutaGiveaway(true);
+    expect(await citeste()).toMatchObject({ trial_first: false, giveaway_visible: true });
+
+    const evenimente = await db.query(
+      `select detaliu from runlift.admin_events where tip = 'homepage_giveaway_set'`
+    );
+    expect(evenimente.rows).toHaveLength(2);
+    expect(evenimente.rows).toEqual(expect.arrayContaining([
+      { detaliu: { giveaway_visible: false } },
+      { detaliu: { giveaway_visible: true } },
+    ]));
+  });
+
+  it('refuză tokenul invalid și valoarea lipsă fără să modifice vizibilitatea', async () => {
+    await expect(comutaGiveaway(false, '22222222-2222-2222-2222-222222222222')).rejects.toThrow(/invalid_token/);
+    await expect(comutaGiveaway(null)).rejects.toThrow(/config_invalid/);
+    expect((await citeste()).giveaway_visible).toBe(true);
   });
 });

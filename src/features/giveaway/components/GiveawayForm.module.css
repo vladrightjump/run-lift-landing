@@ -1,12 +1,6 @@
-/* Formularul de giveaway. Același limbaj ca formularul din /despre-noi:
-   suprafață închisă, colțuri drepte, etichete mici cu majuscule. */
-
 .gw-form {
-  background: var(--e3-surface);
-  border: 1px solid var(--e3-border);
-  padding: clamp(20px, 5vw, 36px);
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .gw-field { display: grid; gap: 8px; }
@@ -15,10 +9,10 @@
   text-transform: uppercase; color: var(--e3-muted);
 }
 .gw-field input {
-  background: var(--e3-bg); border: 1px solid var(--e3-border); color: var(--e3-text);
+  background: var(--e3-surface); border: 1px solid var(--e3-border); color: var(--e3-text);
   font-family: Archivo, sans-serif; font-size: 16px; padding: 13px 14px;
   outline: none; transition: border-color 0.2s ease;
-  min-width: 0; width: 100%; box-sizing: border-box;
+  min-height: 48px; min-width: 0; width: 100%; box-sizing: border-box;
 }
 .gw-field input:focus-visible { border-color: var(--e3-accent); }
 .gw-field.invalid input { border-color: var(--e3-danger-strong); }
@@ -26,12 +20,13 @@
 /* Bifa și textul ei: ținta de atins e tot rândul, nu doar pătratul. */
 .gw-check {
   display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start;
+  min-height: 44px; box-sizing: border-box; padding-block: 8px;
   font-size: 15px; line-height: 1.5; color: var(--e3-muted-strong); cursor: pointer;
 }
 .gw-check input {
   width: 22px; height: 22px; margin: 0; accent-color: var(--e3-accent); cursor: pointer;
 }
-.gw-check a { color: var(--e3-accent); }
+.gw-rules-link { color: var(--e3-accent); }
 .gw-check.invalid { color: var(--e3-danger-strong); }
 
 .gw-error { margin: 0; font-size: 14px; color: var(--e3-danger-strong); }

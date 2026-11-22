@@ -8,12 +8,14 @@ import { Dialog } from '../../../../shared/ui/Dialog';
 import { useSesiuneAdmin } from '../../data/adminSession';
 import { useAdminMutation } from '../../data/useAdminMutation';
 import { useAdminResource } from '../../data/useAdminResource';
+import { AdminGiveawayVisibility } from './AdminGiveawayVisibility';
 import {
   confirmaGiveaway,
   extrageGiveaway,
   incheieGiveaway,
   loadGiveaway,
   mesajRefuzGiveaway,
+  opresteInscrierile,
   stergeParticipare,
   type DateGiveaway,
   type GiveawayAdmin,
@@ -45,6 +47,7 @@ const STARE: Record<StareGiveaway, string> = {
 /** Ce cere confirmare înainte să plece spre server. */
 type Confirmare =
   | { fel: 'stergere'; participare: ParticipareGiveaway }
+  | { fel: 'oprire'; id: string; titlu: string }
   | { fel: 'reextragere'; nume: string; confirmat: boolean }
   | { fel: 'incheiere'; faraAcord: number; cuAcord: number };
 
@@ -54,7 +57,14 @@ const profilInstagram = (cont: string) => `https://www.instagram.com/${cont}/`;
 const extrasaAcum = (participari: ParticipareGiveaway[]) =>
   participari.find((p) => p.extrasa_la !== null && p.inlocuita_la === null) ?? null;
 
-export const EcranGiveaway = () => {
+export const EcranGiveaway = () => (
+  <div className={styles['admin-giveaway']} data-css="admin-giveaway">
+    <AdminGiveawayVisibility />
+    <CampanieGiveaway />
+  </div>
+);
+
+const CampanieGiveaway = () => {
   const { token, onAuthError, showToast } = useSesiuneAdmin();
   // `null` = giveaway-ul curent, ales de server. Selectorul apare abia când există două.
   const [ales, setAles] = useState<string | null>(null);
@@ -137,6 +147,8 @@ export const EcranGiveaway = () => {
     setConfirmare(null);
     if (c.fel === 'stergere') {
       void fa((t) => stergeParticipare(t, c.participare.id), 'Participarea a fost ștearsă.');
+    } else if (c.fel === 'oprire') {
+      void fa((t) => opresteInscrierile(t, c.id), 'Înscrierile au fost închise.');
     } else if (c.fel === 'reextragere') {
       void fa((t) => extrageGiveaway(t, giveaway.id), 'Extragerea s-a făcut.');
     } else {
@@ -145,7 +157,7 @@ export const EcranGiveaway = () => {
   };
 
   return (
-    <div className={styles['admin-giveaway']} data-css="admin-giveaway">
+    <>
       {giveaways.length > 1 && (
         <label className={adminStyles['admin-config-camp']} data-css="admin-config-camp">
           Giveaway
@@ -182,6 +194,7 @@ export const EcranGiveaway = () => {
           extrasa={extrasa}
           ramase={participari.length}
           ocupat={ocupat}
+          onOpreste={() => setConfirmare({ fel: 'oprire', id: giveaway.id, titlu: giveaway.titlu })}
           onExtrage={() => void fa((t) => extrageGiveaway(t, giveaway.id), 'Extragerea s-a făcut.')}
           onReextrage={(nume) => setConfirmare({ fel: 'reextragere', nume, confirmat: giveaway.stare === 'confirmat' })}
           onConfirma={() => void fa((t) => confirmaGiveaway(t, giveaway.id), 'Câștigătorul a fost confirmat.')}
@@ -256,7 +269,7 @@ export const EcranGiveaway = () => {
           onConfirma={() => confirma(confirmare)}
         />
       )}
-    </div>
+    </>
   );
 };
 
@@ -273,6 +286,7 @@ type PropsPanou = {
   /** Câte participări sunt acum în listă. */
   ramase: number;
   ocupat: boolean;
+  onOpreste: () => void;
   onExtrage: () => void;
   onReextrage: (nume: string) => void;
   onConfirma: () => void;
@@ -283,13 +297,25 @@ type PropsPanou = {
  * Starea giveaway-ului și doar pașii pe care starea îi permite. Tabelul de
  * stări e în plan (High-Level Technical Design).
  */
-const PanouExtragere = ({ giveaway, extrasa, ramase, ocupat, onExtrage, onReextrage, onConfirma, onIncheie }: PropsPanou) => {
+const PanouExtragere = ({ giveaway, extrasa, ramase, ocupat, onOpreste, onExtrage, onReextrage, onConfirma, onIncheie }: PropsPanou) => {
   const { stare, castigator } = giveaway;
 
   if (stare === 'programat') {
     return <p>Înscrierile încep pe {momentComplet(giveaway.starts_at)}.</p>;
   }
   if (stare === 'deschis') {
+    if (giveaway.ends_at === 'infinity') {
+      return (
+        <>
+          <p>Înscrierile sunt deschise până când le închizi. După aceea poți extrage câștigătorul.</p>
+          <div className={adminStyles['admin-table-actions']} data-css="admin-table-actions">
+            <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" disabled={ocupat} onClick={onOpreste}>
+              Închide înscrierile
+            </button>
+          </div>
+        </>
+      );
+    }
     return (
       <p>
         Înscrierile se închid pe {momentComplet(giveaway.ends_at)}. Extragerea devine disponibilă după aceea.
@@ -373,24 +399,23 @@ const Persoana = ({ nume, instagram, telefon, email }: { nume: string; instagram
   </div>
 );
 
-const TEXTE: Record<Confirmare['fel'], { renunta: string; confirma: string }> = {
+const TEXTE = {
   stergere: { renunta: 'Păstrează', confirma: 'Șterge definitiv' },
-  reextragere: { renunta: 'Renunță', confirma: 'Reextrage acum' },
-  incheiere: { renunta: 'Nu încă', confirma: 'Încheie definitiv' },
+  oprire: { titlu: 'Închizi înscrierile?', renunta: 'Renunță', confirma: 'Închide acum' },
+  reextragere: { titlu: 'Reextragi?', renunta: 'Renunță', confirma: 'Reextrage acum' },
+  incheiere: { titlu: 'Închei giveaway-ul?', renunta: 'Nu încă', confirma: 'Încheie definitiv' },
 };
 
-/** Cele trei gesturi care nu se pot lua înapoi cer un al doilea „da". */
+/** Acțiunile ireversibile cer confirmare. */
 const DialogConfirmare = ({ confirmare: c, onRenunta, onConfirma }: { confirmare: Confirmare; onRenunta: () => void; onConfirma: () => void }) => {
-  const titlu =
-    c.fel === 'stergere'
-      ? `Ștergi participarea lui ${c.participare.nume}?`
-      : c.fel === 'reextragere'
-        ? 'Reextragi?'
-        : 'Închei giveaway-ul?';
+  const titlu = c.fel === 'stergere' ? `Ștergi participarea lui ${c.participare.nume}?` : TEXTE[c.fel].titlu;
   return (
     <Dialog titlu={titlu} rol="alertdialog" onInchide={onRenunta}>
       {c.fel === 'stergere' && (
         <p>Ștergerea e definitivă. Persoana se poate înscrie din nou cât timp înscrierile sunt deschise.</p>
+      )}
+      {c.fel === 'oprire' && (
+        <p>Formularul pentru {c.titlu} se închide imediat. Participările existente rămân în listă pentru extragere.</p>
       )}
       {c.fel === 'reextragere' && (
         <p>

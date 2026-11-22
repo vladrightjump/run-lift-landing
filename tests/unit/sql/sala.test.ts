@@ -1026,3 +1026,28 @@ describe('ca anon, rolul browserului', () => {
     expect(r.rows.map((x) => x.full_name)).toEqual(['Ana Rusu', 'Dan']);
   });
 });
+
+describe('analiza sondajului', () => {
+  it('păstrează lista de la primul sondaj și întoarce doar voturile Telegram ale membrilor', async () => {
+    const s = await antrenament('2030-01-01');
+    const m = await membru('Membru', 11);
+    const admin = await membru('Admin', 12);
+    await db.query('update public.members set is_admin = true where id = $1', [admin]);
+    await db.exec(`insert into public.telegram_group_memberships (telegram_user_id, chat_id, state) values (11, 'grup', 'in_group'), (12, 'grup', 'in_group')`);
+    await db.query('update public.training_sessions set poll_message_id = 42 where id = $1', [s]);
+    const initial = await db.query<{ poll_roster: string[]; poll_recorded_at: Date }>(
+      'select poll_roster, poll_recorded_at from public.training_sessions'
+    );
+    expect(initial.rows[0].poll_roster).toEqual([m]);
+    expect(initial.rows[0].poll_recorded_at).toBeTruthy();
+    await db.exec("update public.telegram_group_memberships set state = 'left'; update public.training_sessions set poll_message_id = 43");
+    expect((await db.query('select poll_roster, poll_recorded_at from public.training_sessions')).rows).toEqual(initial.rows);
+    await db.query(`insert into public.attendance_log (session_id, member_id, source, response, created_at) values
+      ($1,$2,'telegram','no','2030-01-01T15:00Z'), ($1,$2,'telegram','yes','2030-01-01T14:00Z'),
+      ($1,$2,'manual','no','2030-01-01T14:30Z'), ($1,$3,'telegram','yes','2030-01-01T14:45Z')`, [s,m,admin]);
+    const sql = 'select runlift.admin_sala_voturi($1, $2) as jurnal';
+    const { rows } = await db.query<{ jurnal: { votes: { response: string }[] } }>(sql, [ADMIN_TOKEN, s]);
+    expect(rows[0].jurnal.votes.map((v) => v.response)).toEqual(['yes', 'no']);
+    await expect(db.query(sql, [null, s])).rejects.toThrow('invalid_token');
+  });
+});

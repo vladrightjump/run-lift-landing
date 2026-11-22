@@ -1,0 +1,19 @@
+.giveaway-link {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 14px;
+  border: 1px solid var(--e3-accent-dim);
+  color: var(--e3-accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.giveaway-link:hover {
+  border-color: var(--e3-accent);
+  background: var(--e3-surface-tint);
+}

@@ -5,6 +5,7 @@ import shared2 from '../../../shared/ui/PublicLayout.module.css';
 import styles from './Hero.module.css';
 import { useEditionStrings } from '../../../shared/lib/useEventConfig';
 import { HERO_POSTER, heroVideoSrc } from '../../../shared/lib/media';
+import { GiveawayLink } from './GiveawayLink';
 
 type Props = {
   trialHref?: string | null;
@@ -12,6 +13,7 @@ type Props = {
   onInscrie?: () => void;
   /** `false` ascunde CTA-ul „Rezervă-ți locul" (fereastra din ziua cursei). */
   showCta?: boolean;
+  showGiveaway?: boolean;
 };
 
 /**
@@ -19,7 +21,7 @@ type Props = {
  * lățimea, apoi o bază despărțită de o linie, cu rezumatul și CTA-ul.
  * Aspectul stă în `.e3-hero*` (Hero.module.css); aici rămâne doar structura.
  */
-export const Hero = ({ onInscrie, showCta = true, trialHref }: Props) => {
+export const Hero = ({ onInscrie, showCta = true, trialHref, showGiveaway = false }: Props) => {
   const { HERO_KICKER } = useEditionStrings();
 
   return (
@@ -72,6 +74,7 @@ export const Hero = ({ onInscrie, showCta = true, trialHref }: Props) => {
             </a>
           )}
           {trialHref && <a className={styles['trial-hero-link']} data-css={"trial-hero-link"} href={trialHref}>Vreau la un antrenament</a>}
+          {showGiveaway && <GiveawayLink />}
           </div>
         </div>
       </div>

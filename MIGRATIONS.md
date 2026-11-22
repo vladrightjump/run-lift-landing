@@ -31,20 +31,29 @@ Exposed schemas (`public, graphql_public, runlift`).
 
 ---
 
-## Migrare pregătită — giveaway-ul de pe Instagram (14 noiembrie 2026)
+## Migrări aplicate — giveaway-ul de pe Instagram (15–18 noiembrie 2026)
 
-**NEAPLICATĂ LIVE:** `supabase/sql/supabase-migration-giveaway.sql`. Testele o încarcă prin `MIGRARI_NEAPLICATE`, peste instantaneul existent; `supabase/schema/runlift.sql` rămâne instantaneul producției.
+| Versiune | Nume | Schema | Ce face |
+|---|---|---|---|
+| 20261115053811 | `runlift_giveaway` | runlift | Tabelele, garda de înscriere și fluxul de extragere. [SQL](supabase/sql/supabase-migration-giveaway.sql) |
+| 20261118195302 | `runlift_giveaway_inchidere_manuala` | runlift | Adaugă oprirea înscrierilor din admin și sincronizează oprirea cu înscrierile în curs. [SQL](supabase/sql/supabase-migration-giveaway-inchidere-manuala.sql) |
 
-Planul `docs/plans/2026-11-14-0736-feat-giveaway-instagram-plan.md`. Doar adaugă, deci se poate aplica înaintea funcției Edge și a site-ului:
+Testele aplică ambele migrări peste instantaneul din `supabase/schema/runlift.sql` prin `MIGRARI_NEAPLICATE`. [Planul de implementare](docs/plans/2026-11-14-0736-feat-giveaway-instagram-plan.md)
 
 - `runlift.giveaways` (un rând pe giveaway: `slug`, titlu, perioadă, copia câștigătorului, totalul de la încheiere) și `runlift.giveaway_entries` (participările). RLS pornit, fără politici; `anon` și `authenticated` n-au niciun drept, `service_role` are doar INSERT pe participări.
 - Triggerul `giveaway_entries_guard_trg`: serverul atribuie giveaway-ul curent și refuză înscrierea din afara perioadei (`giveaway_neinceput`, `giveaway_inchis`, `fara_giveaway`). Trei indexuri unice pe giveaway (telefon canonic, email, cont de Instagram) opresc dublurile.
 - `runlift.public_giveaway()`: giveaway-ul curent, perioada și starea, fără numere și fără date personale.
-- `runlift.admin_giveaway_date`, `_sterge`, `_extrage`, `_confirma`, `_incheie`: token verificat în funcție, urmă în `admin_events` fără nume sau contacte. Ștergerea e un `DELETE` real, nu `deleted_at`.
+- Funcțiile `runlift.admin_giveaway_*` verifică tokenul și înregistrează acțiunile în `admin_events` fără nume sau contacte. Ștergerea elimină rândul din tabel.
 
-Înainte de publicare: aplică prin MCP `apply_migration`, cu numele `runlift_giveaway`; verifică pe baza reală că `anon` și `authenticated` nu citesc tabelele și că un token inventat e refuzat, apoi rulează `get_advisors`. Regenerează `supabase/schema/runlift.sql` cu `scripts/schema-snapshot.sql`, scoate migrarea din `MIGRARI_NEAPLICATE` și înlocuiește această secțiune cu versiunea și verificarea aplicării live.
+Campaniile se lansează cu un rând în `runlift.giveaways` și conținutul din cod. [Ghidul de lansare](GHID-GIVEAWAY.md)
 
-Un giveaway nou nu cere migrare: e un rând în `runlift.giveaways` plus conținutul din cod (vezi `GHID-GIVEAWAY.md`, când apare primul).
+### Vizibilitatea butonului Giveaway pe pagina principală
+
+| Versiune | Nume | Schema | Ce face |
+|---|---|---|---|
+| 20261119053840 | `runlift_homepage_giveaway` | runlift | Adaugă `homepage_settings.giveaway_visible` și comutatorul din Site → Giveaway. [SQL](supabase/sql/supabase-migration-homepage-giveaway.sql) |
+
+Migrarea a fost aplicată pe 19 noiembrie 2026. Butonul pornește afișat, iar `public_homepage()` întoarce alegerea salvată. RPC-ul de scriere verifică sesiunea de admin și înregistrează schimbarea în `admin_events`.
 
 ---
 

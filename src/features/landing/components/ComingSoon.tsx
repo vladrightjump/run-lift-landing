@@ -11,6 +11,7 @@ import { usePublicTrialStare } from '../../trial';
 import { usePublicHomepage } from '../../../shared/lib/usePublicHomepage';
 import { TrialTraining } from '../../trial';
 import { CardAntrenament } from '../../antrenament/index';
+import { GiveawayLink } from './GiveawayLink';
 
 type Props = {
   showToast: (kind: ToastKind, msg: string) => void;
@@ -40,9 +41,9 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
   // secțiunea de probă. Cu „Proba primul" așteaptă și configul probei, ca
   // secțiunea să fie deja deasupra lui. Cererile pleacă în paralel și fiecare
   // așteptare e plafonată la 2 s, deci întârzierea e scurtă.
-  const ordine = usePublicHomepage(urmatorul);
-  const cardSus = urmatorul && ordine.gata && !ordine.trialFirst;
-  const cardJos = urmatorul && ordine.gata && ordine.trialFirst && trialGata;
+  const homepage = usePublicHomepage();
+  const cardSus = urmatorul && homepage.gata && !homepage.trialFirst;
+  const cardJos = urmatorul && homepage.gata && homepage.trialFirst && trialGata;
   const momentLabel = momentComplet(tinta);
   const { draft, setField, errors, state, submit, reset, hpProps } = useLaunchForm();
   const [open, setOpen] = useState(false);
@@ -176,6 +177,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
           <a className={shared1['cs-cta-secondary']} data-css={"cs-cta-secondary"} href="/despre-noi">
             Află mai multe
           </a>
+          {homepage.giveawayVisible && <GiveawayLink />}
         </div>
 
         {/*

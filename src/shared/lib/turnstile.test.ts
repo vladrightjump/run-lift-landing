@@ -126,7 +126,7 @@ describe('cu cheie publică', () => {
     expect(mod.isTurnstileError(err)).toBe(true);
   });
 
-  it('containerul NU e display:none — Turnstile refuză să randeze ascuns', async () => {
+  it('containerul lasă provocarea interactivă vizibilă și accesibilă', async () => {
     const { api } = fakeApi();
     (window as { turnstile?: unknown }).turnstile = api;
     const mod = await importCu('0x4AAA-test');
@@ -138,7 +138,10 @@ describe('cu cheie publică', () => {
       return found as HTMLElement;
     });
     expect(el.style.display).not.toBe('none');
-    expect(el.getAttribute('aria-hidden')).toBe('true');
+    expect(el.style.width).not.toBe('0px');
+    expect(el.style.height).not.toBe('0px');
+    expect(el.style.overflow).not.toBe('hidden');
+    expect(el.hasAttribute('aria-hidden')).toBe(false);
   });
 });
 
