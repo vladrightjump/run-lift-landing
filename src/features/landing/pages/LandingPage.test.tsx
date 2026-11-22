@@ -32,6 +32,13 @@ describe('fazele homepage-ului', () => {
     expect(screen.getAllByRole('heading', { level: 2 })[0].textContent).toBe('Cine vine');
   });
 
+  it('după data cursei păstrează o intrare pentru prima vizită și ascunde data expirată', async () => {
+    render(<ComingSoon variant="next-session" target={new Date('2020-09-26T07:00:00Z')} showToast={() => {}} />);
+    expect(screen.queryByText(/26 septembrie/)).toBeNull();
+    expect(screen.getByText(/Data următoarei curse va fi anunțată/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Vin prima dată' })).toBeTruthy();
+  });
+
   it('next arată ecranul următorului antrenament', () => {
     page('next');
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Ne vedemcurând');

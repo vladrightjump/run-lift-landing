@@ -1,6 +1,13 @@
 import { rpc } from '../../../shared/lib/rpc';
 
-export type PublicTrialConfig = { enabled: boolean; bot_username: string; contact_text: string };
+export type PublicTrialConfig = {
+  enabled: boolean;
+  bot_username: string;
+  contact_text: string;
+  bring_text?: string;
+  trial_price?: string;
+  next_session?: { starts_at: string; location: string } | null;
+};
 
 export function trialLink(username: string, source: 'home' | 'share' | 'instagram' = 'home'): string | null {
   const name = username.replace(/^@/, '');

@@ -8,7 +8,7 @@ import { HERO_POSTER, heroVideoSrc } from '../../../shared/lib/media';
 import { GiveawayLink } from './GiveawayLink';
 
 type Props = {
-  trialHref?: string | null;
+  trialHref: string;
   /** Deschide formularul ca overlay. Fără el, CTA-ul navighează la /inscriere. */
   onInscrie?: () => void;
   /** `false` ascunde CTA-ul „Rezervă-ți locul" (fereastra din ziua cursei). */
@@ -70,10 +70,10 @@ export const Hero = ({ onInscrie, showCta = true, trialHref, showGiveaway = fals
               }}
               className={shared4['e3-btn'] + ' ' + styles['e3-cta-lg'] + ' ' + shared5['e3-shine'] + ' ' + shared5['e3-mag'] + ' ' + styles['e3-hero-cta']} data-css={"e3-btn e3-cta-lg e3-shine e3-mag e3-hero-cta"}
             >
-              {trialHref ? 'Înscrie-te la eveniment' : 'Rezervă-ți locul'}
+              Înscrie-te la eveniment
             </a>
           )}
-          {trialHref && <a className={styles['trial-hero-link']} data-css={"trial-hero-link"} href={trialHref}>Vreau la un antrenament</a>}
+          <a className={styles['trial-hero-link']} data-css={"trial-hero-link"} href={trialHref}>Vin prima dată</a>
           {showGiveaway && <GiveawayLink />}
           </div>
         </div>

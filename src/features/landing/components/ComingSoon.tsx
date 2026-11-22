@@ -100,14 +100,14 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
           <span className={shared1['cs-brand-meta']} data-css={"cs-brand-meta"}>
             {urmatorul ? 'Run + Lift · Chișinău' : `Run + Lift · Ediția ${LAUNCH_EDITION_ORDINAL}`}
           </span>
-          <a className={styles['cs-tab']} data-css={"cs-tab"} href="/despre-noi">Despre noi</a>
+          <a className={styles['cs-tab']} data-css={"cs-tab"} href="/despre-noi">Află mai multe</a>
         </nav>
       </header>
 
       <main className={shared1['cs-main']} data-css={"cs-main"}>
         <span className={styles['cs-badge']} data-css={"cs-badge"}>
           {urmatorul
-            ? `Următorul antrenament · ${ziLunaLunga(tinta)}`
+            ? (cd.done ? 'Run + Lift · Chișinău' : `Următoarea ediție · ${ziLunaLunga(tinta)}`)
             : `Antrenament nou · Ediția ${LAUNCH_EDITION_ORDINAL}`}
         </span>
 
@@ -127,28 +127,17 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
 
         <p className={shared1['cs-sub']} data-css={"cs-sub"}>
           {urmatorul ? (
-            // Și după ce trece ținta textul rămâne adevărat: nu promite un anunț
-            // „gata", ci trimite spre lista de notificare — singurul lucru sigur
-            // până când ediția următoare e configurată.
-            cd.done ? (
-              <>
-                Următorul antrenament Run <span className={shared1['cs-accent']} data-css={"cs-accent"}>+</span> Lift e aproape.
-                Lasă-ți datele și te anunțăm când deschidem înscrierile.
-              </>
-            ) : (
-              <>
-                Următorul antrenament Run <span className={shared1['cs-accent']} data-css={"cs-accent"}>+</span> Lift e pe{' '}
-                {momentLabel}. Lasă-ți datele și te anunțăm când deschidem înscrierile.
-              </>
-            )
+            cd.done
+              ? 'Data următoarei curse va fi anunțată aici.'
+              : `Următoarea ediție este programată pe ${momentLabel}.`
           ) : cd.done ? (
             <>
-              Anunțul pentru noul antrenament Run <span className={shared1['cs-accent']} data-css={"cs-accent"}>+</span> Lift este
+              Anunțul pentru noua cursă Run <span className={shared1['cs-accent']} data-css={"cs-accent"}>+</span> Lift este
               gata. Lasă-ți datele și îți scriem imediat.
             </>
           ) : (
             <>
-              Pe {momentLabel} anunțăm noul antrenament Run <span className={shared1['cs-accent']} data-css={"cs-accent"}>+</span>{' '}
+              Pe {momentLabel} anunțăm noua cursă Run <span className={shared1['cs-accent']} data-css={"cs-accent"}>+</span>{' '}
               Lift. Lasă-ți datele și te anunțăm primii.
             </>
           )}
@@ -171,14 +160,15 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
         )}
 
         <div className={shared1['cs-actions']} data-css={"cs-actions"}>
-          <button type="button" className={shared1['cs-cta']} data-css={"cs-cta"} onClick={openForm}>
-            Anunță-mă la lansare
+          <a className={shared1['cs-cta']} data-css="cs-cta" href={trial ? '#prima-proba' : '/despre-noi#prima-vizita'}>Vin prima dată</a>
+          <button type="button" className={shared1['cs-cta-secondary']} data-css="cs-cta-secondary" onClick={openForm}>
+            Anunță-mă la lansarea cursei
           </button>
-          <a className={shared1['cs-cta-secondary']} data-css={"cs-cta-secondary"} href="/despre-noi">
-            Află mai multe
-          </a>
+
           {homepage.giveawayVisible && <GiveawayLink />}
         </div>
+
+        {trialGata && !trial && <p className={shared1['cs-sub']}>Următoarea probă nu are încă o dată publicată.</p>}
 
         {/*
           Doar pe ecranul dintre ediții. Pe „Coming Soon" (înainte de anunț)
@@ -243,7 +233,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
                 </h2>
                 <p className={styles['cs-modal-sub']} data-css={"cs-modal-sub"}>
                   {duplicate
-                    ? 'Adresa ta era deja înscrisă. Te anunțăm când lansăm noul antrenament.'
+                    ? 'Adresa ta era deja înscrisă. Te anunțăm când lansăm noua cursă.'
                     : 'Ți-am trimis un email. Apasă pe linkul din el ca să confirmi înscrierea.'}
                 </p>
                 <button type="button" className={styles['cs-submit']} data-css={"cs-submit"} onClick={closeForm}>
@@ -254,7 +244,7 @@ export const ComingSoon = ({ showToast, target, variant = 'launch' }: Props) => 
               <>
                 <h2 className={styles['cs-modal-title']} data-css={"cs-modal-title"}>Anunță-mă la lansare</h2>
                 <p className={styles['cs-modal-sub']} data-css={"cs-modal-sub"}>
-                  Îți scriem imediat ce anunțăm noul antrenament.
+                  Îți scriem imediat ce anunțăm noua cursă.
                 </p>
 
                 <form
