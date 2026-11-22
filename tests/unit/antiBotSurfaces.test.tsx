@@ -69,7 +69,7 @@ const SUPRAFETE: { nume: string; element: () => ReactElement; deschide?: string 
     // Formularul stă într-un modal: fără click pe CTA nu există `<form>` de verificat.
     nume: 'ComingSoon (anunță-mă la lansare)',
     element: () => <ComingSoon showToast={() => {}} />,
-    deschide: 'Anunță-mă la lansare',
+    deschide: 'Anunță-mă la lansarea cursei',
   },
   {
     nume: 'DespreNoi (cere informații)',

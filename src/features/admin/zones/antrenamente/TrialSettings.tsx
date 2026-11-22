@@ -39,6 +39,20 @@ export function TrialSettings({ onDirty }: { onDirty?: (dirty: boolean) => void 
         {TEXT_FIELDS.map(([key, label]) => <label className={adminStyles['admin-config-camp']} data-css="admin-config-camp" key={key}>{label}{key === 'bot_username' || key === 'trial_price'
           ? <input value={form[key] ?? ''} maxLength={key === 'bot_username' ? 32 : 200} onChange={e => set(key, e.target.value)} />
           : <textarea value={form[key] ?? ''} rows={3} maxLength={1500} onChange={e => set(key, e.target.value)} />}</label>)}
+        {form.public_host !== undefined && (
+          <fieldset className={styles['admin-probe-copy']}>
+            <legend>Pe pagina „Vin prima dată”</legend>
+            <label className={adminStyles['admin-config-camp']}>Cine întâmpină participanții
+              <input value={form.public_host} maxLength={100} onChange={e => set('public_host', e.target.value)} />
+            </label>
+            <label className={adminStyles['admin-config-camp']}>Fotografia locului de întâlnire
+              <input value={form.meeting_photo ?? ''} maxLength={240} placeholder="/foto/intrare.jpg"
+                pattern={String.raw`/([a-zA-Z0-9_\-]+/)*[a-zA-Z0-9_\-]+[.](jpg|jpeg|webp|png)`}
+                onChange={e => set('meeting_photo', e.target.value)} />
+            </label>
+            <p>Folosește calea unei fotografii publicate pe site. Fotografia se afișează pentru locația configurată la salvarea ei.</p>
+          </fieldset>
+        )}
         <fieldset className={styles['admin-probe-copy']} data-css="admin-probe-copy" disabled={date.config.message_texts === undefined}>
           <legend>Mesajele fluxului</legend>
           {date.config.message_texts === undefined && <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint" role="status">Editorul va fi disponibil după actualizarea bazei de date pentru mesajele personalizate.</p>}

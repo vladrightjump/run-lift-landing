@@ -11,13 +11,19 @@ for (const width of [375, 1280]) {
     test(`intrare Telegram ${phase} la ${width}px`, async ({ page, network }) => {
       await page.setViewportSize({ width, height: 900 });
       network.use(...createHandlers({
-        public_trial_config: { enabled: true, bot_username: config.bot_username, contact_text: config.contact_text },
+        public_trial_config: { enabled: true, bot_username: config.bot_username, contact_text: config.contact_text,
+          public_host: 'Ana', bring_text: 'Apă și prosop', next_session: { starts_at: '2099-01-14T05:00:00Z', location: 'Intrarea nord', photo: null } },
         public_homepage: null, public_training_reels: null, public_weekly_workouts: null,
       }));
       await page.goto(`/?preview=${phase}`);
       const section = page.getByRole('region', { name: 'Primul tău antrenament cu noi.' });
-      await expect(section).toBeVisible();
-      await expect(section.getByRole('link', { name: /Vreau la un antrenament/ })).toHaveAttribute('href', 'https://t.me/ParkTrialBot?start=trial_home');
+      const intrare = page.getByRole('link', { name: 'Vin prima dată' });
+      await expect(intrare).toHaveAttribute('href', '#prima-proba');
+      await intrare.click();
+      await expect(section).toBeInViewport();
+      await expect(section.getByText(/14 ianuarie 2099.*07:00/)).toBeVisible();
+      await expect(section.getByText('Apă și prosop')).toBeVisible();
+      await expect(section.getByRole('link', { name: /Aleg ziua în Telegram/ })).toHaveAttribute('href', 'https://t.me/ParkTrialBot?start=trial_home');
       await expect(page.locator('body')).not.toContainText('Gratuit');
       if (phase === 'landing') await expect(page.locator("[data-css~=\"e3-hero\"]").getByRole('link', { name: 'Înscrie-te la eveniment' })).toBeVisible();
       await section.scrollIntoViewIfNeeded();

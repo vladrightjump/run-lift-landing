@@ -1,6 +1,6 @@
 # Antrenamentul de proba prin Telegram
 
-Homepage-ul poate afișa „Vreau la un antrenament”. Linkul deschide conversația privată cu botul; persoana apasă Start, citește condițiile, scrie numele și alege o sesiune disponibilă din următoarele 14 zile.
+Pe homepage, „Vin prima dată” duce la detaliile primei probe disponibile. „Aleg ziua în Telegram” deschide conversația privată cu botul; persoana apasă Start, citește condițiile, scrie numele și alege o sesiune disponibilă din următoarele 14 zile.
 
 Persoana rămâne la **Antrenamente → Persoane noi**, separat de membri. Botul trimite confirmarea și reminderul, iar după durata configurată te întreabă dacă a venit. Confirmarea ta „A venit” declanșează întrebarea de continuare. Numai răspunsul explicit „Da” al persoanei permite invitația în grup. Trimiterea invitației nu înseamnă că persoana a intrat; apartenența se verifică în Telegram.
 
@@ -11,6 +11,12 @@ Persoana rămâne la **Antrenamente → Persoane noi**, separat de membri. Botul
 3. În **Setări bot → Antrenamente de probă**, completează username-ul real al botului (fără URL), bun venit, costul real, condițiile, echipamentul necesar, condițiile continuării, durata și contactul. Selectează un organizator asociat în baza de date (`members.is_admin`) cu cont Telegram care a deschis conversația cu botul.
 4. Salvează cu activarea oprită. Workerul verifică periodic identitatea botului și dreptul de invitare, inclusiv când înscrierile sunt dezactivate. Workerul trebuie să ruleze cu schedulerul activ. Schimbarea username-ului sau organizatorului cere o nouă verificare.
 5. Verifică parcursul într-un mediu/grup de test cu două conturi. Activează numai după confirmarea comportamentului și completarea condițiilor reale. Copiază linkul din setări; CTA-ul apare pe homepage după încărcarea configurației publice.
+
+## Prima vizită pe site
+
+Aplică `supabase/sql/supabase-migration-prima-proba.sql` pentru afișarea programului public. Pagina folosește aceleași 14 zile, ore și anulări ca botul. Pe o bază mai veche, zilele se pot verifica în Telegram. Când înscrierile sunt suspendate, intrarea trimite la prezentarea antrenamentului.
+
+În **Setări bot → Antrenamente de probă**, completează numele public al persoanei care întâmpină participanții și, opțional, calea către o fotografie reală publicată pe site. Fotografia este asociată cu locația din configurația botului la salvarea căii. Pentru o sesiune la altă adresă, pagina arată adresa acelei sesiuni și ascunde fotografia. Costul și echipamentul provin din câmpurile existente ale probei.
 
 ## Administrare
 

@@ -36,6 +36,7 @@ const SALA_SQL = readFileSync(resolve(__dirname, '../../../supabase/schema/sala.
  * instantaneelor, scoate-o din listă: instantaneul o conține deja.
  */
 const MIGRARI_NEAPLICATE = [
+  'supabase/sql/supabase-migration-prima-proba.sql',
   'supabase/sql/supabase-migration-sala-analiza-sondaje.sql',
   'supabase/sql/supabase-migration-giveaway.sql',
   'supabase/sql/supabase-migration-giveaway-inchidere-manuala.sql',

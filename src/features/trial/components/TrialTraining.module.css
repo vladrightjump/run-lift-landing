@@ -17,8 +17,6 @@
 .trial-training-label { margin: 0 0 12px; color: #c7e78e; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
 .trial-training h2 { margin: 0 0 16px; font: inherit; font-size: clamp(28px, 3vw, 44px); font-weight: 700; line-height: 1.08; letter-spacing: -.035em; }
 .trial-training-copy > p:not(.trial-training-label) { margin: 0; color: #c5c9bf; font-size: 16px; line-height: 1.65; max-width: 58ch; }
-.trial-training-steps { padding: 0; margin: 28px 0 0; list-style: none; display: flex; flex-wrap: wrap; gap: 12px 24px; font-size: 13px; }
-.trial-training-steps span { color: #c7e78e; margin-right: 6px; }
 .trial-training-actions { min-width: 0; }
 .trial-training-button { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 22px; background: #c7e78e; color: #14200c; text-decoration: none; font-weight: 700; line-height: 1.4; }
 .trial-training-button:hover { background: #d6efa9; }
@@ -27,7 +25,11 @@
 .trial-training-actions p a { color: inherit; text-underline-offset: 3px; }
 @media (max-width: 680px) {
   .trial-training { width: calc(100% - 32px); grid-template-columns: minmax(0, 1fr); padding: 24px 20px; gap: 28px; margin: 28px auto; } }
-@media (max-width: 680px) {
-  .trial-training-steps { flex-direction: column; } }
 
 [data-css~="e3-root"] a.trial-training-button { color: #14200c; }
+.trial-training-copy a { color: inherit; text-underline-offset: 3px; }
+.fotografie { display: block; margin-top: 1rem; width: 100%; height: auto; }
+.detalii { display: grid; gap: .75rem; margin: 1rem 0 0; overflow-wrap: anywhere; }
+.detalii:empty { display: none; }
+.detalii dt { color: #c5c9bf; font-size: .85rem; }
+.detalii dd { margin: .2rem 0 0; }

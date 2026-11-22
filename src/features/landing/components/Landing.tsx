@@ -3,7 +3,6 @@ import shared1 from '../../../shared/ui/PublicSurface.module.css';
 import styles from './Landing.module.css';
 import { usePublicTrial } from '../../trial';
 import { TrialTraining } from '../../trial';
-import { trialLink } from '../../trial';
 import { useEffect, useRef, useState } from 'react';
 import { useEventConfig, useEditionDates } from '../../../shared/lib/useEventConfig';
 import { useCountdown } from '../../../shared/lib/useCountdown';
@@ -115,7 +114,7 @@ export const Landing = ({ mode = 'full' }: Props) => {
       <SignupBanner />
       <TopBar cd={cd} onInscrie={lista ? undefined : () => setOverlay(true)} showCta={!lista} />
       <Hero
-        trialHref={trial && !lista ? trialLink(trial.bot_username) : null}
+        trialHref={trial ? '#prima-proba' : '/despre-noi#prima-vizita'}
         onInscrie={lista ? undefined : () => setOverlay(true)}
         showCta={!lista}
         showGiveaway={homepage?.value.giveawayVisible}

@@ -249,7 +249,7 @@ export const DespreNoi = () => {
         </div>
       </section>
 
-      <section className={styles['dn-section']} data-css={"dn-section"}>
+      <section id="prima-vizita" className={styles['dn-section']} data-css={"dn-section"}>
         <div className={styles['dn-container']} data-css={"dn-container"}>
           <div className={styles['dn-section-head']} data-css={"dn-section-head"}>
             <span className={styles['dn-section-num'] + ' ' + shared3['e3-title-num']} data-css={"dn-section-num e3-title-num"}>{nr('antrenament')}</span>
