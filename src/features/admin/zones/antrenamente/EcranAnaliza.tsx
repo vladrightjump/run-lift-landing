@@ -13,24 +13,9 @@ import {
 import { istoricMembru, peZileleSaptamanii, randuriFrecventa, type StareFrecventa } from './analiza';
 import { sesiuniPentruStatistici } from './model';
 import { MotivScoatere, ScoateDinGrup, ultimeleScoateri } from './DialogScoatere';
-import { dataScurta, ziSiData } from './sondaj';
+import { dataLunga, dataScurta, ziSiData } from './sondaj';
+import { JurnalVoturi } from './JurnalVoturi';
 import { useSala } from './useSala';
-
-/**
- * Analiza prezențelor (R10) — tot ce arăta „Analiză" din gym-app.
- *
- * Inventarul de paritate (din `components/AnalizaView.tsx` și
- * `components/MemberAnalytics.tsx`): perioada (lună, 3 luni, an); prezența
- * medie cu tendința față de perioada dinainte; numărul de antrenamente;
- * recordul; media celor fără răspuns; fiecare antrenament ca bară vin / nu /
- * tăcere, cu detaliul celui ales; curba procentului „vin"; zilele săptămânii;
- * totalul vin / nu / tăcere; tabelul membrilor cu frecvența, starea (activ,
- * inactiv 2+ săpt., n-a venit), ultima prezență, filtru, sortare, istoricul pe
- * membru (ultimele 20, procent, tendință) și scoaterea din grup.
- *
- * Calculele nu se rescriu: vin din `statistici.ts` și `analiza.ts`, portate
- * din gym-app cu testele lor.
- */
 
 const PERIOADE: [Period, string][] = [
   ['month', 'Luna'],
@@ -78,21 +63,21 @@ export const EcranAnaliza = () => {
     const toate = sesiuniPentruStatistici(date);
     // Ancorat în „azi" de la Chișinău, nu în ceasul browserului.
     const acum = new Date(`${date.azi}T12:00:00Z`);
-    const activi = date.membri.filter((m) => m.status === 'active').length;
     const felie = filterByPeriod(toate, perioada, acum)
       .slice()
       .sort((a, b) => a.session_date.localeCompare(b.session_date));
-    const defalcari = felie.map((s) => sessionBreakdown(s, activi));
+    const defalcari = felie.map((s) => sessionBreakdown(s));
     return {
+      toate,
       felie,
       defalcari,
-      rezumat: summarize(felie, filterPrevPeriod(toate, perioada, acum), activi),
+      rezumat: summarize(felie, filterPrevPeriod(toate, perioada, acum)),
       zile: peZileleSaptamanii(felie, defalcari),
       totalVin: defalcari.reduce((a, b) => a + b.yes, 0),
       totalNu: defalcari.reduce((a, b) => a + b.no, 0),
       totalTacere: defalcari.reduce((a, b) => a + b.none, 0),
       maxBara: Math.max(1, ...defalcari.map((b) => b.total)),
-      randuri: randuriFrecventa(date),
+      randuri: randuriFrecventa(date, toate),
     };
   }, [date, perioada]);
 
@@ -147,7 +132,7 @@ export const EcranAnaliza = () => {
 
       <dl className={sharedSala['admin-sala-cifre'] + ' ' + styles['admin-sala-cifre--patru']} data-css="admin-sala-cifre admin-sala-cifre--patru">
         <div className={sharedSala['admin-sala-cifra'] + ' ' + sharedSala['admin-sala-cifra--vin']} data-css="admin-sala-cifra admin-sala-cifra--vin">
-          <dt>prezență medie</dt>
+          <dt>confirmări medii</dt>
           <dd>{rezumat.avgPct}%</dd>
           <span className={styles['admin-sala-sub']} data-css="admin-sala-sub">
             {rezumat.hasPrevious
@@ -188,7 +173,7 @@ export const EcranAnaliza = () => {
                     type="button"
                     role="listitem"
                     className={`${styles['admin-sala-bara']}${i === indexAles ? ' activ' : ''}`} data-css="admin-sala-bara"
-                    aria-label={`${ziSiData(s.session_date)}: ${b.yes} vin, ${b.no} nu, ${b.none} tăcere`}
+                    aria-label={`${ziSiData(s.session_date)}: ${b.yes} vin, ${b.no} nu, ${b.none} fără răspuns`}
                     aria-pressed={i === indexAles}
                     onClick={() => setAles(i)}
                   >
@@ -201,15 +186,20 @@ export const EcranAnaliza = () => {
             </div>
             {sesiuneAleasa && defAleasa && (
               <p className={sharedSala['admin-sala-cand']} data-css="admin-sala-cand" aria-live="polite">
-                <strong>{ziSiData(sesiuneAleasa.session_date)}</strong>: {defAleasa.yes} vin ({defAleasa.yesPct}%) ·{' '}
-                {defAleasa.no} nu ({defAleasa.noPct}%) · {defAleasa.none} tăcere ({defAleasa.nonePct}%)
+                <strong>{ziSiData(sesiuneAleasa.session_date)}</strong>: {defAleasa.yes} din {defAleasa.total} membri confirmă ({defAleasa.yesPct}%) ·{' '}
+                {defAleasa.no} nu ({defAleasa.noPct}%) · {defAleasa.none} fără răspuns ({defAleasa.nonePct}%)
               </p>
+            )}
+            {sesiuneAleasa && sesiuneAleasa.poll_roster == null && (
+              <p className={adminStyles['admin-config-hint']}>Total estimat din voturile înregistrate și membrii verificați în grup.</p>
             )}
             <svg className={styles['admin-sala-curba']} data-css="admin-sala-curba" viewBox="0 0 100 44" preserveAspectRatio="none" aria-hidden="true">
               <polyline points={puncte.join(' ')} />
             </svg>
             <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Curba: procentul celor care vin, de la primul antrenament din perioadă la ultimul.</p>
           </section>
+
+          {sesiuneAleasa && <JurnalVoturi key={sesiuneAleasa.id} sesiune={sesiuneAleasa.id} zi={dataLunga(sesiuneAleasa.session_date)} />}
 
           <div className={sharedSala['admin-sala-coloane'] + ' ' + styles['admin-sala-coloane--doua']} data-css="admin-sala-coloane admin-sala-coloane--doua">
             <section className={adminStyles['admin-config-grup']} data-css="admin-config-grup" aria-labelledby="sala-zile">
@@ -235,7 +225,7 @@ export const EcranAnaliza = () => {
                 <span className={styles['admin-sala-bara-tacere']} data-css="admin-sala-bara-tacere" style={{ width: `${(calc.totalTacere / totalMix) * 100}%` }} />
               </div>
               <p className={sharedSala['admin-sala-cand']} data-css="admin-sala-cand">
-                {calc.totalVin} vin · {calc.totalNu} nu · {calc.totalTacere} tăcere
+                {calc.totalVin} vin · {calc.totalNu} nu · {calc.totalTacere} fără răspuns
               </p>
             </section>
           </div>
@@ -274,7 +264,7 @@ export const EcranAnaliza = () => {
           <ul className={sharedSala['admin-sala-lista']} data-css="admin-sala-lista">
             {randuri.map((r) => {
               const k = scoateri.get(r.membru.id);
-              const ist = deschis === r.membru.id ? istoricMembru(date, r.membru.id) : null;
+              const ist = deschis === r.membru.id ? istoricMembru(date, r.membru.id, calc.toate) : null;
               return (
                 <li key={r.membru.id} className={sharedSala['admin-sala-rand'] + ' ' + sharedSala['admin-sala-membru']} data-css="admin-sala-rand admin-sala-membru">
                   <span className={sharedSala['admin-sala-nume']} data-css="admin-sala-nume">{r.membru.full_name}</span>

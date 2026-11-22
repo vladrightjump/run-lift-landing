@@ -123,3 +123,18 @@ describe('peZileleSaptamanii', () => {
     ]);
   });
 });
+
+it('calculează separat lista fiecărei sesiuni și păstrează voturile membrilor care au plecat', () => {
+  const d = dateSala();
+  const regulari = Array.from({ length: 22 }, (_, i) => membruSala('m' + i, { telegram_membership: 'in_group' }));
+  d.membri = [...regulari, membruSala('admin', { is_admin: true }), membruSala('plecat', { telegram_membership: 'left' }),
+    membruSala('nou', { telegram_membership: 'in_group', join_date: '2026-10-07' })];
+  const raspuns = (id: string, response: 'yes' | 'no') => ({ ...d.raspunsuri[2], member_id: id, response });
+  d.raspunsuri = [...regulari.slice(0, 15).map((m) => raspuns(m.id, 'yes')), raspuns('m15', 'no'), raspuns('admin', 'yes')];
+  const sesiune = () => sesiuniPentruStatistici(d).find((s) => s.id === 's1')!;
+  expect(sessionBreakdown(sesiune())).toMatchObject({ total: 22, yes: 15, no: 1, none: 6, yesPct: 68 });
+  d.antrenamente[1].poll_roster = ['plecat', 'admin', 'm0'];
+  expect(sessionBreakdown(sesiune())).toMatchObject({ total: 17, yes: 15, no: 1, none: 1 });
+  d.raspunsuri.push(raspuns('plecat', 'yes'));
+  expect(sessionBreakdown(sesiune())).toMatchObject({ total: 17, yes: 16, no: 1, none: 0 });
+});

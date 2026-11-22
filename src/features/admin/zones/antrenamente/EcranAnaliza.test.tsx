@@ -5,7 +5,7 @@ import { EcranAnaliza } from './EcranAnaliza';
 import { dateSala } from '../../../../../tests/support/builders/sala';
 import type { SalaDate } from './api';
 
-const api = vi.hoisted(() => ({ incarcaSala: vi.fn(), scoateDinGrup: vi.fn() }));
+const api = vi.hoisted(() => ({ incarcaSala: vi.fn(), incarcaVoturi: vi.fn(), scoateDinGrup: vi.fn() }));
 vi.mock('./api', async (orig) => ({
   ...(await orig<typeof import('./api')>()),
   ...api,
@@ -31,6 +31,7 @@ const cifra = (eticheta: string) =>
 
 beforeEach(() => {
   api.incarcaSala.mockReset();
+  api.incarcaVoturi.mockReset().mockResolvedValue({ posted_at: null, votes: [] });
   api.scoateDinGrup.mockReset();
   api.scoateDinGrup.mockResolvedValue('id');
 });
@@ -85,12 +86,36 @@ describe('Analiza — scoaterea din grup', () => {
     await waitFor(() => expect(api.scoateDinGrup).toHaveBeenCalledWith('tok', 'ion'));
   });
 
-  it('la un admin, motivul se citește și de pe ecran, și de cititorul de ecran', async () => {
-    api.incarcaSala.mockResolvedValue(dateSala());
+  it('exclude administratorii din statistici, inclusiv când au votat', async () => {
+    const d = dateSala();
+    d.raspunsuri.push({ ...d.raspunsuri[2], member_id: 'roma' });
+    api.incarcaSala.mockResolvedValue(d);
     randeaza();
-    await screen.findByText('Roma', { selector: '[data-css~="admin-sala-nume"]' });
-    const rand = randul('Roma');
-    expect((within(rand).getByRole('button', { name: /Scoate din grup: Adminii grupului nu se scot/ }) as HTMLButtonElement).disabled).toBe(true);
-    expect(within(rand).getByText('Adminii grupului nu se scot.')).toBeTruthy();
+    await screen.findByText('Fiecare antrenament');
+    expect(screen.queryByText('Roma')).toBeNull();
+    expect(cifra('confirmări medii')).toBe('33%');
+    expect(cifra('record')).toBe('1');
+    expect(cifra('fără răspuns')).toBe('2');
+  });
+
+  it('arată votul inițial și fiecare schimbare cu ora locală și durata', async () => {
+    api.incarcaSala.mockResolvedValue(cuUnulVechi());
+    const vot = { name: 'Maria', member_id: 'maria', response: 'yes', at: '2026-10-05T09:02:00Z' };
+    api.incarcaVoturi.mockResolvedValue({
+      posted_at: '2026-10-05T09:00:00Z',
+      votes: [vot, vot, { ...vot, response: 'no', at: '2026-10-05T09:30:00Z' },
+        { ...vot, at: '2026-10-05T10:00:00Z' }],
+    });
+    randeaza();
+    const jurnal = within(await screen.findByRole('region', { name: 'Voturile din sondaj' }));
+    expect(await jurnal.findByText(/Vin → Nu vin/)).toBeTruthy();
+    expect(jurnal.getByText(/Nu vin → Vin/)).toBeTruthy();
+    expect(jurnal.getAllByText(/după 2 min/)).toHaveLength(1);
+    expect(jurnal.getByText(/12:02/)).toBeTruthy();
+    api.incarcaVoturi.mockResolvedValue({ posted_at: null, votes: [vot] });
+    fireEvent.click(screen.getByRole('button', { name: '3 luni' }));
+    fireEvent.click(screen.getAllByRole('listitem', { name: /vin,.*fără răspuns/ })[0]);
+    expect(await screen.findByText(/Ora publicării lipsește/)).toBeTruthy();
+    expect(screen.queryByText(/Vin → Nu vin/)).toBeNull();
   });
 });
