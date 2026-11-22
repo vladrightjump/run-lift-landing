@@ -78,12 +78,30 @@ test.describe('Despre noi — conținut', () => {
       await expect(page).toHaveURL(/#prima-vizita$/);
       const prima = page.locator('#prima-vizita');
       await expect(prima.getByRole('heading', { name: 'Prima vizită' })).toBeInViewport();
+      await expect(cuprins.locator('a[aria-current="location"]')).toHaveText('Prima vizită');
       await prima.getByText('Ce fac dacă mi se schimbă programul?').click();
       await expect(prima.getByText(/anula rezervarea/)).toBeVisible();
       await expect(prima.getByRole('link', { name: /Aleg ziua în Telegram/ })).toHaveAttribute('href', 'https://t.me/ParkTrialBot?start=trial_home');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     });
   }
+
+  test('navigare cu tastatura și imagine statică la mișcare redusă', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 320, height: 720 });
+    await page.goto('/despre-noi');
+    const nav = page.getByRole('navigation', { name: 'Pe această pagină' });
+    const program = nav.getByRole('link', { name: 'Program și hartă' });
+    await program.focus();
+    await program.press('Enter');
+    await expect(page).toHaveURL(/#program$/);
+    await expect(program).toHaveAttribute('aria-current', 'location');
+    await expect(program).toBeInViewport();
+    await expect(page.locator('main video')).toHaveCount(0);
+    await expect(page.locator('img[src="/fpv-poster.jpg"]')).toBeVisible();
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect(page.locator('[data-css~="dn-hero-video"]')).toBeAttached();
+  });
 
   test('legătura distribuită pentru prima vizită oferă noutăți când proba e oprită', async ({ page, network }) => {
     network.use(rpcResponse('public_trial_config', { enabled: false }));
@@ -93,6 +111,7 @@ test.describe('Despre noi — conținut', () => {
     await expect(prima.getByRole('link', { name: /Telegram/ })).toHaveCount(0);
     await prima.getByRole('link', { name: 'Ține-mă la curent' }).click();
     await expect(page.getByLabel('Prenume', { exact: true })).toBeInViewport();
+    await expect(page.getByRole('navigation').getByRole('link', { name: 'Noutăți' })).toHaveAttribute('aria-current', 'location');
   });
 
   /**

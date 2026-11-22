@@ -1,0 +1,40 @@
+.nav {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--e3-border) transparent;
+}
+.track {
+  width: max-content;
+  position: relative;
+  display: flex;
+  gap: clamp(10px, 1.6vw, 28px);
+  padding-inline: 5px;
+}
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--e3-muted-strong);
+  font-size: .875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.nav a:focus-visible { outline-offset: -2px; }
+.nav a:hover, .nav a[aria-current] { color: var(--e3-accent); }
+.line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 1px;
+  background: var(--e3-accent);
+  transform-origin: left;
+  pointer-events: none;
+}
+@media (max-width: 960px) {
+  .nav { grid-column: 1 / -1; grid-row: 2; }
+  .track { gap: 20px; }
+}

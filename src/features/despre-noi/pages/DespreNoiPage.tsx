@@ -18,7 +18,9 @@ import { INSTAGRAM_URL, INSTAGRAM_HANDLE } from '../../../shared/lib/config';
 import { trainingPlace } from '../../../shared/content/format';
 import { usePublicHomepage } from '../../../shared/lib/usePublicHomepage';
 import { EDITION } from '../../../shared/content/edition';
-import { HERO_POSTER, heroVideoSrc } from '../../../shared/lib/media';
+import { HeroFilm } from '../components/HeroFilm';
+import { SectionNav } from '../components/SectionNav';
+import { ArrowDownRightIcon } from '@phosphor-icons/react/ArrowDownRight';
 import { useTrainingReels } from '../../reels';
 import { ReelsRail } from '../../reels';
 
@@ -149,29 +151,17 @@ export const DespreNoi = () => {
         <a className={styles['dn-logo']} data-css={"dn-logo"} href="/">
           Run <span className={styles['dn-accent']} data-css={"dn-accent"}>+</span> Lift
         </a>
+        <SectionNav />
         <a className={styles['dn-topbar-cta']} data-css={"dn-topbar-cta"} href="#prima-vizita">
-          Vin prima dată
+          Vin prima dată <ArrowDownRightIcon size={18} weight="bold" aria-hidden="true" />
         </a>
       </header>
 
       <main>
       <section className={styles['dn-hero']} data-css={"dn-hero"}>
-        <div className={styles['dn-hero-stripes']} data-css={"dn-hero-stripes"} aria-hidden="true" />
-        {/* `e3-hero-video` adaugă driftul legat de scroll — clipul se mișcă în
-            sens invers textului, mai puțin, ca planurile să se separe. */}
-        <video
-          className={styles['dn-hero-video'] + ' ' + shared3['e3-hero-video']} data-css={"dn-hero-video e3-hero-video"}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          poster={HERO_POSTER}
-          aria-hidden="true"
-        >
-          <source src={heroVideoSrc()} type="video/mp4" />
-        </video>
+        <HeroFilm />
         <div className={styles['dn-hero-fade']} data-css={"dn-hero-fade"} aria-hidden="true" />
+        <div aria-hidden="true" className={styles.cortina} />
         {/* `e3-hero-copy` retrage textul la ieșirea din ecran. */}
         <div className={styles['dn-hero-inner'] + ' ' + shared3['e3-hero-copy']} data-css={"dn-hero-inner e3-hero-copy"}>
           <p className={styles['dn-kicker']} data-css={"dn-kicker"}>Cine suntem</p>
@@ -188,16 +178,10 @@ export const DespreNoi = () => {
           <p className={styles['dn-hero-sub']} data-css={"dn-hero-sub"}>
             Facem antrenamente de grup în Chișinău. Alergăm împreună, apoi lucrăm la forță. Poți începe cu o sesiune de probă.
           </p>
+          <a href="#program" className={styles.programLink}>Vezi programul <ArrowDownRightIcon size={20} aria-hidden="true" /></a>
         </div>
       </section>
 
-      <nav className={styles.cuprins} aria-label="Pe această pagină">
-        <a href="#poveste">Povestea noastră</a>
-        <a href="#comunitate">Comunitatea</a>
-        <a href="#antrenament">Antrenamentul</a>
-        <a href="#prima-vizita">Prima vizită</a>
-        <a href="#program">Program și hartă</a>
-      </nav>
       <Marquee items={marquee(loc?.where ?? null)} />
 
       <section id="poveste" className={styles['dn-section']} data-css={"dn-section"}>
