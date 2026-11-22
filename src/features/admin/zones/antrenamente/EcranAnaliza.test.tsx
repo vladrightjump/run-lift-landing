@@ -43,15 +43,31 @@ describe('Analiza prezențelor', () => {
     randeaza();
     await screen.findByText('Fiecare antrenament');
     expect(cifra('antrenamente')).toBe('1');
-    fireEvent.click(screen.getByRole('button', { name: '3 luni' }));
+    fireEvent.click(screen.getByRole('button', { name: '90 de zile' }));
     expect(cifra('antrenamente')).toBe('2');
+  });
+
+  it('distinge lista salvată de totalul estimat când schimb perioada și sondajul', async () => {
+    const d = cuUnulVechi();
+    const recent = d.antrenamente.find((s) => s.id === 's1')!;
+    recent.poll_roster = ['ana', 'maria', 'roma'];
+    api.incarcaSala.mockResolvedValue(d);
+    randeaza();
+    await screen.findByText(/Membri incluși în calcul: 2 · 1 „Vin”/);
+    expect(screen.getByText(/Total calculat din lista salvată/)).toBeTruthy();
+    expect(screen.getByText(/Comparația cu perioada anterioară folosește/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '90 de zile' }));
+    expect(screen.getByText(/Unele totaluri de membri din perioada selectată/)).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('listitem', { name: /vin,.*fără răspuns/ })[0]);
+    expect(screen.getByText(/Membri incluși în calcul: 3 · 1 „Vin”/)).toBeTruthy();
+    expect(screen.getByText(/Total estimat din voturile înregistrate/)).toBeTruthy();
   });
 
   it('lista „inactivi" îi conține pe cei fără prezență în ultimele 14 zile', async () => {
     api.incarcaSala.mockResolvedValue(cuUnulVechi());
     randeaza();
     await screen.findByText('Fiecare antrenament');
-    fireEvent.click(screen.getByRole('button', { name: 'Inactivi 2+ săpt.' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ultima confirmare acum peste 14 zile' }));
     const lista = screen.getByRole('heading', { name: 'Membrii' }).parentElement as HTMLElement;
     expect(within(lista).getByText('Ion')).toBeTruthy();
     expect(within(lista).queryByText('Maria')).toBeNull();
@@ -93,8 +109,8 @@ describe('Analiza — scoaterea din grup', () => {
     randeaza();
     await screen.findByText('Fiecare antrenament');
     expect(screen.queryByText('Roma')).toBeNull();
-    expect(cifra('confirmări medii')).toBe('33%');
-    expect(cifra('record')).toBe('1');
+    expect(cifra('au răspuns „Vin”, în medie')).toBe('33%');
+    expect(cifra('cele mai multe confirmări')).toBe('1');
     expect(cifra('fără răspuns')).toBe('2');
   });
 
@@ -113,7 +129,7 @@ describe('Analiza — scoaterea din grup', () => {
     expect(jurnal.getAllByText(/după 2 min/)).toHaveLength(1);
     expect(jurnal.getByText(/12:02/)).toBeTruthy();
     api.incarcaVoturi.mockResolvedValue({ posted_at: null, votes: [vot] });
-    fireEvent.click(screen.getByRole('button', { name: '3 luni' }));
+    fireEvent.click(screen.getByRole('button', { name: '90 de zile' }));
     fireEvent.click(screen.getAllByRole('listitem', { name: /vin,.*fără răspuns/ })[0]);
     expect(await screen.findByText(/Ora publicării lipsește/)).toBeTruthy();
     expect(screen.queryByText(/Vin → Nu vin/)).toBeNull();

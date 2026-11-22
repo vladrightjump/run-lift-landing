@@ -36,34 +36,24 @@ function isoOffset(now: Date, days: number): string {
   return new Date(now.getTime() - days * MS_DAY).toISOString().slice(0, 10);
 }
 
-// Sessions within the current period (inclusive), excluding cancelled ones.
-export function filterByPeriod<T extends StatSession>(
-  sessions: T[],
-  period: Period,
-  now: Date,
+// Offset 0 is today. Each window includes its first and last calendar day.
+function sessionsInWindow<T extends StatSession>(
+  sessions: T[], now: Date, length: number, endDaysAgo: number,
 ): T[] {
-  const from = isoOffset(now, periodDays(period));
-  const today = now.toISOString().slice(0, 10);
+  const from = isoOffset(now, endDaysAgo + length - 1);
+  const to = isoOffset(now, endDaysAgo);
   return sessions.filter(
-    (s) =>
-      s.status !== "cancelled" &&
-      s.session_date >= from &&
-      s.session_date <= today,
+    (s) => s.status !== "cancelled" && s.session_date >= from && s.session_date <= to,
   );
 }
 
-// The immediately-preceding equal-length window (for trend comparison).
-export function filterPrevPeriod(
-  sessions: StatSession[],
-  period: Period,
-  now: Date,
-): StatSession[] {
-  const len = periodDays(period);
-  const from = isoOffset(now, len * 2);
-  const to = isoOffset(now, len);
-  return sessions.filter(
-    (s) => s.status !== "cancelled" && s.session_date >= from && s.session_date < to,
-  );
+export function filterByPeriod<T extends StatSession>(sessions: T[], period: Period, now: Date): T[] {
+  return sessionsInWindow(sessions, now, periodDays(period), 0);
+}
+
+export function filterPrevPeriod<T extends StatSession>(sessions: T[], period: Period, now: Date): T[] {
+  const length = periodDays(period);
+  return sessionsInWindow(sessions, now, length, length);
 }
 
 // ── Per-session breakdown ─────────────────────────────────────────────────────

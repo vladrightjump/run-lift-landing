@@ -1,4 +1,3 @@
-// Testele din gym-app, portate neschimbat (doar runnerul: node:test → vitest).
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
@@ -198,7 +197,7 @@ test("periodDays: unknown period falls back to the year window", () => {
 });
 
 test("filterByPeriod: today is inside the window; the far edge is inclusive", () => {
-  const from = "2026-06-30"; // exactly 30 days before NOW (2026-07-30)
+  const from = "2026-07-01"; // first of 30 days ending on July 30
   const sessions = [
     sess("edge", from, ["x"]),
     sess("today", "2026-07-30", ["x"]),
@@ -358,18 +357,18 @@ test("leaderboard: duplicate yes rows never push a member above the session coun
 });
 
 // ── Corner cases: period boundaries ──────────────────────────────────────────
-test("filterPrevPeriod: the boundary day belongs to the current window, not the previous", () => {
-  const boundary = "2026-06-30"; // exactly 30 days before NOW
-  const sessions = [sess("edge", boundary, ["x"])];
-  assert.deepEqual(filterByPeriod(sessions, "month", NOW).map((s) => s.id), ["edge"]);
-  assert.deepEqual(filterPrevPeriod(sessions, "month", NOW).map((s) => s.id), []);
-});
-
-test("filterByPeriod: a session dated today at the far edge of the year window is kept", () => {
-  const sessions = [sess("old", "2025-07-31", ["x"]), sess("tooOld", "2025-07-29", ["x"])];
-  const ids = filterByPeriod(sessions, "year", NOW).map((s) => s.id);
-  assert.deepEqual(ids, ["old"]);
-});
+test.each([["month", 30], ["quarter", 90], ["year", 365]] as const)(
+  "%s uses two consecutive windows of exactly %i days",
+  (period, days) => {
+    const sessions = Array.from({ length: 2 * days + 1 }, (_, offset) => {
+      const date = new Date(NOW);
+      date.setUTCDate(date.getUTCDate() - offset);
+      return sess(String(offset), date.toISOString().slice(0, 10), []);
+    });
+    assert.deepEqual(filterByPeriod(sessions, period, NOW), sessions.slice(0, days));
+    assert.deepEqual(filterPrevPeriod(sessions, period, NOW), sessions.slice(days, 2 * days));
+  },
+);
 
 test("recordSession: sessions with zero confirmations still yield a record of 0", () => {
   assert.deepEqual(recordSession([sess("s", "2026-07-10", [])]), {
