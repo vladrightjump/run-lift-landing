@@ -10,28 +10,33 @@ import type { StatSession } from './statistici';
  * deci testabil fără rețea.
  */
 
-/** Antrenamentele în forma pe care o așteaptă statisticile portate din gym-app. */
-export const sesiuniPentruStatistici = (d: SalaDate): StatSession[] => {
-  const membri = new Map(d.membri.map((m) => [m.id, m]));
+/** Lista salvată la sondaj plus membrii cu răspuns. Pentru sondajele vechi estimăm lista din grupul verificat. */
+export const sesiuniPentruStatistici = (d: SalaDate) => {
+  const membri = new Map(d.membri.filter((m) => !m.is_admin).map((m) => [m.id, m]));
   const peSesiune = new Map<string, StatSession['attendance']>();
   for (const r of d.raspunsuri) {
     const m = membri.get(r.member_id);
+    if (!m) continue;
     const lista = peSesiune.get(r.session_id) ?? [];
     lista.push({
       response: r.response,
       is_first_training: r.is_first_training,
-      member: m ? { id: m.id, full_name: m.full_name } : null,
+      member: { id: m.id, full_name: m.full_name },
     });
     peSesiune.set(r.session_id, lista);
   }
-  return d.antrenamente.map((a) => ({
-    id: a.id,
-    session_date: a.session_date,
-    starts_at: a.starts_at,
-    location: a.location,
-    status: a.status,
-    attendance: peSesiune.get(a.id) ?? [],
-  }));
+  return d.antrenamente.map((a) => {
+    const attendance = peSesiune.get(a.id) ?? [];
+    const roster = a.poll_roster ?? [...membri.values()]
+      .filter((m) => a.poll_sent && m.status === 'active' && m.telegram_membership === 'in_group'
+        && m.telegram_user_id != null && m.join_date <= a.session_date)
+      .map((m) => m.id);
+    const eligibleIds = new Set(roster.filter((id) => membri.has(id)));
+    for (const vote of attendance) {
+      if (vote.member) eligibleIds.add(vote.member.id);
+    }
+    return { ...a, attendance, eligibleIds };
+  });
 };
 
 /** Zilele de antrenament anulate (`YYYY-MM-DD`), pentru `urmatorulSondaj`. */

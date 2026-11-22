@@ -43,6 +43,7 @@ export function createHandlers(overrides: Record<string, unknown> = {}, latencyM
     admin_list_training_reels: [reel()],
     admin_list_weekly_workout: [workout()],
     admin_sala_date: dateSala(),
+    admin_sala_voturi: { posted_at: null, votes: [] },
     admin_sala_rezumat: null,
     admin_trial_data: trialData(),
     admin_giveaway_date: dateGiveaway({ giveaway: null }),

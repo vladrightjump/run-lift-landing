@@ -1,7 +1,3 @@
-// Portat neschimbat din gym-app (lib/attendance-stats.ts), cu testele lui
-// (tests/unit/salaStatistici.test.ts). Ecranul „Analiza” trebuie să arate exact
-// ce arăta gym-app (R10), deci calculele nu se rescriu, doar se mută.
-//
 // Pure, dependency-free attendance statistics used by the Prezențe page.
 // Everything here is deterministic and unit-tested (see tests/unit/salaStatistici.test.ts).
 // No Next.js / Supabase imports so it can run under a plain node test runner.
@@ -24,6 +20,7 @@ export interface StatSession {
   location: string;
   status: string; // scheduled | done | cancelled
   attendance: StatAtt[];
+  eligibleIds?: ReadonlySet<string>;
 }
 
 // ── Period windows ────────────────────────────────────────────────────────────
@@ -40,11 +37,11 @@ function isoOffset(now: Date, days: number): string {
 }
 
 // Sessions within the current period (inclusive), excluding cancelled ones.
-export function filterByPeriod(
-  sessions: StatSession[],
+export function filterByPeriod<T extends StatSession>(
+  sessions: T[],
   period: Period,
   now: Date,
-): StatSession[] {
+): T[] {
   const from = isoOffset(now, periodDays(period));
   const today = now.toISOString().slice(0, 10);
   return sessions.filter(
@@ -106,10 +103,10 @@ function countResponses(session: StatSession): { yes: number; no: number } {
 
 export function sessionBreakdown(
   session: StatSession,
-  activeCount: number,
+  activeCount?: number,
 ): Breakdown {
   const { yes, no } = countResponses(session);
-  const total = Math.max(activeCount, yes + no);
+  const total = Math.max(activeCount ?? session.eligibleIds?.size ?? 0, yes + no);
   const none = Math.max(0, total - yes - no);
   const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
   return {
@@ -130,9 +127,9 @@ export function sessionBreakdown(
 // more confirmations than active members reads 100%, not 120%.
 export function averageAttendancePct(
   sessions: StatSession[],
-  activeCount: number,
+  activeCount?: number,
 ): number {
-  if (sessions.length === 0 || activeCount <= 0) return 0;
+  if (sessions.length === 0 || (activeCount !== undefined && activeCount <= 0)) return 0;
   const sum = sessions.reduce((acc, s) => {
     const b = sessionBreakdown(s, activeCount);
     return acc + (b.total > 0 ? b.yes / b.total : 0);
@@ -143,7 +140,7 @@ export function averageAttendancePct(
 // Average number of non-responders per session.
 export function avgNoResponse(
   sessions: StatSession[],
-  activeCount: number,
+  activeCount?: number,
 ): number {
   if (sessions.length === 0) return 0;
   const sum = sessions.reduce(
@@ -232,7 +229,7 @@ export interface Summary {
 export function summarize(
   current: StatSession[],
   previous: StatSession[],
-  activeCount: number,
+  activeCount?: number,
 ): Summary {
   const avgPct = averageAttendancePct(current, activeCount);
   const hasPrevious = previous.length > 0;

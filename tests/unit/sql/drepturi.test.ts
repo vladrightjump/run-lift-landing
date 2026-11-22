@@ -185,7 +185,7 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
       'admin_list_training_reels', 'admin_save_training_reel',
       'admin_move_training_reel', 'admin_delete_training_reel',
       // Grupul de antrenament (tabelele din `public`, fostul gym-app).
-      'admin_sala_marcheaza_verificat', 'admin_sala_verifica_membri', 'admin_sala_date', 'admin_sala_rezumat', 'admin_sala_set_prezenta',
+      'admin_sala_voturi', 'admin_sala_marcheaza_verificat', 'admin_sala_verifica_membri', 'admin_sala_date', 'admin_sala_rezumat', 'admin_sala_set_prezenta',
       'admin_sala_seteaza_antrenament', 'admin_sala_salveaza_config', 'admin_sala_porneste_bot',
       'admin_sala_comanda', 'admin_sala_scoate_din_grup', 'admin_sala_salveaza_membru',
       'admin_sala_leaga_cont', 'admin_sala_membru_din_cont', 'admin_sala_uneste',
@@ -209,6 +209,7 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
     // Ajutoarele funcțiilor grupului: ziua la Chișinău și urma scrierilor.
     'sala_azi',
     'sala_jurnal',
+    'sala_capture_poll',
     // Ajutoarele giveaway-ului și garda de înscriere: le cheamă doar triggerul
     // și funcțiile de mai sus, niciodată un client.
     'giveaway_cheie_telefon',
