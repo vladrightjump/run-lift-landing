@@ -142,9 +142,9 @@ test.describe('Mișcare — efecte legate de scroll', () => {
     await settle(page);
 
     const progress = () => scaleX(page, '[data-css~="e3-progress"]');
-    const heroOffset = () => translateY(page, '[data-css~="e3-hero-copy"]');
+    const title = page.getByRole('heading', { level: 1 });
     await scrollTo(page, 1200);
-    await expect.poll(heroOffset).toBeLessThan(-5);
+    await expect(title).not.toBeInViewport();
     const progressBefore = await progress();
     expect(progressBefore).toBeGreaterThan(0.05);
 
@@ -156,8 +156,8 @@ test.describe('Mișcare — efecte legate de scroll', () => {
     await page.keyboard.press('Home');
     await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
     await expect.poll(progress).toBeLessThan(0.02);
-    await expect.poll(heroOffset).toBe(0);
-    await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+    await expect(title).toBeInViewport();
+    expect(await translateY(page, '[data-css~="e3-hero-copy"]')).toBe(0);
   });
 
   test('titlurile de secțiune se dezvăluie complet, nu rămân tăiate', async ({ page }) => {
@@ -202,11 +202,17 @@ test.describe('Mișcare — reduced motion', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
   });
 
-  test('fără mișcare: bara de progres și clipul din hero dispar', async ({ page }) => {
+  test('fără mișcare: hero-ul arată fotografia fără să încarce clipul', async ({ page }) => {
+    const videoRequests: string[] = [];
+    page.on('request', (request) => {
+      if (request.resourceType() === 'media') videoRequests.push(request.url());
+    });
     await page.goto('/?preview=landing');
     await settle(page);
     await expect(page.locator("[data-css~=\"e3-progress\"]")).toBeHidden();
-    await expect(page.locator("[data-css~=\"e3-hero-video\"]")).toBeHidden();
+    await expect(page.locator('[data-css="hero-poster"]')).toBeVisible();
+    await expect(page.locator('[data-css="e3-hero-video"]')).toHaveCount(0);
+    expect(videoRequests).toEqual([]);
   });
 
   test('fără mișcare: titlurile nu rămân tăiate de mască', async ({ page }) => {
@@ -397,6 +403,27 @@ test.describe('Mișcare — titlul din hero', () => {
 });
 
 test.describe('Mișcare — exploratorul formatului', () => {
+  test('săgețile schimbă fotografia și păstrează înălțimea exploratorului', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/?preview=landing');
+    await settle(page);
+    const run = page.getByRole('tab', { name: 'RUN' });
+    await run.focus();
+    const sequence = page.locator('[data-css="format-sequence"]');
+    const photo = sequence.locator('img');
+    const height = await sequence.evaluate((el) => el.clientHeight);
+
+    for (const [name, image] of [['LIFT', 'lift'], ['REPEAT', 'repeat']]) {
+      await page.keyboard.press('ArrowRight');
+      await expect(page.getByRole('tabpanel', { name })).toBeVisible();
+      await expect(photo).toHaveAttribute('src', `/landing/${image}.webp`);
+      await expect
+        .poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth))
+        .toBeGreaterThan(0);
+      expect(await sequence.evaluate((el) => el.clientHeight)).toBe(height);
+    }
+  });
+
   test('bara de sub etapa aleasă se mută odată cu selecția', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
@@ -571,17 +598,42 @@ test.describe('Mișcare — parallax în hero', () => {
   // `overflow: hidden` devenea ea însăși container de scroll — unul fără
   // overflow scrollabil — iar `view(block)` se lega de ea, deci progresul nu
   // avansa niciodată și parallaxul era mort fără ca nimic să pară stricat.
-  test('textul din hero se retrage la scroll', async ({ page }) => {
+  test('doar imaginea din hero se deplasează la scroll', async ({ page }) => {
     await page.goto('/?preview=landing');
     await settle(page);
 
-    expect(await translateY(page, "[data-css~=\"e3-hero-copy\"]")).toBe(0);
-    await scrollTo(page, 400);
+    const footage = '[data-css="hero-footage"]';
+    expect(await translateY(page, footage)).toBe(0);
+    const top = await page.locator(footage).evaluate((el) => el.getBoundingClientRect().top);
+    await scrollTo(page, top + 300);
 
     await expect
-      .poll(() => translateY(page, "[data-css~=\"e3-hero-copy\"]"), {
+      .poll(() => translateY(page, footage), {
         message: 'hero-ul nu s-a mișcat — timeline-ul de view nu e activ',
       })
-      .toBeLessThan(-5);
+      .toBeLessThan(-2);
+    expect(await translateY(page, '[data-css~="e3-hero-copy"]')).toBe(0);
   });
+});
+
+test('clipul se oprește din tastatură și păstrează pauza după scroll', async ({ page }) => {
+  await page.goto('/?preview=landing');
+  const video = page.locator('[data-css="e3-hero-video"]');
+  const pause = page.getByRole('button', { name: 'Pauză videoclip' });
+  await expect(pause).toBeVisible();
+  await pause.focus();
+  await page.keyboard.press('Enter');
+  const resume = page.getByRole('button', { name: 'Redă videoclipul' });
+  await expect(resume).toBeFocused();
+  await expect(video).toHaveJSProperty('paused', true);
+
+  await scrollTo(page, 1200);
+  await scrollTo(page, 0);
+  await expect(video).toHaveJSProperty('paused', true);
+  await resume.click();
+  await expect(video).toHaveJSProperty('paused', false);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(video).toHaveCount(0);
+  await expect(page.locator('[data-css="hero-poster"]')).toBeVisible();
 });

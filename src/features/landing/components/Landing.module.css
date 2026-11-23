@@ -12,3 +12,8 @@
   .e3-toast-mark { font-size: 17px; font-weight: 700; }
 
 @keyframes e3-toast-in { from { opacity: 0; transform: translate(-50%, -16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (max-width: 360px) {
+  .root {
+    --e3-fs-h2: clamp(38px, 13.5vw, 48px);
+  }
+}

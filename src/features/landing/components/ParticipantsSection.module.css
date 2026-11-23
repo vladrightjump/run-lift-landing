@@ -1,6 +1,6 @@
 
 .e3-skel {
-  height: 12px; border-radius: 2px;
+  height: 12px; max-width: 100%; border-radius: 2px;
   background: linear-gradient(90deg, var(--e3-border) 0%, var(--e3-surface-hover) 50%, var(--e3-border) 100%);
   background-size: 200% 100%;
   animation: e3-shimmer 1.4s ease-in-out infinite;
@@ -35,7 +35,7 @@
     font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--e3-bg); background: var(--e3-accent); padding: 3px 8px;
   }
-  .e3-bib-skel { gap: 12px; }
+  .e3-bib-skel { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .e3-people-empty {
     margin: 0; padding: 40px 0; border-bottom: 1px solid var(--e3-border);
     font-size: 16px; color: var(--e3-muted);
@@ -43,7 +43,7 @@
   .e3-people-empty a { font-weight: 600; }
   .e3-people-wait { margin-top: clamp(28px, 4vw, 44px); }
   @media (max-width: 480px) {
-    .e3-people-grid { grid-template-columns: 1fr 1fr; }
+    .e3-people-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
   @media (max-width: 480px) {
     .e3-bib { padding: 14px 14px 16px; }

@@ -33,6 +33,20 @@ const INTRARI = [
   { nume: 'formularul de pe landing', url: '/?preview=landing' },
 ] as const;
 
+test('landing: lista în încărcare încape la 320px', async ({ page, network }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await fixClock(page);
+  // Verificăm și cadrul inițial, când fonturile web pot lipsi.
+  await page.route('https://fonts.gstatic.com/**', (route) => route.abort());
+  network.use(rpcResponse('public_stats', publicStats(), { latencyMs: 2500 }));
+  await page.goto('/?preview=landing', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('[data-css~="e3-bib-skel"]').first()).toBeAttached();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+  );
+  expect(overflow).toBe(0);
+});
+
 for (const { nume, url } of INTRARI) {
   test(`${nume}: niciun câmp sub ${MIN_FONT_PX}px, deci fără zoom la focus`, async ({ page, network }) => {
     await fixClock(page);

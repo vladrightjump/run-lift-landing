@@ -100,7 +100,7 @@ export const Landing = ({ mode = 'full' }: Props) => {
   const reg = useRegistration({ stats, now, showToast });
 
   return (
-    <div className={shared1['e3-root']} data-css={"e3-root"}>
+    <div className={`${shared1['e3-root']} ${styles.root}`} data-css="e3-root">
       {/* Firul de progres al paginii. Decorativ — scroll-ul e deja indicat de
           bara nativă; aici doar dublează, în culoarea brandului. */}
       <div className={shared2['e3-progress']} data-css={"e3-progress"} aria-hidden="true" />
