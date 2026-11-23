@@ -157,11 +157,12 @@
   .activitati a:hover, .disponibilitate a:hover { text-decoration: underline; }
   .dn-section[id] { scroll-margin-top: 80px; }
   .intrebari summary:focus-visible { outline: 2px solid var(--e3-accent); outline-offset: 4px; }
-  @media (max-width: 960px) {
+  @media (max-width: 1024px) {
     .dn-topbar {
       grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 0;
       padding-block: 8px 0;
     }
+    .dn-topbar > nav { grid-column: 1 / -1; grid-row: 2; --section-nav-gap: 20px; }
     .dn-topbar-cta { grid-column: 2; grid-row: 1; padding-inline: 14px; white-space: nowrap; }
     .dn-section[id] { scroll-margin-top: 116px; }
   }

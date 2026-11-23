@@ -19,44 +19,50 @@ export function SectionNav() {
   useEffect(() => {
     const targets = sections.map(([id]) => document.getElementById(id)).reverse();
     const header = nav.current?.closest('header');
-    if (!header || typeof IntersectionObserver === 'undefined') return;
-    const footer = document.querySelector('footer');
-    let observer: IntersectionObserver;
-    let top = 0;
+    const page = header?.parentElement;
+    const scroller = document.scrollingElement;
+    if (!header || !page || !scroller) return;
+
+    let frame: number | undefined;
     const readPosition = () => {
-      const atFooter = footer && footer.getBoundingClientRect().top < window.innerHeight;
-      const section = atFooter ? targets[0] : targets.find(target => target && target.getBoundingClientRect().top <= top + 1);
+      frame = undefined;
+      const height = scroller.clientHeight;
+      if (!height) return;
+      const headerHeight = header.getBoundingClientRect().height;
+      // Citim secțiunea în partea de sus a spațiului rămas sub antet.
+      const readingLine = headerHeight + Math.max(0, height - headerHeight) / 5;
+      const scrollTop = scroller.scrollTop;
+      const atEnd = scrollTop > 0 && scroller.scrollHeight - height - scrollTop <= 1;
+      const section = atEnd ? targets[0] : targets.find(target => target && target.getBoundingClientRect().top <= readingLine);
       setActive(section?.id ?? '');
     };
-    const observe = () => {
-      observer?.disconnect();
-      const headerHeight = header.getBoundingClientRect().height;
-      top = Math.round(headerHeight + (window.innerHeight - headerHeight) * 0.2);
-      const below = Math.max(0, window.innerHeight - top - 1);
-      // Mark the section in the upper fifth of the reading area, below the sticky header.
-      observer = new IntersectionObserver(readPosition, { rootMargin: '-' + top + 'px 0px -' + below + 'px 0px' });
-      for (const target of targets) if (target) observer.observe(target);
-      readPosition();
+    const schedule = () => {
+      frame ??= window.requestAnimationFrame(readPosition);
     };
-    const endOfPage = new IntersectionObserver(readPosition);
-    if (footer) endOfPage.observe(footer);
-    observe();
-    window.addEventListener('resize', observe);
-    const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(observe);
+    schedule();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
     resize?.observe(header);
+    resize?.observe(page);
     return () => {
-      observer.disconnect();
-      endOfPage.disconnect();
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
       resize?.disconnect();
-      window.removeEventListener('resize', observe);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
     };
   }, []);
 
   useLayoutEffect(() => {
     const container = nav.current;
     const marker = line.current;
-    const link = container?.querySelector<HTMLAnchorElement>(`a[href="#${active}"]`);
-    if (!container || !marker || !link) return;
+    if (!container || !marker) return;
+    if (!active) {
+      if (!container.contains(document.activeElement)) container.scrollLeft = 0;
+      return;
+    }
+    const link = container.querySelector<HTMLAnchorElement>(`a[href="#${active}"]`);
+    if (!link) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     let movement: ReturnType<typeof animate> | undefined;
     let previous = '';
@@ -66,7 +72,7 @@ export function SectionNav() {
       const to = 'translateX(' + link.offsetLeft + 'px) scaleX(' + link.offsetWidth + ')';
       if (!shouldAnimate && previous === to && !reduced.matches) return;
       previous = to;
-      movement?.stop();
+      movement?.cancel();
       marker.style.transform = to;
       if (shouldAnimate && !reduced.matches && typeof marker.animate === 'function' && from !== 'none') {
         movement = animate(marker, { transform: [from, to] }, { duration: 0.24, ease: 'easeOut' });
@@ -83,7 +89,11 @@ export function SectionNav() {
     const endMotion = () => place(false);
     reduced.addEventListener('change', endMotion);
     return () => {
-      movement?.stop();
+      // React poate ascunde indicatorul înainte de cleanup.
+      if (movement && marker.getClientRects().length) {
+        marker.style.transform = getComputedStyle(marker).transform;
+      }
+      movement?.cancel();
       resize?.disconnect();
       reduced.removeEventListener('change', endMotion);
     };

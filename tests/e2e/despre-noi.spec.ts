@@ -86,6 +86,127 @@ test.describe('Despre noi — conținut', () => {
     });
   }
 
+  test('cuprinsul revine la program la primul scroll în sus de la finalul paginii', async ({ page, network }) => {
+    network.use(rpcResponse('public_trial_config', { enabled: false }));
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/despre-noi');
+    await expect(page.getByRole('link', { name: /Deschide în Google Maps/ })).toBeAttached();
+    await expect(page.locator('#prima-vizita').getByRole('link', { name: 'Ține-mă la curent' })).toBeAttached();
+    await page.evaluate(async () => { await document.fonts.ready; });
+
+    // Lasă subsolul parțial vizibil când ancora programului ajunge sub antet.
+    const height = await page.locator('#program').evaluate(section => {
+      const footer = document.querySelector('footer')!;
+      return Math.ceil(footer.getBoundingClientRect().top - section.getBoundingClientRect().top) + 96;
+    });
+    await page.setViewportSize({ width: 1280, height });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+    const nav = page.getByRole('navigation', { name: 'Pe această pagină' });
+    const program = nav.getByRole('link', { name: 'Program și hartă' });
+    const noutati = nav.getByRole('link', { name: 'Noutăți' });
+    const footer = page.locator('footer');
+
+    const remaining = () => page.evaluate(() => document.documentElement.scrollHeight - innerHeight - scrollY);
+    await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
+    await expect.poll(remaining).toBeLessThanOrEqual(1);
+    await expect(noutati).toHaveAttribute('aria-current', 'location');
+    await page.mouse.move(24, 200);
+    await page.mouse.wheel(0, -32);
+    await expect.poll(remaining).toBeCloseTo(32, 0);
+    await expect(footer).toBeInViewport();
+    await expect(program).toHaveAttribute('aria-current', 'location');
+
+    await program.click();
+    await expect(page).toHaveURL(/#program$/);
+    await expect(footer).toBeInViewport();
+    await expect(program).toHaveAttribute('aria-current', 'location');
+  });
+
+  test('cuprinsul încape pe lățime lângă pragul antetului', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 961, height: 768 });
+    await page.goto('/despre-noi');
+    await page.evaluate(async () => { await document.fonts.ready; });
+    const nav = page.getByRole('navigation', { name: 'Pe această pagină' });
+    await expect(nav.getByRole('link', { name: 'Noutăți' })).toBeInViewport({ ratio: 1 });
+  });
+
+  test('la revenirea direct sus pe mobil, cuprinsul arată din nou primele linkuri', async ({ page, network }) => {
+    network.use(rpcResponse('public_trial_config', { enabled: false }));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/despre-noi');
+    await expect(page.getByRole('link', { name: /Deschide în Google Maps/ })).toBeAttached();
+    await expect(page.locator('#prima-vizita').getByRole('link', { name: 'Ține-mă la curent' })).toBeAttached();
+    await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
+    const nav = page.getByRole('navigation', { name: 'Pe această pagină' });
+    const noutati = nav.getByRole('link', { name: 'Noutăți' });
+    await expect(noutati).toHaveAttribute('aria-current', 'location');
+    await expect(noutati).toBeInViewport({ ratio: 1 });
+
+    // Revenim sus în timp ce indicatorul tocmai pornește spre „Program și hartă”.
+    await nav.getByRole('link', { name: 'Program și hartă' }).evaluate(link => new Promise<void>(resolve => {
+      const observer = new MutationObserver(() => {
+        if (!link.hasAttribute('aria-current')) return;
+        observer.disconnect();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        resolve();
+      });
+      observer.observe(link, { attributes: true, attributeFilter: ['aria-current'] });
+      document.getElementById('program')!.scrollIntoView({ behavior: 'instant' });
+    }));
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+    await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+    await expect(nav.locator('[aria-current]')).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Povestea noastră' })).toBeInViewport({ ratio: 1 });
+  });
+
+  test('tastele End și Home păstrează pagina și cuprinsul funcționale pe mobil', async ({ page, network }) => {
+    network.use(rpcResponse('public_trial_config', { enabled: false }));
+    await page.setViewportSize({ width: 390, height: 844 });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+
+    await page.goto('/despre-noi');
+    await expect(page.getByRole('link', { name: /Deschide în Google Maps/ })).toBeAttached();
+    await expect(page.locator('#prima-vizita').getByRole('link', { name: 'Ține-mă la curent' })).toBeAttached();
+    await page.evaluate(async () => { await document.fonts.ready; });
+
+    const nav = page.getByRole('navigation', { name: 'Pe această pagină' });
+    const firstLink = nav.getByRole('link', { name: 'Povestea noastră' });
+    const noutati = nav.getByRole('link', { name: 'Noutăți' });
+    await page.keyboard.press('End');
+    await expect(noutati).toHaveAttribute('aria-current', 'location');
+    await expect(noutati).toBeInViewport({ ratio: 1 });
+    await expect(firstLink).not.toBeInViewport();
+
+    await page.keyboard.press('Home');
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+    await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+    await expect(firstLink).toBeInViewport({ ratio: 1 });
+    await expect(nav.locator('[aria-current]')).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
+  test('filmarea rămâne în pauză după trecerea de la lățime mobilă la desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/despre-noi');
+    const video = page.locator('[data-css~="dn-hero-video"]');
+    await expect(video).toHaveAttribute('src', '/fpv-mobile.mp4');
+    await expect(video).toHaveJSProperty('paused', false);
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.getByRole('button', { name: 'Pune filmarea pe pauză' }).click();
+    const play = page.getByRole('button', { name: 'Pornește filmarea' });
+    await expect(play).toBeVisible();
+    await expect(video).toHaveAttribute('src', '/fpv-mobile.mp4');
+    await expect(video).toHaveJSProperty('paused', true);
+
+    await play.click();
+    await expect(video).toHaveJSProperty('paused', false);
+  });
+
   test('navigare cu tastatura și imagine statică la mișcare redusă', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.setViewportSize({ width: 320, height: 720 });

@@ -70,6 +70,35 @@ test.describe('Pagina /antrenament', () => {
     await incapePeTelefon(page, page.getByLabel(/Alege o săptămână/));
   });
 
+  test('scrollul în sus pe mobil readuce titlul și păstrează săptămâna din link', async ({ page, network }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const corp = Array.from({ length: 36 }, (_, i) => `Repetarea ${i + 1}: 400 m alergare`).join('\n');
+    program(network, [saptamanaPublica(1, { titlu: 'Intervale pe pistă', corp }), saptamanaPublica(2)]);
+    await page.goto('/antrenament#s1');
+
+    const heading = page.getByRole('heading', { level: 1, name: 'Antrenamentul săptămânii' });
+    const workout = page.getByRole('heading', { level: 2, name: 'Intervale pe pistă' });
+    const weekSelector = page.getByLabel(/Alege o săptămână/);
+    await expect(workout).toBeInViewport();
+    await expect(weekSelector).not.toBeInViewport();
+
+    await page.keyboard.press('End');
+    await expect(weekSelector).toBeInViewport();
+    await expect(heading).not.toBeInViewport();
+    const bottom = await page.evaluate(() => scrollY);
+
+    await page.mouse.move(24, 300);
+    await page.mouse.wheel(0, -300);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(bottom);
+
+    await page.keyboard.press('Home');
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+    await expect(heading).toBeInViewport();
+    await expect(workout).toBeInViewport();
+    await expect(weekSelector).toHaveValue('1');
+    await expect(page).toHaveURL(/\/antrenament#s1$/);
+  });
+
   test('shell-ul construit poartă cardul de share al antrenamentului, nu al ediției', async ({ page }) => {
     await page.goto('/antrenament.html');
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', META_ANTRENAMENT.title);
