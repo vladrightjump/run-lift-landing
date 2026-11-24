@@ -55,7 +55,11 @@ interface SentMessage {
 export async function sendMessage(
   chatId: number | string,
   text: string,
-  options?: { reply_markup?: Record<string, unknown>; parse_mode?: "HTML" },
+  options?: {
+    reply_markup?: Record<string, unknown>;
+    parse_mode?: "HTML";
+    link_preview_options?: { is_disabled: boolean };
+  },
 ): Promise<TelegramResponse<SentMessage>> {
   return call<SentMessage>("sendMessage", {
     chat_id: chatId,
@@ -72,6 +76,7 @@ export async function editMessageText(
   options?: {
     reply_markup?: { inline_keyboard: InlineKeyboard };
     parse_mode?: "HTML";
+    link_preview_options?: { is_disabled: boolean };
   },
   signal?: AbortSignal,
 ): Promise<TelegramResponse> {

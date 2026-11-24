@@ -4,7 +4,7 @@ import { botFailure, unreportedFailure } from "./lib/log.js";
 import { syncMemberships } from "./lib/membership.js";
 import express from "express";
 import cron from "node-cron";
-import { handleUpdate, registerOrganizerMenu, type TgUpdate } from "./webhook.js";
+import { handleUpdate, registerMemberMenu, registerOrganizerMenu, type TgUpdate } from "./webhook.js";
 import { organizerIds } from "./lib/organizers.js";
 import { sendPoll, wasPollAccepted } from "./jobs/send-poll.js";
 import { morningSummary } from "./jobs/morning-summary.js";
@@ -62,6 +62,7 @@ app.listen(PORT, () => {
   // The organizers' command menu (KTD13). Without a bot token (CI) there is
   // nothing to register.
   if (process.env.TELEGRAM_BOT_TOKEN) {
+    void registerMemberMenu();
     for (const id of organizerIds()) void registerOrganizerMenu(id);
   }
 });

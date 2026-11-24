@@ -38,6 +38,7 @@ const SALA_SQL = readFileSync(resolve(__dirname, '../../../supabase/schema/sala.
 const MIGRARI_NEAPLICATE = [
   'supabase/sql/supabase-migration-prima-proba.sql',
   'supabase/sql/supabase-migration-sala-analiza-sondaje.sql',
+  'supabase/sql/supabase-migration-sala-feedback.sql',
   'supabase/sql/supabase-migration-giveaway.sql',
   'supabase/sql/supabase-migration-giveaway-inchidere-manuala.sql',
 ].map((f) =>
@@ -103,6 +104,7 @@ const TABELE_SALA = [
   'telegram_unmatched',
   'telegram_group_memberships',
   'inactivity_reviews',
+  'telegram_feedback', 'telegram_member_profiles',
 ];
 
 export const ADMIN_TOKEN = '11111111-1111-1111-1111-111111111111';
