@@ -289,9 +289,8 @@ confirmare. Invitația se publică doar când organizatorul apasă **Trimite în
 
 - **Dă feedback** deschide sondajul privat. Membrii îl pot deschide și din meniul de comenzi cu
   `/feedback`. Răspunsurile și comentariile se salvează fără legătură cu profilul Telegram.
-- **Completează profilul** deschide `/profil`. Membrul verifică numele, poate adăuga ziua și luna
-  nașterii și scrie în cuvintele lui ce vrea să obțină. Formularul salvează și preferința pentru o
-  urare publică, dacă a fost aleasă.
+- **Completează profilul** deschide `/profil`. Membrul verifică numele și scrie în
+  cuvintele lui ce vrea să obțină la antrenament.
 - Organizatorii citesc totalurile și comentariile cu `/feedback_rezultate` și profilurile cu
   `/profiluri`. Adaugă un număr după comandă pentru altă pagină. Pentru un profil marcat
   **De legat**, folosește ID-ul Telegram în secțiunea **Membri** din admin.
@@ -299,3 +298,20 @@ confirmare. Invitația se publică doar când organizatorul apasă **Trimite în
 Ciornele expiră după 15 minute de inactivitate și se pierd la repornirea procesului. Un membru
 poate redeschide formularul din meniu. Formularele cer apartenență la grup la deschidere și la
 salvare. Publicarea invitației cere migrarea și administratorul autorizat în bot.
+
+## Urări aniversare
+
+După publicarea noii versiuni de bot și admin, aplicați
+[migrarea pentru aniversări](../supabase/sql/supabase-migration-sala-aniversari.sql)
+peste [migrarea de feedback](../supabase/sql/supabase-migration-sala-feedback.sql), în proiectul
+Supabase al grupului din parc. Până la migrare, celelalte comenzi și sondaje rămân disponibile.
+
+Membrul controlează urările din comanda privată `/aniversare`. Botul poate folosi ziua și luna
+vizibile în profilul Telegram. În **Admin → Membri**, organizatorii pot filtra lista după sursa
+datei sau pot vedea pentru cine lipsește data. Pot completa sau corecta data pentru un cont
+Telegram legat. Editarea datei nu schimbă opțiunea membrului de a primi o urare.
+
+Sub comutatorul principal al botului, urarea pleacă în grup la 09:00, ora Chișinăului. O pornire
+mai târzie poate recupera doar zilele de naștere din ziua în curs. Botul verifică apartenența la
+grup și reconfirmă datele importate din Telegram înainte de mesaj. Salvează o singură încercare
+pe membru și an. Dacă Telegram nu confirmă livrarea, urarea nu se retrimite automat.

@@ -292,6 +292,7 @@ export function adminPreviewData(now = Date.now()): Record<string, unknown> {
     admin_list_training_reels: clipuri,
     admin_list_weekly_workout: antrenamente,
     admin_sala_date: sala,
+    admin_sala_birthdays_status: [],
     admin_sala_rezumat: rezumatSala,
     admin_login: 'token-preview',
     admin_logout: null,

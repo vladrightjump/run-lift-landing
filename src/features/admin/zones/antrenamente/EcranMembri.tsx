@@ -4,22 +4,27 @@ import adminRoot from '../../components/RadacinaAdmin.module.css';
 import styles from './EcranMembri.module.css';
 import { useMemo, useState } from 'react';
 import {
+  incarcaSituatieAniversari,
   leagaCont,
   verificaMembri,
   membruDinCont,
   salveazaMembru,
+  salveazaAniversare,
   unesteMembri,
   type DateMembru,
   type SalaComanda,
   type SalaDate,
   type SalaMembru,
+  type SursaAniversare,
 } from './api';
 import { Dialog } from '../../../../shared/ui/Dialog';
+import { useAdminResource } from '../../data/useAdminResource';
 import { StareComanda } from './StareComanda';
 import { MotivScoatere, ScoateDinGrup, ultimeleScoateri } from './DialogScoatere';
 import { prezentePeMembru } from './analiza';
 import { dataScurta } from './sondaj';
 import { useSala } from './useSala';
+import { DialogZiNastere } from './DialogZiNastere';
 
 /**
  * Membrii grupului — lista ținută la zi (R8, R9, F2).
@@ -49,6 +54,24 @@ const FILTRE: [Filtru, string][] = [
   ['toti', 'Toți'],
 ];
 
+type FiltruAniversari = 'toate' | 'cu-data' | 'fara-data' | SursaAniversare;
+
+const SURSE_ANIVERSARI: Record<SursaAniversare, string> = {
+  telegram: 'Din Telegram',
+  manual: 'Introdusă manual',
+  legacy: 'Din profilul anterior',
+};
+
+const corespundeAniversarii = (
+  m: SalaMembru, filtru: FiltruAniversari, surse: ReadonlyMap<string, SursaAniversare> | null
+) => {
+  if (!surse || filtru === 'toate') return true;
+  const sursa = m.telegram_user_id === null ? undefined : surse.get(m.id);
+  if (filtru === 'cu-data') return sursa !== undefined;
+  if (filtru === 'fara-data') return sursa === undefined;
+  return sursa === filtru;
+};
+
 const ETICHETE_STARE: Record<SalaMembru['status'], string> = {
   active: 'activ',
   paused: 'în pauză',
@@ -67,15 +90,26 @@ const textScoatere = (c: SalaComanda): string =>
 
 export const EcranMembri = () => {
   const { date, eroare, ocupat, fa } = useSala();
+  const { date: situatieAniversari, eroare: eroareAniversari } = useAdminResource(incarcaSituatieAniversari, undefined, {
+    queryKey: ['antrenamente', 'sala', 'aniversari'], enabled: date !== null,
+  });
   const [cauta, setCauta] = useState('');
   const [filtru, setFiltru] = useState<Filtru>('toti');
+  const [filtruAniversari, setFiltruAniversari] = useState<FiltruAniversari>('toate');
   const [apartenenta, setApartenenta] = useState<Apartenenta>('in_group');
   const [deEditat, setDeEditat] = useState<SalaMembru | null>(null);
+  const [aniversare, setAniversare] = useState<{ id: string; nume: string; telegramId: number } | null>(null);
   const [unire, setUnire] = useState(false);
 
   const ultimaPrezenta = useMemo(
     () => (date ? prezentePeMembru(date).ultima : new Map<string, string>()),
     [date]
+  );
+  const surseAniversari = useMemo(
+    () => Array.isArray(situatieAniversari)
+      ? new Map(situatieAniversari.map(({ member_id, source }) => [member_id, source]))
+      : null,
+    [situatieAniversari]
   );
 
   if (!date) {
@@ -102,6 +136,7 @@ export const EcranMembri = () => {
     (m) =>
       corespundeApartenentei(m, apartenenta) &&
       (filtru === 'toti' || m.status === filtru) &&
+      corespundeAniversarii(m, filtruAniversari, surseAniversari) &&
       (termen === '' ||
         m.full_name.toLowerCase().includes(termen) ||
         (m.telegram_username ?? '').toLowerCase().includes(termen))
@@ -210,7 +245,26 @@ export const EcranMembri = () => {
               </button>
             ))}
           </div>
+          <label className={sharedSala['admin-sala-bifa']} data-css="admin-sala-bifa">
+            Zi de naștere
+            <select value={surseAniversari ? filtruAniversari : 'toate'} disabled={!surseAniversari}
+              onChange={(e) => setFiltruAniversari(e.target.value as FiltruAniversari)}>
+              <option value="toate">Toate</option>
+              <option value="cu-data">Cu dată salvată</option>
+              {Object.entries(SURSE_ANIVERSARI).map(([sursa, eticheta]) => (
+                <option value={sursa} key={sursa}>{eticheta}</option>
+              ))}
+              <option value="fara-data">Fără dată</option>
+            </select>
+          </label>
         </div>
+        {!surseAniversari && (
+          <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint" role="status">
+            {situatieAniversari === 'migrare_lipsa'
+              ? 'Situația datelor de naștere va fi disponibilă după aplicarea migrării pentru aniversări.'
+              : eroareAniversari ? 'Situația datelor de naștere nu s-a putut încărca.' : 'Se încarcă situația datelor de naștere…'}
+          </p>
+        )}
 
         {vizibili.length === 0 ? (
           <p className={adminStyles['admin-config-hint']} data-css="admin-config-hint">Niciun membru nu se potrivește.</p>
@@ -219,6 +273,10 @@ export const EcranMembri = () => {
             {vizibili.map((m) => {
               const k = scoateri.get(m.id);
               const ultima = ultimaPrezenta.get(m.id);
+              const telegramId = m.telegram_user_id;
+              const sursaAniversarii = surseAniversari?.get(m.id);
+              const etichetaAniversarii = telegramId === null ? 'Fără cont Telegram legat'
+                : surseAniversari && (sursaAniversarii ? SURSE_ANIVERSARI[sursaAniversarii] : 'Fără dată');
               return (
                 <li key={m.id} className={sharedSala['admin-sala-rand'] + ' ' + sharedSala['admin-sala-membru']} data-css="admin-sala-rand admin-sala-membru">
                   <span className={sharedSala['admin-sala-nume']} data-css="admin-sala-nume">
@@ -234,6 +292,9 @@ export const EcranMembri = () => {
                     {' · antrenamente: '}{ETICHETE_STARE[m.status]}
                     {' · '}
                     {ultima ? `ultima dată ${dataScurta(ultima)}` : 'n-a venit încă'}
+                    {etichetaAniversarii && (
+                      <> · <span>Zi de naștere: {etichetaAniversarii}</span></>
+                    )}
                     {k && (
                       <StareComanda comanda={k}> · {textScoatere(k)}</StareComanda>
                     )}
@@ -242,6 +303,16 @@ export const EcranMembri = () => {
                     <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => setDeEditat(m)}>
                       Editează
                     </button>
+                    {telegramId !== null && (
+                      <button
+                        type="button"
+                        className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
+                        disabled={ocupat}
+                        onClick={() => setAniversare({ id: m.id, nume: m.full_name, telegramId })}
+                      >
+                        Zi de naștere
+                      </button>
+                    )}
                     <ScoateDinGrup membru={m} ultimaScoatere={k} ocupat={ocupat} fa={fa} />
                   </span>
                   <MotivScoatere membru={m} ultimaScoatere={k} />
@@ -272,6 +343,22 @@ export const EcranMembri = () => {
             void fa((t) => salveazaMembru(t, deEditat.id, d), `${d.nume} e salvat.`).then(
               (ok) => ok && setDeEditat(null)
             )
+          }
+        />
+      )}
+
+      {aniversare && (
+        <DialogZiNastere
+          membru={aniversare}
+          ocupat={ocupat}
+          onInchide={() => {
+            if (!ocupat) setAniversare(null);
+          }}
+          onSalveaza={(zi, luna) =>
+            void fa(
+              (token) => salveazaAniversare(token, aniversare.id, aniversare.telegramId, zi, luna),
+              zi === null ? 'Data de naștere a fost eliminată.' : 'Data de naștere a fost salvată.'
+            ).then((ok) => ok && setAniversare((curent) => curent === aniversare ? null : curent))
           }
         />
       )}

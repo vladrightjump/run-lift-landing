@@ -10,6 +10,7 @@ import { sendPoll, wasPollAccepted } from "./jobs/send-poll.js";
 import { morningSummary } from "./jobs/morning-summary.js";
 import { processCommands } from "./jobs/process-commands.js";
 import { inactivityAlert } from "./jobs/inactivity-alert.js";
+import { createBirthdayScheduler } from "./jobs/birthday-greetings.js";
 import { GYM_TZ, localMinuteInstant, localWeekdayAndTime, ymdInTz } from "./lib/tz.js";
 import { readBotConfig } from "./lib/config.js";
 import { inactivityDue, isDue, localScheduleClaims, reminderDue, schedulerEnabled, summaryDue } from "./lib/schedule.js";
@@ -80,6 +81,7 @@ app.listen(PORT, () => {
 //   auto-reminder    — 2h before today's training, by its own start time
 //                      (reminderDue), at most once per training
 const claimScheduledRun = localScheduleClaims();
+const scheduleBirthdayGreetings = createBirthdayScheduler();
 // Trainings already auto-reminded while this process runs (KTD12).
 const remindedSessions = new Set<string>();
 // The local day the inactivity check last ran in this process.
@@ -112,6 +114,13 @@ if (schedulerEnabled()) cron.schedule(
       const localToday = ymdInTz(localNow);
       const { weekday, hhmm } = localWeekdayAndTime(GYM_TZ, localNow);
       const claim = (action: string) => claimScheduledRun(localToday, hhmm, action);
+
+      // Public birthday posts require a known master-switch state.
+      if (read.updatedAt !== null) {
+        const birthdayStarted = performance.now();
+        void scheduleBirthdayGreetings(process.env.TELEGRAM_GROUP_CHAT_ID, localToday, hhmm)
+          .catch((error) => unreportedFailure("birthday.schedule", birthdayStarted, error));
+      }
 
       if (
         isDue(cfg.pollDays, cfg.pollTime, weekday, hhmm) &&

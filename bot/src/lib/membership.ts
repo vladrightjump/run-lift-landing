@@ -8,6 +8,12 @@ export function membershipState(member: TelegramMember): MembershipState {
   return 'in_group';
 }
 
+export async function currentTelegramMember(group: string, id: number): Promise<TelegramMember | null> {
+  const result = await getChatMember(group, id);
+  if (!result.ok || !result.result || result.result.user.id !== id) throw new Error('Membership unavailable');
+  return !result.result.user.is_bot && membershipState(result.result) === 'in_group' ? result.result : null;
+}
+
 export async function recordMembership(chatId: string | number, member: TelegramMember, observedAt: string): Promise<void> {
   if (String(chatId) !== process.env.TELEGRAM_GROUP_CHAT_ID || member.user.is_bot) return;
   const { error } = await createAdminClient().rpc('record_telegram_membership', {

@@ -1,3 +1,4 @@
+import { birthdaySettings } from './birthday-settings.js';
 import { broadcastControl } from './broadcast-control.js';
 import { FORM_ORGANIZER_COMMANDS, handleFormReport } from './member-form-reports.js';
 import { MEMBER_COMMANDS, memberForms } from './member-forms.js';
@@ -158,6 +159,13 @@ export async function handleUpdate(update: TgUpdate): Promise<boolean> {
       return true;
     }
     const cb = update.callback_query;
+    if (cb?.data?.startsWith('bd:')) {
+      await birthdaySettings.callback({
+        id: cb.id, fromId: cb.from.id, data: cb.data,
+        chatId: cb.message?.chat.id, chatType: cb.message?.chat.type,
+      });
+      return true;
+    }
     if (cb?.data?.startsWith('f:')) {
       await memberForms.callback({
         id: cb.id, fromId: cb.from.id, data: cb.data,
@@ -530,6 +538,10 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
     fromName: [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" "),
     text, messageId: msg.message_id,
   })) return;
+  if (msg.chat.id === msg.from.id && /^\/aniversare(?:@\w+)?$/i.test(text)) {
+    await birthdaySettings.open(msg.from.id);
+    return;
+  }
   if (await handleFormReport(msg.chat.id, msg.from.id, text)) return;
   if (/^\/stop(?:@\w+)?$/i.test(text)) {
     const db = createAdminClient();

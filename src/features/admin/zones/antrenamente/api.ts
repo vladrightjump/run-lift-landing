@@ -1,3 +1,4 @@
+import { SubmitHttpError } from '../../../../shared/lib/errors';
 import { rpc } from '../../../../shared/lib/rpc';
 
 
@@ -219,6 +220,59 @@ export const salveazaMembru = (token: string, membru: string, d: DateMembru): Pr
     p_admin: d.admin,
   });
 
+export type SursaAniversare = 'telegram' | 'manual' | 'legacy';
+
+export type PreferinteAniversare = {
+  day: number | null;
+  month: number | null;
+  source: SursaAniversare | null;
+  enabled: boolean;
+};
+
+type StareAniversareMembru = { member_id: string; source: SursaAniversare };
+
+const migrareAniversareLipsa = (err: unknown) =>
+  err instanceof SubmitHttpError && /"code"\s*:\s*"(?:PGRST202|42883|42P01)"/.test(err.message);
+
+export const incarcaSituatieAniversari = async (
+  token: string, signal: AbortSignal
+): Promise<StareAniversareMembru[] | 'migrare_lipsa'> => {
+  try {
+    const status = await rpc<StareAniversareMembru[]>('admin_sala_birthdays_status', { p_token: token }, signal);
+    if (!Array.isArray(status)) throw new Error('Răspuns nevalid pentru datele de naștere.');
+    return status;
+  } catch (err) {
+    if (migrareAniversareLipsa(err)) return 'migrare_lipsa';
+    throw err;
+  }
+};
+
+export const incarcaAniversare = async (
+  token: string, membru: string, signal: AbortSignal
+): Promise<PreferinteAniversare | 'migrare_lipsa'> => {
+  try {
+    return await rpc<PreferinteAniversare>('admin_sala_read_birthday', {
+      p_token: token, p_membru: membru,
+    }, signal);
+  } catch (err) {
+    if (migrareAniversareLipsa(err)) return 'migrare_lipsa';
+    throw err;
+  }
+};
+
+export const salveazaAniversare = async (
+  token: string, membru: string, telegramId: number, zi: number | null, luna: number | null
+): Promise<void> => {
+  try {
+    await rpc<PreferinteAniversare>('admin_sala_set_birthday', {
+      p_token: token, p_membru: membru, p_telegram_id: telegramId, p_day: zi, p_month: luna,
+    });
+  } catch (err) {
+    if (refuzSala(err) === 'fara_telegram') throw new Error('cont_telegram_schimbat', { cause: err });
+    throw err;
+  }
+};
+
 /** Leagă un cont de Telegram necunoscut de un membru existent. */
 export const leagaCont = (token: string, telegramId: number, membru: string): Promise<void> =>
   rpc<void>('admin_sala_leaga_cont', { p_token: token, p_telegram_id: telegramId, p_membru: membru });
@@ -252,6 +306,8 @@ export const REFUZURI_SALA = [
   'utilizator_invalid',
   'status_invalid',
   'telegram_deja_legat',
+  'cont_telegram_schimbat',
+  'birthday_invalid',
   'cont_inexistent',
   'acelasi_membru',
   'antrenament_anulat',
@@ -288,6 +344,8 @@ export const MESAJE_REFUZ: Record<RefuzSala, string> = {
   utilizator_invalid: 'Numele de utilizator Telegram are doar litere, cifre și „_”.',
   status_invalid: 'Starea nu e una cunoscută.',
   telegram_deja_legat: 'Contul de Telegram e deja legat de alt membru.',
+  cont_telegram_schimbat: 'Contul Telegram al membrului s-a schimbat. Redeschide dialogul.',
+  birthday_invalid: 'Alege o combinație validă de zi și lună.',
   cont_inexistent: 'Contul a fost deja legat sau nu mai există.',
   acelasi_membru: 'Alege doi membri diferiți.',
   motiv_prea_lung: 'Motivul are voie la 200 de caractere.',

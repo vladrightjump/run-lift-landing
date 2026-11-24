@@ -11,6 +11,9 @@ const api = vi.hoisted(() => ({
   leagaCont: vi.fn(),
   membruDinCont: vi.fn(),
   salveazaMembru: vi.fn(),
+  incarcaAniversare: vi.fn(),
+  incarcaSituatieAniversari: vi.fn(),
+  salveazaAniversare: vi.fn(),
   unesteMembri: vi.fn(),
 }));
 vi.mock('./api', async (orig) => ({
@@ -30,6 +33,7 @@ const randul = (nume: string) => screen.getByText(nume, { selector: '[data-css~=
 beforeEach(() => {
   Object.values(api).forEach((f) => f.mockReset());
   Object.values(api).forEach((f) => f.mockResolvedValue(undefined));
+  api.incarcaSituatieAniversari.mockResolvedValue([]);
 });
 afterEach(cleanup);
 
@@ -308,4 +312,140 @@ it('arhivează persoanele ieșite inclusiv cu erori, fără să piardă avertiz�
   fireEvent.click(screen.getByRole('button', { name: /^În grup/ }));
   expect(screen.queryByText('Blocat')).toBeNull();
   expect(api.scoateDinGrup).not.toHaveBeenCalled();
+});
+
+
+describe('Date de naștere în lista membrilor', () => {
+  it('arată sursa fiecărei date salvate, fără să citească data exactă, și filtrează membrii', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    api.incarcaSituatieAniversari.mockResolvedValue([
+      { member_id: 'ion', source: 'telegram' },
+      { member_id: 'ana', source: 'manual' },
+      { member_id: 'maria', source: 'legacy' },
+    ]);
+    randeaza();
+
+    await screen.findByText('Zi de naștere: Din Telegram');
+    expect(within(randul('Ion')).getByText('Zi de naștere: Din Telegram')).toBeTruthy();
+    expect(within(randul('Ana')).getByText('Zi de naștere: Introdusă manual')).toBeTruthy();
+    expect(within(randul('Maria')).getByText('Zi de naștere: Din profilul anterior')).toBeTruthy();
+    expect(within(randul('Roma')).getByText('Zi de naștere: Fără dată')).toBeTruthy();
+
+    const filtru = screen.getByRole('combobox', { name: 'Zi de naștere' });
+    fireEvent.change(filtru, { target: { value: 'cu-data' } });
+    expect(screen.getByText('Ion')).toBeTruthy();
+    expect(screen.getByText('Ana')).toBeTruthy();
+    expect(screen.getByText('Maria')).toBeTruthy();
+    expect(screen.queryByText('Roma')).toBeNull();
+
+    fireEvent.change(filtru, { target: { value: 'telegram' } });
+    expect(screen.getByText('Ion')).toBeTruthy();
+    expect(screen.queryByText('Ana')).toBeNull();
+    expect(screen.queryByText('Maria')).toBeNull();
+    expect(screen.queryByText('Roma')).toBeNull();
+
+    fireEvent.change(filtru, { target: { value: 'manual' } });
+    expect(screen.getByText('Ana')).toBeTruthy();
+    expect(screen.queryByText('Ion')).toBeNull();
+    fireEvent.change(filtru, { target: { value: 'legacy' } });
+    expect(screen.getByText('Maria')).toBeTruthy();
+    expect(screen.queryByText('Ana')).toBeNull();
+
+    fireEvent.change(filtru, { target: { value: 'fara-data' } });
+    expect(screen.getByText('Roma')).toBeTruthy();
+    expect(screen.queryByText('Ion')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Neverificați/ }));
+    expect(within(randul('Fara')).getByText('Zi de naștere: Fără cont Telegram legat')).toBeTruthy();
+    fireEvent.change(filtru, { target: { value: 'cu-data' } });
+    expect(screen.queryByText('Fara')).toBeNull();
+    fireEvent.change(filtru, { target: { value: 'toate' } });
+    expect(screen.getByText('Fara')).toBeTruthy();
+
+    expect(api.incarcaSituatieAniversari).toHaveBeenCalledExactlyOnceWith('tok', expect.any(AbortSignal));
+    expect(api.incarcaAniversare).not.toHaveBeenCalled();
+  });
+
+  it('păstrează lista la vedere fără să confunde încărcarea sau lipsa migrării cu lipsa datelor', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    let raspunde!: (valoare: 'migrare_lipsa') => void;
+    api.incarcaSituatieAniversari.mockReturnValue(new Promise((rezolva) => { raspunde = rezolva; }));
+    randeaza();
+
+    await screen.findByText('Ion');
+    const filtru = screen.getByRole('combobox', { name: 'Zi de naștere' }) as HTMLSelectElement;
+    expect(filtru.disabled).toBe(true);
+    expect(screen.getByRole('status').textContent).toMatch(/Se încarcă/);
+    expect(screen.queryByText('Zi de naștere: Fără dată')).toBeNull();
+
+    raspunde('migrare_lipsa');
+    await screen.findByText(/după aplicarea migrării pentru aniversări/);
+    expect(screen.getByText('Ion')).toBeTruthy();
+    expect(filtru.disabled).toBe(true);
+    expect(screen.queryByText('Zi de naștere: Fără dată')).toBeNull();
+  });
+});
+
+describe('Ziua de naștere a unui membru', () => {
+  const deschide = async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Ion');
+    fireEvent.click(within(randul('Ion')).getByRole('button', { name: 'Zi de naștere' }));
+    return within(screen.getByRole('dialog', { name: 'Zi de naștere: Ion' }));
+  };
+
+  it('citește data Telegram și salvează corectura fără să schimbe urările', async () => {
+    api.incarcaSituatieAniversari.mockResolvedValueOnce([{ member_id: 'ion', source: 'telegram' }]);
+    api.incarcaAniversare.mockResolvedValue({ day: 12, month: 2, source: 'telegram', enabled: false });
+    api.salveazaAniversare.mockImplementationOnce(async () => {
+      api.incarcaSituatieAniversari.mockResolvedValue([{ member_id: 'ion', source: 'manual' }]);
+    });
+    const dialog = await deschide();
+    const ziua = await dialog.findByLabelText('Zi');
+    expect((ziua as HTMLInputElement).value).toBe('12');
+    expect((dialog.getByRole('button', { name: 'Salvează' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(dialog.getByText(/Urările în grup sunt oprite\./)).toBeTruthy();
+    expect(api.incarcaAniversare).toHaveBeenCalledWith('tok', 'ion', expect.any(AbortSignal));
+    fireEvent.change(ziua, { target: { value: '29' } });
+    fireEvent.click(dialog.getByRole('button', { name: 'Salvează' }));
+    await waitFor(() => expect(api.salveazaAniversare).toHaveBeenCalledWith('tok', 'ion', 1003, 29, 2));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(within(randul('Ion')).getByText('Zi de naștere: Introdusă manual')).toBeTruthy();
+    expect(api.salveazaMembru).not.toHaveBeenCalled();
+  });
+
+  it('păstrează corectura la refuz și permite ștergerea datei salvate', async () => {
+    api.incarcaAniversare.mockResolvedValue({ day: 12, month: 2, source: 'manual', enabled: true });
+    api.salveazaAniversare.mockRejectedValueOnce(new Error('birthday_invalid'));
+    const dialog = await deschide();
+    const ziua = await dialog.findByLabelText('Zi');
+    const salveaza = dialog.getByRole('button', { name: 'Salvează' }) as HTMLButtonElement;
+    fireEvent.change(ziua, { target: { value: '30' } });
+    expect(salveaza.disabled).toBe(true);
+    fireEvent.change(ziua, { target: { value: '28' } });
+    fireEvent.click(salveaza);
+    await waitFor(() => expect(api.salveazaAniversare).toHaveBeenCalledWith('tok', 'ion', 1003, 28, 2));
+    expect((ziua as HTMLInputElement).value).toBe('28');
+    const sterge = dialog.getByRole('button', { name: 'Elimină data' }) as HTMLButtonElement;
+    await waitFor(() => expect(sterge.disabled).toBe(false));
+    fireEvent.click(sterge);
+    await waitFor(() => expect(api.salveazaAniversare).toHaveBeenLastCalledWith('tok', 'ion', 1003, null, null));
+  });
+
+  it('afișează lipsa migrării și nu permite editarea', async () => {
+    api.incarcaAniversare.mockResolvedValue('migrare_lipsa');
+    const dialog = await deschide();
+    expect(await dialog.findByText(/migrării pentru aniversări/)).toBeTruthy();
+    expect(dialog.queryByRole('button', { name: 'Salvează' })).toBeNull();
+    expect(api.salveazaAniversare).not.toHaveBeenCalled();
+  });
+
+  it('arată acțiunea numai pentru membrii cu un cont Telegram legat', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala());
+    randeaza();
+    await screen.findByText('Ion');
+    expect(within(randul('Ion')).getByRole('button', { name: 'Zi de naștere' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Neverificați/ }));
+    expect(within(randul('Fara')).queryByRole('button', { name: 'Zi de naștere' })).toBeNull();
+  });
 });
