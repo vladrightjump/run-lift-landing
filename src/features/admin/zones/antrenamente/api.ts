@@ -220,11 +220,31 @@ export const salveazaMembru = (token: string, membru: string, d: DateMembru): Pr
     p_admin: d.admin,
   });
 
+export type SursaAniversare = 'telegram' | 'manual' | 'legacy';
+
 export type PreferinteAniversare = {
   day: number | null;
   month: number | null;
-  source: 'telegram' | 'manual' | 'legacy' | null;
+  source: SursaAniversare | null;
   enabled: boolean;
+};
+
+type StareAniversareMembru = { member_id: string; source: SursaAniversare };
+
+const migrareAniversareLipsa = (err: unknown) =>
+  err instanceof SubmitHttpError && /"code"\s*:\s*"(?:PGRST202|42883|42P01)"/.test(err.message);
+
+export const incarcaSituatieAniversari = async (
+  token: string, signal: AbortSignal
+): Promise<StareAniversareMembru[] | 'migrare_lipsa'> => {
+  try {
+    const status = await rpc<StareAniversareMembru[]>('admin_sala_birthdays_status', { p_token: token }, signal);
+    if (!Array.isArray(status)) throw new Error('Răspuns nevalid pentru datele de naștere.');
+    return status;
+  } catch (err) {
+    if (migrareAniversareLipsa(err)) return 'migrare_lipsa';
+    throw err;
+  }
 };
 
 export const incarcaAniversare = async (
@@ -235,9 +255,7 @@ export const incarcaAniversare = async (
       p_token: token, p_membru: membru,
     }, signal);
   } catch (err) {
-    if (err instanceof SubmitHttpError && /"code"\s*:\s*"(?:PGRST202|42883|42P01)"/.test(err.message)) {
-      return 'migrare_lipsa';
-    }
+    if (migrareAniversareLipsa(err)) return 'migrare_lipsa';
     throw err;
   }
 };
@@ -250,7 +268,7 @@ export const salveazaAniversare = async (
       p_token: token, p_membru: membru, p_telegram_id: telegramId, p_day: zi, p_month: luna,
     });
   } catch (err) {
-    if (refuzSala(err) === 'fara_telegram') throw new Error('cont_telegram_schimbat');
+    if (refuzSala(err) === 'fara_telegram') throw new Error('cont_telegram_schimbat', { cause: err });
     throw err;
   }
 };

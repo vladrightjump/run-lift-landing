@@ -307,8 +307,9 @@ peste [migrarea de feedback](../supabase/sql/supabase-migration-sala-feedback.sq
 Supabase al grupului din parc. Până la migrare, celelalte comenzi și sondaje rămân disponibile.
 
 Membrul controlează urările din comanda privată `/aniversare`. Botul poate folosi ziua și luna
-vizibile în profilul Telegram. Un organizator poate completa sau corecta data în **Admin → Membri**,
-la contul Telegram legat. Editarea datei nu schimbă opțiunea membrului de a primi o urare.
+vizibile în profilul Telegram. În **Admin → Membri**, organizatorii pot filtra lista după sursa
+datei sau pot vedea pentru cine lipsește data. Pot completa sau corecta data pentru un cont
+Telegram legat. Editarea datei nu schimbă opțiunea membrului de a primi o urare.
 
 Sub comutatorul principal al botului, urarea pleacă în grup la 09:00, ora Chișinăului. O pornire
 mai târzie poate recupera doar zilele de naștere din ziua în curs. Botul verifică apartenența la

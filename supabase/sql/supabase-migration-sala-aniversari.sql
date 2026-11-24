@@ -154,6 +154,21 @@ begin
 end;
 $$;
 
+create or replace function runlift.admin_sala_birthdays_status(p_token uuid)
+returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not runlift.admin_check_token(p_token) then raise exception 'invalid_token'; end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object('member_id', m.id, 'source', p.source) order by m.id)
+    from public.members m
+    join public.telegram_birthday_preferences p on p.telegram_user_id = m.telegram_user_id
+    where p.day is not null
+  ), '[]'::jsonb);
+end;
+$$;
+
 create or replace function public.telegram_birthday_candidates(p_date date)
 returns table (telegram_user_id bigint, source text, display_name text, revision bigint)
 language sql stable security invoker set search_path = ''
@@ -207,9 +222,9 @@ grant execute on function public.telegram_birthday_date_valid(integer, integer),
   public.telegram_birthday_candidates(date), public.telegram_claim_birthday(bigint, date, bigint),
   public.telegram_finish_birthday(bigint, date, text) to service_role;
 
-revoke all on function runlift.admin_sala_read_birthday(uuid, uuid),
+revoke all on function runlift.admin_sala_birthdays_status(uuid), runlift.admin_sala_read_birthday(uuid, uuid),
   runlift.admin_sala_set_birthday(uuid, uuid, bigint, integer, integer) from public, anon, authenticated, service_role;
-grant execute on function runlift.admin_sala_read_birthday(uuid, uuid),
+grant execute on function runlift.admin_sala_birthdays_status(uuid), runlift.admin_sala_read_birthday(uuid, uuid),
   runlift.admin_sala_set_birthday(uuid, uuid, bigint, integer, integer) to anon, authenticated, service_role;
 
 commit;

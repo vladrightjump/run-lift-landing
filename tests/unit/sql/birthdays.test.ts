@@ -72,6 +72,33 @@ describe('Telegram birthday preferences and delivery', () => {
     expect(stale.rows).toEqual([{ claimed: false }]);
   });
 
+  it('lists the source for each linked account with a date and keeps exact dates out of the overview', async () => {
+    const manual = '22222222-2222-3333-4444-555555555555';
+    const missing = '33333333-2222-3333-4444-555555555555';
+    await db.query(
+      "insert into public.members (id, full_name, telegram_user_id) values ($1, 'Ina', 43), ($2, 'Dinu', 44)",
+      [manual, missing],
+    );
+    await db.exec("select public.telegram_change_birthday(42, 'enable', 27, 11, true, null)");
+    await db.exec("select public.telegram_change_birthday(45, 'enable', 20, 6, true, null)");
+    await db.query('select runlift.admin_sala_set_birthday($1, $2, 43, 5, 4)', [ADMIN_TOKEN, manual]);
+
+    await db.exec('set role anon');
+    try {
+      await expect(db.query('select * from runlift.admin_sala_birthdays_status(null)'))
+        .rejects.toThrow(/invalid_token/);
+      const { rows } = await db.query<{ status: unknown }>(
+        'select runlift.admin_sala_birthdays_status($1) as status', [ADMIN_TOKEN],
+      );
+      expect(rows[0].status).toEqual([
+        { member_id: member, source: 'telegram' },
+        { member_id: manual, source: 'manual' },
+      ]);
+    } finally {
+      await db.exec('reset role');
+    }
+  });
+
   it('removes a hidden Telegram birthday and honors a member clearing their date', async () => {
     await db.exec("select public.telegram_change_birthday(42, 'enable', 29, 2, true, null)");
     const { rows } = await db.query<{ revision: number }>("select * from public.telegram_birthday_candidates('2028-02-29')");

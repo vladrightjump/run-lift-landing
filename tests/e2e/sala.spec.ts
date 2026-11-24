@@ -163,17 +163,27 @@ for (const width of [1280, 375]) {
 for (const width of [1280, 375]) {
   test('administratorul poate corecta o zi de naștere la ' + width + 'px', async ({ page, network }) => {
     await page.setViewportSize({ width, height: 900 });
-    await deschideAdminul(page, network, '#grup-membri', SALA);
+    await deschideAdminul(page, network, '', SALA);
     let solicitare: unknown;
+    let sursa = 'telegram';
     network.use(
+      rpcHandler('admin_sala_birthdays_status', () => HttpResponse.json([{ member_id: 'm1', source: sursa }])),
       rpcHandler('admin_sala_read_birthday', () => HttpResponse.json({ day: 12, month: 2, source: 'telegram', enabled: false })),
       rpcHandler('admin_sala_set_birthday', async ({ request }) => {
         solicitare = await request.json();
+        sursa = 'manual';
         return HttpResponse.json({ day: 29, month: 2, source: 'manual', enabled: false });
       }),
     );
+    await page.goto('/admin#grup-membri');
     const membrii = page.getByRole('region', { name: 'Membrii', exact: true });
     const membru = membrii.getByRole('listitem').filter({ hasText: 'Ion Ceban' });
+    const filtru = membrii.getByRole('combobox', { name: 'Zi de naștere' });
+    await expect(membru.getByText('Zi de naștere: Din Telegram')).toBeVisible();
+    await filtru.selectOption('fara-data');
+    await expect(membru).toHaveCount(0);
+    await expect(membrii.getByText('Zi de naștere: Fără dată').first()).toBeVisible();
+    await filtru.selectOption('toate');
     await membru.getByRole('button', { name: 'Zi de naștere' }).click();
     const dialog = page.getByRole('dialog', { name: 'Zi de naștere: Ion Ceban' });
     await expect(dialog.getByText(/Urările în grup sunt oprite/)).toBeVisible();
@@ -186,6 +196,11 @@ for (const width of [1280, 375]) {
       p_token: 'token-e2e', p_membru: 'm1', p_telegram_id: 1001, p_day: 29, p_month: 2,
     });
     await expect(dialog).toHaveCount(0);
+    await expect(membru.getByText('Zi de naștere: Introdusă manual')).toBeVisible();
+    await filtru.selectOption('telegram');
+    await expect(membru).toHaveCount(0);
+    await filtru.selectOption('manual');
+    await expect(membru).toBeVisible();
   });
 }
 
