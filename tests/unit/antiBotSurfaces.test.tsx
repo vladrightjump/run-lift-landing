@@ -102,6 +102,7 @@ describe('niciun formular din src/ nu scapă fără capcană', () => {
     'src/features/admin/pages/AdminLogin.tsx',
     'src/features/admin/zones/antrenamente/EcranPrezente.tsx',
     'src/features/admin/zones/antrenamente/EcranMembri.tsx',
+    'src/features/admin/zones/antrenamente/DialogZiNastere.tsx',
     'src/features/admin/zones/antrenamente/EcranBot.tsx',
     'src/features/admin/zones/antrenamente/TrialSettings.tsx',
   ]);

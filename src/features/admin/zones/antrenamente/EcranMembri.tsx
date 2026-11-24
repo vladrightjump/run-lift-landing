@@ -8,6 +8,7 @@ import {
   verificaMembri,
   membruDinCont,
   salveazaMembru,
+  salveazaAniversare,
   unesteMembri,
   type DateMembru,
   type SalaComanda,
@@ -20,6 +21,7 @@ import { MotivScoatere, ScoateDinGrup, ultimeleScoateri } from './DialogScoatere
 import { prezentePeMembru } from './analiza';
 import { dataScurta } from './sondaj';
 import { useSala } from './useSala';
+import { DialogZiNastere } from './DialogZiNastere';
 
 /**
  * Membrii grupului — lista ținută la zi (R8, R9, F2).
@@ -71,6 +73,7 @@ export const EcranMembri = () => {
   const [filtru, setFiltru] = useState<Filtru>('toti');
   const [apartenenta, setApartenenta] = useState<Apartenenta>('in_group');
   const [deEditat, setDeEditat] = useState<SalaMembru | null>(null);
+  const [aniversare, setAniversare] = useState<{ id: string; nume: string; telegramId: number } | null>(null);
   const [unire, setUnire] = useState(false);
 
   const ultimaPrezenta = useMemo(
@@ -219,6 +222,7 @@ export const EcranMembri = () => {
             {vizibili.map((m) => {
               const k = scoateri.get(m.id);
               const ultima = ultimaPrezenta.get(m.id);
+              const telegramId = m.telegram_user_id;
               return (
                 <li key={m.id} className={sharedSala['admin-sala-rand'] + ' ' + sharedSala['admin-sala-membru']} data-css="admin-sala-rand admin-sala-membru">
                   <span className={sharedSala['admin-sala-nume']} data-css="admin-sala-nume">
@@ -242,6 +246,16 @@ export const EcranMembri = () => {
                     <button type="button" className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost" onClick={() => setDeEditat(m)}>
                       Editează
                     </button>
+                    {telegramId !== null && (
+                      <button
+                        type="button"
+                        className={adminRoot['admin-btn-ghost']} data-css="admin-btn-ghost"
+                        disabled={ocupat}
+                        onClick={() => setAniversare({ id: m.id, nume: m.full_name, telegramId })}
+                      >
+                        Zi de naștere
+                      </button>
+                    )}
                     <ScoateDinGrup membru={m} ultimaScoatere={k} ocupat={ocupat} fa={fa} />
                   </span>
                   <MotivScoatere membru={m} ultimaScoatere={k} />
@@ -272,6 +286,22 @@ export const EcranMembri = () => {
             void fa((t) => salveazaMembru(t, deEditat.id, d), `${d.nume} e salvat.`).then(
               (ok) => ok && setDeEditat(null)
             )
+          }
+        />
+      )}
+
+      {aniversare && (
+        <DialogZiNastere
+          membru={aniversare}
+          ocupat={ocupat}
+          onInchide={() => {
+            if (!ocupat) setAniversare(null);
+          }}
+          onSalveaza={(zi, luna) =>
+            void fa(
+              (token) => salveazaAniversare(token, aniversare.id, aniversare.telegramId, zi, luna),
+              zi === null ? 'Data de naștere a fost eliminată.' : 'Data de naștere a fost salvată.'
+            ).then((ok) => ok && setAniversare((curent) => curent === aniversare ? null : curent))
           }
         />
       )}

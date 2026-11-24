@@ -21,6 +21,8 @@ function fixture(user: number) {
   let membership = 'member';
   let storage = true;
   let failSave = false;
+  let birthdaySchema = true;
+  let priorProfile: Record<string, unknown> | undefined;
   const calls: Call[] = [];
   const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
     status, headers: { 'Content-Type': 'application/json' },
@@ -38,6 +40,10 @@ function fixture(user: number) {
       return response({ ok: true, result });
     }
     if (!storage) return response({ code: '42P01', message: 'missing relation' }, 404);
+    if (!birthdaySchema && name === 'telegram_save_training_profile') {
+      return response({ code: 'PGRST202', message: 'missing function' }, 404);
+    }
+    if (name === 'telegram_member_profiles' && priorProfile) return response([priorProfile]);
     if (failSave && name === 'telegram_feedback' && init?.method === 'POST') {
       failSave = false;
       return response({ code: 'XX001', message: 'write interrupted' }, 500);
@@ -68,7 +74,10 @@ function fixture(user: number) {
       message: { message_id: 300, chat: { type, id: type === 'private' ? fromId : -100 } } },
   });
   return { calls, message, latest, pick, tap, depart: () => { membership = 'left'; },
-    disableStorage: () => { storage = false; }, failNextFeedbackSave: () => { failSave = true; } };
+    disableStorage: () => { storage = false; }, failNextFeedbackSave: () => { failSave = true; },
+    disableBirthdaySchema: () => { birthdaySchema = false; },
+    setPriorProfile: (value: Record<string, unknown>) => { priorProfile = value; },
+  };
 }
 
 test('submits feedback without identity and ignores stale or repeated save taps', async () => {
@@ -100,22 +109,35 @@ test('submits feedback without identity and ignores stale or repeated save taps'
   assert.match(f.latest().body.text!, /Mulțumim/);
 });
 
-test('prefills the name, validates dates, and saves only after profile confirmation', async () => {
+test('prefills the name and asks only for the training goal before saving', async () => {
   const f = fixture(44);
   await f.message('/start profil');
   await f.tap(f.pick('Păstrează numele'));
-  await f.message('30.02');
-  assert.match(f.latest().body.text!, /dată validă/);
-  await f.message('29.02');
-  await f.tap(f.pick('Fără urare'));
+  assert.match(f.latest().body.text!, /Ce vrei să obții/);
   await f.message('5 km fără oprire');
   assert.match(f.latest().body.text!, /Ana Popescu/);
-  assert.ok(!f.calls.some(call => call.name === 'telegram_save_member_profile'));
+  assert.ok(!f.calls.some(call => call.name === 'telegram_save_training_profile'));
+  await f.tap(f.pick('Salvează profilul'));
+  assert.deepEqual(f.calls.find(call => call.name === 'telegram_save_training_profile')?.body, {
+    p_user_id: 44, p_name: 'Ana Popescu', p_goal: '5 km fără oprire',
+  });
+  assert.ok(!f.calls.some(call => ['telegram_save_member_profile', 'getChat'].includes(call.name)));
+});
+
+test('pre-migration profile saves preserve a previously entered birthday and consent', async () => {
+  const f = fixture(47);
+  f.disableBirthdaySchema();
+  f.setPriorProfile({
+    display_name: 'Ana Popescu', training_goal: null, birth_day: 29, birth_month: 2, birthday_greeting: true,
+  });
+  await f.message('/profil');
+  await f.tap(f.pick('Păstrează numele'));
+  await f.message('5 km fără oprire');
   await f.tap(f.pick('Salvează profilul'));
   assert.deepEqual(f.calls.find(call => call.name === 'telegram_save_member_profile')?.body, {
-    p_user_id: 44, p_name: 'Ana Popescu', p_day: 29, p_month: 2, p_greeting: false, p_goal: '5 km fără oprire',
+    p_user_id: 47, p_name: 'Ana Popescu', p_day: 29, p_month: 2, p_greeting: true, p_goal: '5 km fără oprire',
   });
-  assert.ok(!f.calls.some(call => 'bot_dm_enabled' in call.body));
+  assert.match(f.latest().body.text!, /a fost salvat/);
 });
 
 test('members who leave cannot submit and the schema can be absent before rollout', async () => {
@@ -172,11 +194,11 @@ test('publishes an invitation only after organizer confirmation and keeps report
   assert.deepEqual(f.calls.findLast(call => call.name === 'setMyCommands')?.body.scope, { type: 'all_private_chats' });
   assert.deepEqual(
     (f.calls.findLast(call => call.name === 'setMyCommands')?.body.commands as { command: string }[]).map(item => item.command),
-    ['feedback', 'profil'],
+    ['feedback', 'profil', 'aniversare'],
   );
   await registerOrganizerMenu(42);
   const commands = f.calls.findLast(call => call.name === 'setMyCommands')!.body.commands as {command:string}[];
-  for (const command of ['antrenament', 'feedback', 'profil', 'feedback_grup']) {
+  for (const command of ['antrenament', 'feedback', 'profil', 'aniversare', 'feedback_grup']) {
     assert.ok(commands.some(item => item.command === command), command);
   }
 });

@@ -189,6 +189,7 @@ describe('ce poate chema cheia publică (rolul anon)', () => {
       'admin_sala_seteaza_antrenament', 'admin_sala_salveaza_config', 'admin_sala_porneste_bot',
       'admin_sala_comanda', 'admin_sala_scoate_din_grup', 'admin_sala_salveaza_membru',
       'admin_sala_leaga_cont', 'admin_sala_membru_din_cont', 'admin_sala_uneste',
+      'admin_sala_read_birthday', 'admin_sala_set_birthday',
       // Giveaway-ul: participările, închiderea înscrierilor, extragerea și încheierea.
       'admin_giveaway_date', 'admin_giveaway_sterge', 'admin_giveaway_extrage',
       'admin_giveaway_opreste_inscrierile', 'admin_giveaway_confirma', 'admin_giveaway_incheie',

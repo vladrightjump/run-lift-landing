@@ -26,7 +26,6 @@ create table if not exists public.telegram_birthday_preferences (
 create table if not exists public.telegram_birthday_deliveries (
   telegram_user_id bigint not null,
   greeting_year integer not null,
-  greeting_date date not null,
   outcome text not null default 'claimed' check (outcome in ('claimed', 'sent', 'rejected', 'uncertain')),
   primary key (telegram_user_id, greeting_year)
 );
@@ -181,8 +180,8 @@ begin
   for update;
   if not found then return false; end if;
 
-  insert into public.telegram_birthday_deliveries (telegram_user_id, greeting_year, greeting_date)
-  values (p_user_id, extract(year from p_date)::integer, p_date)
+  insert into public.telegram_birthday_deliveries (telegram_user_id, greeting_year)
+  values (p_user_id, extract(year from p_date)::integer)
   on conflict (telegram_user_id, greeting_year) do nothing;
   return found;
 end;
@@ -192,7 +191,7 @@ create or replace function public.telegram_finish_birthday(p_user_id bigint, p_d
 returns void language sql security invoker set search_path = ''
 as $$
   update public.telegram_birthday_deliveries set outcome = p_outcome
-  where telegram_user_id = p_user_id and greeting_year = extract(year from p_date) and greeting_date = p_date
+  where telegram_user_id = p_user_id and greeting_year = extract(year from p_date)
     and outcome = 'claimed' and p_outcome in ('sent', 'rejected', 'uncertain');
 $$;
 

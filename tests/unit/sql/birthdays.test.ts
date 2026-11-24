@@ -23,8 +23,25 @@ describe('Telegram birthday preferences and delivery', () => {
     const claims = await Promise.all([claim(), claim()]);
     expect(claims.map(result => result.rows)).toEqual([[{ claimed: true }], [{ claimed: false }]]);
     await db.exec("select public.telegram_finish_birthday(42, '2026-11-27', 'uncertain')");
+    expect((await db.query('select to_jsonb(d) as delivery from public.telegram_birthday_deliveries d')).rows)
+      .toEqual([{ delivery: { telegram_user_id: 42, greeting_year: 2026, outcome: 'uncertain' } }]);
     expect((await claim()).rows).toEqual([{ claimed: false }]);
     expect((await db.query("select * from public.telegram_birthday_candidates('2027-11-27')")).rows).toHaveLength(1);
+  });
+
+  it('leaves birthday settings intact when training goals change and clears legacy data on removal', async () => {
+    await db.exec("select public.telegram_save_member_profile(42, 'Ana', 27, 11, true, 'Alergare')");
+    await db.exec(migration);
+    await db.exec("select public.telegram_save_training_profile(42, 'Ana Maria', 'Prima cursă')");
+    const preferences = await db.query('select public.telegram_birthday_preference(42) as prefs');
+    expect(preferences.rows[0]).toMatchObject({ prefs: { day: 27, month: 11, enabled: true } });
+    const candidates = await db.query("select * from public.telegram_birthday_candidates('2026-11-27')");
+    expect(candidates.rows[0]).toMatchObject({ display_name: 'Ana Maria' });
+    await db.exec("select public.telegram_change_birthday(42, 'clear', null, null, false, null)");
+    await db.exec(migration);
+    expect((await db.query("select * from public.telegram_birthday_candidates('2026-11-27')")).rows).toEqual([]);
+    expect((await db.query('select birth_day, birth_month from public.telegram_member_profiles where telegram_user_id = 42')).rows)
+      .toEqual([{ birth_day: null, birth_month: null }]);
   });
 
   it('validates organizer edits and keeps permission independent of the date', async () => {
