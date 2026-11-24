@@ -1,4 +1,6 @@
 import { broadcastControl } from './broadcast-control.js';
+import { FORM_ORGANIZER_COMMANDS, handleFormReport } from './member-form-reports.js';
+import { MEMBER_COMMANDS, memberForms } from './member-forms.js';
 import { trialCallback, trialJoinRequest, trialPrivateMessage, trialOrganizerText, missingTrialSchema } from './lib/trial.js';
 import { recordMembership } from "./lib/membership.js";
 import { memberControl, memberControlDeps } from "./member-control.js";
@@ -107,10 +109,21 @@ function controlDeps(): ControlDeps {
 // Shows the command menu in one organizer's private chat (KTD13). Best effort.
 export async function registerOrganizerMenu(chatId: number): Promise<void> {
   try {
-    const r = await setMyCommands(ORGANIZER_COMMANDS, { type: "chat", chat_id: chatId });
+    const r = await setMyCommands([...ORGANIZER_COMMANDS, ...MEMBER_COMMANDS, ...FORM_ORGANIZER_COMMANDS], {
+      type: "chat", chat_id: chatId,
+    });
     if (!r.ok) console.error(`[menu] setMyCommands for ${chatId} failed:`, r.description);
   } catch (err) {
     console.error("[menu]", err);
+  }
+}
+
+export async function registerMemberMenu(): Promise<void> {
+  try {
+    const result = await setMyCommands(MEMBER_COMMANDS, { type: "all_private_chats" });
+    if (!result.ok) console.error("[menu] member command registration refused");
+  } catch {
+    console.error("[menu] member command registration failed");
   }
 }
 
@@ -145,6 +158,17 @@ export async function handleUpdate(update: TgUpdate): Promise<boolean> {
       return true;
     }
     const cb = update.callback_query;
+    if (cb?.data?.startsWith('f:')) {
+      await memberForms.callback({
+        id: cb.id, fromId: cb.from.id, data: cb.data,
+        chatId: cb.message?.chat.id, chatType: cb.message?.chat.type,
+      });
+      return true;
+    }
+    if (cb?.message?.chat.type === 'private' && cb.message.chat.id === cb.from.id &&
+        /^[btmic]:/.test(cb.data ?? '')) {
+      await memberForms.close(cb.from.id);
+    }
     if (cb?.data?.startsWith('b:')) {
       await organizerSafely(cb.from.id, () => broadcastControl.callback({
         id: cb.id, fromId: cb.from.id, fromName: cb.from.first_name ?? String(cb.from.id),
@@ -501,6 +525,12 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
   if (msg.chat.type !== "private") return;
   if (!msg.from) return;
   const text = (msg.text ?? "").trim();
+  if (await memberForms.text({
+    chatId: msg.chat.id, chatType: msg.chat.type, fromId: msg.from.id,
+    fromName: [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" "),
+    text, messageId: msg.message_id,
+  })) return;
+  if (await handleFormReport(msg.chat.id, msg.from.id, text)) return;
   if (/^\/stop(?:@\w+)?$/i.test(text)) {
     const db = createAdminClient();
     const memberResult = await db.from('members').update({ bot_dm_enabled: false }).eq('telegram_user_id', msg.from.id);
@@ -511,7 +541,7 @@ async function handleMessage(msg: NonNullable<TgUpdate["message"]>) {
     return;
   }
 
-  if (/^\/(mesaj|poll)(?:@\w+)?(?:\s|$)/i.test(text)) {
+  if (/^\/(mesaj|poll|feedback_grup)(?:@\w+)?(?:\s|$)/i.test(text)) {
     await organizerSafely(msg.chat.id, () => broadcastControl.text({
       chatId: msg.chat.id, chatType: msg.chat.type, fromId: msg.from!.id,
       fromName: msg.from!.first_name ?? String(msg.from!.id), text,

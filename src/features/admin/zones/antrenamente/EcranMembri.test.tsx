@@ -127,6 +127,19 @@ describe('Membrii grupului', () => {
     expect(within(sectiune).getByLabelText('Membrul de care se leagă contul lui Dan')).toBeTruthy();
   });
 
+  it('arată ID-urile Telegram pentru conturile nelegate fără nume', async () => {
+    api.incarcaSala.mockResolvedValue(dateSala({
+      necunoscuti: [901, 902].map(telegram_user_id => ({
+        telegram_user_id, username: null, first_name: null, last_name: null, created_at: 'x',
+      })),
+    }));
+    randeaza();
+    const id = await screen.findByText('ID Telegram 901');
+    const alDoilea = screen.getByText('ID Telegram 902');
+    expect(id.closest('li')).not.toBe(alDoilea.closest('li'));
+    expect(within(id.closest('li')!).getByRole('combobox').getAttribute('aria-describedby')).toBe(id.id);
+  });
+
   it('fără conturi cu adevărat nelegate, secțiunea lipsește', async () => {
     api.incarcaSala.mockResolvedValue(
       dateSala({

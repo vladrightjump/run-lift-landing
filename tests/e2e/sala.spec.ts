@@ -139,15 +139,21 @@ for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
     const scrieri = await deschideAdminul(page, network, '#grup-membri', { ...SALA,
       membri: SALA.membri.map((m) => m.id === 'm1' ? { ...m, telegram_membership: 'left' } : m),
+      necunoscuti: [7001, 7002].map(telegram_user_id => ({
+        telegram_user_id, username: null, first_name: null, last_name: null, created_at: '2026-11-24',
+      })),
     });
-    await expect(page.getByText('Ana Rusu', { exact: true })).toBeVisible();
-    await expect(page.getByText('Ion Ceban', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { description: 'ID Telegram 7001' })).toBeVisible();
+    await expect(page.getByRole('combobox', { description: 'ID Telegram 7002' })).toBeVisible();
+    const membri = page.getByRole('region', { name: 'Membrii', exact: true });
+    await expect(membri.getByText('Ana Rusu', { exact: true })).toBeVisible();
+    await expect(membri.getByText('Ion Ceban', { exact: true })).toHaveCount(0);
     const filtre = page.getByRole('group', { name: 'Apartenență Telegram' });
     await filtre.getByRole('button', { name: /^Arhivă/ }).click();
-    await expect(page.getByText('Ion Ceban', { exact: true })).toBeVisible();
+    await expect(membri.getByText('Ion Ceban', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Scoate din grup: E deja ieșit.' })).toBeDisabled();
     await filtre.getByRole('button', { name: /^Neverificați/ }).click();
-    await expect(page.getByText('Dan Fără Cont', { exact: true })).toBeVisible();
+    await expect(membri.getByText('Dan Fără Cont', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Verifică apartenența' }).click();
     await expect.poll(() => scrieri.filter((s) => s.rpc === 'admin_sala_verifica_membri').length).toBe(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);

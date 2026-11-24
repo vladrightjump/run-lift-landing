@@ -569,3 +569,7 @@ tranzacție cele **șase** valori din `app_config` pe care le citesc guard-urile
 `src/shared/content/edition.ts` a rămas instantaneul de build (primul cadru + meta de share). Un test
 opt-in (`npm run test:integration`) verifică relația care poate încă să se rupă: scalarele din
 `app_config` trebuie să urmeze documentul publicat.
+
+### Feedback și profiluri în Telegram — NEAPLICAT
+
+[Aplicați migrarea](supabase/sql/supabase-migration-sala-feedback.sql) în proiectul Supabase folosit de grupul din parc. Tabelele și funcțiile sunt accesibile doar rolului de serviciu. Răspunsurile de feedback nu conțin identificatori de membri. Profilurile și răspunsurile sunt în tabele separate. Testele încarcă migrarea peste instantaneele schemei.

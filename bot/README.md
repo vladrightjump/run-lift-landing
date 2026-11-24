@@ -280,3 +280,22 @@ logurilor sunt în UTC, iar programul sondajului este în ora Chișinăului.
 O recuperare înseamnă că verificările trec din nou. Poate însemna și că fereastra
 sondajului s-a închis sau că antrenamentul a fost anulat. Monitorul nu testează
 livrarea webhook-ului Telegram și nu confirmă primirea mesajelor de probă.
+
+## Feedback și profiluri din Telegram
+
+După [migrarea Supabase](../supabase/sql/supabase-migration-sala-feedback.sql), un organizator
+pornește din privat cu `/feedback_grup`. Botul arată grupul și cele două butoane înainte de
+confirmare. Invitația se publică doar când organizatorul apasă **Trimite în grup**.
+
+- **Dă feedback** deschide sondajul privat. Membrii îl pot deschide și din meniul de comenzi cu
+  `/feedback`. Răspunsurile și comentariile se salvează fără legătură cu profilul Telegram.
+- **Completează profilul** deschide `/profil`. Membrul verifică numele, poate adăuga ziua și luna
+  nașterii și scrie în cuvintele lui ce vrea să obțină. Formularul salvează și preferința pentru o
+  urare publică, dacă a fost aleasă.
+- Organizatorii citesc totalurile și comentariile cu `/feedback_rezultate` și profilurile cu
+  `/profiluri`. Adaugă un număr după comandă pentru altă pagină. Pentru un profil marcat
+  **De legat**, folosește ID-ul Telegram în secțiunea **Membri** din admin.
+
+Ciornele expiră după 15 minute de inactivitate și se pierd la repornirea procesului. Un membru
+poate redeschide formularul din meniu. Formularele cer apartenență la grup la deschidere și la
+salvare. Publicarea invitației cere migrarea și administratorul autorizat în bot.
