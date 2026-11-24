@@ -1,83 +1,175 @@
-import shared5 from '../../../shared/ui/PublicControls.module.css';
-import shared4 from './LandingStyles.module.css';
-import shared3 from '../../../shared/ui/PublicMotion.module.css';
-import shared2 from '../../../shared/ui/PublicLayout.module.css';
-import styles from './Hero.module.css';
+import { useEffect, useRef, useState } from 'react';
 import { useEditionStrings } from '../../../shared/lib/useEventConfig';
-import { HERO_POSTER, heroVideoSrc } from '../../../shared/lib/media';
+import controls from '../../../shared/ui/PublicControls.module.css';
+import layout from '../../../shared/ui/PublicLayout.module.css';
+import motion from '../../../shared/ui/PublicMotion.module.css';
+import landing from './LandingStyles.module.css';
+import styles from './Hero.module.css';
 import { GiveawayLink } from './GiveawayLink';
 
 type Props = {
   trialHref: string;
   /** Deschide formularul ca overlay. Fără el, CTA-ul navighează la /inscriere. */
   onInscrie?: () => void;
-  /** `false` ascunde CTA-ul „Rezervă-ți locul" (fereastra din ziua cursei). */
   showCta?: boolean;
   showGiveaway?: boolean;
 };
 
-/**
- * Hero-ul ca afiș: kicker-ul pe o linie, titlul „Hyrox / Trial." pe toată
- * lățimea, apoi o bază despărțită de o linie, cu rezumatul și CTA-ul.
- * Aspectul stă în `.e3-hero*` (Hero.module.css); aici rămâne doar structura.
- */
+const POSTER = '/landing/hero.webp';
+
 export const Hero = ({ onInscrie, showCta = true, trialHref, showGiveaway = false }: Props) => {
   const { HERO_KICKER } = useEditionStrings();
 
   return (
-    <section className={styles['e3-hero']} data-css={"e3-hero"}>
-      {/* Fundal video FPV — mut, în buclă, autoplay (inclusiv iOS via playsInline). */}
-      <video
-        className={shared2['e3-hero-video']} data-css={"e3-hero-video"}
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        poster={HERO_POSTER}
-        aria-hidden="true"
-      >
-        <source src={heroVideoSrc()} type="video/mp4" />
-      </video>
-      <div className={styles['e3-hero-shade']} data-css={"e3-hero-shade"} aria-hidden="true" />
-      <div className={shared2['e3-hero-copy'] + ' ' + shared2['e3-wrap']} data-css={"e3-hero-copy e3-wrap"}>
-        <p className={styles['e3-hero-kicker']} data-css={"e3-hero-kicker"}>{HERO_KICKER}</p>
-        <h1 className={styles['e3-hero-title']} data-css={"e3-hero-title"}>
-          {/* Cuvintele cresc din linia de bază prin mască (`.e3-word`), nu se
-              estompează: titlul e vizibil ca formă din primul cadru, deci nu
-              întârzie prima afișare. `--d` e decalajul dintre ele. */}
-          <span className={shared3['e3-word'] + ' ' + styles.text1} data-css={"e3-word"} >
-            Hyrox
-          </span>
-          <span className={shared3['e3-word'] + ' ' + styles['e3-hero-accent'] + ' ' + styles.text2} data-css={"e3-word e3-hero-accent"} >
-            Trial.
-          </span>
-        </h1>
-        <div className={styles['e3-hero-foot']} data-css={"e3-hero-foot"}>
-          <p className={shared2['e3-lead'] + ' ' + styles['e3-hero-lead']} data-css={"e3-lead e3-hero-lead"}>
+    <section className={styles.hero} data-css="e3-hero">
+      <div className={`${layout['e3-wrap']} ${styles.composition}`} data-css="e3-hero-copy e3-wrap">
+        <div className={styles.headline} data-enter>
+          <p className={styles.kicker} data-css="e3-hero-kicker">{HERO_KICKER}</p>
+          <h1 className={styles.title} data-css="e3-hero-title">
+            <span className={motion['e3-word']} data-css="e3-word">Hyrox</span>
+            <span className={motion['e3-word']} data-css="e3-word e3-hero-accent">Trial.</span>
+          </h1>
+        </div>
+
+        <HeroMedia />
+
+        <div className={styles.details} data-css="e3-hero-foot">
+          <p className={layout['e3-lead']} data-css="e3-lead e3-hero-lead">
             Cursă în stil HYROX în aer liber: alergare combinată cu stații funcționale, contra
             cronometru, în ritmul tău. Stațiile și greutățile se adaptează nivelului tău.
           </p>
-          <div className={styles['trial-hero-actions']} data-css={"trial-hero-actions"}>
-          {showCta && (
-            <a
-              href="/inscriere"
-              onClick={(e) => {
-                if (onInscrie) {
-                  e.preventDefault();
-                  onInscrie();
-                }
-              }}
-              className={shared4['e3-btn'] + ' ' + styles['e3-cta-lg'] + ' ' + shared5['e3-shine'] + ' ' + shared5['e3-mag'] + ' ' + styles['e3-hero-cta']} data-css={"e3-btn e3-cta-lg e3-shine e3-mag e3-hero-cta"}
-            >
-              Înscrie-te la eveniment
+          <div className={styles.actions} data-css="trial-hero-actions">
+            {showCta && (
+              <a
+                href="/inscriere"
+                onClick={(event) => {
+                  if (onInscrie) {
+                    event.preventDefault();
+                    onInscrie();
+                  }
+                }}
+                className={`${landing['e3-btn']} ${controls['e3-shine']} ${controls['e3-mag']} ${styles.cta}`}
+                data-css="e3-btn e3-cta-lg e3-shine e3-mag e3-hero-cta"
+              >
+                Înscrie-te la eveniment
+                <span aria-hidden="true">↗</span>
+              </a>
+            )}
+            <a className={styles.trialLink} data-css="trial-hero-link" href={trialHref}>
+              Vin prima dată
             </a>
-          )}
-          <a className={styles['trial-hero-link']} data-css={"trial-hero-link"} href={trialHref}>Vin prima dată</a>
-          {showGiveaway && <GiveawayLink />}
+            {showGiveaway && <GiveawayLink />}
           </div>
         </div>
       </div>
     </section>
+  );
+};
+
+const HeroMedia = () => {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const pausedByVisitor = useRef(false);
+  const [motionAllowed, setMotionAllowed] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => {
+      setMotionAllowed(!preference.matches);
+      if (preference.matches) {
+        if (videoRef.current?.paused === false) videoRef.current.pause();
+        setPlaying(false);
+        setStarted(false);
+      }
+    };
+    update();
+    preference.addEventListener('change', update);
+    return () => preference.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const frame = frameRef.current;
+    if (!motionAllowed || failed || !video || !frame || !('IntersectionObserver' in window)) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) {
+        if (!video.paused) video.pause();
+      } else if (!pausedByVisitor.current) {
+        void video.play().catch(() => {});
+      }
+    });
+    observer.observe(frame);
+
+    return () => {
+      observer.disconnect();
+      if (!video.paused) video.pause();
+    };
+  }, [motionAllowed, failed]);
+
+  const togglePlayback = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    pausedByVisitor.current = !video.paused;
+    if (pausedByVisitor.current) {
+      video.pause();
+    } else {
+      void video.play().catch(() => {});
+    }
+  };
+
+  return (
+    <div className={styles.media} ref={frameRef} data-enter>
+      <div className={styles.viewport}>
+        <div className={styles.footage} data-css="hero-footage">
+          <img
+            className={styles.poster}
+            src={POSTER}
+            alt=""
+            width={1280}
+            height={720}
+            fetchPriority="high"
+            data-css="hero-poster"
+          />
+          {motionAllowed && !failed && (
+            <video
+              ref={videoRef}
+              className={styles.video}
+              data-css="e3-hero-video"
+              data-started={started}
+              src="/landing/hero.mp4"
+              poster={POSTER}
+              preload="none"
+              loop
+              muted
+              playsInline
+              aria-hidden="true"
+              onPlaying={() => {
+                setPlaying(true);
+                setStarted(true);
+              }}
+              onPause={() => setPlaying(false)}
+              onError={() => setFailed(true)}
+            />
+          )}
+        </div>
+      </div>
+      {motionAllowed && !failed && (
+        <button
+          type="button"
+          className={styles.playback}
+          data-playing={playing}
+          onClick={togglePlayback}
+          aria-label={playing ? 'Pauză videoclip' : 'Redă videoclipul'}
+        >
+          <span aria-hidden="true" className={styles.playbackIcon} />
+          {playing ? 'Pauză' : 'Redă'}
+        </button>
+      )}
+    </div>
   );
 };

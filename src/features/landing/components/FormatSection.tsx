@@ -51,14 +51,16 @@ export const FormatSection = ({ num = '01' }: Props) => {
   return (
     <section className={shared1['e3-sec']} data-css={"e3-sec e3-format"}>
       <div className={shared1['e3-wrap']} data-css={"e3-wrap"}>
-        <SectionHead num={num}>Formatul</SectionHead>
-        <p className={shared1['e3-lead'] + ' ' + styles['e3-format-intro']} data-css={"e3-lead e3-format-intro"}>
-          Aleargă. Ridică. Repetă. Segmente de alergare alternate cu stații de exerciții funcționale, în
-          stil HYROX. Fără trucuri: doar tu, cronometrul și traseul. Stațiile și greutățile se adaptează
-          nivelului tău de către antrenori la fața locului.
-        </p>
+        <div className={styles.introduction}>
+          <SectionHead num={num}>Formatul</SectionHead>
+          <p className={shared1['e3-lead']} data-css="e3-lead e3-format-intro">
+            Aleargă. Ridică. Repetă. Segmente de alergare alternate cu stații de exerciții funcționale, în
+            stil HYROX. Fără trucuri: doar tu, cronometrul și traseul. Stațiile și greutățile se adaptează
+            nivelului tău de către antrenori la fața locului.
+          </p>
+        </div>
 
-        <div className={styles['e3-format-tabs']} data-css={"e3-format-tabs"} role="tablist" aria-label="Etapele cursei" data-reveal>
+        <div className={styles['e3-format-tabs']} data-css={"e3-format-tabs"} role="tablist" aria-label="Etapele cursei">
           {ETAPE.map((etapa, i) => (
             <button
               key={etapa.nume}
@@ -83,26 +85,45 @@ export const FormatSection = ({ num = '01' }: Props) => {
           ))}
         </div>
 
-        <div className={styles['e3-format-stage']} data-css={"e3-format-stage"}>
-          {ETAPE.map((etapa, i) =>
-            i === ales ? (
-              <div
-                key={etapa.nume}
-                role="tabpanel"
-                id={idPanou}
-                aria-labelledby={idTab(i)}
-                className={styles['e3-format-panel']} data-css={"e3-format-panel"}
-              >
-                <Continut intro={etapa.intro} detalii={etapa.detalii} />
-              </div>
-            ) : (
-              // Copia invizibilă ține doar locul: rezervă înălțimea celui mai
-              // lung panou. Nu e focusabilă și nu e citită.
-              <div key={etapa.nume} className={styles['e3-format-panel'] + ' ' + styles['e3-format-ghost']} data-css={"e3-format-panel e3-format-ghost"} aria-hidden="true">
-                <Continut intro={etapa.intro} detalii={etapa.detalii} />
-              </div>
-            )
-          )}
+        <div className={styles.sequence} data-css="format-sequence">
+          <div className={styles.visual} aria-hidden="true">
+            <img
+              key={ales}
+              className={styles.photo}
+              src={`/landing/${ETAPE[ales].nume.toLowerCase()}.webp`}
+              alt=""
+              width={800}
+              height={450}
+              loading="lazy"
+              decoding="async"
+              data-css="format-photo"
+            />
+          </div>
+          <div className={styles['e3-format-stage']} data-css={"e3-format-stage"}>
+            {ETAPE.map((etapa, i) =>
+              i === ales ? (
+                <div
+                  key={etapa.nume}
+                  role="tabpanel"
+                  id={idPanou}
+                  aria-labelledby={idTab(i)}
+                  className={styles['e3-format-panel']} data-css="e3-format-panel"
+                >
+                  <Continut intro={etapa.intro} detalii={etapa.detalii} />
+                </div>
+              ) : (
+                // Copia invizibilă rezervă înălțimea celui mai lung panou.
+                <div
+                  key={etapa.nume}
+                  className={`${styles['e3-format-panel']} ${styles['e3-format-ghost']}`}
+                  data-css="e3-format-panel e3-format-ghost"
+                  aria-hidden="true"
+                >
+                  <Continut intro={etapa.intro} detalii={etapa.detalii} />
+                </div>
+              )
+            )}
+          </div>
         </div>
       </div>
     </section>
