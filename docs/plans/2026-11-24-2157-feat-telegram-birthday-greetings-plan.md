@@ -26,16 +26,18 @@ execution: code
 - R4. Preserve dates and greeting preferences already saved by the previous profile form. A member can disable greetings or remove their date. A removed date stays out of Telegram imports until the member re-enables them.
 - R5. Send one greeting once per year at 09:00 Chișinău time, or later the same day if the worker recovers. Confirm current group membership. For a Telegram-sourced date, verify it's still visible and correct before publishing. Publish the member's preferred name without an age or birth year.
 - R6. An expired or retried run must not produce a duplicate. When Telegram may have accepted a request, retain its uncertain outcome and skip an automatic resend.
+- R7. Show birthday coverage in the member list, with distinct labels for Telegram, manual entry, the previous profile form, and missing dates. Organizers can filter by source or missing date. Keep exact dates in the individual editor.
 
 ### Key Decisions
 
-- **Telegram or organizer entry.** Members can enable birthday greetings without answering a birthday question in the profile form. (session-settled: user-directed — chosen over asking the member to type their date in the bot.) Governs R1–R3.
+- **Telegram or organizer entry.** Members can enable birthday greetings without answering a birthday question in the profile form. (session-settled: user-directed — chosen over asking the member to type their date in the bot.) Governs R1–R3, R7.
 
 ### Acceptance Examples
 
 - A member's private chat exposes 27 November. Enabling greetings saves 27.11. Telegram supplies a birth year and the bot discards it.
 - No date is visible. An organizer saves 27.11. The member keeps control of the private greeting switch.
 - A previously imported date becomes hidden or changes. The worker skips the old greeting. A concurrent profile edit cannot overwrite an organizer's date or a member's greeting choice.
+- An organizer can see which members have a Telegram date and find the members with a linked account and no saved date. A missing migration shows that the overview is unavailable.
 - Two worker runs see the same birthday. PostgreSQL issues one claim for that account and year. An ambiguous send is never sent again automatically.
 
 ## Planning Contract
@@ -43,7 +45,7 @@ execution: code
 ### Key Technical Decisions
 
 - KTD1. Keep a dedicated service-only preference table keyed by numeric Telegram account. Store date, provenance, and the separate greeting switch. Backfill existing day, month, and consent with legacy provenance once. Preserve the old profile RPC during deployment and expose a name-and-goal RPC that never overwrites birthday data.
-- KTD2. Add token-checked Admin RPCs for the read and edit dialog. Pass the expected numeric Telegram account on save so a stale dialog cannot update a newly linked account. Limit date management to linked members.
+- KTD2. Add token-checked Admin RPCs for the read and edit dialog. Pass the expected numeric Telegram account on save so a stale dialog cannot update a newly linked account. Limit date management to linked members. Load coverage in one token-checked RPC that exposes the member ID and date source only.
 - KTD3. Use Telegram's official optional private-chat birthdate. A successful missing field removes a previously imported date. Transport failures leave the saved value pending verification. The manual and legacy sources never require profile lookup for delivery. Use 29 February literally in leap years.
 - KTD4. Under the existing bot scheduler and master switch, check birthdays from 09:00 local time. Read due candidates, verify membership and imported dates, and use a service-only transactional claim keyed by account and annual occurrence before sending. Record sent, rejected, or uncertain outcome. Retries before claim are safe. A missing migration leaves old bot flows available.
 
@@ -78,6 +80,14 @@ execution: code
 **Files** — Bot birthday job, worker scheduler, focused tests and operator documentation.
 
 **Verification** — Local scheduling window, membership, consent recheck, source verification, duplicate prevention, and ambiguous Telegram delivery.
+
+### U5. Member birthday overview
+
+**Dependencies** — U1, U2.
+
+**Files** — Birthday status RPC and focused SQL tests, the existing member list and admin API, and focused UI tests.
+
+**Verification** — Confirm source attribution, missing dates and unavailable-schema handling, filters, refresh after edits, and that list results contain no exact dates.
 
 ## Verification Contract
 
