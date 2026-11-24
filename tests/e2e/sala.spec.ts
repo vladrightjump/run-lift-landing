@@ -139,7 +139,12 @@ for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
     const scrieri = await deschideAdminul(page, network, '#grup-membri', { ...SALA,
       membri: SALA.membri.map((m) => m.id === 'm1' ? { ...m, telegram_membership: 'left' } : m),
+      necunoscuti: [7001, 7002].map(telegram_user_id => ({
+        telegram_user_id, username: null, first_name: null, last_name: null, created_at: '2026-11-24',
+      })),
     });
+    await expect(page.getByRole('combobox', { description: 'ID Telegram 7001' })).toBeVisible();
+    await expect(page.getByRole('combobox', { description: 'ID Telegram 7002' })).toBeVisible();
     await expect(page.getByText('Ana Rusu', { exact: true })).toBeVisible();
     await expect(page.getByText('Ion Ceban', { exact: true })).toHaveCount(0);
     const filtre = page.getByRole('group', { name: 'Apartenență Telegram' });

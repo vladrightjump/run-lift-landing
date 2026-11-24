@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { createBroadcastControl, parseBroadcast } from '../src/broadcast-control.js';
 import { sendGeneralPoll } from '../src/lib/telegram.js';
 
-function fixture() {
+function fixture(prepareFormInvite?: () => Promise<{ text: string; links: { text: string; url: string }[][] }>) {
  let now=0, group='-100', authorized=true, throws=false, ok=true;
  const replies: {text:string; kb?:{text:string;callback_data:string}[][]}[]=[];
  const sent: unknown[]=[];
- const c=createBroadcastControl({authorized:id=>authorized && [1,2].includes(id),now:()=>now,
+ const c=createBroadcastControl({prepareFormInvite,authorized:id=>authorized && [1,2].includes(id),now:()=>now,
   destination:async()=>({id:group,title:'Run + Lift'}),reply:async(_id,text,kb)=>{replies.push({text,kb});},answer:async()=>{},
   publish:async(g,content)=>{sent.push({g,content}); if(throws)throw new Error('timeout');return {ok};}});
  const text=(s:string,id=1,chatType='private')=>c.text({chatId:id,fromId:id,chatType,fromName:'Vlad',text:s});
@@ -34,6 +34,19 @@ test('replacement and old cancel cannot publish or discard a newer draft',async(
  await f.callback(old);await f.callback(old.replace(':ok:',':no:'));assert.equal(f.sent.length,0);
  await f.callback(next);assert.deepEqual(f.sent,[{g:'-100',content:{kind:'message',text:'New'}}]);
 });
+test('a slow form invitation cannot replace the newer broadcast preview', async () => {
+ const {promise, resolve} = Promise.withResolvers<{ text: string; links: [] }>();
+ const f = fixture(() => promise);
+ const invite = f.text('/feedback_grup');
+ await f.text('/mesaj Nou');
+ const newer = f.token();
+ resolve({ text: 'Vechi', links: [] });
+ await invite;
+ await f.callback(newer);
+ assert.deepEqual(f.sent, [{g: '-100', content: { kind: 'message', text: 'Nou' }}]);
+ assert.ok(!f.replies.some(reply => reply.text.includes('Vechi')));
+});
+
 test('invalid command replacement invalidates previous confirmation',async()=>{
  const f=fixture();await f.text('/mesaj Old');const old=f.token();await f.text('/poll');await f.callback(old);assert.equal(f.sent.length,0);
 });

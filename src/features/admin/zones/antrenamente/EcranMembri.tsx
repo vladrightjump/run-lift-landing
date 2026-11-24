@@ -122,6 +122,7 @@ export const EcranMembri = () => {
             {nelegate.map((c) => (
               <ContNelegat
                 key={c.telegram_user_id}
+                telegramId={c.telegram_user_id}
                 nume={numeCont(c)}
                 utilizator={c.username}
                 membri={date.membri.filter((m) => m.telegram_user_id == null)}
@@ -293,6 +294,7 @@ export const EcranMembri = () => {
 };
 
 type PropsCont = {
+  telegramId: number;
   nume: string;
   utilizator: string | null;
   /** Membrii care încă n-au cont legat — singurii de care se poate lega. */
@@ -302,18 +304,21 @@ type PropsCont = {
   onMembruNou: () => void;
 };
 
-const ContNelegat = ({ nume, utilizator, membri, ocupat, onLeaga, onMembruNou }: PropsCont) => {
+const ContNelegat = ({ telegramId, nume, utilizator, membri, ocupat, onLeaga, onMembruNou }: PropsCont) => {
   const [ales, setAles] = useState('');
   const membru = membri.find((m) => m.id === ales);
+  const idDetaliu = 'sala-telegram-' + telegramId;
   return (
     <li className={sharedSala['admin-sala-rand'] + ' ' + styles['admin-sala-cont']} data-css="admin-sala-rand admin-sala-cont">
       <span className={sharedSala['admin-sala-nume']} data-css="admin-sala-nume">
         {nume}
         {utilizator && <span className={sharedSala['admin-sala-detaliu']} data-css="admin-sala-detaliu"> @{utilizator}</span>}
+        <span id={idDetaliu} className={sharedSala['admin-sala-detaliu']} data-css="admin-sala-detaliu"> ID Telegram {telegramId}</span>
       </span>
       <span className={sharedSala['admin-sala-actiuni']} data-css="admin-sala-actiuni">
         <select
           aria-label={`Membrul de care se leagă contul lui ${nume}`}
+          aria-describedby={idDetaliu}
           value={ales}
           onChange={(e) => setAles(e.target.value)}
         >
